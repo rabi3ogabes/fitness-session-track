@@ -9,6 +9,15 @@ import {
   CarouselPrevious, 
   CarouselNext 
 } from "@/components/ui/carousel";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
 
 interface MainPageContent {
   heroTitle: string;
@@ -86,6 +95,58 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Navigation Header */}
+      <div 
+        className="sticky top-0 z-50 w-full border-b shadow-sm" 
+        style={{ backgroundColor: headerColor }}
+      >
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          {/* Logo on the left */}
+          <div className="flex items-center">
+            {logo ? (
+              <Link to="/">
+                <img 
+                  src={logo} 
+                  alt="Gym Logo" 
+                  className="h-10 object-contain"
+                />
+              </Link>
+            ) : (
+              <Link to="/" className="font-bold text-xl text-gym-blue">
+                FitTrack Pro
+              </Link>
+            )}
+          </div>
+          
+          {/* Auth buttons on the right */}
+          <div className="flex items-center gap-4">
+            {isAuthenticated ? (
+              <Link
+                to="/dashboard"
+                className="px-4 py-2 bg-gym-blue hover:bg-gym-dark-blue text-white rounded-md transition-colors"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 text-gym-blue hover:text-gym-dark-blue transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 bg-gym-blue hover:bg-gym-dark-blue text-white rounded-md transition-colors"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Hero Section with dynamic background color */}
       <header 
         className="relative min-h-[80vh] flex flex-col items-center justify-center text-white overflow-hidden"
@@ -103,15 +164,8 @@ const Index = () => {
         {/* Dark Overlay for better text visibility */}
         <div className="absolute inset-0 bg-black opacity-50 z-10"></div>
         
-        {/* Logo and content */}
+        {/* Content */}
         <div className="container mx-auto px-4 py-20 flex flex-col items-center text-center relative z-20">
-          {logo && (
-            <img 
-              src={logo} 
-              alt="Gym Logo" 
-              className="h-20 mb-6 object-contain"
-            />
-          )}
           <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
             <span className="text-gym-blue">{content.heroTitle.split(' ')[0]}</span> {content.heroTitle.split(' ').slice(1).join(' ')}
           </h1>
