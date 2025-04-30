@@ -18,11 +18,13 @@ import Memberships from "./pages/admin/Memberships";
 import Bookings from "./pages/admin/Bookings";
 import Payments from "./pages/admin/Payments";
 import Reports from "./pages/admin/Reports";
+import Settings from "./pages/admin/Settings";
 import UserProfile from "./pages/user/UserProfile";
 import UserMembership from "./pages/user/UserMembership";
 import UserBooking from "./pages/user/UserBooking";
 import UserSchedule from "./pages/user/UserSchedule";
 import ClassCalendar from "./pages/user/ClassCalendar";
+import TrainerDashboard from "./pages/trainer/TrainerDashboard";
 
 // Context
 import { AuthProvider } from "./context/AuthContext";
@@ -50,6 +52,7 @@ const App = () => (
             <Route path="/admin/bookings" element={<Bookings />} />
             <Route path="/admin/payments" element={<Payments />} />
             <Route path="/admin/reports" element={<Reports />} />
+            <Route path="/admin/settings" element={<Settings />} />
 
             {/* User Routes */}
             <Route path="/user/profile" element={<UserProfile />} />
@@ -57,6 +60,9 @@ const App = () => (
             <Route path="/user/booking" element={<UserBooking />} />
             <Route path="/user/schedule" element={<UserSchedule />} />
             <Route path="/user/calendar" element={<ClassCalendar />} />
+            
+            {/* Trainer Routes */}
+            <Route path="/trainer" element={<TrainerDashboard />} />
 
             {/* 404 Page */}
             <Route path="*" element={<NotFound />} />

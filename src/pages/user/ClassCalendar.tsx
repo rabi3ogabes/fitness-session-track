@@ -1,12 +1,12 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Bell } from "lucide-react";
+import { CalendarDays, Bell, AlertCircle } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -82,13 +82,34 @@ const mockClasses = [
   },
 ];
 
+// Mock bookings data
+const mockBookings = [
+  { id: 1, classId: 3, userId: "user-1" },
+  { id: 2, classId: 5, userId: "user-1" },
+];
+
+// Mock system settings
+const systemSettings = {
+  cancellationTimeLimit: 4, // hours before class starts
+};
+
 const ClassCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [bookedClasses, setBookedClasses] = useState<number[]>([]);
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   const { toast } = useToast();
   
   // Calculate if sessions are low (25% or less)
   const sessionsLow = userData.remainingSessions <= (userData.totalSessions * 0.25);
+  
+  useEffect(() => {
+    // In a real app, this would fetch bookings from an API
+    const userBookedClassIds = mockBookings
+      .filter(booking => booking.userId === "user-1")
+      .map(booking => booking.classId);
+    
+    setBookedClasses(userBookedClassIds);
+  }, []);
   
   // Get classes for the selected date
   const classesForSelectedDate = selectedDate 
@@ -119,9 +140,37 @@ const ClassCalendar = () => {
     }
 
     setSelectedClass(classId);
+    setBookedClasses([...bookedClasses, classId]);
     toast({
       title: "Class booked successfully!",
-      description: "Your session has been booked.",
+      description: "Your session has been booked. The trainer has been notified.",
+    });
+  };
+  
+  const handleCancelBooking = (classId: number, classTime: string, className: string) => {
+    // Calculate if cancellation is within allowed time limit
+    const classHour = parseInt(classTime.split(':')[0]);
+    const now = new Date();
+    const classDate = new Date(selectedDate!);
+    classDate.setHours(classHour);
+    
+    const hoursDifference = (classDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    if (hoursDifference < systemSettings.cancellationTimeLimit) {
+      toast({
+        title: "Cannot cancel class",
+        description: `You can only cancel classes ${systemSettings.cancellationTimeLimit} hours or more before they start.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setBookedClasses(bookedClasses.filter(id => id !== classId));
+    setSelectedClass(null);
+    
+    toast({
+      title: "Class cancelled",
+      description: `You've successfully cancelled your ${className} class. The trainer has been notified.`,
     });
   };
 
@@ -149,6 +198,10 @@ const ClassCalendar = () => {
                   <span>Your sessions are running low. Consider renewing your membership.</span>
                 </div>
               )}
+              <div className="flex items-center mt-2 text-sm text-amber-600">
+                <AlertCircle className="mr-2 h-4 w-4" />
+                <span>You can cancel a class up to {systemSettings.cancellationTimeLimit} hours before it starts.</span>
+              </div>
             </div>
           </div>
           
@@ -179,39 +232,66 @@ const ClassCalendar = () => {
                   
                   {classesForSelectedDate.length > 0 ? (
                     <div className="space-y-4">
-                      {classesForSelectedDate.map((cls) => (
-                        <Card key={cls.id} className={cn(
-                          "transition-all hover:shadow",
-                          selectedClass === cls.id ? "border-2 border-gym-blue" : ""
-                        )}>
-                          <CardHeader className="pb-2">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <CardTitle>{cls.name}</CardTitle>
-                                <CardDescription>{cls.time}</CardDescription>
+                      {classesForSelectedDate.map((cls) => {
+                        const isBooked = bookedClasses.includes(cls.id);
+                        const isPastCancellationWindow = () => {
+                          const classHour = parseInt(cls.time.split(':')[0]);
+                          const now = new Date();
+                          const classDate = new Date(selectedDate!);
+                          classDate.setHours(classHour);
+                          return (classDate.getTime() - now.getTime()) / (1000 * 60 * 60) < systemSettings.cancellationTimeLimit;
+                        };
+                        
+                        return (
+                          <Card key={cls.id} className={cn(
+                            "transition-all hover:shadow",
+                            isBooked ? "border-2 border-gym-blue" : ""
+                          )}>
+                            <CardHeader className="pb-2">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <CardTitle>{cls.name}</CardTitle>
+                                  <CardDescription>{cls.time}</CardDescription>
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                  <Badge variant={cls.enrolled >= cls.capacity ? "destructive" : "outline"}>
+                                    {cls.enrolled >= cls.capacity ? "Full" : `${cls.enrolled}/${cls.capacity}`}
+                                  </Badge>
+                                  {isBooked && (
+                                    <Badge variant="secondary" className="bg-green-100 text-green-800">Booked</Badge>
+                                  )}
+                                </div>
                               </div>
-                              <Badge variant={cls.enrolled >= cls.capacity ? "destructive" : "outline"}>
-                                {cls.enrolled >= cls.capacity ? "Full" : `${cls.enrolled}/${cls.capacity}`}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pb-2">
-                            <p className="text-sm">Trainer: {cls.trainer}</p>
-                          </CardContent>
-                          <CardFooter>
-                            <Button 
-                              onClick={() => handleBookClass(cls.id)}
-                              className="w-full bg-gym-blue hover:bg-gym-dark-blue"
-                              disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0 || selectedClass === cls.id}
-                            >
-                              {selectedClass === cls.id ? "Booked" : 
-                               cls.enrolled >= cls.capacity ? "Class Full" : 
-                               userData.remainingSessions <= 0 ? "No Sessions Left" : 
-                               "Book Class"}
-                            </Button>
-                          </CardFooter>
-                        </Card>
-                      ))}
+                            </CardHeader>
+                            <CardContent className="pb-2">
+                              <p className="text-sm">Trainer: {cls.trainer}</p>
+                            </CardContent>
+                            <CardFooter>
+                              {isBooked ? (
+                                <Button 
+                                  onClick={() => handleCancelBooking(cls.id, cls.time.split(' ')[0], cls.name)}
+                                  className="w-full bg-red-500 hover:bg-red-600"
+                                  disabled={isPastCancellationWindow()}
+                                >
+                                  {isPastCancellationWindow() ? 
+                                    `Can't Cancel (< ${systemSettings.cancellationTimeLimit}h)` : 
+                                    "Cancel Booking"}
+                                </Button>
+                              ) : (
+                                <Button 
+                                  onClick={() => handleBookClass(cls.id)}
+                                  className="w-full bg-gym-blue hover:bg-gym-dark-blue"
+                                  disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0}
+                                >
+                                  {cls.enrolled >= cls.capacity ? "Class Full" : 
+                                   userData.remainingSessions <= 0 ? "No Sessions Left" : 
+                                   "Book Class"}
+                                </Button>
+                              )}
+                            </CardFooter>
+                          </Card>
+                        );
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">

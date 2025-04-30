@@ -1,3 +1,4 @@
+
 import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -21,7 +22,7 @@ import {
 
 const Sidebar = () => {
   const location = useLocation();
-  const { isAdmin, logout } = useAuth();
+  const { isAdmin, isTrainer, logout } = useAuth();
   const isMobile = useIsMobile();
 
   const adminNavItems = [
@@ -33,18 +34,31 @@ const Sidebar = () => {
     { name: "Memberships", path: "/admin/memberships", icon: <BadgeCheck className="h-5 w-5" /> },
     { name: "Payments", path: "/admin/payments", icon: <CreditCard className="h-5 w-5" /> },
     { name: "Reports", path: "/admin/reports", icon: <BarChart3 className="h-5 w-5" /> },
+    { name: "Settings", path: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
   ];
 
   const userNavItems = [
     { name: "Dashboard", path: "/dashboard", icon: <Home className="h-5 w-5" /> },
     { name: "Profile", path: "/user/profile", icon: <User className="h-5 w-5" /> },
     { name: "Membership", path: "/user/membership", icon: <BadgeCheck className="h-5 w-5" /> },
-    { name: "Book Session", path: "/user/booking", icon: <CalendarDays className="h-5 w-5" /> },
     { name: "Calendar", path: "/user/calendar", icon: <Calendar className="h-5 w-5" /> },
     { name: "Class Schedule", path: "/user/schedule", icon: <CalendarCheck className="h-5 w-5" /> },
   ];
+  
+  const trainerNavItems = [
+    { name: "Dashboard", path: "/trainer", icon: <Home className="h-5 w-5" /> },
+    { name: "Profile", path: "/user/profile", icon: <User className="h-5 w-5" /> },
+    { name: "Bookings", path: "/admin/bookings", icon: <CalendarDays className="h-5 w-5" /> },
+    { name: "Class Schedule", path: "/user/schedule", icon: <CalendarCheck className="h-5 w-5" /> },
+    { name: "Members", path: "/admin/members", icon: <UsersRound className="h-5 w-5" /> },
+  ];
 
-  const navItems = isAdmin ? adminNavItems : userNavItems;
+  let navItems = userNavItems;
+  if (isAdmin) {
+    navItems = adminNavItems;
+  } else if (isTrainer) {
+    navItems = trainerNavItems;
+  }
 
   return (
     <div className={cn(
