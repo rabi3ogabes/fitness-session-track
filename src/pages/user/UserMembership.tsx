@@ -2,6 +2,7 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -10,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Check, } from "lucide-react";
+import { Check } from "lucide-react";
 
 // Mock membership data
 const membershipData = {
@@ -55,8 +56,7 @@ const availablePlans = [
     id: 1,
     name: "Basic",
     description: "Access to gym facilities and 12 sessions per month",
-    monthlyPrice: 250, // QAR
-    yearlyPrice: 2500, // QAR
+    price: 250, // QAR
     features: [
       "Full gym access",
       "12 trainer sessions per month",
@@ -69,8 +69,7 @@ const availablePlans = [
     id: 2,
     name: "Premium",
     description: "Full access with 20 sessions per month and additional perks",
-    monthlyPrice: 350, // QAR
-    yearlyPrice: 3500, // QAR
+    price: 350, // QAR
     features: [
       "Full gym access",
       "20 trainer sessions per month",
@@ -85,8 +84,7 @@ const availablePlans = [
     id: 3,
     name: "Ultimate",
     description: "Unlimited access with personal training and premium amenities",
-    monthlyPrice: 500, // QAR
-    yearlyPrice: 5000, // QAR
+    price: 500, // QAR
     features: [
       "Full gym access",
       "Unlimited trainer sessions",
@@ -102,7 +100,18 @@ const availablePlans = [
 ];
 
 const UserMembership = () => {
-  const [billingCycle, setBillingCycle] = useState("monthly");
+  const { toast } = useToast();
+  
+  const handleBookPlan = (planName: string) => {
+    // Create a membership request
+    toast({
+      title: "Membership request sent",
+      description: `Your request for the ${planName} plan has been submitted. A staff member will review it shortly.`,
+    });
+    
+    // In a real app, this would make an API call to create the membership request
+    // For demonstration purposes, we're just showing a toast notification
+  };
   
   return (
     <DashboardLayout title="Membership">
@@ -135,15 +144,6 @@ const UserMembership = () => {
                 </div>
               </div>
               <div className="border-l-0 md:border-l border-gray-200 pl-0 md:pl-4 mt-4 md:mt-0">
-                <p className="font-medium">Payment</p>
-                <p className="text-2xl font-bold mt-1">
-                  QAR {membershipData.current.price}<span className="text-sm font-normal">/month</span>
-                </p>
-                <p className="text-gray-500 mt-1">
-                  {membershipData.current.automatic
-                    ? "Automatic renewal enabled"
-                    : "Automatic renewal disabled"}
-                </p>
                 <div className="mt-4 flex space-x-2">
                   <Button variant="outline" size="sm">
                     Disable Auto-Renewal
@@ -156,30 +156,8 @@ const UserMembership = () => {
 
         {/* Available Plans - read only */}
         <div>
-          <div className="flex justify-between items-center mb-6">
+          <div className="mb-6">
             <h2 className="text-2xl font-bold">Available Plans</h2>
-            <div className="bg-gray-100 rounded-md p-1">
-              <button
-                className={`px-4 py-1 rounded-md transition ${
-                  billingCycle === "monthly"
-                    ? "bg-white shadow-sm"
-                    : "text-gray-500"
-                }`}
-                onClick={() => setBillingCycle("monthly")}
-              >
-                Monthly
-              </button>
-              <button
-                className={`px-4 py-1 rounded-md transition ${
-                  billingCycle === "yearly"
-                    ? "bg-white shadow-sm"
-                    : "text-gray-500"
-                }`}
-                onClick={() => setBillingCycle("yearly")}
-              >
-                Yearly (save 10%)
-              </button>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -204,13 +182,7 @@ const UserMembership = () => {
                 <CardContent>
                   <div className="mt-1 mb-4">
                     <p className="text-3xl font-bold">
-                      QAR{" "}
-                      {billingCycle === "monthly"
-                        ? plan.monthlyPrice
-                        : plan.yearlyPrice}
-                      <span className="text-sm font-normal">
-                        /{billingCycle === "monthly" ? "month" : "year"}
-                      </span>
+                      QAR {plan.price}
                     </p>
                   </div>
 
@@ -224,11 +196,18 @@ const UserMembership = () => {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  <p className="text-sm text-gray-500 w-full text-center">
-                    {membershipData.current.name === plan.name
-                      ? "Current Plan"
-                      : "Please contact reception to change your plan"}
-                  </p>
+                  {membershipData.current.name === plan.name ? (
+                    <p className="text-sm text-gray-500 w-full text-center">
+                      Current Plan
+                    </p>
+                  ) : (
+                    <Button 
+                      onClick={() => handleBookPlan(plan.name)} 
+                      className="w-full bg-gym-blue hover:bg-gym-dark-blue"
+                    >
+                      Book Now
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             ))}

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -32,6 +31,24 @@ const Memberships = () => {
   });
   const [editMembership, setEditMembership] = useState<typeof membershipTypes[0] | null>(null);
   const { toast } = useToast();
+
+  // Check for new membership requests in localStorage whenever the component renders
+  useState(() => {
+    const storedRequests = localStorage.getItem("membershipRequests");
+    if (storedRequests) {
+      try {
+        const parsedRequests = JSON.parse(storedRequests);
+        // Add any new requests to the existing ones
+        setMembershipRequests(prev => {
+          const existingIds = new Set(prev.map(r => r.id));
+          const newRequests = parsedRequests.filter(r => !existingIds.has(r.id));
+          return [...prev, ...newRequests];
+        });
+      } catch (error) {
+        console.error("Error parsing membership requests:", error);
+      }
+    }
+  });
 
   const handleAddMembership = () => {
     if (!newMembership.name || newMembership.sessions <= 0 || newMembership.price <= 0) {
@@ -101,6 +118,9 @@ const Memberships = () => {
       title: "Request approved",
       description: "The membership request has been approved successfully",
     });
+    
+    // In a real app, this would update the user's membership in the database
+    // For demonstration purposes, we're just updating the local state
   };
 
   const handleRejectRequest = (id: number) => {

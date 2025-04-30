@@ -57,7 +57,6 @@ const Sidebar = () => {
     { name: "Members", path: "/admin/members", icon: <UsersRound className="h-5 w-5" /> },
     { name: "Trainers", path: "/admin/trainers", icon: <User className="h-5 w-5" /> },
     { name: "Classes", path: "/admin/classes", icon: <Dumbbell className="h-5 w-5" /> },
-    { name: "Bookings", path: "/admin/bookings", icon: <CalendarDays className="h-5 w-5" /> },
     { name: "Memberships", path: "/admin/memberships", icon: <BadgeCheck className="h-5 w-5" /> },
     { name: "Payments", path: "/admin/payments", icon: <CreditCard className="h-5 w-5" /> },
     { name: "Reports", path: "/admin/reports", icon: <BarChart3 className="h-5 w-5" /> },
@@ -97,59 +96,55 @@ const Sidebar = () => {
       "bg-white shadow-md min-h-screen z-10 flex flex-col justify-between relative",
       isMobile ? "w-16" : "w-64"
     )}>
-      <div>
-        {/* Logo Section with black background */}
-        <div className="bg-black p-4 flex flex-col items-center justify-center border-b">
-          {logo ? (
-            <div className={cn(
-              "flex justify-center",
-              isMobile ? "w-10 h-10" : "w-full h-12"
-            )}>
-              <img 
-                src={logo} 
-                alt="Gym Logo" 
-                className="max-h-full max-w-full object-contain"
-              />
-            </div>
-          ) : (
-            <h2 className={cn(
-              "text-gym-blue font-bold",
-              isMobile ? "text-xl" : "text-2xl"
-            )}>
-              {isMobile ? "GM" : "GYM SYSTEM"}
-            </h2>
-          )}
-          
-          {/* User info below the logo */}
-          {!isMobile && (
-            <div className="mt-2 text-center text-white">
-              <p className="text-sm font-medium">{userName}</p>
-              <p className="text-xs text-gray-300">{userRole}</p>
-            </div>
-          )}
-        </div>
+      <div className="bg-black p-4 flex flex-col items-center justify-center border-b">
+        {logo ? (
+          <div className={cn(
+            "flex justify-center",
+            isMobile ? "w-10 h-10" : "w-full h-12"
+          )}>
+            <img 
+              src={logo} 
+              alt="Gym Logo" 
+              className="max-h-full max-w-full object-contain"
+            />
+          </div>
+        ) : (
+          <h2 className={cn(
+            "text-gym-blue font-bold",
+            isMobile ? "text-xl" : "text-2xl"
+          )}>
+            {isMobile ? "GM" : "GYM SYSTEM"}
+          </h2>
+        )}
         
-        <nav className="mt-6">
-          <ul className="space-y-1">
-            {navItems.map((item) => (
-              <li key={item.path}>
-                <Link
-                  to={item.path}
-                  className={cn(
-                    "flex items-center px-4 py-3 text-gray-700 hover:bg-gym-light hover:text-gym-blue transition-colors",
-                    location.pathname === item.path && "bg-gym-light text-gym-blue font-medium"
-                  )}
-                >
-                  <span className="mr-3">{item.icon}</span>
-                  {!isMobile && <span>{item.name}</span>}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {/* User info below the logo */}
+        {!isMobile && (
+          <div className="mt-2 text-center text-white">
+            <p className="text-sm font-medium">{userName}</p>
+            <p className="text-xs text-gray-300">{userRole}</p>
+          </div>
+        )}
       </div>
       
-      {/* Fixed footer with profile, main page and logout icons */}
+      <nav className="mt-6">
+        <ul className="space-y-1">
+          {navItems.map((item) => (
+            <li key={item.path}>
+              <Link
+                to={item.path}
+                className={cn(
+                  "flex items-center px-4 py-3 text-gray-700 hover:bg-gym-light hover:text-gym-blue transition-colors",
+                  location.pathname === item.path && "bg-gym-light text-gym-blue font-medium"
+                )}
+              >
+                <span className="mr-3">{item.icon}</span>
+                {!isMobile && <span>{item.name}</span>}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      
       <div className="mt-auto border-t border-gray-200">
         <div className="flex justify-around items-center py-3">
           <Link
