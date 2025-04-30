@@ -23,8 +23,8 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
     <div className="min-h-screen flex bg-gray-50">
       <Sidebar />
       <div className="flex-1">
-        <header className="bg-white shadow-sm p-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gym-dark">{title}</h1>
+        <header className="bg-black shadow-sm p-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-white">{title}</h1>
           <div>
             <button
               onClick={() => logout()}
