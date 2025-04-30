@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,8 @@ const Classes = () => {
   const [classes, setClasses] = useState(initialClasses);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [newClass, setNewClass] = useState({
     name: "",
     trainer: "",
@@ -35,6 +37,14 @@ const Classes = () => {
     capacity: "",
     enrolled: "0",
     status: "Active"
+  });
+  const [editClass, setEditClass] = useState({
+    name: "",
+    trainer: "",
+    schedule: "",
+    capacity: "",
+    enrolled: "",
+    status: ""
   });
   const { toast } = useToast();
 
@@ -93,9 +103,58 @@ const Classes = () => {
     });
   };
 
+  const handleEditClick = (id: number) => {
+    const classToEdit = classes.find(cls => cls.id === id);
+    if (classToEdit) {
+      setSelectedClassId(id);
+      setEditClass({
+        name: classToEdit.name,
+        trainer: classToEdit.trainer,
+        schedule: classToEdit.schedule,
+        capacity: classToEdit.capacity.toString(),
+        enrolled: classToEdit.enrolled.toString(),
+        status: classToEdit.status
+      });
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleUpdateClass = () => {
+    if (selectedClassId === null) return;
+    
+    setClasses(
+      classes.map((cls) =>
+        cls.id === selectedClassId
+          ? {
+              ...cls,
+              name: editClass.name,
+              trainer: editClass.trainer,
+              schedule: editClass.schedule,
+              capacity: parseInt(editClass.capacity) || 0,
+              enrolled: parseInt(editClass.enrolled) || 0,
+              status: editClass.status
+            }
+          : cls
+      )
+    );
+    
+    setIsEditDialogOpen(false);
+    setSelectedClassId(null);
+    
+    toast({
+      title: "Class updated",
+      description: "The class has been successfully updated."
+    });
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewClass(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setEditClass(prev => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -187,6 +246,90 @@ const Classes = () => {
         </Dialog>
       </div>
 
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Class</DialogTitle>
+            <DialogDescription>
+              Update class information.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-name" className="text-right">
+                Class Name
+              </Label>
+              <Input
+                id="edit-name"
+                name="name"
+                value={editClass.name}
+                onChange={handleEditInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-trainer" className="text-right">
+                Trainer
+              </Label>
+              <Input
+                id="edit-trainer"
+                name="trainer"
+                value={editClass.trainer}
+                onChange={handleEditInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-schedule" className="text-right">
+                Schedule
+              </Label>
+              <Input
+                id="edit-schedule"
+                name="schedule"
+                value={editClass.schedule}
+                onChange={handleEditInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-capacity" className="text-right">
+                Capacity
+              </Label>
+              <Input
+                id="edit-capacity"
+                name="capacity"
+                type="number"
+                value={editClass.capacity}
+                onChange={handleEditInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-enrolled" className="text-right">
+                Enrolled
+              </Label>
+              <Input
+                id="edit-enrolled"
+                name="enrolled"
+                type="number"
+                value={editClass.enrolled}
+                onChange={handleEditInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button 
+                onClick={handleUpdateClass} 
+                className="bg-gym-blue hover:bg-gym-dark-blue"
+              >
+                Update Class
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -250,6 +393,7 @@ const Classes = () => {
                       {cls.status === "Active" ? "Deactivate" : "Activate"}
                     </button>
                     <button
+                      onClick={() => handleEditClick(cls.id)}
                       className="text-gym-blue hover:text-gym-dark-blue"
                     >
                       Edit
