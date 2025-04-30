@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { 
   Carousel, 
   CarouselContent, 
@@ -23,11 +23,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
+  AlertDialogClose,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
 
 interface MainPageContent {
   heroTitle: string;
@@ -46,6 +51,7 @@ const Index = () => {
   const [logo, setLogo] = useState<string | null>(null);
   const [headerColor, setHeaderColor] = useState<string>("#ffffff");
   const [footerColor, setFooterColor] = useState<string>("#000000");
+  const closeDialogRef = useRef<HTMLButtonElement>(null);
   const [content, setContent] = useState<MainPageContent>({
     heroTitle: "FitTrack Pro",
     heroDescription: "The ultimate gym management system for trainers, members, and administrators. Track your fitness journey, manage classes, and achieve your goals.",
@@ -92,6 +98,7 @@ const Index = () => {
     canBeEditedByTrainers: true
   });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -117,6 +124,16 @@ const Index = () => {
       setContent(JSON.parse(savedMainPageContent));
     }
   }, []);
+
+  // Update birthday when date is selected
+  useEffect(() => {
+    if (selectedDate) {
+      setNewMember({
+        ...newMember,
+        birthday: format(selectedDate, 'dd/MM/yyyy')
+      });
+    }
+  }, [selectedDate]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,11 +185,11 @@ const Index = () => {
         status: "Active",
         canBeEditedByTrainers: true
       });
+      setSelectedDate(undefined);
       
-      // Close the dialog (by clicking any close button on the page)
-      const closeButtons = document.querySelectorAll('[data-state="open"] button[aria-label="Close"]');
-      if (closeButtons.length > 0) {
-        (closeButtons[0] as HTMLButtonElement).click();
+      // Close the dialog by triggering the close button click
+      if (closeDialogRef.current) {
+        closeDialogRef.current.click();
       }
       
     } catch (error) {
@@ -280,12 +297,30 @@ const Index = () => {
                           <label className="text-right text-sm font-medium col-span-1">
                             Birthday
                           </label>
-                          <Input
-                            type="date"
-                            value={newMember.birthday}
-                            onChange={(e) => setNewMember({ ...newMember, birthday: e.target.value })}
-                            className="col-span-3"
-                          />
+                          <div className="col-span-3">
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "w-full justify-start text-left",
+                                    !selectedDate && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {selectedDate ? format(selectedDate, "dd/MM/yyyy") : <span>Pick a date</span>}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                  mode="single"
+                                  selected={selectedDate}
+                                  onSelect={setSelectedDate}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                           <label className="text-right text-sm font-medium col-span-1">
@@ -310,14 +345,11 @@ const Index = () => {
                       </div>
                       
                       <div className="flex justify-end gap-2 pt-4">
-                        <Button type="button" variant="outline" onClick={() => {
-                          const closeButtons = document.querySelectorAll('[data-state="open"] button[aria-label="Close"]');
-                          if (closeButtons.length > 0) {
-                            (closeButtons[0] as HTMLButtonElement).click();
-                          }
-                        }}>
-                          Cancel
-                        </Button>
+                        <AlertDialogClose ref={closeDialogRef} asChild>
+                          <Button type="button" variant="outline">
+                            Cancel
+                          </Button>
+                        </AlertDialogClose>
                         <Button 
                           type="submit" 
                           disabled={isProcessing}

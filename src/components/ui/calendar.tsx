@@ -2,6 +2,7 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
+import { format } from "date-fns";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -56,6 +57,14 @@ function Calendar({
         IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
         DayContent: props.components?.DayContent,
+      }}
+      formatters={{
+        formatCaption: (date, options) => {
+          return format(date, 'MMMM yyyy', options);
+        },
+        formatDay: (date, options) => {
+          return format(date, 'd', options);
+        }
       }}
       {...props}
     />
