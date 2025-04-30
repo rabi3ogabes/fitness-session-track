@@ -1,5 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Tabs,
@@ -16,6 +18,9 @@ import { NewMemberDialog, NewMemberButton } from "./components/NewMemberDialog";
 import { mockBookings } from "./mockData";
 
 const TrainerDashboard = () => {
+  const { isTrainer, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [bookings, setBookings] = useState(mockBookings);
   const [viewMode, setViewMode] = useState<"today" | "tomorrow" | "all">("today");
@@ -28,6 +33,18 @@ const TrainerDashboard = () => {
   // State for attendees view
   const [selectedClassForAttendees, setSelectedClassForAttendees] = useState<number | null>(null);
   const [selectedDateForAttendees, setSelectedDateForAttendees] = useState<Date>(new Date());
+  
+  // Check authentication and redirect if necessary
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+    
+    if (isAuthenticated && !isTrainer) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, isTrainer, navigate]);
   
   // Handler for viewing class details to ensure dialog opens
   const handleViewClassDetails = (classId: number) => {
@@ -51,6 +68,11 @@ const TrainerDashboard = () => {
     setBookings([...bookings, bookingToAdd]);
     setIsNewMemberDialogOpen(false);
   };
+  
+  // If still checking authentication, don't render anything yet
+  if (!isAuthenticated) {
+    return null;
+  }
   
   return (
     <DashboardLayout title="Trainer Dashboard">
@@ -93,7 +115,7 @@ const TrainerDashboard = () => {
         </TabsContent>
       </Tabs>
       
-      {/* Class details dialog */}
+      {/* Class details dialog - moved outside tabs to ensure it renders properly */}
       <ClassDetailsDialog 
         isOpen={isClassDetailsOpen}
         onOpenChange={setIsClassDetailsOpen}

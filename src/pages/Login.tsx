@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -31,12 +32,25 @@ const Login = () => {
   const [logo, setLogo] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("login");
   
-  const { login, signup, isAdmin, isTrainer } = useAuth();
+  const { login, signup, isAdmin, isTrainer, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   // Generate years for the year selector
   const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
+
+  // Check if user is already logged in and redirect accordingly
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (isAdmin) {
+        navigate("/admin");
+      } else if (isTrainer) {
+        navigate("/trainer");
+      } else {
+        navigate("/dashboard");
+      }
+    }
+  }, [isAuthenticated, isAdmin, isTrainer, navigate]);
 
   useEffect(() => {
     // Load logo from local storage
@@ -58,15 +72,8 @@ const Login = () => {
           title: "Login successful",
           description: "Welcome back to FitTrack Pro!",
         });
-
-        // Redirect based on role
-        if (isAdmin) {
-          navigate("/admin");
-        } else if (isTrainer) {
-          navigate("/trainer");
-        } else {
-          navigate("/dashboard");
-        }
+        
+        // Navigation is now handled by the useEffect that watches isAuthenticated
       } else {
         toast({
           title: "Login failed",

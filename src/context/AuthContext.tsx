@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -63,6 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log("Auth state changed:", event, session);
         setSession(session);
         if (session?.user) {
           // Use setTimeout to prevent potential recursion issues
@@ -77,6 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Existing session:", session);
       setSession(session);
       if (session?.user) {
         fetchUserProfile(session.user.id);
@@ -154,11 +155,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) {
         console.error("Auth error:", error);
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
-        });
         
         // Fallback to mock users for demo
         const mockUser = MOCK_USERS.find(
@@ -168,6 +164,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (mockUser) {
           const { password: _, ...userWithoutPassword } = mockUser;
           setUser(userWithoutPassword);
+          
+          // Create a fake session object for the mock user
+          const fakeSession = {
+            user: {
+              id: mockUser.id,
+              email: mockUser.email,
+            },
+            access_token: "mock_token"
+          };
+          setSession(fakeSession);
+          
           return true;
         }
         return false;
@@ -257,7 +264,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     login,
     signup,
     logout,
-    isAuthenticated: !!session?.user,
+    isAuthenticated: !!user,
     isAdmin: user?.role === "admin",
     isTrainer: user?.role === "trainer",
     isUser: user?.role === "user",
