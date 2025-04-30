@@ -36,13 +36,19 @@ const registeredMembers = [
   { id: 8, name: "Alexander Garcia" },
 ];
 
+// Membership pricing in QAR
+const membershipPricing = {
+  "Basic": 80,
+  "Standard": 95,
+  "Premium": 120
+};
+
 const Payments = () => {
   const [payments, setPayments] = useState(initialPayments);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newPayment, setNewPayment] = useState({
     member: "",
-    amount: 0,
     membership: "Basic",
     isSessionPayment: false,
   });
@@ -57,10 +63,10 @@ const Payments = () => {
   );
 
   const handleAddPayment = () => {
-    if (!newPayment.member || newPayment.amount <= 0) {
+    if (!newPayment.member) {
       toast({
         title: "Required fields missing",
-        description: "Please fill in all required fields",
+        description: "Please select a member",
         variant: "destructive",
       });
       return;
@@ -73,13 +79,14 @@ const Payments = () => {
 
     const id = Math.max(...payments.map((p) => p.id)) + 1;
     const today = new Date().toISOString().split("T")[0];
+    const amount = membershipPricing[newPayment.membership as keyof typeof membershipPricing];
     
     setPayments([
       ...payments, 
       { 
         id, 
         member: newPayment.member, 
-        amount: newPayment.amount, 
+        amount, 
         date: today, 
         membership: newPayment.membership, 
         status: "Completed" 
@@ -90,14 +97,13 @@ const Payments = () => {
     setConfirmationStep(false);
     setNewPayment({
       member: "",
-      amount: 0,
       membership: "Basic",
       isSessionPayment: false,
     });
 
     toast({
       title: "Payment recorded successfully",
-      description: `Payment of $${newPayment.amount} recorded for ${newPayment.member}`,
+      description: `Payment of QAR ${amount} recorded for ${newPayment.member}`,
     });
   };
 
@@ -114,7 +120,6 @@ const Payments = () => {
     setConfirmationStep(false);
     setNewPayment({
       member: "",
-      amount: 0,
       membership: "Basic",
       isSessionPayment: false,
     });
@@ -189,7 +194,7 @@ const Payments = () => {
                     <div className="font-medium text-gray-900">{payment.member}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-gray-500">${payment.amount}</div>
+                    <div className="text-gray-500">QAR {payment.amount}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-gray-500">{payment.date}</div>
@@ -267,18 +272,6 @@ const Payments = () => {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <label className="text-right text-sm font-medium col-span-1">
-                  Amount*
-                </label>
-                <Input
-                  id="amount"
-                  type="number"
-                  value={newPayment.amount || ""}
-                  onChange={(e) => setNewPayment({ ...newPayment, amount: parseFloat(e.target.value) })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium col-span-1">
                   Membership
                 </label>
                 <select
@@ -286,9 +279,9 @@ const Payments = () => {
                   onChange={(e) => setNewPayment({ ...newPayment, membership: e.target.value })}
                   className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent"
                 >
-                  <option value="Basic">Basic ($80)</option>
-                  <option value="Standard">Standard ($95)</option>
-                  <option value="Premium">Premium ($120)</option>
+                  <option value="Basic">Basic (QAR 80)</option>
+                  <option value="Standard">Standard (QAR 95)</option>
+                  <option value="Premium">Premium (QAR 120)</option>
                 </select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -316,7 +309,7 @@ const Payments = () => {
                   <span className="font-medium">{newPayment.member}</span>
                   
                   <span className="text-gray-500">Amount:</span>
-                  <span className="font-medium">${newPayment.amount}</span>
+                  <span className="font-medium">QAR {membershipPricing[newPayment.membership as keyof typeof membershipPricing]}</span>
                   
                   <span className="text-gray-500">Membership Type:</span>
                   <span className="font-medium">{newPayment.membership}</span>
