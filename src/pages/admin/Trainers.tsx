@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +16,7 @@ const initialTrainers = [
 ];
 
 const Trainers = () => {
-  const [trainers, setTrainers] = useState(initialTrainers);
+  const [trainers, setTrainers] = useState<typeof initialTrainers>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -30,6 +29,25 @@ const Trainers = () => {
   });
   const [editTrainer, setEditTrainer] = useState<typeof trainers[0] | null>(null);
   const { toast } = useToast();
+
+  // Load trainers from localStorage on component mount
+  useEffect(() => {
+    const storedTrainers = localStorage.getItem("trainers");
+    if (storedTrainers) {
+      setTrainers(JSON.parse(storedTrainers));
+    } else {
+      setTrainers(initialTrainers);
+      // Initialize localStorage with mock data if empty
+      localStorage.setItem("trainers", JSON.stringify(initialTrainers));
+    }
+  }, []);
+
+  // Update localStorage whenever trainers change
+  useEffect(() => {
+    if (trainers.length > 0) {
+      localStorage.setItem("trainers", JSON.stringify(trainers));
+    }
+  }, [trainers]);
 
   const filteredTrainers = trainers.filter(
     (trainer) =>
@@ -48,8 +66,12 @@ const Trainers = () => {
       return;
     }
 
-    const id = Math.max(...trainers.map((t) => t.id)) + 1;
-    setTrainers([...trainers, { ...newTrainer, id }]);
+    const id = trainers.length > 0 ? Math.max(...trainers.map((t) => t.id)) + 1 : 1;
+    const updatedTrainers = [...trainers, { ...newTrainer, id }];
+    
+    setTrainers(updatedTrainers);
+    localStorage.setItem("trainers", JSON.stringify(updatedTrainers));
+    
     setIsAddDialogOpen(false);
     setNewTrainer({
       name: "",
@@ -75,9 +97,11 @@ const Trainers = () => {
       return;
     }
 
-    setTrainers(
-      trainers.map((t) => (t.id === editTrainer.id ? editTrainer : t))
-    );
+    const updatedTrainers = trainers.map((t) => (t.id === editTrainer.id ? editTrainer : t));
+    
+    setTrainers(updatedTrainers);
+    localStorage.setItem("trainers", JSON.stringify(updatedTrainers));
+    
     setIsEditDialogOpen(false);
     setEditTrainer(null);
 
@@ -88,16 +112,17 @@ const Trainers = () => {
   };
 
   const toggleTrainerStatus = (id: number) => {
-    setTrainers(
-      trainers.map((trainer) =>
-        trainer.id === id
-          ? {
-              ...trainer,
-              status: trainer.status === "Active" ? "Inactive" : "Active",
-            }
-          : trainer
-      )
+    const updatedTrainers = trainers.map((trainer) =>
+      trainer.id === id
+        ? {
+            ...trainer,
+            status: trainer.status === "Active" ? "Inactive" : "Active",
+          }
+        : trainer
     );
+    
+    setTrainers(updatedTrainers);
+    localStorage.setItem("trainers", JSON.stringify(updatedTrainers));
 
     toast({
       title: "Trainer status updated",

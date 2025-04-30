@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +43,7 @@ const membershipPricing = {
 };
 
 const Payments = () => {
-  const [payments, setPayments] = useState(initialPayments);
+  const [payments, setPayments] = useState<typeof initialPayments>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newPayment, setNewPayment] = useState({
@@ -54,6 +53,25 @@ const Payments = () => {
   });
   const [confirmationStep, setConfirmationStep] = useState(false);
   const { toast } = useToast();
+
+  // Load payments from localStorage on component mount
+  useEffect(() => {
+    const storedPayments = localStorage.getItem("payments");
+    if (storedPayments) {
+      setPayments(JSON.parse(storedPayments));
+    } else {
+      setPayments(initialPayments);
+      // Initialize localStorage with mock data if empty
+      localStorage.setItem("payments", JSON.stringify(initialPayments));
+    }
+  }, []);
+
+  // Update localStorage whenever payments change
+  useEffect(() => {
+    if (payments.length > 0) {
+      localStorage.setItem("payments", JSON.stringify(payments));
+    }
+  }, [payments]);
 
   const filteredPayments = payments.filter(
     (payment) =>
@@ -77,11 +95,11 @@ const Payments = () => {
       return;
     }
 
-    const id = Math.max(...payments.map((p) => p.id)) + 1;
+    const id = payments.length > 0 ? Math.max(...payments.map((p) => p.id)) + 1 : 1;
     const today = new Date().toISOString().split("T")[0];
     const amount = membershipPricing[newPayment.membership as keyof typeof membershipPricing];
     
-    setPayments([
+    const updatedPayments = [
       ...payments, 
       { 
         id, 
@@ -91,7 +109,10 @@ const Payments = () => {
         membership: newPayment.membership, 
         status: "Completed" 
       }
-    ]);
+    ];
+    
+    setPayments(updatedPayments);
+    localStorage.setItem("payments", JSON.stringify(updatedPayments));
     
     setIsAddDialogOpen(false);
     setConfirmationStep(false);
@@ -126,16 +147,17 @@ const Payments = () => {
   };
 
   const updatePaymentStatus = (id: number, newStatus: string) => {
-    setPayments(
-      payments.map((payment) =>
-        payment.id === id
-          ? {
-              ...payment,
-              status: newStatus,
-            }
-          : payment
-      )
+    const updatedPayments = payments.map((payment) =>
+      payment.id === id
+        ? {
+            ...payment,
+            status: newStatus,
+          }
+        : payment
     );
+    
+    setPayments(updatedPayments);
+    localStorage.setItem("payments", JSON.stringify(updatedPayments));
 
     toast({
       title: "Payment status updated",

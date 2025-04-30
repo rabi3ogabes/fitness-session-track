@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 
 // Mock data
 const initialMembershipTypes = [
-  { id: 1, name: "Basic", sessions: 1, price: 25, active: true, description: "Perfect for trying out our gym facilities and classes" },
-  { id: 2, name: "Standard", sessions: 4, price: 80, active: true, description: "Ideal for occasional gym-goers" },
-  { id: 3, name: "Premium", sessions: 12, price: 180, active: true, description: "Best value for regular attendees" },
+  { id: 1, name: "Basic", sessions: 1, price: 80, active: true, description: "Perfect for trying out our gym facilities and classes" },
+  { id: 2, name: "Standard", sessions: 4, price: 95, active: true, description: "Ideal for occasional gym-goers" },
+  { id: 3, name: "Premium", sessions: 12, price: 120, active: true, description: "Best value for regular attendees" },
 ];
 
 const initialMembershipRequests = [
@@ -19,8 +18,8 @@ const initialMembershipRequests = [
 ];
 
 const Memberships = () => {
-  const [membershipTypes, setMembershipTypes] = useState(initialMembershipTypes);
-  const [membershipRequests, setMembershipRequests] = useState(initialMembershipRequests);
+  const [membershipTypes, setMembershipTypes] = useState<typeof initialMembershipTypes>([]);
+  const [membershipRequests, setMembershipRequests] = useState<typeof initialMembershipRequests>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [newMembership, setNewMembership] = useState({
@@ -33,25 +32,95 @@ const Memberships = () => {
   const [editMembership, setEditMembership] = useState<typeof membershipTypes[0] | null>(null);
   const { toast } = useToast();
 
-  // Check for new membership requests in localStorage whenever the component renders
-  useState(() => {
+  // Load membership types from localStorage on component mount
+  useEffect(() => {
+    const storedTypes = localStorage.getItem("membershipTypes");
+    if (storedTypes) {
+      setMembershipTypes(JSON.parse(storedTypes));
+    } else {
+      setMembershipTypes(initialMembershipTypes);
+      // Initialize localStorage with mock data if empty
+      localStorage.setItem("membershipTypes", JSON.stringify(initialMembershipTypes));
+    }
+
+    // Load membership requests
     const storedRequests = localStorage.getItem("membershipRequests");
+    if (storedRequests) {
+      try {
+        setMembershipRequests(JSON.parse(storedRequests));
+      } catch (error) {
+        console.error("Error parsing membership requests:", error);
+        setMembershipRequests(initialMembershipRequests);
+        localStorage.setItem("membershipRequests", JSON.stringify(initialMembershipRequests));
+      }
+    } else {
+      setMembershipRequests(initialMembershipRequests);
+      localStorage.setItem("membershipRequests", JSON.stringify(initialMembershipRequests));
+    }
+  }, []);
+
+  // Check for new membership requests in localStorage whenever the component renders
+  useEffect(() => {
+    const storedRequests = localStorage.getItem("pendingMembershipRequests");
     if (storedRequests) {
       try {
         const parsedRequests = JSON.parse(storedRequests);
         // Add any new requests to the existing ones
-        setMembershipRequests(prev => {
-          const existingIds = new Set(prev.map(r => r.id));
-          const newRequests = parsedRequests.filter(r => !existingIds.has(r.id));
-          return [...prev, ...newRequests];
+        const updatedRequests = [...membershipRequests];
+        let hasNewRequests = false;
+        
+        parsedRequests.forEach((newRequest) => {
+          const existingRequestIndex = updatedRequests.findIndex(r => 
+            r.member === newRequest.member && 
+            r.email === newRequest.email &&
+            r.type === newRequest.type &&
+            r.date === newRequest.date
+          );
+          
+          if (existingRequestIndex === -1) {
+            // Generate a new ID for the request
+            const newId = updatedRequests.length > 0 
+              ? Math.max(...updatedRequests.map(r => r.id)) + 1 
+              : 1;
+            
+            updatedRequests.push({
+              ...newRequest,
+              id: newId,
+              status: "Pending"
+            });
+            hasNewRequests = true;
+          }
         });
-        // Clear the localStorage after processing
-        localStorage.removeItem("membershipRequests");
+        
+        if (hasNewRequests) {
+          setMembershipRequests(updatedRequests);
+          localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
+          // Clear the pending requests
+          localStorage.removeItem("pendingMembershipRequests");
+          
+          toast({
+            title: "New membership requests",
+            description: "You have new membership requests to review",
+          });
+        }
       } catch (error) {
-        console.error("Error parsing membership requests:", error);
+        console.error("Error parsing pending membership requests:", error);
       }
     }
-  });
+  }, [membershipRequests, toast]);
+
+  // Update localStorage whenever membership types or requests change
+  useEffect(() => {
+    if (membershipTypes.length > 0) {
+      localStorage.setItem("membershipTypes", JSON.stringify(membershipTypes));
+    }
+  }, [membershipTypes]);
+
+  useEffect(() => {
+    if (membershipRequests.length > 0) {
+      localStorage.setItem("membershipRequests", JSON.stringify(membershipRequests));
+    }
+  }, [membershipRequests]);
 
   const handleAddMembership = () => {
     if (!newMembership.name || newMembership.sessions <= 0 || newMembership.price <= 0) {
@@ -63,8 +132,12 @@ const Memberships = () => {
       return;
     }
 
-    const id = Math.max(...membershipTypes.map((m) => m.id)) + 1;
-    setMembershipTypes([...membershipTypes, { ...newMembership, id }]);
+    const id = membershipTypes.length > 0 ? Math.max(...membershipTypes.map((m) => m.id)) + 1 : 1;
+    const updatedTypes = [...membershipTypes, { ...newMembership, id }];
+    
+    setMembershipTypes(updatedTypes);
+    localStorage.setItem("membershipTypes", JSON.stringify(updatedTypes));
+    
     setIsAddDialogOpen(false);
     setNewMembership({
       name: "",
@@ -83,11 +156,13 @@ const Memberships = () => {
   const handleEditMembership = () => {
     if (!editMembership) return;
 
-    setMembershipTypes(
-      membershipTypes.map((m) =>
-        m.id === editMembership.id ? editMembership : m
-      )
+    const updatedTypes = membershipTypes.map((m) =>
+      m.id === editMembership.id ? editMembership : m
     );
+    
+    setMembershipTypes(updatedTypes);
+    localStorage.setItem("membershipTypes", JSON.stringify(updatedTypes));
+    
     setIsEditDialogOpen(false);
     setEditMembership(null);
 
@@ -98,11 +173,12 @@ const Memberships = () => {
   };
 
   const toggleMembershipStatus = (id: number) => {
-    setMembershipTypes(
-      membershipTypes.map((m) =>
-        m.id === id ? { ...m, active: !m.active } : m
-      )
+    const updatedTypes = membershipTypes.map((m) =>
+      m.id === id ? { ...m, active: !m.active } : m
     );
+    
+    setMembershipTypes(updatedTypes);
+    localStorage.setItem("membershipTypes", JSON.stringify(updatedTypes));
 
     toast({
       title: "Membership status updated",
@@ -111,11 +187,12 @@ const Memberships = () => {
   };
 
   const handleApproveRequest = (id: number) => {
-    setMembershipRequests(
-      membershipRequests.map((r) =>
-        r.id === id ? { ...r, status: "Approved" } : r
-      )
+    const updatedRequests = membershipRequests.map((r) =>
+      r.id === id ? { ...r, status: "Approved" } : r
     );
+    
+    setMembershipRequests(updatedRequests);
+    localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
 
     toast({
       title: "Request approved",
@@ -127,11 +204,12 @@ const Memberships = () => {
   };
 
   const handleRejectRequest = (id: number) => {
-    setMembershipRequests(
-      membershipRequests.map((r) =>
-        r.id === id ? { ...r, status: "Rejected" } : r
-      )
+    const updatedRequests = membershipRequests.map((r) =>
+      r.id === id ? { ...r, status: "Rejected" } : r
     );
+    
+    setMembershipRequests(updatedRequests);
+    localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
 
     toast({
       title: "Request rejected",
