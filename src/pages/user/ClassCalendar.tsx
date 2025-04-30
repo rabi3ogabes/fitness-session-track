@@ -30,6 +30,7 @@ const mockClasses = [
   {
     id: 1,
     name: "Morning Yoga",
+    type: "yoga",
     date: new Date(2025, 4, 1), // May 1, 2025
     time: "08:00 - 09:00",
     trainer: "Jane Doe",
@@ -39,6 +40,7 @@ const mockClasses = [
   {
     id: 2,
     name: "HIIT Workout",
+    type: "workout",
     date: new Date(2025, 4, 1), // May 1, 2025
     time: "18:00 - 19:00",
     trainer: "John Smith",
@@ -48,6 +50,7 @@ const mockClasses = [
   {
     id: 3,
     name: "Pilates",
+    type: "yoga",
     date: new Date(2025, 4, 2), // May 2, 2025
     time: "09:00 - 10:00",
     trainer: "Sarah Williams",
@@ -57,6 +60,7 @@ const mockClasses = [
   {
     id: 4,
     name: "Strength Training",
+    type: "workout",
     date: new Date(2025, 4, 3), // May 3, 2025
     time: "17:00 - 18:00",
     trainer: "Alex Johnson",
@@ -66,6 +70,7 @@ const mockClasses = [
   {
     id: 5,
     name: "Boxing",
+    type: "combat",
     date: new Date(2025, 4, 4), // May 4, 2025
     time: "18:00 - 19:00",
     trainer: "Mike Tyson",
@@ -75,13 +80,66 @@ const mockClasses = [
   {
     id: 6,
     name: "Zumba",
+    type: "dance",
     date: new Date(2025, 4, 5), // May 5, 2025
     time: "16:00 - 17:00",
     trainer: "Maria Garcia",
     capacity: 20,
     enrolled: 12,
   },
+  {
+    id: 7,
+    name: "Evening Yoga",
+    type: "yoga",
+    date: new Date(2025, 4, 1), // May 1, 2025
+    time: "19:00 - 20:00",
+    trainer: "Emily Chen",
+    capacity: 15,
+    enrolled: 6,
+  },
+  {
+    id: 8,
+    name: "CrossFit",
+    type: "workout",
+    date: new Date(2025, 4, 1), // May 1, 2025
+    time: "12:00 - 13:00",
+    trainer: "Chris Taylor",
+    capacity: 10,
+    enrolled: 8,
+  },
 ];
+
+// Class type colors mapping
+const classTypeColors = {
+  yoga: {
+    bg: "bg-red-100",
+    text: "text-red-800",
+    border: "border-red-200",
+    dot: "bg-red-500",
+    calendarDay: "bg-red-50"
+  },
+  workout: {
+    bg: "bg-green-100",
+    text: "text-green-800",
+    border: "border-green-200",
+    dot: "bg-green-500",
+    calendarDay: "bg-green-50"
+  },
+  combat: {
+    bg: "bg-blue-100",
+    text: "text-blue-800",
+    border: "border-blue-200",
+    dot: "bg-blue-500", 
+    calendarDay: "bg-blue-50"
+  },
+  dance: {
+    bg: "bg-purple-100",
+    text: "text-purple-800",
+    border: "border-purple-200",
+    dot: "bg-purple-500",
+    calendarDay: "bg-purple-50"
+  },
+};
 
 // Mock bookings data
 const mockBookings = [
@@ -121,12 +179,42 @@ const ClassCalendar = () => {
       )
     : [];
   
-  // Function to highlight dates with classes
+  // Function to highlight dates with classes and show class types
   const isDayWithClass = (date: Date) => {
     return mockClasses.some(cls => 
       cls.date.getDate() === date.getDate() &&
       cls.date.getMonth() === date.getMonth() &&
       cls.date.getFullYear() === date.getFullYear()
+    );
+  };
+
+  // Get class types for a specific date
+  const getClassTypesForDate = (date: Date) => {
+    return mockClasses
+      .filter(cls => 
+        cls.date.getDate() === date.getDate() &&
+        cls.date.getMonth() === date.getMonth() &&
+        cls.date.getFullYear() === date.getFullYear()
+      )
+      .map(cls => cls.type)
+      .filter((value, index, self) => self.indexOf(value) === index); // Get unique types
+  };
+
+  // Render color dots for class types on a specific date
+  const renderClassTypeDots = (date: Date) => {
+    const classTypes = getClassTypesForDate(date);
+    
+    if (classTypes.length === 0) return null;
+    
+    return (
+      <div className="flex justify-center mt-1 space-x-1">
+        {classTypes.map((type, idx) => (
+          <div 
+            key={idx}
+            className={`h-2 w-2 rounded-full ${classTypeColors[type as keyof typeof classTypeColors]?.dot || 'bg-gray-500'}`}
+          />
+        ))}
+      </div>
     );
   };
 
@@ -217,19 +305,42 @@ const ClassCalendar = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-1">
-              <div className="bg-white border rounded-lg p-4 shadow-sm">
-                <Calendar 
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  className="pointer-events-auto"
-                  modifiers={{
-                    hasClass: isDayWithClass
-                  }}
-                  modifiersClassNames={{
-                    hasClass: "bg-gym-light text-gym-blue font-bold"
-                  }}
-                />
+              <div className="flex flex-col space-y-4">
+                <div className="bg-white border rounded-lg p-4 shadow-sm">
+                  <Calendar 
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    className="pointer-events-auto w-full"
+                    modifiers={{
+                      hasClass: isDayWithClass
+                    }}
+                    modifiersClassNames={{
+                      hasClass: "bg-gym-light text-gym-blue font-bold"
+                    }}
+                    components={{
+                      DayContent: ({ date, ...props }) => (
+                        <div className="flex flex-col items-center">
+                          <div {...props} />
+                          {renderClassTypeDots(date)}
+                        </div>
+                      ),
+                    }}
+                  />
+                </div>
+                
+                {/* Class type legend */}
+                <div className="bg-white border rounded-lg p-4 shadow-sm">
+                  <h3 className="text-sm font-medium mb-2">Class Types</h3>
+                  <div className="space-y-2">
+                    {Object.entries(classTypeColors).map(([type, colors]) => (
+                      <div key={type} className="flex items-center">
+                        <span className={`w-3 h-3 rounded-full ${colors.dot} mr-2`}></span>
+                        <span className="capitalize">{type}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -256,6 +367,11 @@ const ClassCalendar = () => {
                       {classesForSelectedDate.map((cls) => {
                         const isBooked = bookedClasses.includes(cls.id);
                         const isSelected = selectedClasses.includes(cls.id);
+                        const typeColor = classTypeColors[cls.type as keyof typeof classTypeColors] || {
+                          bg: "bg-gray-100",
+                          text: "text-gray-800",
+                          border: "border-gray-200"
+                        };
                         const isPastCancellationWindow = () => {
                           const classHour = parseInt(cls.time.split(':')[0]);
                           const now = new Date();
@@ -270,7 +386,7 @@ const ClassCalendar = () => {
                             isBooked ? "border-2 border-gym-blue" : "",
                             isSelected ? "border-2 border-green-500" : ""
                           )}>
-                            <CardHeader className="pb-2">
+                            <CardHeader className={`pb-2 ${typeColor.bg}`}>
                               <div className="flex justify-between items-start">
                                 <div className="flex items-center space-x-2">
                                   {!isBooked && (
@@ -283,12 +399,15 @@ const ClassCalendar = () => {
                                     />
                                   )}
                                   <div>
-                                    <CardTitle>{cls.name}</CardTitle>
+                                    <CardTitle className={typeColor.text}>{cls.name}</CardTitle>
                                     <CardDescription>{cls.time}</CardDescription>
                                   </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-1">
-                                  <Badge variant={cls.enrolled >= cls.capacity ? "destructive" : "outline"}>
+                                  <Badge 
+                                    variant={cls.enrolled >= cls.capacity ? "destructive" : "outline"}
+                                    className={cls.enrolled >= cls.capacity ? "" : `${typeColor.border} ${typeColor.text}`}
+                                  >
                                     {cls.enrolled >= cls.capacity ? "Full" : `${cls.enrolled}/${cls.capacity}`}
                                   </Badge>
                                   {isBooked && (
@@ -298,7 +417,12 @@ const ClassCalendar = () => {
                               </div>
                             </CardHeader>
                             <CardContent className="pb-2">
-                              <p className="text-sm">Trainer: {cls.trainer}</p>
+                              <div className="flex justify-between items-center">
+                                <p className="text-sm">Trainer: {cls.trainer}</p>
+                                <Badge variant="outline" className={`${typeColor.bg} ${typeColor.text} ${typeColor.border} capitalize`}>
+                                  {cls.type}
+                                </Badge>
+                              </div>
                             </CardContent>
                             <CardFooter>
                               {isBooked ? (
