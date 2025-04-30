@@ -2,8 +2,6 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -12,15 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Check, CreditCard } from "lucide-react";
+import { Check, } from "lucide-react";
 
 // Mock membership data
 const membershipData = {
@@ -113,7 +103,6 @@ const availablePlans = [
 
 const UserMembership = () => {
   const [billingCycle, setBillingCycle] = useState("monthly");
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("credit-card");
   
   return (
     <DashboardLayout title="Membership">
@@ -159,16 +148,13 @@ const UserMembership = () => {
                   <Button variant="outline" size="sm">
                     Disable Auto-Renewal
                   </Button>
-                  <Button size="sm" className="bg-gym-blue hover:bg-gym-dark-blue">
-                    Upgrade Plan
-                  </Button>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Available Plans */}
+        {/* Available Plans - read only */}
         <div>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">Available Plans</h2>
@@ -238,17 +224,11 @@ const UserMembership = () => {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  <Button
-                    className={`w-full ${
-                      plan.recommended
-                        ? "bg-gym-blue hover:bg-gym-dark-blue"
-                        : ""
-                    }`}
-                  >
+                  <p className="text-sm text-gray-500 w-full text-center">
                     {membershipData.current.name === plan.name
                       ? "Current Plan"
-                      : "Select Plan"}
-                  </Button>
+                      : "Please contact reception to change your plan"}
+                  </p>
                 </CardFooter>
               </Card>
             ))}
@@ -308,88 +288,6 @@ const UserMembership = () => {
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Update Payment Method */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Method</CardTitle>
-            <CardDescription>Update your payment details</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="credit-card">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger
-                  value="credit-card"
-                  onClick={() => setSelectedPaymentMethod("credit-card")}
-                >
-                  Credit Card
-                </TabsTrigger>
-                <TabsTrigger
-                  value="paypal"
-                  onClick={() => setSelectedPaymentMethod("paypal")}
-                >
-                  PayPal
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="credit-card">
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                      <Label htmlFor="cardName">Cardholder Name</Label>
-                      <Input
-                        id="cardName"
-                        placeholder="John Doe"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label htmlFor="cardNumber">Card Number</Label>
-                      <Input
-                        id="cardNumber"
-                        placeholder="**** **** **** ****"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="expiry">Expiry Date</Label>
-                      <Input
-                        id="expiry"
-                        placeholder="MM/YY"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="cvc">CVC</Label>
-                      <Input id="cvc" placeholder="***" className="mt-1" />
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="paypal">
-                <div className="text-center py-6">
-                  <p className="mb-4">
-                    You will be redirected to PayPal to complete the setup.
-                  </p>
-                  <Button className="bg-[#0070ba] hover:bg-[#005ea6]">
-                    Connect with PayPal
-                  </Button>
-                </div>
-              </TabsContent>
-
-              <div className="mt-6 flex justify-end">
-                <Button
-                  className="bg-gym-blue hover:bg-gym-dark-blue"
-                  disabled={!selectedPaymentMethod}
-                >
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Save Payment Method
-                </Button>
-              </div>
-            </Tabs>
           </CardContent>
         </Card>
       </div>
