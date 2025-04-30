@@ -1,15 +1,15 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarIcon, ChevronLeft, ChevronRight, Check, X, Users, Save } from "lucide-react";
-import { format, addDays, isToday, isFuture, compareAsc } from "date-fns";
+import { CalendarIcon, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { format, addDays, isToday, compareAsc } from "date-fns";
 import { cn } from "@/lib/utils";
 import { mockClasses, getBookingsForClass, getClassesForDate } from "../mockData";
 import { useAttendanceManager } from "../utils/attendanceUtils";
 import { mockBookings } from "../mockData";
 import { useState } from "react";
 import { BulkAttendanceDialog } from "./BulkAttendanceDialog";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 
 interface AttendeesSectionProps {
   selectedDateForAttendees: Date;
@@ -53,10 +53,6 @@ export const AttendeesSection = ({
   const upcomingClasses = getUpcomingClasses();
   const classesForAttendees = getClassesForDate(selectedDateForAttendees);
   
-  const handleMarkAttendance = (bookingId: number, present: boolean) => {
-    markAttendance(bookingId, present, bookings, setBookings);
-  };
-
   const handleOpenBulkAttendance = () => {
     if (selectedClassForAttendees) {
       setIsBulkAttendanceOpen(true);
@@ -112,10 +108,10 @@ export const AttendeesSection = ({
                     const percentFull = (cls.enrolled / cls.capacity) * 100;
                     
                     return (
-                      <div 
+                      <Card 
                         key={cls.id} 
                         className={cn(
-                          "p-4 rounded-md border-2 cursor-pointer transition-all",
+                          "cursor-pointer transition-all border-2",
                           isSelected ? "border-gym-blue bg-gym-light" : "border-gray-200 hover:border-gray-300"
                         )}
                         onClick={() => {
@@ -123,33 +119,37 @@ export const AttendeesSection = ({
                           setSelectedDateForAttendees(dayClasses.date);
                         }}
                       >
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-medium">{cls.name}</h4>
-                          <Badge 
-                            className={cn(
-                              percentFull >= 90 ? "bg-red-100 text-red-800" : 
-                              percentFull >= 70 ? "bg-amber-100 text-amber-800" : 
-                              "bg-green-100 text-green-800"
-                            )}
-                          >
-                            {cls.enrolled}/{cls.capacity}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1">{cls.time}</p>
-                        <p className="text-xs text-gray-500">Trainer: {cls.trainer}</p>
-                        
-                        <div className="mt-3 w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
-                          <div 
-                            className={cn(
-                              "h-full",
-                              percentFull >= 90 ? "bg-red-500" : 
-                              percentFull >= 70 ? "bg-amber-500" : 
-                              "bg-green-500"
-                            )}
-                            style={{ width: `${percentFull}%` }}
-                          ></div>
-                        </div>
-                      </div>
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-start">
+                            <h4 className="font-medium text-base">{cls.name}</h4>
+                            <Badge 
+                              className={cn(
+                                percentFull >= 90 ? "bg-red-100 text-red-800" : 
+                                percentFull >= 70 ? "bg-amber-100 text-amber-800" : 
+                                "bg-green-100 text-green-800"
+                              )}
+                            >
+                              {cls.enrolled}/{cls.capacity}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pb-2">
+                          <p className="text-sm text-gray-500">{cls.time}</p>
+                          <p className="text-xs text-gray-500">Trainer: {cls.trainer}</p>
+                          
+                          <div className="mt-3 w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                            <div 
+                              className={cn(
+                                "h-full",
+                                percentFull >= 90 ? "bg-red-500" : 
+                                percentFull >= 70 ? "bg-amber-500" : 
+                                "bg-green-500"
+                              )}
+                              style={{ width: `${percentFull}%` }}
+                            ></div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     );
                   })}
                 </div>
@@ -164,100 +164,80 @@ export const AttendeesSection = ({
           </div>
         </div>
         
-        {/* Attendees list */}
+        {/* Selected class details */}
         {selectedClassForAttendees && (
           <div>
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-lg font-medium">
-                Attendees List
+                Selected Class
                 {(() => {
                   const cls = mockClasses.find(c => c.id === selectedClassForAttendees);
                   return cls ? ` - ${cls.name} (${cls.time})` : '';
                 })()}
               </h3>
-              <div className="flex space-x-2">
-                <Badge variant="outline">
-                  {(() => {
-                    const cls = mockClasses.find(c => c.id === selectedClassForAttendees);
-                    return cls ? `${cls.enrolled}/${cls.capacity}` : '';
-                  })()}
-                </Badge>
-                <Button 
-                  onClick={handleOpenBulkAttendance}
-                  className="bg-gym-blue hover:bg-gym-dark-blue"
-                  size="sm"
-                >
-                  <Users className="h-4 w-4 mr-2" /> Manage Attendance
-                </Button>
-              </div>
+              <Button 
+                onClick={handleOpenBulkAttendance}
+                className="bg-gym-blue hover:bg-gym-dark-blue"
+                size="sm"
+              >
+                <Users className="h-4 w-4 mr-2" /> Manage Attendance
+              </Button>
             </div>
             
             {(() => {
               const classBookings = getBookingsForClass(selectedClassForAttendees);
+              const cls = mockClasses.find(c => c.id === selectedClassForAttendees);
               
-              return classBookings.length > 0 ? (
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Member</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Attendance</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+              return (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h4 className="font-medium">{cls?.name}</h4>
+                        <p className="text-sm text-gray-500">{format(selectedDateForAttendees, "EEEE, MMMM d")} at {cls?.time}</p>
+                      </div>
+                      <Badge>{classBookings.length} Members</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {classBookings.map(booking => (
-                        <TableRow key={booking.id}>
-                          <TableCell className="font-medium">{booking.member}</TableCell>
-                          <TableCell>
-                            <span
-                              className={cn(
-                                "px-2 py-1 text-xs rounded-full",
-                                {
-                                  "bg-green-100 text-green-800": booking.status === "Confirmed" || booking.status === "Present",
-                                  "bg-red-100 text-red-800": booking.status === "Absent",
-                                  "bg-yellow-100 text-yellow-800": booking.status === "Pending",
-                                }
-                              )}
-                            >
-                              {booking.status}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {booking.status === "Completed" || booking.status === "Present" ? (
-                              <Badge className="bg-green-100 text-green-800">Present</Badge>
-                            ) : booking.status === "Absent" ? (
-                              <Badge className="bg-red-100 text-red-800">Absent</Badge>
-                            ) : (
-                              <div className="flex justify-end space-x-1">
-                                <Button 
-                                  size="sm" 
-                                  className="h-8 w-8 p-0 bg-green-500 hover:bg-green-600"
-                                  variant="default"
-                                  onClick={() => handleMarkAttendance(booking.id, true)}
-                                >
-                                  <Check className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  className="h-8 w-8 p-0 bg-red-500 hover:bg-red-600"
-                                  variant="default"
-                                  onClick={() => handleMarkAttendance(booking.id, false)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
+                        <div 
+                          key={booking.id} 
+                          className="p-2 border rounded-md flex justify-between items-center"
+                        >
+                          <span className="font-medium">{booking.member}</span>
+                          <span
+                            className={cn(
+                              "px-2 py-1 text-xs rounded-full",
+                              {
+                                "bg-green-100 text-green-800": booking.status === "Confirmed" || booking.status === "Present",
+                                "bg-red-100 text-red-800": booking.status === "Absent",
+                                "bg-yellow-100 text-yellow-800": booking.status === "Pending",
+                              }
                             )}
-                          </TableCell>
-                        </TableRow>
+                          >
+                            {booking.status}
+                          </span>
+                        </div>
                       ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-8 border rounded-md">
-                  <p className="text-gray-500">No attendees for this class</p>
-                </div>
+                      
+                      {classBookings.length === 0 && (
+                        <div className="col-span-2 text-center py-4 text-gray-500">
+                          No members enrolled in this class
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      onClick={handleOpenBulkAttendance} 
+                      className="w-full bg-gym-blue hover:bg-gym-dark-blue"
+                    >
+                      <Users className="h-4 w-4 mr-2" /> Manage Attendance
+                    </Button>
+                  </CardFooter>
+                </Card>
               );
             })()}
           </div>
