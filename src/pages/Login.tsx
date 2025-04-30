@@ -7,6 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const Login = () => {
   // Login state
@@ -18,6 +23,8 @@ const Login = () => {
   const [signupPassword, setSignupPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   
   const [isLoading, setIsLoading] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
@@ -99,7 +106,7 @@ const Login = () => {
         return;
       }
 
-      const success = await signup(phone, signupPassword, name);
+      const success = await signup(phone, signupPassword, name, email, selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined);
       
       if (success) {
         toast({
@@ -212,6 +219,17 @@ const Login = () => {
                 </div>
                 
                 <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number (8 digits)</Label>
                   <Input
                     id="phone"
@@ -221,8 +239,34 @@ const Login = () => {
                     required
                   />
                   <p className="text-xs text-gray-500">
-                    Your phone number will be your username
+                    Your phone number will be your username and default password
                   </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Date of Birth</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn(
+                          "w-full justify-start text-left",
+                          !selectedDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "dd/MM/yyyy") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 
                 <div className="space-y-2">

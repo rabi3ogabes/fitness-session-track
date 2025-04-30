@@ -291,8 +291,13 @@ const Index = () => {
                             value={newMember.phone}
                             onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
                             className="col-span-3"
-                            placeholder="Phone Number"
+                            placeholder="8-digit Qatar Phone Number"
                           />
+                          <div className="col-span-3 col-start-2">
+                            <p className="text-xs text-gray-500">
+                              Phone number will be your username and default password
+                            </p>
+                          </div>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                           <label className="text-right text-sm font-medium col-span-1">
