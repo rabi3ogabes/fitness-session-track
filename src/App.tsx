@@ -54,6 +54,25 @@ const TrainerHomeRedirect = () => {
   return <Index />;
 };
 
+// User dashboard component with role-based redirection
+const UserDashboardRedirect = () => {
+  const { isAuthenticated, isAdmin, isTrainer } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (isAdmin) {
+    return <Navigate to="/admin" />;
+  }
+  
+  if (isTrainer) {
+    return <Navigate to="/trainer" />;
+  }
+  
+  return <Dashboard />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -64,7 +83,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<TrainerHomeRedirect />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<UserDashboardRedirect />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
