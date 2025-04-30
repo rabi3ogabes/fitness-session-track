@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Mock data
 const mockBookings = [
@@ -40,6 +41,13 @@ const mockClasses = [
   { id: 5, name: "Boxing", date: new Date(2025, 4, 4), time: "6:00 PM - 7:00 PM", capacity: 8, enrolled: 7, trainer: "Mike Tyson" },
 ];
 
+// Mock membership plans for new member registration
+const membershipPlans = [
+  { id: 1, name: "Basic", price: 250, sessions: 12 },
+  { id: 2, name: "Premium", price: 350, sessions: 20 },
+  { id: 3, name: "Ultimate", price: 500, sessions: 30 }
+];
+
 const TrainerDashboard = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [todaysBookings, setTodaysBookings] = useState<typeof mockBookings>([]);
@@ -50,6 +58,16 @@ const TrainerDashboard = () => {
     class: "",
     date: format(new Date(), "yyyy-MM-dd"),
     time: ""
+  });
+  
+  // New member registration dialog
+  const [isNewMemberDialogOpen, setIsNewMemberDialogOpen] = useState(false);
+  const [newMember, setNewMember] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    membershipPlan: "1",
+    additionalSessions: "0"
   });
   
   useEffect(() => {
@@ -134,6 +152,47 @@ const TrainerDashboard = () => {
     const { name, value } = e.target;
     setNewBooking(prev => ({ ...prev, [name]: value }));
   };
+
+  const handleNewMemberInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewMember(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handleRegisterMember = () => {
+    // In a real app, this would create a new account, process payment, etc.
+    // For demo purposes, we'll just show a success message
+    
+    const selectedPlan = membershipPlans.find(plan => plan.id === parseInt(newMember.membershipPlan));
+    
+    toast({
+      title: "New member registered",
+      description: `${newMember.name} has been registered with the ${selectedPlan?.name} plan.`,
+    });
+    
+    // Add a new booking for this member to today's date
+    const newId = Math.max(...bookings.map(b => b.id)) + 1;
+    const bookingToAdd = {
+      id: newId,
+      member: newMember.name,
+      class: "First Session",
+      date: format(new Date(), "yyyy-MM-dd"),
+      time: "Current Time",
+      status: "Present", // Auto-mark as present
+      trainer: "Current Trainer"
+    };
+    
+    setBookings([...bookings, bookingToAdd]);
+    setIsNewMemberDialogOpen(false);
+    
+    // Reset form
+    setNewMember({
+      name: "",
+      email: "",
+      phone: "",
+      membershipPlan: "1",
+      additionalSessions: "0"
+    });
+  };
   
   // Custom day content renderer for the calendar
   const DayContent = (props: any) => {
@@ -171,7 +230,7 @@ const TrainerDashboard = () => {
               mode="single"
               selected={selectedDate}
               onSelect={(date) => date && setSelectedDate(date)}
-              className="pointer-events-auto w-full"
+              className="pointer-events-auto w-full bg-white"
               modifiers={{
                 hasClass: isDayWithClass
               }}
@@ -223,81 +282,182 @@ const TrainerDashboard = () => {
                   <span className="font-medium">{attendanceStats.total}</span> Bookings | 
                   <span className="text-yellow-600 font-medium ml-1">{attendanceStats.pending}</span> Pending
                 </div>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="bg-gym-blue hover:bg-gym-dark-blue">
-                      <Plus className="h-4 w-4 mr-1" /> Add Booking
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                      <DialogTitle>Add New Booking</DialogTitle>
-                      <DialogDescription>
-                        Create a new booking for a member.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="member" className="text-right">
-                          Member
-                        </Label>
-                        <Input
-                          id="member"
-                          name="member"
-                          value={newBooking.member}
-                          onChange={handleInputChange}
-                          className="col-span-3"
-                        />
+                <div className="flex space-x-2">
+                  <Dialog open={isNewMemberDialogOpen} onOpenChange={setIsNewMemberDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="border-gym-blue text-gym-blue hover:bg-gym-light">
+                        <UserPlus className="h-4 w-4 mr-1" /> Add New Member
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                        <DialogTitle>Register New Member</DialogTitle>
+                        <DialogDescription>
+                          Create a new account and membership for a walk-in member.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="member-name" className="text-right">
+                            Name
+                          </Label>
+                          <Input
+                            id="member-name"
+                            name="name"
+                            value={newMember.name}
+                            onChange={handleNewMemberInputChange}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="member-email" className="text-right">
+                            Email
+                          </Label>
+                          <Input
+                            id="member-email"
+                            name="email"
+                            type="email"
+                            value={newMember.email}
+                            onChange={handleNewMemberInputChange}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="member-phone" className="text-right">
+                            Phone
+                          </Label>
+                          <Input
+                            id="member-phone"
+                            name="phone"
+                            value={newMember.phone}
+                            onChange={handleNewMemberInputChange}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="membership-plan" className="text-right">
+                            Membership Plan
+                          </Label>
+                          <Select 
+                            name="membershipPlan" 
+                            value={newMember.membershipPlan}
+                            onValueChange={(value) => handleNewMemberInputChange({
+                              target: { name: "membershipPlan", value }
+                            } as React.ChangeEvent<HTMLSelectElement>)}
+                          >
+                            <SelectTrigger className="col-span-3">
+                              <SelectValue placeholder="Select a plan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {membershipPlans.map(plan => (
+                                <SelectItem key={plan.id} value={plan.id.toString()}>
+                                  {plan.name} - QR {plan.price} ({plan.sessions} sessions)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="additional-sessions" className="text-right">
+                            Extra Sessions
+                          </Label>
+                          <Input
+                            id="additional-sessions"
+                            name="additionalSessions"
+                            type="number"
+                            min="0"
+                            value={newMember.additionalSessions}
+                            onChange={handleNewMemberInputChange}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="flex justify-end mt-4">
+                          <Button 
+                            onClick={handleRegisterMember} 
+                            className="bg-gym-blue hover:bg-gym-dark-blue"
+                          >
+                            Register & Mark Present
+                          </Button>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="class" className="text-right">
-                          Class
-                        </Label>
-                        <Input
-                          id="class"
-                          name="class"
-                          value={newBooking.class}
-                          onChange={handleInputChange}
-                          className="col-span-3"
-                        />
+                    </DialogContent>
+                  </Dialog>
+                  <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="bg-gym-blue hover:bg-gym-dark-blue">
+                        <Plus className="h-4 w-4 mr-1" /> Add Booking
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[500px]">
+                      <DialogHeader>
+                        <DialogTitle>Add New Booking</DialogTitle>
+                        <DialogDescription>
+                          Create a new booking for a member.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="member" className="text-right">
+                            Member
+                          </Label>
+                          <Input
+                            id="member"
+                            name="member"
+                            value={newBooking.member}
+                            onChange={handleInputChange}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="class" className="text-right">
+                            Class
+                          </Label>
+                          <Input
+                            id="class"
+                            name="class"
+                            value={newBooking.class}
+                            onChange={handleInputChange}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="date" className="text-right">
+                            Date
+                          </Label>
+                          <Input
+                            id="date"
+                            name="date"
+                            type="date"
+                            value={newBooking.date}
+                            onChange={handleInputChange}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="time" className="text-right">
+                            Time
+                          </Label>
+                          <Input
+                            id="time"
+                            name="time"
+                            value={newBooking.time}
+                            onChange={handleInputChange}
+                            placeholder="e.g., 3:00 PM"
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="flex justify-end mt-4">
+                          <Button 
+                            onClick={handleAddBooking}
+                            className="bg-gym-blue hover:bg-gym-dark-blue"
+                          >
+                            Add Booking
+                          </Button>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="date" className="text-right">
-                          Date
-                        </Label>
-                        <Input
-                          id="date"
-                          name="date"
-                          type="date"
-                          value={newBooking.date}
-                          onChange={handleInputChange}
-                          className="col-span-3"
-                        />
-                      </div>
-                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="time" className="text-right">
-                          Time
-                        </Label>
-                        <Input
-                          id="time"
-                          name="time"
-                          value={newBooking.time}
-                          onChange={handleInputChange}
-                          placeholder="e.g., 3:00 PM"
-                          className="col-span-3"
-                        />
-                      </div>
-                      <div className="flex justify-end mt-4">
-                        <Button 
-                          onClick={handleAddBooking}
-                          className="bg-gym-blue hover:bg-gym-dark-blue"
-                        >
-                          Add Booking
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </div>
             </div>
           </CardHeader>

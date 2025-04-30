@@ -60,7 +60,7 @@ const Bookings = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false); 
   const [newBooking, setNewBooking] = useState({
     member: "",
     class: "",
@@ -71,6 +71,7 @@ const Bookings = () => {
   });
   const { toast } = useToast();
 
+  // Filter bookings based on search term, status, and date
   const filterBookings = () => {
     return bookings.filter(
       (booking) => {
@@ -95,6 +96,7 @@ const Bookings = () => {
 
   const filteredBookings = filterBookings();
 
+  // Handle updating booking status
   const updateBookingStatus = (id: number, newStatus: string) => {
     setBookings(
       bookings.map((booking) =>
@@ -113,6 +115,7 @@ const Bookings = () => {
     });
   };
   
+  // Mark attendance for a booking
   const updateAttendance = (id: number, attended: boolean) => {
     setBookings(
       bookings.map((booking) =>
@@ -132,10 +135,12 @@ const Bookings = () => {
     });
   };
   
+  // Get today's bookings for stats
   const getTodaysBookings = () => {
     return bookings.filter(booking => booking.date === todayString && booking.status !== "Cancelled");
   };
   
+  // Calculate attendance stats
   const attendanceStats = {
     total: getTodaysBookings().length,
     present: getTodaysBookings().filter(b => b.attendance === true).length,
@@ -143,6 +148,7 @@ const Bookings = () => {
     pending: getTodaysBookings().filter(b => b.attendance === null).length
   };
 
+  // Reset all filters
   const resetFilters = () => {
     setSearchTerm("");
     setStatusFilter("all");
@@ -150,6 +156,7 @@ const Bookings = () => {
     setIsFilterOpen(false);
   };
 
+  // Handle adding a new booking
   const handleAddBooking = () => {
     const newId = Math.max(...bookings.map(b => b.id)) + 1;
     const bookingToAdd = {
@@ -182,9 +189,21 @@ const Bookings = () => {
     });
   };
 
+  // Update form field values
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewBooking(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Auto-mark attendance for sessions that weren't canceled
+  const checkSessionTime = (booking: typeof bookings[0]) => {
+    // If it's a confirmed booking from the past and wasn't marked, mark as present
+    const bookingDate = new Date(booking.date);
+    if (bookingDate < today && booking.status === "Confirmed" && booking.attendance === null) {
+      // Auto-mark as present since they didn't cancel
+      return true;
+    }
+    return booking.attendance;
   };
 
   return (
@@ -455,7 +474,7 @@ const Bookings = () => {
                         ) : (
                           <span className="text-gray-400">Not recorded</span>
                         )
-                      ) : booking.status === "Confirmed" && booking.date === todayString ? (
+                      ) : booking.status === "Confirmed" ? (
                         <div className="flex space-x-1">
                           <Button 
                             onClick={() => updateAttendance(booking.id, true)}

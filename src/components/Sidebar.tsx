@@ -58,7 +58,7 @@ const Sidebar = () => {
 
   return (
     <div className={cn(
-      "bg-white shadow-md min-h-screen z-10 flex flex-col justify-between",
+      "bg-white shadow-md min-h-screen z-10 flex flex-col justify-between relative",
       isMobile ? "w-16" : "w-64"
     )}>
       <div>
@@ -90,31 +90,27 @@ const Sidebar = () => {
         </nav>
       </div>
       
-      <div className="mt-auto mb-4 px-3">
-        <ul className="space-y-1">
-          <li>
-            <Link
-              to="/user/profile"
-              className="flex items-center px-4 py-3 text-gray-700 hover:bg-gym-light hover:text-gym-blue transition-colors rounded-md"
-            >
-              <span className="mr-3">
-                <User className="h-5 w-5" />
-              </span>
-              {!isMobile && <span>Profile</span>}
-            </Link>
-          </li>
-          <li>
-            <button
-              onClick={logout}
-              className="w-full flex items-center px-4 py-3 text-red-500 hover:bg-red-50 transition-colors rounded-md"
-            >
-              <span className="mr-3">
-                <LogOut className="h-5 w-5" />
-              </span>
-              {!isMobile && <span>Logout</span>}
-            </button>
-          </li>
-        </ul>
+      {/* Fixed footer with profile and logout icons */}
+      <div className="fixed bottom-0 left-0 w-16 sm:w-64 bg-gym-blue text-white z-20">
+        <div className="flex justify-around items-center py-3">
+          <Link
+            to="/user/profile"
+            className="flex flex-col items-center text-white hover:text-gym-light transition-colors"
+            title="Profile"
+          >
+            <User className="h-6 w-6" />
+            {!isMobile && <span className="text-xs mt-1">Profile</span>}
+          </Link>
+          
+          <button
+            onClick={logout}
+            className="flex flex-col items-center text-white hover:text-gym-light transition-colors"
+            title="Logout"
+          >
+            <LogOut className="h-6 w-6" />
+            {!isMobile && <span className="text-xs mt-1">Logout</span>}
+          </button>
+        </div>
       </div>
     </div>
   );
