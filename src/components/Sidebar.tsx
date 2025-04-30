@@ -1,4 +1,3 @@
-
 import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -57,7 +56,6 @@ const Sidebar = () => {
     { name: "Payments", path: "/admin/payments", icon: <CreditCard className="h-5 w-5" /> },
     { name: "Reports", path: "/admin/reports", icon: <BarChart3 className="h-5 w-5" /> },
     { name: "Settings", path: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
-    // Removed Main Page link from here
   ];
 
   const userNavItems = [
@@ -159,6 +157,8 @@ const Sidebar = () => {
           
           <a
             href="/"
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
             title="Main Page"
           >
