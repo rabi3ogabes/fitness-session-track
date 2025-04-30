@@ -2,12 +2,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAttendanceManager } from "../utils/attendanceUtils";
-import { mockBookings } from "../mockData";
+import { mockBookings, mockClasses } from "../mockData";
 import { BulkAttendanceDialog } from "./BulkAttendanceDialog";
 import { DateNavigator } from "./attendees/DateNavigator";
 import { UpcomingClassesList } from "./attendees/UpcomingClassesList";
 import { SelectedClassDetails } from "./attendees/SelectedClassDetails";
 import { getUpcomingClasses } from "./attendees/attendeesUtils";
+import { Users } from "lucide-react";
 
 interface AttendeesSectionProps {
   selectedDateForAttendees: Date;
@@ -27,7 +28,6 @@ export const AttendeesSection = ({
   const [isBulkAttendanceOpen, setIsBulkAttendanceOpen] = useState(false);
   
   const upcomingClasses = getUpcomingClasses();
-  const classesForAttendees = getUpcomingClasses();
   
   const handleOpenBulkAttendance = () => {
     if (selectedClassForAttendees) {
