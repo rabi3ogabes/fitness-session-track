@@ -31,7 +31,7 @@ const membershipData = {
     endDate: "May 1, 2025",
     sessions: 12,
     sessionsRemaining: 7,
-    price: 250, // QR
+    price: 250, // QAR
     automatic: true,
   },
   history: [
@@ -39,21 +39,21 @@ const membershipData = {
       id: 1,
       type: "Basic Monthly",
       date: "April 1, 2025",
-      amount: 250, // QR
+      amount: 250, // QAR
       status: "Successful",
     },
     {
       id: 2,
       type: "Basic Monthly",
       date: "March 1, 2025",
-      amount: 250, // QR
+      amount: 250, // QAR
       status: "Successful",
     },
     {
       id: 3,
       type: "Premium Monthly",
       date: "February 1, 2025",
-      amount: 350, // QR
+      amount: 350, // QAR
       status: "Successful",
     },
   ],
@@ -65,8 +65,8 @@ const availablePlans = [
     id: 1,
     name: "Basic",
     description: "Access to gym facilities and 12 sessions per month",
-    monthlyPrice: 250, // QR
-    yearlyPrice: 2500, // QR
+    monthlyPrice: 250, // QAR
+    yearlyPrice: 2500, // QAR
     features: [
       "Full gym access",
       "12 trainer sessions per month",
@@ -79,8 +79,8 @@ const availablePlans = [
     id: 2,
     name: "Premium",
     description: "Full access with 20 sessions per month and additional perks",
-    monthlyPrice: 350, // QR
-    yearlyPrice: 3500, // QR
+    monthlyPrice: 350, // QAR
+    yearlyPrice: 3500, // QAR
     features: [
       "Full gym access",
       "20 trainer sessions per month",
@@ -95,8 +95,8 @@ const availablePlans = [
     id: 3,
     name: "Ultimate",
     description: "Unlimited access with personal training and premium amenities",
-    monthlyPrice: 500, // QR
-    yearlyPrice: 5000, // QR
+    monthlyPrice: 500, // QAR
+    yearlyPrice: 5000, // QAR
     features: [
       "Full gym access",
       "Unlimited trainer sessions",
@@ -148,7 +148,7 @@ const UserMembership = () => {
               <div className="border-l-0 md:border-l border-gray-200 pl-0 md:pl-4 mt-4 md:mt-0">
                 <p className="font-medium">Payment</p>
                 <p className="text-2xl font-bold mt-1">
-                  QR {membershipData.current.price}<span className="text-sm font-normal">/month</span>
+                  QAR {membershipData.current.price}<span className="text-sm font-normal">/month</span>
                 </p>
                 <p className="text-gray-500 mt-1">
                   {membershipData.current.automatic
@@ -218,7 +218,7 @@ const UserMembership = () => {
                 <CardContent>
                   <div className="mt-1 mb-4">
                     <p className="text-3xl font-bold">
-                      QR{" "}
+                      QAR{" "}
                       {billingCycle === "monthly"
                         ? plan.monthlyPrice
                         : plan.yearlyPrice}
@@ -290,7 +290,7 @@ const UserMembership = () => {
                         {payment.type}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        QR {payment.amount}
+                        QAR {payment.amount}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span

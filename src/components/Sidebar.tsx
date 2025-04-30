@@ -92,8 +92,8 @@ const Sidebar = () => {
       isMobile ? "w-16" : "w-64"
     )}>
       <div>
-        {/* Logo Section */}
-        <div className="p-4 flex flex-col items-center justify-center border-b">
+        {/* Logo Section with black background */}
+        <div className="bg-black p-4 flex flex-col items-center justify-center border-b">
           {logo ? (
             <div className={cn(
               "flex justify-center",
@@ -116,9 +116,9 @@ const Sidebar = () => {
           
           {/* User info below the logo */}
           {!isMobile && (
-            <div className="mt-2 text-center">
+            <div className="mt-2 text-center text-white">
               <p className="text-sm font-medium">{userName}</p>
-              <p className="text-xs text-gray-500">{userRole}</p>
+              <p className="text-xs text-gray-300">{userRole}</p>
             </div>
           )}
         </div>
