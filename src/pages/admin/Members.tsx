@@ -35,7 +35,7 @@ const Members = () => {
     sessions: 4,
     remainingSessions: 4,
     status: "Active",
-    canBeEditedByTrainers: false
+    canBeEditedByTrainers: true  // Changed from false to true
   });
   const { toast } = useToast();
   const { isAdmin, isTrainer } = useAuth();
@@ -495,3 +495,4 @@ const Members = () => {
 };
 
 export default Members;
+
