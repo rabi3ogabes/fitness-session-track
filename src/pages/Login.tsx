@@ -31,7 +31,7 @@ const Login = () => {
   const [logo, setLogo] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("login");
   
-  const { login, signup, isAdmin } = useAuth();
+  const { login, signup, isAdmin, isTrainer } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -62,6 +62,8 @@ const Login = () => {
         // Redirect based on role
         if (isAdmin) {
           navigate("/admin");
+        } else if (isTrainer) {
+          navigate("/trainer");
         } else {
           navigate("/dashboard");
         }
