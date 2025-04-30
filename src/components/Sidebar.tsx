@@ -17,6 +17,8 @@ import {
   LogOut,
   Calendar,
   ExternalLink,
+  Menu,
+  X,
 } from "lucide-react";
 
 const Sidebar = () => {
@@ -25,6 +27,7 @@ const Sidebar = () => {
   const { isAdmin, isTrainer, logout, user } = useAuth();
   const isMobile = useIsMobile();
   const [logo, setLogo] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     // Load logo from local storage
@@ -46,6 +49,11 @@ const Sidebar = () => {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
+  useEffect(() => {
+    // Close mobile sidebar when route changes
+    setIsOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -89,93 +97,106 @@ const Sidebar = () => {
   // Mock user name - in a real app, this would come from the auth context
   const userName = user?.name || "John Doe";
 
+  // Mobile hamburger button
+  const toggleButton = (
+    <button 
+      onClick={() => setIsOpen(!isOpen)}
+      className="fixed top-4 left-4 z-50 md:hidden p-2 rounded-full bg-white shadow-md"
+      aria-label={isOpen ? "Close menu" : "Open menu"}
+    >
+      {isOpen ? <X size={24} /> : <Menu size={24} />}
+    </button>
+  );
+
   return (
-    <div className={cn(
-      "bg-white shadow-md min-h-screen z-10 flex flex-col justify-between relative",
-      isMobile ? "w-16" : "w-64"
-    )}>
-      <div className="bg-black p-4 flex flex-col items-center justify-center border-b">
-        {logo ? (
-          <div className={cn(
-            "flex justify-center",
-            isMobile ? "w-10 h-10" : "w-full h-12"
-          )}>
-            <img 
-              src={logo} 
-              alt="Gym Logo" 
-              className="max-h-full max-w-full object-contain"
-            />
-          </div>
-        ) : (
-          <h2 className={cn(
-            "text-gym-blue font-bold",
-            isMobile ? "text-xl" : "text-2xl"
-          )}>
-            {isMobile ? "GM" : "GYM SYSTEM"}
-          </h2>
-        )}
-        
-        {/* User info below the logo */}
-        {!isMobile && (
+    <>
+      {toggleButton}
+      <div className={cn(
+        "bg-white shadow-md min-h-screen z-40 flex flex-col justify-between fixed md:static transition-all duration-300",
+        isMobile ? (isOpen ? "left-0" : "-left-full") : "left-0",
+        isMobile ? "w-64" : "w-16 md:w-64"
+      )}>
+        <div className="bg-black p-4 flex flex-col items-center justify-center border-b">
+          {logo ? (
+            <div className={cn(
+              "flex justify-center",
+              isMobile ? "w-10 h-10" : "w-full h-12"
+            )}>
+              <img 
+                src={logo} 
+                alt="Gym Logo" 
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
+          ) : (
+            <h2 className={cn(
+              "text-gym-blue font-bold",
+              isMobile ? "text-xl" : "text-2xl"
+            )}>
+              {isMobile ? "GM" : "GYM SYSTEM"}
+            </h2>
+          )}
+          
+          {/* User info below the logo */}
           <div className="mt-2 text-center text-white">
             <p className="text-sm font-medium">{userName}</p>
             <p className="text-xs text-gray-300">{userRole}</p>
           </div>
-        )}
-      </div>
-      
-      <nav className="mt-6">
-        <ul className="space-y-1">
-          {navItems.map((item) => (
-            <li key={item.path}>
-              <Link
-                to={item.path}
-                className={cn(
-                  "flex items-center px-4 py-3 text-gray-700 hover:bg-gym-light hover:text-gym-blue transition-colors",
-                  location.pathname === item.path && "bg-gym-light text-gym-blue font-medium"
-                )}
-              >
-                <span className="mr-3">{item.icon}</span>
-                {!isMobile && <span>{item.name}</span>}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      
-      <div className="mt-auto border-t border-gray-200">
-        <div className="flex justify-around items-center py-3">
-          <Link
-            to="/user/profile"
-            className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
-            title="Profile"
-          >
-            <User className="h-6 w-6" />
-            {!isMobile && <span className="text-xs mt-1">Profile</span>}
-          </Link>
-          
-          <a
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
-            title="Main Page"
-          >
-            <ExternalLink className="h-6 w-6" />
-            {!isMobile && <span className="text-xs mt-1">Main Page</span>}
-          </a>
-          
-          <button
-            onClick={handleLogout}
-            className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
-            title="Logout"
-          >
-            <LogOut className="h-6 w-6" />
-            {!isMobile && <span className="text-xs mt-1">Logout</span>}
-          </button>
+        </div>
+        
+        <nav className="mt-6 overflow-y-auto flex-grow">
+          <ul className="space-y-1">
+            {navItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  to={item.path}
+                  className={cn(
+                    "flex items-center px-4 py-3 text-gray-700 hover:bg-gym-light hover:text-gym-blue transition-colors",
+                    location.pathname === item.path && "bg-gym-light text-gym-blue font-medium"
+                  )}
+                >
+                  <span className="mr-3">{item.icon}</span>
+                  <span>{item.name}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        
+        <div className="mt-auto border-t border-gray-200">
+          <div className="flex justify-around items-center py-3">
+            <Link
+              to="/user/profile"
+              className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
+              title="Profile"
+            >
+              <User className="h-6 w-6" />
+              <span className="text-xs mt-1">Profile</span>
+            </Link>
+            
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
+              title="Main Page"
+            >
+              <ExternalLink className="h-6 w-6" />
+              <span className="text-xs mt-1">Main Page</span>
+            </a>
+            
+            <button
+              onClick={handleLogout}
+              className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
+              title="Logout"
+            >
+              <LogOut className="h-6 w-6" />
+              <span className="text-xs mt-1">Logout</span>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

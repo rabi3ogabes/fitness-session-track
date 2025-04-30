@@ -1,7 +1,8 @@
+
 #root {
-  max-width: 1280px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 0;
   text-align: center;
 }
 
@@ -34,9 +35,40 @@
 }
 
 .card {
-  padding: 2em;
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .card {
+    padding: 2rem;
+  }
 }
 
 .read-the-docs {
   color: #888;
+}
+
+/* Mobile-first responsive adjustments */
+.responsive-container {
+  width: 100%;
+  padding: 0 1rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-container {
+    padding: 0 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .responsive-container {
+    padding: 0 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-container {
+    max-width: 1280px;
+    margin: 0 auto;
+  }
 }

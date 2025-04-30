@@ -61,8 +61,8 @@ export const CalendarSection = ({
   };
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <Card className="md:col-span-1">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <Card className="lg:col-span-1">
         <CardHeader>
           <CardTitle className="text-lg flex items-center">
             <CalendarIcon className="mr-2 h-5 w-5 text-gym-blue" />
@@ -95,7 +95,7 @@ export const CalendarSection = ({
               <div className="space-y-2">
                 {classesForView.map(cls => (
                   <div key={cls.id} className="bg-gray-50 p-3 rounded-md">
-                    <div className="flex justify-between">
+                    <div className="flex flex-wrap justify-between gap-2">
                       <div>
                         <p className="font-medium">{cls.name}</p>
                         <p className="text-xs text-gray-500">{cls.time}</p>
@@ -114,9 +114,9 @@ export const CalendarSection = ({
         </CardContent>
       </Card>
       
-      <Card className="md:col-span-2">
+      <Card className="lg:col-span-2">
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <CardTitle className="text-lg flex items-center">
               <UsersRound className="mr-2 h-5 w-5 text-gym-blue" />
               Attendance Management
@@ -136,7 +136,7 @@ export const CalendarSection = ({
         </CardContent>
       </Card>
       
-      <Card className="md:col-span-3">
+      <Card className="lg:col-span-3">
         <CardHeader>
           <CardTitle className="text-lg flex items-center">
             <Clock className="mr-2 h-5 w-5 text-gym-blue" />
@@ -144,13 +144,13 @@ export const CalendarSection = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {mockClasses.filter(cls => cls.date > new Date()).slice(0, 3).map(cls => (
               <div key={cls.id} className="bg-gray-50 p-4 rounded-md border border-gray-200">
                 <h3 className="font-medium text-lg">{cls.name}</h3>
                 <p className="text-sm text-gray-500">{format(cls.date, "MMMM d, yyyy")}</p>
                 <p className="text-sm text-gray-500">{cls.time}</p>
-                <div className="mt-3 flex justify-between items-center">
+                <div className="mt-3 flex flex-wrap justify-between items-center gap-2">
                   <Badge variant="outline" className="bg-white">
                     {cls.enrolled}/{cls.capacity} enrolled
                   </Badge>

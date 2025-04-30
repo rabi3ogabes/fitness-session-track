@@ -77,7 +77,7 @@ const TrainerDashboard = () => {
   return (
     <DashboardLayout title="Trainer Dashboard">
       <Tabs defaultValue="calendar" className="w-full">
-        <TabsList className="mb-4">
+        <TabsList className="w-full mb-4 overflow-x-auto flex-wrap justify-start md:justify-start">
           <TabsTrigger value="calendar">Calendar View</TabsTrigger>
           <TabsTrigger value="classes">Classes & Bookings</TabsTrigger>
           <TabsTrigger value="attendees">Attendees</TabsTrigger>
