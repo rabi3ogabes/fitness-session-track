@@ -110,7 +110,13 @@ const Login = () => {
         return;
       }
 
-      const success = await signup(phone, signupPassword, name, email, selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined);
+      const success = await signup(
+        phone, 
+        signupPassword, 
+        name, 
+        email, 
+        selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined
+      );
       
       if (success) {
         toast({

@@ -17,7 +17,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   login: (identifier: string, password: string) => Promise<boolean>;
-  signup: (phone: string, password: string, name: string) => Promise<boolean>;
+  signup: (phone: string, password: string, name: string, email?: string, dateOfBirth?: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -176,7 +176,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signup = async (phone: string, password: string, name: string): Promise<boolean> => {
+  const signup = async (phone: string, password: string, name: string, email?: string, dateOfBirth?: string): Promise<boolean> => {
     try {
       // Validate phone number format (8 digits)
       if (!/^\d{8}$/.test(phone)) {
@@ -188,15 +188,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return false;
       }
 
+      // Create user metadata including all provided info
+      const userData = {
+        phone_number: phone,
+        name: name,
+        email: email || '',
+        date_of_birth: dateOfBirth || ''
+      };
+
       // Create a user with the phone number as the email (phone@example.com)
       const { data, error } = await supabase.auth.signUp({
-        email: `${phone}@example.com`,
+        email: email || `${phone}@example.com`,
         password: password,
         options: {
-          data: {
-            phone_number: phone,
-            name: name
-          }
+          data: userData
         }
       });
 
