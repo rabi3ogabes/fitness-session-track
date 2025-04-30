@@ -77,7 +77,6 @@ const UserSchedule = () => {
                         <p>⏰ {cls.time}</p>
                         <p>👨‍🏫 {cls.trainer}</p>
                         <p>
-                          Level:{" "}
                           <span
                             className={`px-2 py-0.5 text-xs rounded-full ${
                               cls.level === "Beginner"

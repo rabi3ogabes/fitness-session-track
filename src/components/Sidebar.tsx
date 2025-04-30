@@ -13,8 +13,6 @@ import {
   Settings,
   CalendarCheck,
   BadgeCheck,
-  BookOpen,
-  Bell,
   BarChart3,
   LogOut,
   Calendar,
@@ -39,15 +37,13 @@ const Sidebar = () => {
 
   const userNavItems = [
     { name: "Dashboard", path: "/dashboard", icon: <Home className="h-5 w-5" /> },
-    { name: "Profile", path: "/user/profile", icon: <User className="h-5 w-5" /> },
-    { name: "Membership", path: "/user/membership", icon: <BadgeCheck className="h-5 w-5" /> },
     { name: "Calendar", path: "/user/calendar", icon: <Calendar className="h-5 w-5" /> },
     { name: "Class Schedule", path: "/user/schedule", icon: <CalendarCheck className="h-5 w-5" /> },
+    { name: "Membership", path: "/user/membership", icon: <BadgeCheck className="h-5 w-5" /> },
   ];
   
   const trainerNavItems = [
     { name: "Dashboard", path: "/trainer", icon: <Home className="h-5 w-5" /> },
-    { name: "Profile", path: "/user/profile", icon: <User className="h-5 w-5" /> },
     { name: "Attendees", path: "/admin/bookings", icon: <CalendarDays className="h-5 w-5" /> },
     { name: "Class Schedule", path: "/user/schedule", icon: <CalendarCheck className="h-5 w-5" /> },
     { name: "Members", path: "/admin/members", icon: <UsersRound className="h-5 w-5" /> },
@@ -62,37 +58,55 @@ const Sidebar = () => {
 
   return (
     <div className={cn(
-      "bg-white shadow-md min-h-screen z-10",
+      "bg-white shadow-md min-h-screen z-10 flex flex-col justify-between",
       isMobile ? "w-16" : "w-64"
     )}>
-      <div className="p-4 flex items-center justify-center">
-        <h2 className={cn(
-          "text-gym-dark font-bold",
-          isMobile ? "text-xl" : "text-2xl"
-        )}>
-          {isMobile ? "GM" : "GYM SYSTEM"}
-        </h2>
+      <div>
+        <div className="p-4 flex items-center justify-center">
+          <h2 className={cn(
+            "text-gym-dark font-bold",
+            isMobile ? "text-xl" : "text-2xl"
+          )}>
+            {isMobile ? "GM" : "GYM SYSTEM"}
+          </h2>
+        </div>
+        <nav className="mt-6">
+          <ul className="space-y-1">
+            {navItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  to={item.path}
+                  className={cn(
+                    "flex items-center px-4 py-3 text-gray-700 hover:bg-gym-light hover:text-gym-blue transition-colors",
+                    location.pathname === item.path && "bg-gym-light text-gym-blue font-medium"
+                  )}
+                >
+                  <span className="mr-3">{item.icon}</span>
+                  {!isMobile && <span>{item.name}</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
-      <nav className="mt-6">
+      
+      <div className="mt-auto mb-4 px-3">
         <ul className="space-y-1">
-          {navItems.map((item) => (
-            <li key={item.path}>
-              <Link
-                to={item.path}
-                className={cn(
-                  "flex items-center px-4 py-3 text-gray-700 hover:bg-gym-light hover:text-gym-blue transition-colors",
-                  location.pathname === item.path && "bg-gym-light text-gym-blue font-medium"
-                )}
-              >
-                <span className="mr-3">{item.icon}</span>
-                {!isMobile && <span>{item.name}</span>}
-              </Link>
-            </li>
-          ))}
+          <li>
+            <Link
+              to="/user/profile"
+              className="flex items-center px-4 py-3 text-gray-700 hover:bg-gym-light hover:text-gym-blue transition-colors rounded-md"
+            >
+              <span className="mr-3">
+                <User className="h-5 w-5" />
+              </span>
+              {!isMobile && <span>Profile</span>}
+            </Link>
+          </li>
           <li>
             <button
               onClick={logout}
-              className="flex items-center w-full px-4 py-3 text-red-500 hover:bg-red-50 transition-colors"
+              className="w-full flex items-center px-4 py-3 text-red-500 hover:bg-red-50 transition-colors rounded-md"
             >
               <span className="mr-3">
                 <LogOut className="h-5 w-5" />
@@ -101,7 +115,7 @@ const Sidebar = () => {
             </button>
           </li>
         </ul>
-      </nav>
+      </div>
     </div>
   );
 };
