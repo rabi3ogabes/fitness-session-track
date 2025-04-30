@@ -1,4 +1,3 @@
-
 import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -17,6 +16,7 @@ import {
   BarChart3,
   LogOut,
   Calendar,
+  ExternalLink,
 } from "lucide-react";
 
 const Sidebar = () => {
@@ -56,6 +56,7 @@ const Sidebar = () => {
     { name: "Payments", path: "/admin/payments", icon: <CreditCard className="h-5 w-5" /> },
     { name: "Reports", path: "/admin/reports", icon: <BarChart3 className="h-5 w-5" /> },
     { name: "Settings", path: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
+    { name: "Main Page", path: "/", icon: <ExternalLink className="h-5 w-5" /> },
   ];
 
   const userNavItems = [

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -7,11 +8,23 @@ const Index = () => {
   const navigate = useNavigate();
   const [logo, setLogo] = useState<string | null>(null);
   const [headerColor, setHeaderColor] = useState<string | null>(null);
+  const [pageContent, setPageContent] = useState({
+    heroTitle: "Streamlined Gym Management System",
+    heroDescription: "A complete solution for gym owners and members. Manage memberships, book sessions, track attendance, and more.",
+    heroImage: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    feature1Title: "User Roles",
+    feature1Description: "Separate dashboards for administrators and members with role-specific functionality.",
+    feature2Title: "Session Booking",
+    feature2Description: "Effortless class booking with membership session tracking and management.",
+    feature3Title: "Membership Management",
+    feature3Description: "Easily manage different membership packages with automated session tracking."
+  });
   
   useEffect(() => {
-    // Load logo and header color from local storage
+    // Load logo, header color, and page content from local storage
     const savedLogo = localStorage.getItem("gymLogo");
     const savedHeaderColor = localStorage.getItem("headerBackgroundColor");
+    const savedPageContent = localStorage.getItem("mainPageContent");
     
     if (savedLogo) {
       setLogo(savedLogo);
@@ -19,6 +32,10 @@ const Index = () => {
     
     if (savedHeaderColor) {
       setHeaderColor(savedHeaderColor);
+    }
+    
+    if (savedPageContent) {
+      setPageContent(JSON.parse(savedPageContent));
     }
   }, []);
   
@@ -63,10 +80,10 @@ const Index = () => {
         <div className="flex flex-col md:flex-row items-center gap-12">
           <div className="max-w-xl animate-fade-in">
             <h1 className="text-5xl font-bold mb-6 text-gym-dark">
-              Streamlined Gym Management System
+              {pageContent.heroTitle}
             </h1>
             <p className="text-lg mb-8 text-gray-600">
-              A complete solution for gym owners and members. Manage memberships, book sessions, track attendance, and more.
+              {pageContent.heroDescription}
             </p>
             <div className="flex gap-4">
               <Link
@@ -85,9 +102,13 @@ const Index = () => {
           </div>
           <div className="flex-1 flex justify-center">
             <img
-              src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+              src={pageContent.heroImage}
               alt="Gym workout"
               className="rounded-lg shadow-xl max-w-full md:max-w-md h-auto"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+              }}
             />
           </div>
         </div>
@@ -101,8 +122,8 @@ const Index = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">User Roles</h3>
-              <p className="text-gray-600">Separate dashboards for administrators and members with role-specific functionality.</p>
+              <h3 className="text-xl font-semibold mb-2">{pageContent.feature1Title}</h3>
+              <p className="text-gray-600">{pageContent.feature1Description}</p>
             </div>
             
             <div className="bg-white p-6 rounded-lg shadow-md">
@@ -111,8 +132,8 @@ const Index = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Session Booking</h3>
-              <p className="text-gray-600">Effortless class booking with membership session tracking and management.</p>
+              <h3 className="text-xl font-semibold mb-2">{pageContent.feature2Title}</h3>
+              <p className="text-gray-600">{pageContent.feature2Description}</p>
             </div>
             
             <div className="bg-white p-6 rounded-lg shadow-md">
@@ -121,8 +142,8 @@ const Index = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Membership Management</h3>
-              <p className="text-gray-600">Easily manage different membership packages with automated session tracking.</p>
+              <h3 className="text-xl font-semibold mb-2">{pageContent.feature3Title}</h3>
+              <p className="text-gray-600">{pageContent.feature3Description}</p>
             </div>
           </div>
         </section>
