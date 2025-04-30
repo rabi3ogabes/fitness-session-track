@@ -1,7 +1,6 @@
-
 import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import {
   Home,
@@ -23,7 +22,7 @@ import {
 const Sidebar = () => {
   const location = useLocation();
   const { isAdmin, logout } = useAuth();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
 
   const adminNavItems = [
     { name: "Dashboard", path: "/admin", icon: <Home className="h-5 w-5" /> },
