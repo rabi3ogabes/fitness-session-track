@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -8,9 +8,18 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [logo, setLogo] = useState<string | null>(null);
   const { login, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Load logo from local storage
+    const savedLogo = localStorage.getItem("gymLogo");
+    if (savedLogo) {
+      setLogo(savedLogo);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,10 +59,27 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex flex-col bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="mb-8 self-center">
+        <Link to="/">
+          {logo ? (
+            <div className="flex justify-center h-16">
+              <img 
+                src={logo} 
+                alt="Gym Logo" 
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
+          ) : (
+            <h2 className="text-3xl font-bold text-gym-blue">
+              FitTrack Pro
+            </h2>
+          )}
+        </Link>
+      </div>
+      
+      <div className="max-w-md w-full mx-auto space-y-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gym-blue">FitTrack Pro</h1>
           <h2 className="mt-6 text-2xl font-bold text-gray-900">Sign in to your account</h2>
           <p className="mt-2 text-sm text-gray-600">
             Demo accounts: admin@gym.com, user@gym.com, trainer@gym.com (password: admin123, user123, trainer123)
