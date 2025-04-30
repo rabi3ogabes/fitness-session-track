@@ -5,23 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Check, X, UserPlus, Calendar as CalendarIcon, Clock } from "lucide-react";
+import { Check, X, UserPlus, Calendar as CalendarIcon, Clock, UsersRound } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { toast } from "@/components/ui/use-toast";
 
 // Mock data
-const mockMembers = [
-  { id: 1, name: "Sarah Johnson", joinDate: "2025-04-25", membershipType: "Basic" },
-  { id: 2, name: "Michael Brown", joinDate: "2025-04-26", membershipType: "Premium" },
-  { id: 3, name: "Emma Wilson", joinDate: "2025-04-28", membershipType: "Basic" },
-];
-
 const mockBookings = [
   { id: 1, member: "Sarah Johnson", class: "Morning Yoga", date: "2025-05-01", time: "7:00 AM", status: "Confirmed" },
   { id: 2, member: "Michael Brown", class: "HIIT Workout", date: "2025-05-01", time: "6:00 PM", status: "Confirmed" },
   { id: 3, member: "Emma Wilson", class: "Strength Training", date: "2025-05-02", time: "5:00 PM", status: "Confirmed" },
   { id: 4, member: "James Martinez", class: "Pilates", date: "2025-05-02", time: "9:00 AM", status: "Confirmed" },
   { id: 5, member: "William Harris", class: "HIIT Workout", date: "2025-04-30", time: "6:00 PM", status: "Completed" },
+  { id: 6, member: "Linda Rodriguez", class: "Morning Yoga", date: "2025-05-01", time: "7:00 AM", status: "Confirmed" },
+  { id: 7, member: "Thomas Wilson", class: "HIIT Workout", date: "2025-05-01", time: "6:00 PM", status: "Confirmed" },
+  { id: 8, member: "Olivia Smith", class: "Strength Training", date: "2025-05-02", time: "5:00 PM", status: "Confirmed" },
 ];
 
 const mockClasses = [
@@ -35,7 +33,6 @@ const mockClasses = [
 const TrainerDashboard = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [todaysBookings, setTodaysBookings] = useState<typeof mockBookings>([]);
-  const [showNewMembers, setShowNewMembers] = useState(true);
   
   useEffect(() => {
     // Filter bookings for today
@@ -65,18 +62,47 @@ const TrainerDashboard = () => {
     pending: todaysBookings.filter(b => b.status === "Confirmed").length
   };
   
-  // Get new members from the last 7 days
-  const getRecentMembers = () => {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const markAttendance = (bookingId: number, present: boolean) => {
+    // In a real app, this would call an API
+    const newStatus = present ? "Present" : "Absent";
     
-    return mockMembers.filter(member => {
-      const joinDate = new Date(member.joinDate);
-      return joinDate >= sevenDaysAgo;
+    // Update the local state for UI feedback
+    setTodaysBookings(prev => 
+      prev.map(booking => 
+        booking.id === bookingId 
+          ? { ...booking, status: newStatus } 
+          : booking
+      )
+    );
+    
+    const booking = todaysBookings.find(b => b.id === bookingId);
+    
+    toast({
+      title: `Attendance marked: ${newStatus}`,
+      description: `${booking?.member} has been marked as ${newStatus.toLowerCase()} for ${booking?.class}`,
     });
   };
   
-  const recentMembers = getRecentMembers();
+  // Custom day content renderer for the calendar
+  const DayContent = (props: any) => {
+    const { date, ...otherProps } = props;
+    
+    // Check if there are classes on this day
+    const hasClasses = mockClasses.some(cls => 
+      cls.date.getDate() === date.getDate() &&
+      cls.date.getMonth() === date.getMonth() &&
+      cls.date.getFullYear() === date.getFullYear()
+    );
+    
+    return (
+      <div className="flex flex-col items-center">
+        <div {...otherProps} />
+        {hasClasses && (
+          <div className="w-1 h-1 bg-gym-blue rounded-full mt-0.5" />
+        )}
+      </div>
+    );
+  };
   
   return (
     <DashboardLayout title="Trainer Dashboard">
@@ -93,12 +119,15 @@ const TrainerDashboard = () => {
               mode="single"
               selected={selectedDate}
               onSelect={(date) => date && setSelectedDate(date)}
-              className="pointer-events-auto"
+              className="pointer-events-auto w-full"
               modifiers={{
                 hasClass: isDayWithClass
               }}
               modifiersClassNames={{
                 hasClass: "bg-gym-light text-gym-blue font-bold"
+              }}
+              components={{
+                DayContent: DayContent,
               }}
             />
             
@@ -134,8 +163,8 @@ const TrainerDashboard = () => {
           <CardHeader>
             <div className="flex justify-between items-center">
               <CardTitle className="text-lg flex items-center">
-                <Clock className="mr-2 h-5 w-5 text-gym-blue" />
-                Today's Attendance
+                <UsersRound className="mr-2 h-5 w-5 text-gym-blue" />
+                Attendance Management
               </CardTitle>
               <div className="text-sm">
                 <span className="font-medium">{attendanceStats.total}</span> Bookings | 
@@ -176,14 +205,17 @@ const TrainerDashboard = () => {
                           <div className="text-gray-500">{booking.time}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          {booking.status === "Completed" ? (
+                          {booking.status === "Completed" || booking.status === "Present" ? (
                             <Badge className="bg-green-100 text-green-800">Present</Badge>
+                          ) : booking.status === "Absent" ? (
+                            <Badge className="bg-red-100 text-red-800">Absent</Badge>
                           ) : (
                             <div className="flex justify-center space-x-1">
                               <Button 
                                 size="sm" 
                                 className="h-8 bg-green-500 hover:bg-green-600"
                                 variant="default"
+                                onClick={() => markAttendance(booking.id, true)}
                               >
                                 <Check className="h-4 w-4" />
                               </Button>
@@ -191,6 +223,7 @@ const TrainerDashboard = () => {
                                 size="sm" 
                                 className="h-8 bg-red-500 hover:bg-red-600"
                                 variant="default"
+                                onClick={() => markAttendance(booking.id, false)}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -213,36 +246,33 @@ const TrainerDashboard = () => {
           </CardContent>
         </Card>
         
-        {showNewMembers && recentMembers.length > 0 && (
-          <Card className="md:col-span-3">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-lg flex items-center">
-                  <UserPlus className="mr-2 h-5 w-5 text-gym-blue" />
-                  New Members
-                </CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => setShowNewMembers(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {recentMembers.map(member => (
-                  <div key={member.id} className="bg-gray-50 p-3 rounded-md">
-                    <p className="font-medium">{member.name}</p>
-                    <p className="text-xs text-gray-500">
-                      Joined on {format(new Date(member.joinDate), "MMM d, yyyy")}
-                    </p>
-                    <Badge variant="outline" className="mt-2">
-                      {member.membershipType}
+        <Card className="md:col-span-3">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center">
+              <Clock className="mr-2 h-5 w-5 text-gym-blue" />
+              Upcoming Sessions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {mockClasses.filter(cls => cls.date > new Date()).slice(0, 3).map(cls => (
+                <div key={cls.id} className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                  <h3 className="font-medium text-lg">{cls.name}</h3>
+                  <p className="text-sm text-gray-500">{format(cls.date, "MMMM d, yyyy")}</p>
+                  <p className="text-sm text-gray-500">{cls.time}</p>
+                  <div className="mt-3 flex justify-between items-center">
+                    <Badge variant="outline" className="bg-white">
+                      {cls.enrolled}/{cls.capacity} enrolled
                     </Badge>
+                    <Button size="sm" className="bg-gym-blue hover:bg-gym-dark-blue">
+                      View Details
+                    </Button>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
