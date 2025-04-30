@@ -5,6 +5,11 @@ import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import StatsCard from "@/components/StatsCard";
 import { Users, User, Calendar, CreditCard, Bell } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 // Mock admin data
 const adminData = {
@@ -29,11 +34,55 @@ const adminData = {
     { id: 2, message: "3 new member registrations require approval", type: "info" },
     { id: 3, message: "Morning Yoga class is fully booked", type: "success" },
   ],
+  classSchedule: [
+    { id: 1, name: "Morning Yoga", date: new Date(2025, 4, 1), time: "7:00 AM - 8:00 AM", trainer: "Jane Smith" },
+    { id: 2, name: "HIIT Workout", date: new Date(2025, 4, 2), time: "6:00 PM - 7:00 PM", trainer: "Mike Johnson" },
+    { id: 3, name: "Strength Training", date: new Date(2025, 4, 3), time: "5:00 PM - 6:00 PM", trainer: "Sarah Davis" },
+    { id: 4, name: "Pilates", date: new Date(2025, 4, 4), time: "9:00 AM - 10:00 AM", trainer: "Emma Wilson" },
+  ]
 };
 
 const AdminDashboard = () => {
   const { isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  // Filter classes for the selected date
+  const classesForSelectedDate = adminData.classSchedule.filter(cls => 
+    cls.date.getDate() === selectedDate.getDate() &&
+    cls.date.getMonth() === selectedDate.getMonth() &&
+    cls.date.getFullYear() === selectedDate.getFullYear()
+  );
+
+  // Function to highlight dates with classes
+  const isDayWithClass = (date: Date) => {
+    return adminData.classSchedule.some(cls => 
+      cls.date.getDate() === date.getDate() &&
+      cls.date.getMonth() === date.getMonth() &&
+      cls.date.getFullYear() === date.getFullYear()
+    );
+  };
+
+  // Custom day content renderer for the calendar
+  const DayContent = (props: any) => {
+    const { date, ...otherProps } = props;
+    
+    // Check if there are classes on this day
+    const hasClasses = adminData.classSchedule.some(cls => 
+      cls.date.getDate() === date.getDate() &&
+      cls.date.getMonth() === date.getMonth() &&
+      cls.date.getFullYear() === date.getFullYear()
+    );
+    
+    return (
+      <div className="flex flex-col items-center">
+        <div {...otherProps} />
+        {hasClasses && (
+          <div className="w-1 h-1 bg-gym-blue rounded-full mt-0.5" />
+        )}
+      </div>
+    );
+  };
   
   useEffect(() => {
     if (isAuthenticated && !isAdmin) {
@@ -128,26 +177,50 @@ const AdminDashboard = () => {
           </div>
 
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-bold mb-4">Alerts</h2>
-              <div className="space-y-3">
-                {adminData.alerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    className={`p-3 rounded-md flex items-center gap-2 ${
-                      alert.type === "warning"
-                        ? "bg-yellow-50 text-yellow-700"
-                        : alert.type === "info"
-                        ? "bg-blue-50 text-blue-700"
-                        : "bg-green-50 text-green-700"
-                    }`}
-                  >
-                    <Bell className="h-5 w-5" />
-                    <p className="text-sm">{alert.message}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Class Schedule</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <CalendarComponent
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  className="pointer-events-auto"
+                  modifiers={{
+                    hasClass: isDayWithClass
+                  }}
+                  modifiersClassNames={{
+                    hasClass: "bg-gym-light text-gym-blue font-bold"
+                  }}
+                  components={{
+                    DayContent: DayContent
+                  }}
+                />
+                
+                <div className="mt-4">
+                  <h3 className="font-medium mb-2">
+                    Classes on {format(selectedDate, "MMMM d, yyyy")}
+                  </h3>
+                  
+                  {classesForSelectedDate.length > 0 ? (
+                    <div className="space-y-2">
+                      {classesForSelectedDate.map(cls => (
+                        <div key={cls.id} className="bg-gray-50 p-3 rounded-md">
+                          <div>
+                            <p className="font-medium">{cls.name}</p>
+                            <p className="text-xs text-gray-500">{cls.time}</p>
+                            <p className="text-xs text-gray-500">Trainer: {cls.trainer}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-2">No classes scheduled</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             <div className="mt-6 bg-white rounded-lg shadow-md p-6">
               <div className="flex justify-between items-center mb-4">

@@ -4,6 +4,16 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Mock data
 const initialClasses = [
@@ -17,6 +27,15 @@ const initialClasses = [
 const Classes = () => {
   const [classes, setClasses] = useState(initialClasses);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newClass, setNewClass] = useState({
+    name: "",
+    trainer: "",
+    schedule: "",
+    capacity: "",
+    enrolled: "0",
+    status: "Active"
+  });
   const { toast } = useToast();
 
   const filteredClasses = classes.filter(
@@ -43,6 +62,42 @@ const Classes = () => {
     });
   };
 
+  const handleAddClass = () => {
+    const newId = Math.max(...classes.map(c => c.id)) + 1;
+    const classToAdd = {
+      id: newId,
+      name: newClass.name,
+      trainer: newClass.trainer,
+      schedule: newClass.schedule,
+      capacity: parseInt(newClass.capacity) || 0,
+      enrolled: parseInt(newClass.enrolled) || 0,
+      status: newClass.status
+    };
+    
+    setClasses([...classes, classToAdd]);
+    setIsAddDialogOpen(false);
+    
+    // Reset form
+    setNewClass({
+      name: "",
+      trainer: "",
+      schedule: "",
+      capacity: "",
+      enrolled: "0",
+      status: "Active"
+    });
+    
+    toast({
+      title: "Class added",
+      description: "The new class has been successfully added."
+    });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewClass(prev => ({ ...prev, [name]: value }));
+  };
+
   return (
     <DashboardLayout title="Class Management">
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -54,9 +109,82 @@ const Classes = () => {
             className="sm:w-80"
           />
         </div>
-        <Button className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue">
-          Add New Class
-        </Button>
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue">
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Class
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Add New Class</DialogTitle>
+              <DialogDescription>
+                Create a new fitness class.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Class Name
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={newClass.name}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="trainer" className="text-right">
+                  Trainer
+                </Label>
+                <Input
+                  id="trainer"
+                  name="trainer"
+                  value={newClass.trainer}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="schedule" className="text-right">
+                  Schedule
+                </Label>
+                <Input
+                  id="schedule"
+                  name="schedule"
+                  value={newClass.schedule}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Mon, Wed, Fri - 9:00 AM"
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="capacity" className="text-right">
+                  Capacity
+                </Label>
+                <Input
+                  id="capacity"
+                  name="capacity"
+                  type="number"
+                  value={newClass.capacity}
+                  onChange={handleInputChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button 
+                  onClick={handleAddClass} 
+                  className="bg-gym-blue hover:bg-gym-dark-blue"
+                >
+                  Add Class
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">

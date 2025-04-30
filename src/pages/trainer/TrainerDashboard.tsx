@@ -5,10 +5,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Check, X, UserPlus, Calendar as CalendarIcon, Clock, UsersRound } from "lucide-react";
+import { Check, X, UserPlus, Calendar as CalendarIcon, Clock, UsersRound, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 // Mock data
 const mockBookings = [
@@ -33,13 +43,21 @@ const mockClasses = [
 const TrainerDashboard = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [todaysBookings, setTodaysBookings] = useState<typeof mockBookings>([]);
+  const [bookings, setBookings] = useState(mockBookings);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newBooking, setNewBooking] = useState({
+    member: "",
+    class: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    time: ""
+  });
   
   useEffect(() => {
     // Filter bookings for today
     const formattedDate = format(selectedDate, "yyyy-MM-dd");
-    const filtered = mockBookings.filter(booking => booking.date === formattedDate);
+    const filtered = bookings.filter(booking => booking.date === formattedDate);
     setTodaysBookings(filtered);
-  }, [selectedDate]);
+  }, [selectedDate, bookings]);
   
   // Find classes for the selected date
   const classesForSelectedDate = mockClasses.filter(cls => 
@@ -67,7 +85,7 @@ const TrainerDashboard = () => {
     const newStatus = present ? "Present" : "Absent";
     
     // Update the local state for UI feedback
-    setTodaysBookings(prev => 
+    setBookings(prev => 
       prev.map(booking => 
         booking.id === bookingId 
           ? { ...booking, status: newStatus } 
@@ -81,6 +99,40 @@ const TrainerDashboard = () => {
       title: `Attendance marked: ${newStatus}`,
       description: `${booking?.member} has been marked as ${newStatus.toLowerCase()} for ${booking?.class}`,
     });
+  };
+
+  const handleAddBooking = () => {
+    const newId = Math.max(...bookings.map(b => b.id)) + 1;
+    const bookingToAdd = {
+      id: newId,
+      member: newBooking.member,
+      class: newBooking.class,
+      date: newBooking.date,
+      time: newBooking.time,
+      status: "Confirmed",
+      trainer: "Current Trainer" // In a real app, this would be the logged-in trainer
+    };
+    
+    setBookings([...bookings, bookingToAdd]);
+    setIsAddDialogOpen(false);
+    
+    // Reset form
+    setNewBooking({
+      member: "",
+      class: "",
+      date: format(new Date(), "yyyy-MM-dd"),
+      time: ""
+    });
+    
+    toast({
+      title: "Booking added",
+      description: "The new booking has been successfully added."
+    });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewBooking(prev => ({ ...prev, [name]: value }));
   };
   
   // Custom day content renderer for the calendar
@@ -166,9 +218,86 @@ const TrainerDashboard = () => {
                 <UsersRound className="mr-2 h-5 w-5 text-gym-blue" />
                 Attendance Management
               </CardTitle>
-              <div className="text-sm">
-                <span className="font-medium">{attendanceStats.total}</span> Bookings | 
-                <span className="text-yellow-600 font-medium ml-1">{attendanceStats.pending}</span> Pending
+              <div className="flex items-center space-x-4">
+                <div className="text-sm">
+                  <span className="font-medium">{attendanceStats.total}</span> Bookings | 
+                  <span className="text-yellow-600 font-medium ml-1">{attendanceStats.pending}</span> Pending
+                </div>
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="bg-gym-blue hover:bg-gym-dark-blue">
+                      <Plus className="h-4 w-4 mr-1" /> Add Booking
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                      <DialogTitle>Add New Booking</DialogTitle>
+                      <DialogDescription>
+                        Create a new booking for a member.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="member" className="text-right">
+                          Member
+                        </Label>
+                        <Input
+                          id="member"
+                          name="member"
+                          value={newBooking.member}
+                          onChange={handleInputChange}
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="class" className="text-right">
+                          Class
+                        </Label>
+                        <Input
+                          id="class"
+                          name="class"
+                          value={newBooking.class}
+                          onChange={handleInputChange}
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="date" className="text-right">
+                          Date
+                        </Label>
+                        <Input
+                          id="date"
+                          name="date"
+                          type="date"
+                          value={newBooking.date}
+                          onChange={handleInputChange}
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="time" className="text-right">
+                          Time
+                        </Label>
+                        <Input
+                          id="time"
+                          name="time"
+                          value={newBooking.time}
+                          onChange={handleInputChange}
+                          placeholder="e.g., 3:00 PM"
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="flex justify-end mt-4">
+                        <Button 
+                          onClick={handleAddBooking}
+                          className="bg-gym-blue hover:bg-gym-dark-blue"
+                        >
+                          Add Booking
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           </CardHeader>

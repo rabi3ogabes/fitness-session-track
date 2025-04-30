@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,8 @@ import {
   X, 
   Filter, 
   ChevronDown,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  Plus
 } from "lucide-react";
 import {
   Select,
@@ -25,6 +25,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -52,6 +60,15 @@ const Bookings = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newBooking, setNewBooking] = useState({
+    member: "",
+    class: "",
+    trainer: "",
+    date: format(new Date(), "yyyy-MM-dd"),
+    time: "",
+    status: "Pending"
+  });
   const { toast } = useToast();
 
   const filterBookings = () => {
@@ -131,6 +148,43 @@ const Bookings = () => {
     setStatusFilter("all");
     setSelectedDate(undefined);
     setIsFilterOpen(false);
+  };
+
+  const handleAddBooking = () => {
+    const newId = Math.max(...bookings.map(b => b.id)) + 1;
+    const bookingToAdd = {
+      id: newId,
+      member: newBooking.member,
+      class: newBooking.class,
+      trainer: newBooking.trainer,
+      date: newBooking.date,
+      time: newBooking.time,
+      status: "Pending",
+      attendance: null
+    };
+    
+    setBookings([...bookings, bookingToAdd]);
+    setIsAddDialogOpen(false);
+    
+    // Reset form
+    setNewBooking({
+      member: "",
+      class: "",
+      trainer: "",
+      date: format(new Date(), "yyyy-MM-dd"),
+      time: "",
+      status: "Pending"
+    });
+    
+    toast({
+      title: "Booking added",
+      description: "The new booking has been successfully added."
+    });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewBooking(prev => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -239,9 +293,94 @@ const Bookings = () => {
               </PopoverContent>
             </Popover>
             
-            <Button className="bg-gym-blue hover:bg-gym-dark-blue">
-              Add New Booking
-            </Button>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-gym-blue hover:bg-gym-dark-blue">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add New Booking
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>Add New Booking</DialogTitle>
+                  <DialogDescription>
+                    Create a new booking for a member.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="member" className="text-right">
+                      Member
+                    </Label>
+                    <Input
+                      id="member"
+                      name="member"
+                      value={newBooking.member}
+                      onChange={handleInputChange}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="class" className="text-right">
+                      Class
+                    </Label>
+                    <Input
+                      id="class"
+                      name="class"
+                      value={newBooking.class}
+                      onChange={handleInputChange}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="trainer" className="text-right">
+                      Trainer
+                    </Label>
+                    <Input
+                      id="trainer"
+                      name="trainer"
+                      value={newBooking.trainer}
+                      onChange={handleInputChange}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="date" className="text-right">
+                      Date
+                    </Label>
+                    <Input
+                      id="date"
+                      name="date"
+                      type="date"
+                      value={newBooking.date}
+                      onChange={handleInputChange}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="time" className="text-right">
+                      Time
+                    </Label>
+                    <Input
+                      id="time"
+                      name="time"
+                      value={newBooking.time}
+                      onChange={handleInputChange}
+                      placeholder="e.g., 3:00 PM"
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="flex justify-end mt-4">
+                    <Button 
+                      onClick={handleAddBooking} 
+                      className="bg-gym-blue hover:bg-gym-dark-blue"
+                    >
+                      Add Booking
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>
