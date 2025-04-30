@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 
 // Mock data
 const initialMembers = [
@@ -20,12 +29,31 @@ const initialMembers = [
   { id: 8, name: "Alexander Hernandez", email: "alexander@example.com", phone: "(555) 890-1234", membership: "Basic", sessions: 4, remainingSessions: 1, status: "Inactive", canBeEditedByTrainers: true },
 ];
 
+// Mock payment history data
+const paymentHistoryData = {
+  1: [
+    { id: 1, date: "2025-04-15", amount: 180, description: "Premium Membership - Monthly", status: "Paid" },
+    { id: 2, date: "2025-03-15", amount: 180, description: "Premium Membership - Monthly", status: "Paid" },
+    { id: 3, date: "2025-02-15", amount: 180, description: "Premium Membership - Monthly", status: "Paid" },
+  ],
+  2: [
+    { id: 1, date: "2025-04-10", amount: 25, description: "Basic Membership - Monthly", status: "Paid" },
+    { id: 2, date: "2025-03-10", amount: 25, description: "Basic Membership - Monthly", status: "Paid" },
+  ],
+  3: [
+    { id: 1, date: "2025-04-05", amount: 80, description: "Standard Membership - Monthly", status: "Paid" },
+    { id: 2, date: "2025-03-05", amount: 80, description: "Standard Membership - Monthly", status: "Paid" },
+    { id: 3, date: "2025-02-05", amount: 80, description: "Standard Membership - Monthly", status: "Paid" },
+  ]
+};
+
 const Members = () => {
   const [members, setMembers] = useState(initialMembers);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentMember, setCurrentMember] = useState<any>(null);
+  const [selectedTab, setSelectedTab] = useState("personal");
   const [newMember, setNewMember] = useState({
     name: "",
     email: "",
@@ -35,7 +63,7 @@ const Members = () => {
     sessions: 4,
     remainingSessions: 4,
     status: "Active",
-    canBeEditedByTrainers: true  // Changed from false to true
+    canBeEditedByTrainers: true
   });
   const { toast } = useToast();
   const { isAdmin, isTrainer } = useAuth();
@@ -103,6 +131,7 @@ const Members = () => {
   const openEditDialog = (member: any) => {
     setCurrentMember({...member});
     setIsEditDialogOpen(true);
+    setSelectedTab("personal");
   };
 
   const toggleMemberStatus = (id: number) => {
@@ -365,129 +394,195 @@ const Members = () => {
             <DialogTitle>Edit Member</DialogTitle>
           </DialogHeader>
           {currentMember && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium col-span-1">
-                  Name*
-                </label>
-                <Input
-                  id="edit-name"
-                  value={currentMember.name}
-                  onChange={(e) => setCurrentMember({ ...currentMember, name: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium col-span-1">
-                  Email*
-                </label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={currentMember.email}
-                  onChange={(e) => setCurrentMember({ ...currentMember, email: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium col-span-1">
-                  Phone
-                </label>
-                <Input
-                  id="edit-phone"
-                  value={currentMember.phone}
-                  onChange={(e) => setCurrentMember({ ...currentMember, phone: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium col-span-1">
-                  Birthday
-                </label>
-                <Input
-                  id="edit-birthday"
-                  type="date"
-                  value={currentMember.birthday}
-                  onChange={(e) => setCurrentMember({ ...currentMember, birthday: e.target.value })}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium col-span-1">
-                  Membership
-                </label>
-                <select
-                  value={currentMember.membership}
-                  onChange={(e) => {
-                    const membership = e.target.value;
-                    let sessions = 4;
-                    if (membership === "Standard") sessions = 8;
-                    if (membership === "Premium") sessions = 12;
-                    setCurrentMember({ ...currentMember, membership, sessions });
-                  }}
-                  className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent"
-                >
-                  <option value="Basic">Basic (4 sessions)</option>
-                  <option value="Standard">Standard (8 sessions)</option>
-                  <option value="Premium">Premium (12 sessions)</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm font-medium col-span-1">
-                  Remaining Sessions
-                </label>
-                <Input
-                  id="edit-remaining-sessions"
-                  type="number"
-                  min="0"
-                  max={currentMember.sessions}
-                  value={currentMember.remainingSessions}
-                  onChange={(e) => setCurrentMember({ 
-                    ...currentMember, 
-                    remainingSessions: Math.max(0, Math.min(currentMember.sessions, parseInt(e.target.value) || 0)) 
-                  })}
-                  className="col-span-3"
-                />
-              </div>
-              {isAdmin && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium col-span-1">
-                    Status
-                  </label>
-                  <select
-                    value={currentMember.status}
-                    onChange={(e) => setCurrentMember({ ...currentMember, status: e.target.value })}
-                    className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
-                </div>
-              )}
-              {isAdmin && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <label className="text-right text-sm font-medium col-span-1">
-                    Trainer Edit
-                  </label>
-                  <div className="col-span-3 flex items-center">
-                    <Switch 
-                      checked={currentMember.canBeEditedByTrainers}
-                      onCheckedChange={() => setCurrentMember({ ...currentMember, canBeEditedByTrainers: !currentMember.canBeEditedByTrainers })}
-                    />
-                    <span className="ml-2 text-sm text-gray-500">Allow trainers to edit this member</span>
+            <div className="space-y-4">
+              <Tabs 
+                value={selectedTab} 
+                onValueChange={setSelectedTab} 
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="personal">Personal Info</TabsTrigger>
+                  <TabsTrigger value="membership">Membership</TabsTrigger>
+                  {(isAdmin || isTrainer) && (
+                    <TabsTrigger value="payments">Payment History</TabsTrigger>
+                  )}
+                </TabsList>
+                
+                <TabsContent value="personal" className="mt-4">
+                  <div className="grid gap-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <label className="text-right text-sm font-medium col-span-1">
+                        Name*
+                      </label>
+                      <Input
+                        id="edit-name"
+                        value={currentMember.name}
+                        onChange={(e) => setCurrentMember({ ...currentMember, name: e.target.value })}
+                        className="col-span-3"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <label className="text-right text-sm font-medium col-span-1">
+                        Email*
+                      </label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={currentMember.email}
+                        onChange={(e) => setCurrentMember({ ...currentMember, email: e.target.value })}
+                        className="col-span-3"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <label className="text-right text-sm font-medium col-span-1">
+                        Phone
+                      </label>
+                      <Input
+                        id="edit-phone"
+                        value={currentMember.phone}
+                        onChange={(e) => setCurrentMember({ ...currentMember, phone: e.target.value })}
+                        className="col-span-3"
+                      />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <label className="text-right text-sm font-medium col-span-1">
+                        Birthday
+                      </label>
+                      <Input
+                        id="edit-birthday"
+                        type="date"
+                        value={currentMember.birthday}
+                        onChange={(e) => setCurrentMember({ ...currentMember, birthday: e.target.value })}
+                        className="col-span-3"
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                </TabsContent>
+                
+                <TabsContent value="membership" className="mt-4">
+                  <div className="grid gap-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <label className="text-right text-sm font-medium col-span-1">
+                        Membership
+                      </label>
+                      <select
+                        value={currentMember.membership}
+                        onChange={(e) => {
+                          const membership = e.target.value;
+                          let sessions = 4;
+                          if (membership === "Standard") sessions = 8;
+                          if (membership === "Premium") sessions = 12;
+                          setCurrentMember({ ...currentMember, membership, sessions });
+                        }}
+                        className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent"
+                      >
+                        <option value="Basic">Basic (4 sessions)</option>
+                        <option value="Standard">Standard (8 sessions)</option>
+                        <option value="Premium">Premium (12 sessions)</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <label className="text-right text-sm font-medium col-span-1">
+                        Remaining Sessions
+                      </label>
+                      <Input
+                        id="edit-remaining-sessions"
+                        type="number"
+                        min="0"
+                        max={currentMember.sessions}
+                        value={currentMember.remainingSessions}
+                        onChange={(e) => setCurrentMember({ 
+                          ...currentMember, 
+                          remainingSessions: Math.max(0, Math.min(currentMember.sessions, parseInt(e.target.value) || 0)) 
+                        })}
+                        className="col-span-3"
+                      />
+                    </div>
+                    {isAdmin && (
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <label className="text-right text-sm font-medium col-span-1">
+                          Status
+                        </label>
+                        <select
+                          value={currentMember.status}
+                          onChange={(e) => setCurrentMember({ ...currentMember, status: e.target.value })}
+                          className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent"
+                        >
+                          <option value="Active">Active</option>
+                          <option value="Inactive">Inactive</option>
+                        </select>
+                      </div>
+                    )}
+                    {isAdmin && (
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <label className="text-right text-sm font-medium col-span-1">
+                          Trainer Edit
+                        </label>
+                        <div className="col-span-3 flex items-center">
+                          <Switch 
+                            checked={currentMember.canBeEditedByTrainers}
+                            onCheckedChange={() => setCurrentMember({ ...currentMember, canBeEditedByTrainers: !currentMember.canBeEditedByTrainers })}
+                          />
+                          <span className="ml-2 text-sm text-gray-500">Allow trainers to edit this member</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+                
+                {(isAdmin || isTrainer) && (
+                  <TabsContent value="payments" className="mt-4">
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(paymentHistoryData[currentMember.id] || []).map((payment) => (
+                            <TableRow key={payment.id}>
+                              <TableCell>{payment.date}</TableCell>
+                              <TableCell>{payment.description}</TableCell>
+                              <TableCell>${payment.amount}</TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-1 text-xs rounded-full ${
+                                    payment.status === "Paid"
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                                  }`}>
+                                  {payment.status}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {(!paymentHistoryData[currentMember.id] || paymentHistoryData[currentMember.id].length === 0) && (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center py-4 text-gray-500">
+                                No payment history available.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TabsContent>
+                )}
+              </Tabs>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleEditMember} className="bg-gym-blue hover:bg-gym-dark-blue">
+                  Save Changes
+                </Button>
+              </DialogFooter>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditMember} className="bg-gym-blue hover:bg-gym-dark-blue">
-              Save Changes
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </DashboardLayout>
