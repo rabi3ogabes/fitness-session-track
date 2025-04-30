@@ -63,8 +63,10 @@ const Members = () => {
       name: "",
       email: "",
       phone: "",
+      birthday: "",
       membership: "Basic",
       sessions: 4,
+      remainingSessions: 4,
       status: "Active",
       canBeEditedByTrainers: false
     });
