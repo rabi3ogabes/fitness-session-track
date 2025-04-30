@@ -125,8 +125,19 @@ const AlertDialogCancel = React.forwardRef<
 ))
 AlertDialogCancel.displayName = AlertDialogPrimitive.Cancel.displayName
 
-// Add the missing AlertDialogClose component
-const AlertDialogClose = AlertDialogPrimitive.Close
+// Create our own AlertDialogClose component using the Cancel component
+// Since AlertDialogPrimitive doesn't have a Close component
+const AlertDialogClose = React.forwardRef<
+  React.ElementRef<typeof AlertDialogPrimitive.Cancel>,
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Cancel>
+>(({ className, ...props }, ref) => (
+  <AlertDialogPrimitive.Cancel
+    ref={ref}
+    className={cn(className)}
+    {...props}
+  />
+))
+AlertDialogClose.displayName = "AlertDialogClose"
 
 export {
   AlertDialog,
