@@ -157,14 +157,14 @@ const Sidebar = () => {
             {!isMobile && <span className="text-xs mt-1">Profile</span>}
           </Link>
           
-          <Link
-            to="/"
+          <a
+            href="/"
             className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
             title="Main Page"
           >
             <ExternalLink className="h-6 w-6" />
             {!isMobile && <span className="text-xs mt-1">Main Page</span>}
-          </Link>
+          </a>
           
           <button
             onClick={logout}
