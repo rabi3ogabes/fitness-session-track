@@ -16,6 +16,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
+  session: any; // Store full session object
   login: (identifier: string, password: string) => Promise<boolean>;
   signup: (phone: string, password: string, name: string, email?: string, dateOfBirth?: string) => Promise<boolean>;
   logout: () => void;
@@ -153,6 +154,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (error) {
         console.error("Auth error:", error);
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
         
         // Fallback to mock users for demo
         const mockUser = MOCK_USERS.find(
@@ -162,7 +168,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (mockUser) {
           const { password: _, ...userWithoutPassword } = mockUser;
           setUser(userWithoutPassword);
-          localStorage.setItem("gymUser", JSON.stringify(userWithoutPassword));
           return true;
         }
         return false;
@@ -172,6 +177,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return true;
     } catch (error) {
       console.error("Login error:", error);
+      toast({
+        title: "Login error",
+        description: "An unexpected error occurred during login",
+        variant: "destructive",
+      });
       return false;
     }
   };
@@ -231,16 +241,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.signOut().then(() => {
       setUser(null);
       setSession(null);
-      localStorage.removeItem("gymUser");
+    }).catch(error => {
+      console.error("Logout error:", error);
+      toast({
+        title: "Logout error",
+        description: "An error occurred during logout",
+        variant: "destructive",
+      });
     });
   };
 
   const value = {
     user,
+    session,
     login,
     signup,
     logout,
-    isAuthenticated: !!user,
+    isAuthenticated: !!session?.user,
     isAdmin: user?.role === "admin",
     isTrainer: user?.role === "trainer",
     isUser: user?.role === "user",
