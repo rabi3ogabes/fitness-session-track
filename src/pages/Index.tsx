@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
@@ -18,6 +17,17 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
 
 interface MainPageContent {
   heroTitle: string;
@@ -69,6 +79,21 @@ const Index = () => {
     }
   ]);
 
+  // States for the sign up form
+  const [newMember, setNewMember] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    birthday: "",
+    membership: "Basic",
+    sessions: 4,
+    remainingSessions: 4,
+    status: "Active",
+    canBeEditedByTrainers: true
+  });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
+
   useEffect(() => {
     // Load settings from localStorage
     const savedLogo = localStorage.getItem("gymLogo");
@@ -92,6 +117,74 @@ const Index = () => {
       setContent(JSON.parse(savedMainPageContent));
     }
   }, []);
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newMember.name || !newMember.email) {
+      toast({
+        title: "Required fields missing",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsProcessing(true);
+    
+    try {
+      // In a real app, this would make an API call to register the user
+      // For now, we'll just simulate a successful registration
+      
+      // Store membership request in localStorage to show in admin/trainer interface
+      const existingRequests = JSON.parse(localStorage.getItem("membershipRequests") || "[]");
+      const newRequest = {
+        id: Date.now(),
+        name: newMember.name,
+        email: newMember.email,
+        phone: newMember.phone,
+        membership: newMember.membership,
+        requestDate: new Date().toISOString(),
+        status: "Pending"
+      };
+      
+      localStorage.setItem("membershipRequests", JSON.stringify([...existingRequests, newRequest]));
+      
+      // Show success message
+      toast({
+        title: "Sign up successful!",
+        description: "Your membership request has been submitted. Our team will contact you shortly.",
+      });
+      
+      // Reset form
+      setNewMember({
+        name: "",
+        email: "",
+        phone: "",
+        birthday: "",
+        membership: "Basic",
+        sessions: 4,
+        remainingSessions: 4,
+        status: "Active",
+        canBeEditedByTrainers: true
+      });
+      
+      // Close the dialog (by clicking any close button on the page)
+      const closeButtons = document.querySelectorAll('[data-state="open"] button[aria-label="Close"]');
+      if (closeButtons.length > 0) {
+        (closeButtons[0] as HTMLButtonElement).click();
+      }
+      
+    } catch (error) {
+      toast({
+        title: "Sign up failed",
+        description: "There was an error processing your request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -135,12 +228,107 @@ const Index = () => {
                 >
                   Login
                 </Link>
-                <Link
-                  to="/login"
-                  className="px-4 py-2 bg-gym-blue hover:bg-gym-dark-blue text-white rounded-md transition-colors"
-                >
-                  Sign Up
-                </Link>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button className="px-4 py-2 bg-gym-blue hover:bg-gym-dark-blue text-white rounded-md transition-colors">
+                      Sign Up
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="max-w-md">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Sign Up for Membership</AlertDialogTitle>
+                    </AlertDialogHeader>
+                    <form onSubmit={handleSignUp} className="mt-4 space-y-4">
+                      <div className="grid gap-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <label className="text-right text-sm font-medium col-span-1">
+                            Name*
+                          </label>
+                          <Input
+                            value={newMember.name}
+                            onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                            className="col-span-3"
+                            placeholder="Full Name"
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <label className="text-right text-sm font-medium col-span-1">
+                            Email*
+                          </label>
+                          <Input
+                            type="email"
+                            value={newMember.email}
+                            onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                            className="col-span-3"
+                            placeholder="Email Address"
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <label className="text-right text-sm font-medium col-span-1">
+                            Phone
+                          </label>
+                          <Input
+                            value={newMember.phone}
+                            onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
+                            className="col-span-3"
+                            placeholder="Phone Number"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <label className="text-right text-sm font-medium col-span-1">
+                            Birthday
+                          </label>
+                          <Input
+                            type="date"
+                            value={newMember.birthday}
+                            onChange={(e) => setNewMember({ ...newMember, birthday: e.target.value })}
+                            className="col-span-3"
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <label className="text-right text-sm font-medium col-span-1">
+                            Membership
+                          </label>
+                          <select
+                            value={newMember.membership}
+                            onChange={(e) => {
+                              const membership = e.target.value;
+                              let sessions = 4;
+                              if (membership === "Standard") sessions = 8;
+                              if (membership === "Premium") sessions = 12;
+                              setNewMember({ ...newMember, membership, sessions, remainingSessions: sessions });
+                            }}
+                            className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent"
+                          >
+                            <option value="Basic">Basic (4 sessions)</option>
+                            <option value="Standard">Standard (8 sessions)</option>
+                            <option value="Premium">Premium (12 sessions)</option>
+                          </select>
+                        </div>
+                      </div>
+                      
+                      <div className="flex justify-end gap-2 pt-4">
+                        <Button type="button" variant="outline" onClick={() => {
+                          const closeButtons = document.querySelectorAll('[data-state="open"] button[aria-label="Close"]');
+                          if (closeButtons.length > 0) {
+                            (closeButtons[0] as HTMLButtonElement).click();
+                          }
+                        }}>
+                          Cancel
+                        </Button>
+                        <Button 
+                          type="submit" 
+                          disabled={isProcessing}
+                          className="bg-gym-blue hover:bg-gym-dark-blue text-white"
+                        >
+                          {isProcessing ? "Processing..." : "Submit"}
+                        </Button>
+                      </div>
+                    </form>
+                  </AlertDialogContent>
+                </AlertDialog>
               </>
             )}
           </div>
