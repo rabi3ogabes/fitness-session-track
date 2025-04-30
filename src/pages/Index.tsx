@@ -1,178 +1,182 @@
-
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import {
+  Home,
+  User,
+  UsersRound,
+  Dumbbell,
+  CalendarDays,
+  CreditCard,
+  Settings,
+  CalendarCheck,
+  BadgeCheck,
+  BarChart3,
+  LogOut,
+  Calendar,
+  ExternalLink,
+} from "lucide-react";
 
-const Index = () => {
-  const { isAuthenticated, isAdmin } = useAuth();
-  const navigate = useNavigate();
+const Sidebar = () => {
+  const location = useLocation();
+  const { isAdmin, isTrainer, logout, user } = useAuth();
+  const isMobile = useIsMobile();
   const [logo, setLogo] = useState<string | null>(null);
-  const [headerColor, setHeaderColor] = useState<string | null>(null);
-  const [pageContent, setPageContent] = useState({
-    heroTitle: "Streamlined Gym Management System",
-    heroDescription: "A complete solution for gym owners and members. Manage memberships, book sessions, track attendance, and more.",
-    heroImage: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-    feature1Title: "User Roles",
-    feature1Description: "Separate dashboards for administrators and members with role-specific functionality.",
-    feature2Title: "Session Booking",
-    feature2Description: "Effortless class booking with membership session tracking and management.",
-    feature3Title: "Membership Management",
-    feature3Description: "Easily manage different membership packages with automated session tracking."
-  });
-  
+
   useEffect(() => {
-    // Load logo, header color, and page content from local storage
+    // Load logo from local storage
     const savedLogo = localStorage.getItem("gymLogo");
-    const savedHeaderColor = localStorage.getItem("headerBackgroundColor");
-    const savedPageContent = localStorage.getItem("mainPageContent");
-    
     if (savedLogo) {
       setLogo(savedLogo);
     }
     
-    if (savedHeaderColor) {
-      setHeaderColor(savedHeaderColor);
-    }
-    
-    if (savedPageContent) {
-      setPageContent(JSON.parse(savedPageContent));
-    }
-  }, []);
-  
-  useEffect(() => {
-    // Redirect if already authenticated
-    if (isAuthenticated) {
-      if (isAdmin) {
-        navigate("/admin");
-      } else {
-        navigate("/dashboard");
+    // Listen for storage changes (in case logo is updated in settings)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "gymLogo") {
+        setLogo(e.newValue);
       }
-    }
-  }, [isAuthenticated, isAdmin, navigate]);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
+  const adminNavItems = [
+    { name: "Dashboard", path: "/admin", icon: <Home className="h-5 w-5" /> },
+    { name: "Members", path: "/admin/members", icon: <UsersRound className="h-5 w-5" /> },
+    { name: "Trainers", path: "/admin/trainers", icon: <User className="h-5 w-5" /> },
+    { name: "Classes", path: "/admin/classes", icon: <Dumbbell className="h-5 w-5" /> },
+    { name: "Bookings", path: "/admin/bookings", icon: <CalendarDays className="h-5 w-5" /> },
+    { name: "Memberships", path: "/admin/memberships", icon: <BadgeCheck className="h-5 w-5" /> },
+    { name: "Payments", path: "/admin/payments", icon: <CreditCard className="h-5 w-5" /> },
+    { name: "Reports", path: "/admin/reports", icon: <BarChart3 className="h-5 w-5" /> },
+    { name: "Settings", path: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
+    // Removed Main Page link from here
+  ];
+
+  const userNavItems = [
+    { name: "Dashboard", path: "/dashboard", icon: <Home className="h-5 w-5" /> },
+    { name: "Calendar", path: "/user/calendar", icon: <Calendar className="h-5 w-5" /> },
+    { name: "Class Schedule", path: "/user/schedule", icon: <CalendarCheck className="h-5 w-5" /> },
+    { name: "Membership", path: "/user/membership", icon: <BadgeCheck className="h-5 w-5" /> },
+  ];
+  
+  const trainerNavItems = [
+    { name: "Dashboard", path: "/trainer", icon: <Home className="h-5 w-5" /> },
+    { name: "Attendees", path: "/admin/bookings", icon: <CalendarDays className="h-5 w-5" /> },
+    { name: "Class Schedule", path: "/user/schedule", icon: <CalendarCheck className="h-5 w-5" /> },
+    { name: "Members", path: "/admin/members", icon: <UsersRound className="h-5 w-5" /> },
+  ];
+
+  let navItems = userNavItems;
+  let userRole = "Member";
+  
+  if (isAdmin) {
+    navItems = adminNavItems;
+    userRole = "Admin";
+  } else if (isTrainer) {
+    navItems = trainerNavItems;
+    userRole = "Trainer";
+  }
+
+  // Mock user name - in a real app, this would come from the auth context
+  const userName = user?.name || "John Doe";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gym-light to-white">
-      <header 
-        className="container mx-auto py-6 px-4 flex justify-between items-center"
-        style={headerColor ? { backgroundColor: headerColor } : {}}
-      >
-        <div className="flex items-center">
+    <div className={cn(
+      "bg-white shadow-md min-h-screen z-10 flex flex-col justify-between relative",
+      isMobile ? "w-16" : "w-64"
+    )}>
+      <div>
+        {/* Logo Section with black background */}
+        <div className="bg-black p-4 flex flex-col items-center justify-center border-b">
           {logo ? (
-            <div className="h-10">
+            <div className={cn(
+              "flex justify-center",
+              isMobile ? "w-10 h-10" : "w-full h-12"
+            )}>
               <img 
                 src={logo} 
-                alt="FitTrack Pro Logo" 
-                className="h-full max-w-full object-contain"
+                alt="Gym Logo" 
+                className="max-h-full max-w-full object-contain"
               />
             </div>
           ) : (
-            <span className="text-2xl font-bold text-gym-blue">FitTrack Pro</span>
+            <h2 className={cn(
+              "text-gym-blue font-bold",
+              isMobile ? "text-xl" : "text-2xl"
+            )}>
+              {isMobile ? "GM" : "GYM SYSTEM"}
+            </h2>
+          )}
+          
+          {/* User info below the logo */}
+          {!isMobile && (
+            <div className="mt-2 text-center text-white">
+              <p className="text-sm font-medium">{userName}</p>
+              <p className="text-xs text-gray-300">{userRole}</p>
+            </div>
           )}
         </div>
-        <div>
-          <Link to="/login" className="px-6 py-2 bg-gym-blue hover:bg-gym-dark-blue text-white rounded-md transition-colors">
-            Login
+        
+        <nav className="mt-6">
+          <ul className="space-y-1">
+            {navItems.map((item) => (
+              <li key={item.path}>
+                <Link
+                  to={item.path}
+                  className={cn(
+                    "flex items-center px-4 py-3 text-gray-700 hover:bg-gym-light hover:text-gym-blue transition-colors",
+                    location.pathname === item.path && "bg-gym-light text-gym-blue font-medium"
+                  )}
+                >
+                  <span className="mr-3">{item.icon}</span>
+                  {!isMobile && <span>{item.name}</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+      
+      {/* Fixed footer with profile, main page and logout icons */}
+      <div className="mt-auto border-t border-gray-200">
+        <div className="flex justify-around items-center py-3">
+          <Link
+            to="/user/profile"
+            className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
+            title="Profile"
+          >
+            <User className="h-6 w-6" />
+            {!isMobile && <span className="text-xs mt-1">Profile</span>}
           </Link>
+          
+          <Link
+            to="/"
+            className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
+            title="Main Page"
+          >
+            <ExternalLink className="h-6 w-6" />
+            {!isMobile && <span className="text-xs mt-1">Main Page</span>}
+          </Link>
+          
+          <button
+            onClick={logout}
+            className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
+            title="Logout"
+          >
+            <LogOut className="h-6 w-6" />
+            {!isMobile && <span className="text-xs mt-1">Logout</span>}
+          </button>
         </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-16">
-        <div className="flex flex-col md:flex-row items-center gap-12">
-          <div className="max-w-xl animate-fade-in">
-            <h1 className="text-5xl font-bold mb-6 text-gym-dark">
-              {pageContent.heroTitle}
-            </h1>
-            <p className="text-lg mb-8 text-gray-600">
-              {pageContent.heroDescription}
-            </p>
-            <div className="flex gap-4">
-              <Link
-                to="/login"
-                className="px-8 py-3 bg-gym-blue hover:bg-gym-dark-blue text-white rounded-md transition-colors text-lg font-medium"
-              >
-                Get Started
-              </Link>
-              <a
-                href="#features"
-                className="px-8 py-3 border border-gym-blue text-gym-blue hover:bg-gym-light rounded-md transition-colors text-lg font-medium"
-              >
-                Learn More
-              </a>
-            </div>
-          </div>
-          <div className="flex-1 flex justify-center">
-            <img
-              src={pageContent.heroImage}
-              alt="Gym workout"
-              className="rounded-lg shadow-xl max-w-full md:max-w-md h-auto"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
-              }}
-            />
-          </div>
-        </div>
-
-        <section id="features" className="py-16">
-          <h2 className="text-3xl font-bold mb-12 text-center">Key Features</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="bg-gym-light w-12 h-12 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-gym-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">{pageContent.feature1Title}</h3>
-              <p className="text-gray-600">{pageContent.feature1Description}</p>
-            </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="bg-gym-light w-12 h-12 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-gym-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">{pageContent.feature2Title}</h3>
-              <p className="text-gray-600">{pageContent.feature2Description}</p>
-            </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <div className="bg-gym-light w-12 h-12 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-gym-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">{pageContent.feature3Title}</h3>
-              <p className="text-gray-600">{pageContent.feature3Description}</p>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer className="bg-gym-dark text-white py-8">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              {logo ? (
-                <div className="h-10">
-                  <img 
-                    src={logo} 
-                    alt="FitTrack Pro Logo" 
-                    className="h-full max-w-full object-contain"
-                  />
-                </div>
-              ) : (
-                <span className="text-xl font-bold">FitTrack Pro</span>
-              )}
-            </div>
-            <div className="text-sm">
-              &copy; 2025 FitTrack Pro. All rights reserved.
-            </div>
-          </div>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 };
 
-export default Index;
+export default Sidebar;

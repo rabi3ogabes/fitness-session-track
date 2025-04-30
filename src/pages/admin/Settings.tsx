@@ -18,6 +18,7 @@ const Settings = () => {
   const [logo, setLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [headerColor, setHeaderColor] = useState<string>("#ffffff");
+  const [footerColor, setFooterColor] = useState<string>("#000000");
   const [membershipExpiry, setMembershipExpiry] = useState({
     basic: 30,   // days
     standard: 60, // days
@@ -49,6 +50,11 @@ const Settings = () => {
       setHeaderColor(savedHeaderColor);
     }
     
+    const savedFooterColor = localStorage.getItem("footerBackgroundColor");
+    if (savedFooterColor) {
+      setFooterColor(savedFooterColor);
+    }
+    
     // Load main page content from local storage
     const savedMainPageContent = localStorage.getItem("mainPageContent");
     if (savedMainPageContent) {
@@ -71,6 +77,13 @@ const Settings = () => {
       localStorage.setItem("headerBackgroundColor", headerColor);
     } else {
       localStorage.removeItem("headerBackgroundColor");
+    }
+    
+    // Save footer color to localStorage
+    if (footerColor) {
+      localStorage.setItem("footerBackgroundColor", footerColor);
+    } else {
+      localStorage.removeItem("footerBackgroundColor");
     }
     
     // Save main page content to localStorage
@@ -182,10 +195,10 @@ const Settings = () => {
               <CardHeader>
                 <div className="flex items-center space-x-2">
                   <Palette className="h-5 w-5 text-gym-blue" />
-                  <CardTitle>Header Color</CardTitle>
+                  <CardTitle>Color Settings</CardTitle>
                 </div>
                 <CardDescription>
-                  Set the background color for the main page header
+                  Set the background colors for the main page
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -208,7 +221,30 @@ const Settings = () => {
                     />
                   </div>
                   <div className="mt-4 p-4 rounded-md" style={{ backgroundColor: headerColor }}>
-                    <p className="text-sm text-center">Preview</p>
+                    <p className="text-sm text-center">Header Preview</p>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <Label htmlFor="footer-color">Footer Background Color</Label>
+                  <div className="flex items-center space-x-3 mt-2">
+                    <Input
+                      id="footer-color"
+                      type="color"
+                      value={footerColor}
+                      onChange={(e) => setFooterColor(e.target.value)}
+                      className="w-16 h-10 p-1"
+                    />
+                    <Input
+                      type="text"
+                      value={footerColor}
+                      onChange={(e) => setFooterColor(e.target.value)}
+                      className="w-32"
+                      placeholder="#000000"
+                    />
+                  </div>
+                  <div className="mt-4 p-4 rounded-md" style={{ backgroundColor: footerColor }}>
+                    <p className="text-sm text-center text-white">Footer Preview</p>
                   </div>
                 </div>
               </CardContent>
