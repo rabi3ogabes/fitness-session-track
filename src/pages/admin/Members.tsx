@@ -547,7 +547,7 @@ const Members = () => {
                             <TableRow key={payment.id}>
                               <TableCell>{payment.date}</TableCell>
                               <TableCell>{payment.description}</TableCell>
-                              <TableCell>${payment.amount}</TableCell>
+                              <TableCell>QAR {payment.amount}</TableCell>
                               <TableCell>
                                 <span className={`px-2 py-1 text-xs rounded-full ${
                                     payment.status === "Paid"

@@ -110,7 +110,23 @@ const UserMembership = () => {
     });
     
     // In a real app, this would make an API call to create the membership request
-    // For demonstration purposes, we're just showing a toast notification
+    // For demonstration, we'll store the request in localStorage so the admin page can see it
+    const existingRequests = localStorage.getItem("membershipRequests");
+    const newRequest = {
+      id: Date.now(), // Use timestamp as unique ID
+      member: "Current User", // In a real app, this would be the logged-in user's name
+      email: "user@example.com", // In a real app, this would be the logged-in user's email
+      type: planName,
+      date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+      status: "Pending"
+    };
+    
+    if (existingRequests) {
+      const parsedRequests = JSON.parse(existingRequests);
+      localStorage.setItem("membershipRequests", JSON.stringify([...parsedRequests, newRequest]));
+    } else {
+      localStorage.setItem("membershipRequests", JSON.stringify([newRequest]));
+    }
   };
   
   return (

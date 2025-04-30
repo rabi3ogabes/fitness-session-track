@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,8 @@ const Memberships = () => {
           const newRequests = parsedRequests.filter(r => !existingIds.has(r.id));
           return [...prev, ...newRequests];
         });
+        // Clear the localStorage after processing
+        localStorage.removeItem("membershipRequests");
       } catch (error) {
         console.error("Error parsing membership requests:", error);
       }
@@ -182,7 +185,7 @@ const Memberships = () => {
                         {type.sessions}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                        ${type.price}
+                        QAR {type.price}
                       </td>
                       <td className="px-6 py-4 text-gray-500 max-w-xs truncate">
                         {type.description}
