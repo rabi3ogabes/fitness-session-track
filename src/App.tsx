@@ -22,6 +22,7 @@ import UserProfile from "./pages/user/UserProfile";
 import UserMembership from "./pages/user/UserMembership";
 import UserBooking from "./pages/user/UserBooking";
 import UserSchedule from "./pages/user/UserSchedule";
+import ClassCalendar from "./pages/user/ClassCalendar";
 
 // Context
 import { AuthProvider } from "./context/AuthContext";
@@ -39,7 +40,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            
+
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/members" element={<Members />} />
@@ -49,14 +50,15 @@ const App = () => (
             <Route path="/admin/bookings" element={<Bookings />} />
             <Route path="/admin/payments" element={<Payments />} />
             <Route path="/admin/reports" element={<Reports />} />
-            
+
             {/* User Routes */}
             <Route path="/user/profile" element={<UserProfile />} />
             <Route path="/user/membership" element={<UserMembership />} />
             <Route path="/user/booking" element={<UserBooking />} />
             <Route path="/user/schedule" element={<UserSchedule />} />
-            
-            {/* Catch all */}
+            <Route path="/user/calendar" element={<ClassCalendar />} />
+
+            {/* 404 Page */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
