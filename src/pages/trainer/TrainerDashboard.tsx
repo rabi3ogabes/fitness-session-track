@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -257,10 +256,11 @@ const TrainerDashboard = () => {
     );
   };
   
-  // Handlers for viewing classes
+  // Fix: Update the handler for viewing class details to ensure dialog opens
   const handleViewClassDetails = (classId: number) => {
     setSelectedClass(classId);
     setIsClassDetailsOpen(true);
+    console.log("Opening dialog for class:", classId, "Dialog state:", isClassDetailsOpen);
   };
   
   // Handlers for viewing attendees
@@ -940,6 +940,207 @@ const TrainerDashboard = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      {/* Fix: Make sure dialog is outside of the Tabs component and properly controlled */}
+      <Dialog open={isClassDetailsOpen} onOpenChange={setIsClassDetailsOpen}>
+        <DialogContent className="sm:max-w-[700px]">
+          {selectedClass && (() => {
+            const cls = mockClasses.find(c => c.id === selectedClass);
+            const classBookings = getBookingsForClass(selectedClass);
+            
+            if (!cls) return <p>Class not found</p>;
+            
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>{cls.name} - {format(cls.date, "MMMM d, yyyy")}</DialogTitle>
+                  <DialogDescription>
+                    {cls.time} • {cls.enrolled}/{cls.capacity} enrolled
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="mt-4">
+                  <h4 className="font-medium text-sm mb-2">Enrolled Members</h4>
+                  
+                  {classBookings.length > 0 ? (
+                    <div className="border rounded-md max-h-[300px] overflow-y-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Attendance</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {classBookings.map(booking => (
+                            <tr key={booking.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {booking.member}
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                                <span
+                                  className={cn(
+                                    "px-2 py-1 text-xs rounded-full",
+                                    {
+                                      "bg-green-100 text-green-800": booking.status === "Confirmed" || booking.status === "Present",
+                                      "bg-red-100 text-red-800": booking.status === "Absent",
+                                      "bg-yellow-100 text-yellow-800": booking.status === "Pending",
+                                    }
+                                  )}
+                                >
+                                  {booking.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap text-center">
+                                {booking.status === "Completed" || booking.status === "Present" ? (
+                                  <Badge className="bg-green-100 text-green-800">Present</Badge>
+                                ) : booking.status === "Absent" ? (
+                                  <Badge className="bg-red-100 text-red-800">Absent</Badge>
+                                ) : (
+                                  <div className="flex justify-center space-x-1">
+                                    <Button 
+                                      size="sm" 
+                                      className="h-7 w-7 p-0 bg-green-500 hover:bg-green-600"
+                                      variant="default"
+                                      onClick={() => markAttendance(booking.id, true)}
+                                    >
+                                      <Check className="h-3 w-3" />
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      className="h-7 w-7 p-0 bg-red-500 hover:bg-red-600"
+                                      variant="default"
+                                      onClick={() => markAttendance(booking.id, false)}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-center py-4 text-gray-500">No members enrolled yet</p>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Fix: Keep the new member dialog outside of tabs as well */}
+      <Dialog open={isNewMemberDialogOpen} onOpenChange={setIsNewMemberDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Register New Member</DialogTitle>
+            <DialogDescription>
+              Create a new account and membership for a walk-in member.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="member-name" className="text-right">
+                Name*
+              </Label>
+              <Input
+                id="member-name"
+                name="name"
+                value={newMember.name}
+                onChange={handleNewMemberInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="member-email" className="text-right">
+                Email*
+              </Label>
+              <Input
+                id="member-email"
+                name="email"
+                type="email"
+                value={newMember.email}
+                onChange={handleNewMemberInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="member-phone" className="text-right">
+                Phone
+              </Label>
+              <Input
+                id="member-phone"
+                name="phone"
+                value={newMember.phone}
+                onChange={handleNewMemberInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="member-birthday" className="text-right">
+                Birthday
+              </Label>
+              <Input
+                id="member-birthday"
+                name="birthday"
+                type="date"
+                value={newMember.birthday}
+                onChange={handleNewMemberInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="membership-plan" className="text-right">
+                Membership Plan
+              </Label>
+              <Select 
+                name="membershipPlan" 
+                value={newMember.membershipPlan}
+                onValueChange={(value) => handleNewMemberInputChange({
+                  target: { name: "membershipPlan", value }
+                } as React.ChangeEvent<HTMLSelectElement>)}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {membershipPlans.map(plan => (
+                    <SelectItem key={plan.id} value={plan.id.toString()}>
+                      {plan.name} - QAR {plan.price} ({plan.sessions} sessions)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="additional-sessions" className="text-right">
+                Extra Sessions
+              </Label>
+              <Input
+                id="additional-sessions"
+                name="additionalSessions"
+                type="number"
+                min="0"
+                value={newMember.additionalSessions}
+                onChange={handleNewMemberInputChange}
+                className="col-span-3"
+              />
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button 
+                onClick={handleRegisterMember} 
+                className="bg-gym-blue hover:bg-gym-dark-blue"
+              >
+                Register & Mark Present
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
