@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, Mail, Clock, Image, Trash } from "lucide-react";
+import { Settings as SettingsIcon, Mail, Clock, Image, Trash, Palette } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 const Settings = () => {
@@ -15,6 +15,7 @@ const Settings = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [headerColor, setHeaderColor] = useState<string>("#ffffff");
   const [membershipExpiry, setMembershipExpiry] = useState({
     basic: 30,   // days
     standard: 60, // days
@@ -24,10 +25,15 @@ const Settings = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load logo from local storage if exists
+    // Load logo and header color from local storage
     const savedLogo = localStorage.getItem("gymLogo");
     if (savedLogo) {
       setLogo(savedLogo);
+    }
+    
+    const savedHeaderColor = localStorage.getItem("headerBackgroundColor");
+    if (savedHeaderColor) {
+      setHeaderColor(savedHeaderColor);
     }
   }, []);
 
@@ -39,6 +45,13 @@ const Settings = () => {
       localStorage.setItem("gymLogo", logo);
     } else {
       localStorage.removeItem("gymLogo");
+    }
+    
+    // Save header color to localStorage
+    if (headerColor) {
+      localStorage.setItem("headerBackgroundColor", headerColor);
+    } else {
+      localStorage.removeItem("headerBackgroundColor");
     }
 
     // Save other settings to localStorage
@@ -125,6 +138,42 @@ const Settings = () => {
               <p className="text-sm text-gray-500 mt-1">
                 Recommended size: 200x60 pixels. Max file size: 2MB.
               </p>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Palette className="h-5 w-5 text-gym-blue" />
+              <CardTitle>Header Color</CardTitle>
+            </div>
+            <CardDescription>
+              Set the background color for the main page header
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="header-color">Header Background Color</Label>
+              <div className="flex items-center space-x-3 mt-2">
+                <Input
+                  id="header-color"
+                  type="color"
+                  value={headerColor}
+                  onChange={(e) => setHeaderColor(e.target.value)}
+                  className="w-16 h-10 p-1"
+                />
+                <Input
+                  type="text"
+                  value={headerColor}
+                  onChange={(e) => setHeaderColor(e.target.value)}
+                  className="w-32"
+                  placeholder="#ffffff"
+                />
+              </div>
+              <div className="mt-4 p-4 rounded-md" style={{ backgroundColor: headerColor }}>
+                <p className="text-sm text-center">Preview</p>
+              </div>
             </div>
           </CardContent>
         </Card>
