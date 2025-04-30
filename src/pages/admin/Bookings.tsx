@@ -4,6 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
 import { 
   Calendar, 
   Check, 
