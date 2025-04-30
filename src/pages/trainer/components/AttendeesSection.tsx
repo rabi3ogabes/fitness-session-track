@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CalendarIcon, ChevronLeft, ChevronRight, Check, X, Users, Save } from "lucide-react";
-import { format, addDays } from "date-fns";
+import { format, addDays, isToday, isFuture, compareAsc } from "date-fns";
 import { cn } from "@/lib/utils";
 import { mockClasses, getBookingsForClass, getClassesForDate } from "../mockData";
 import { useAttendanceManager } from "../utils/attendanceUtils";
@@ -28,6 +28,29 @@ export const AttendeesSection = ({
   const { markAttendance } = useAttendanceManager();
   const [isBulkAttendanceOpen, setIsBulkAttendanceOpen] = useState(false);
   
+  // Get upcoming classes for multiple days
+  const getUpcomingClasses = () => {
+    const result = [];
+    const today = new Date();
+    
+    // Get classes for today and the next 6 days (week view)
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      
+      const classesForDay = getClassesForDate(date);
+      if (classesForDay.length > 0) {
+        result.push({
+          date,
+          classes: classesForDay
+        });
+      }
+    }
+    
+    return result;
+  };
+  
+  const upcomingClasses = getUpcomingClasses();
   const classesForAttendees = getClassesForDate(selectedDateForAttendees);
   
   const handleMarkAttendance = (bookingId: number, present: boolean) => {
@@ -39,6 +62,11 @@ export const AttendeesSection = ({
       setIsBulkAttendanceOpen(true);
     }
   };
+  
+  // Function to determine if a date is today
+  const isDateToday = (date: Date) => {
+    return isToday(date);
+  }
   
   return (
     <div className="space-y-6">
@@ -61,56 +89,76 @@ export const AttendeesSection = ({
           </div>
         </div>
         
-        {/* Classes displayed as boxes */}
+        {/* Upcoming Classes Section */}
         <div className="mb-8">
-          <h3 className="text-lg font-medium mb-3">Available Classes</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {classesForAttendees.length > 0 ? (
-              classesForAttendees.map(cls => {
-                const isSelected = cls.id === selectedClassForAttendees;
-                const percentFull = (cls.enrolled / cls.capacity) * 100;
+          <h3 className="text-lg font-medium mb-3">Upcoming Classes</h3>
+          <div className="space-y-6">
+            {upcomingClasses.map((dayClasses) => (
+              <div key={format(dayClasses.date, 'yyyy-MM-dd')} className="space-y-3">
+                <h4 className={cn(
+                  "text-base font-medium flex items-center",
+                  isDateToday(dayClasses.date) ? "text-gym-blue" : ""
+                )}>
+                  {isDateToday(dayClasses.date) ? (
+                    <Badge variant="outline" className="mr-2 bg-gym-light text-gym-blue">Today</Badge>
+                  ) : null}
+                  {format(dayClasses.date, "EEEE, MMMM d")}
+                </h4>
                 
-                return (
-                  <div 
-                    key={cls.id} 
-                    className={cn(
-                      "p-4 rounded-md border-2 cursor-pointer transition-all",
-                      isSelected ? "border-gym-blue bg-gym-light" : "border-gray-200 hover:border-gray-300"
-                    )}
-                    onClick={() => setSelectedClassForAttendees(cls.id)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-medium">{cls.name}</h4>
-                      <Badge 
-                        className={cn(
-                          percentFull >= 90 ? "bg-red-100 text-red-800" : 
-                          percentFull >= 70 ? "bg-amber-100 text-amber-800" : 
-                          "bg-green-100 text-green-800"
-                        )}
-                      >
-                        {cls.enrolled}/{cls.capacity}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">{cls.time}</p>
-                    <p className="text-xs text-gray-500">Trainer: {cls.trainer}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {dayClasses.classes.map(cls => {
+                    const isSelected = cls.id === selectedClassForAttendees && 
+                                      isSameDay(dayClasses.date, selectedDateForAttendees);
+                    const percentFull = (cls.enrolled / cls.capacity) * 100;
                     
-                    <div className="mt-3 w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                    return (
                       <div 
+                        key={cls.id} 
                         className={cn(
-                          "h-full",
-                          percentFull >= 90 ? "bg-red-500" : 
-                          percentFull >= 70 ? "bg-amber-500" : 
-                          "bg-green-500"
+                          "p-4 rounded-md border-2 cursor-pointer transition-all",
+                          isSelected ? "border-gym-blue bg-gym-light" : "border-gray-200 hover:border-gray-300"
                         )}
-                        style={{ width: `${percentFull}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="col-span-full text-center py-6 text-gray-500">
-                <p>No classes scheduled for {format(selectedDateForAttendees, "MMMM d, yyyy")}</p>
+                        onClick={() => {
+                          setSelectedClassForAttendees(cls.id);
+                          setSelectedDateForAttendees(dayClasses.date);
+                        }}
+                      >
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-medium">{cls.name}</h4>
+                          <Badge 
+                            className={cn(
+                              percentFull >= 90 ? "bg-red-100 text-red-800" : 
+                              percentFull >= 70 ? "bg-amber-100 text-amber-800" : 
+                              "bg-green-100 text-green-800"
+                            )}
+                          >
+                            {cls.enrolled}/{cls.capacity}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">{cls.time}</p>
+                        <p className="text-xs text-gray-500">Trainer: {cls.trainer}</p>
+                        
+                        <div className="mt-3 w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className={cn(
+                              "h-full",
+                              percentFull >= 90 ? "bg-red-500" : 
+                              percentFull >= 70 ? "bg-amber-500" : 
+                              "bg-green-500"
+                            )}
+                            style={{ width: `${percentFull}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            
+            {upcomingClasses.length === 0 && (
+              <div className="text-center py-8 border rounded-md">
+                <p className="text-gray-500">No upcoming classes scheduled</p>
               </div>
             )}
           </div>
@@ -232,3 +280,12 @@ export const AttendeesSection = ({
     </div>
   );
 };
+
+// Helper function to check if two dates are the same day
+function isSameDay(date1: Date, date2: Date) {
+  return (
+    date1.getDate() === date2.getDate() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getFullYear() === date2.getFullYear()
+  );
+}
