@@ -1,7 +1,9 @@
+
 import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 import {
   Home,
   User,
@@ -21,6 +23,28 @@ const Sidebar = () => {
   const location = useLocation();
   const { isAdmin, isTrainer, logout, user } = useAuth();
   const isMobile = useIsMobile();
+  const [logo, setLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load logo from local storage
+    const savedLogo = localStorage.getItem("gymLogo");
+    if (savedLogo) {
+      setLogo(savedLogo);
+    }
+    
+    // Listen for storage changes (in case logo is updated in settings)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "gymLogo") {
+        setLogo(e.newValue);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const adminNavItems = [
     { name: "Dashboard", path: "/admin", icon: <Home className="h-5 w-5" /> },
@@ -70,12 +94,25 @@ const Sidebar = () => {
       <div>
         {/* Logo Section */}
         <div className="p-4 flex flex-col items-center justify-center border-b">
-          <h2 className={cn(
-            "text-gym-blue font-bold",
-            isMobile ? "text-xl" : "text-2xl"
-          )}>
-            {isMobile ? "GM" : "GYM SYSTEM"}
-          </h2>
+          {logo ? (
+            <div className={cn(
+              "flex justify-center",
+              isMobile ? "w-10 h-10" : "w-full h-12"
+            )}>
+              <img 
+                src={logo} 
+                alt="Gym Logo" 
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
+          ) : (
+            <h2 className={cn(
+              "text-gym-blue font-bold",
+              isMobile ? "text-xl" : "text-2xl"
+            )}>
+              {isMobile ? "GM" : "GYM SYSTEM"}
+            </h2>
+          )}
           
           {/* User info below the logo */}
           {!isMobile && (
@@ -107,11 +144,11 @@ const Sidebar = () => {
       </div>
       
       {/* Fixed footer with profile and logout icons */}
-      <div className="fixed bottom-0 left-0 w-16 sm:w-64 bg-gym-blue text-white z-20">
+      <div className="mt-auto border-t border-gray-200">
         <div className="flex justify-around items-center py-3">
           <Link
             to="/user/profile"
-            className="flex flex-col items-center text-white hover:text-gym-light transition-colors"
+            className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
             title="Profile"
           >
             <User className="h-6 w-6" />
@@ -120,7 +157,7 @@ const Sidebar = () => {
           
           <button
             onClick={logout}
-            className="flex flex-col items-center text-white hover:text-gym-light transition-colors"
+            className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
             title="Logout"
           >
             <LogOut className="h-6 w-6" />

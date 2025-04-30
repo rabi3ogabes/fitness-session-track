@@ -10,14 +10,14 @@ import { useAuth } from "@/context/AuthContext";
 
 // Mock data
 const initialMembers = [
-  { id: 1, name: "Sarah Johnson", email: "sarah@example.com", phone: "(555) 123-4567", membership: "Premium", sessions: 12, status: "Active", canBeEditedByTrainers: false },
-  { id: 2, name: "Michael Brown", email: "michael@example.com", phone: "(555) 234-5678", membership: "Basic", sessions: 4, status: "Active", canBeEditedByTrainers: true },
-  { id: 3, name: "Emma Wilson", email: "emma@example.com", phone: "(555) 345-6789", membership: "Standard", sessions: 8, status: "Active", canBeEditedByTrainers: false },
-  { id: 4, name: "James Martinez", email: "james@example.com", phone: "(555) 456-7890", membership: "Premium", sessions: 12, status: "Inactive", canBeEditedByTrainers: true },
-  { id: 5, name: "Olivia Taylor", email: "olivia@example.com", phone: "(555) 567-8901", membership: "Basic", sessions: 4, status: "Active", canBeEditedByTrainers: false },
-  { id: 6, name: "William Anderson", email: "william@example.com", phone: "(555) 678-9012", membership: "Standard", sessions: 8, status: "Active", canBeEditedByTrainers: true },
-  { id: 7, name: "Sophia Thomas", email: "sophia@example.com", phone: "(555) 789-0123", membership: "Premium", sessions: 12, status: "Active", canBeEditedByTrainers: false },
-  { id: 8, name: "Alexander Hernandez", email: "alexander@example.com", phone: "(555) 890-1234", membership: "Basic", sessions: 4, status: "Inactive", canBeEditedByTrainers: true },
+  { id: 1, name: "Sarah Johnson", email: "sarah@example.com", phone: "(555) 123-4567", membership: "Premium", sessions: 12, remainingSessions: 8, status: "Active", birthday: "1990-05-15", canBeEditedByTrainers: false },
+  { id: 2, name: "Michael Brown", email: "michael@example.com", phone: "(555) 234-5678", membership: "Basic", sessions: 4, remainingSessions: 2, status: "Active", birthday: "1985-07-22", canBeEditedByTrainers: true },
+  { id: 3, name: "Emma Wilson", email: "emma@example.com", phone: "(555) 345-6789", membership: "Standard", sessions: 8, remainingSessions: 5, status: "Active", birthday: "1992-03-10", canBeEditedByTrainers: false },
+  { id: 4, name: "James Martinez", email: "james@example.com", phone: "(555) 456-7890", membership: "Premium", sessions: 12, remainingSessions: 9, status: "Inactive", birthday: "1988-11-05", canBeEditedByTrainers: true },
+  { id: 5, name: "Olivia Taylor", email: "olivia@example.com", phone: "(555) 567-8901", membership: "Basic", sessions: 4, remainingSessions: 0, status: "Active", birthday: "1995-01-30", canBeEditedByTrainers: false },
+  { id: 6, name: "William Anderson", email: "william@example.com", phone: "(555) 678-9012", membership: "Standard", sessions: 8, remainingSessions: 6, status: "Active", birthday: "1987-09-17", canBeEditedByTrainers: true },
+  { id: 7, name: "Sophia Thomas", email: "sophia@example.com", phone: "(555) 789-0123", membership: "Premium", sessions: 12, remainingSessions: 10, status: "Active", birthday: "1993-12-25", canBeEditedByTrainers: false },
+  { id: 8, name: "Alexander Hernandez", email: "alexander@example.com", phone: "(555) 890-1234", membership: "Basic", sessions: 4, remainingSessions: 1, status: "Inactive", birthday: "1991-04-08", canBeEditedByTrainers: true },
 ];
 
 const Members = () => {
@@ -30,8 +30,10 @@ const Members = () => {
     name: "",
     email: "",
     phone: "",
+    birthday: "",
     membership: "Basic",
     sessions: 4,
+    remainingSessions: 4,
     status: "Active",
     canBeEditedByTrainers: false
   });
@@ -173,9 +175,6 @@ const Members = () => {
                   Contact Info
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Membership
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Sessions
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -202,12 +201,12 @@ const Members = () => {
                     <div className="text-gray-500">{member.phone}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                      {member.membership}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                    {member.sessions}
+                    <div className="font-medium text-gray-900">
+                      {member.remainingSessions}/{member.sessions}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {member.membership} Plan
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -248,7 +247,7 @@ const Members = () => {
               ))}
               {filteredMembers.length === 0 && (
                 <tr>
-                  <td colSpan={isAdmin ? 7 : 6} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={isAdmin ? 6 : 5} className="px-6 py-4 text-center text-gray-500">
                     No members found matching your search criteria.
                   </td>
                 </tr>
@@ -301,6 +300,18 @@ const Members = () => {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <label className="text-right text-sm font-medium col-span-1">
+                Birthday
+              </label>
+              <Input
+                id="birthday"
+                type="date"
+                value={newMember.birthday}
+                onChange={(e) => setNewMember({ ...newMember, birthday: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label className="text-right text-sm font-medium col-span-1">
                 Membership
               </label>
               <select
@@ -310,7 +321,7 @@ const Members = () => {
                   let sessions = 4;
                   if (membership === "Standard") sessions = 8;
                   if (membership === "Premium") sessions = 12;
-                  setNewMember({ ...newMember, membership, sessions });
+                  setNewMember({ ...newMember, membership, sessions, remainingSessions: sessions });
                 }}
                 className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent"
               >
@@ -389,6 +400,18 @@ const Members = () => {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <label className="text-right text-sm font-medium col-span-1">
+                  Birthday
+                </label>
+                <Input
+                  id="edit-birthday"
+                  type="date"
+                  value={currentMember.birthday}
+                  onChange={(e) => setCurrentMember({ ...currentMember, birthday: e.target.value })}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-sm font-medium col-span-1">
                   Membership
                 </label>
                 <select
@@ -406,6 +429,23 @@ const Members = () => {
                   <option value="Standard">Standard (8 sessions)</option>
                   <option value="Premium">Premium (12 sessions)</option>
                 </select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-sm font-medium col-span-1">
+                  Remaining Sessions
+                </label>
+                <Input
+                  id="edit-remaining-sessions"
+                  type="number"
+                  min="0"
+                  max={currentMember.sessions}
+                  value={currentMember.remainingSessions}
+                  onChange={(e) => setCurrentMember({ 
+                    ...currentMember, 
+                    remainingSessions: Math.max(0, Math.min(currentMember.sessions, parseInt(e.target.value) || 0)) 
+                  })}
+                  className="col-span-3"
+                />
               </div>
               {isAdmin && (
                 <div className="grid grid-cols-4 items-center gap-4">
