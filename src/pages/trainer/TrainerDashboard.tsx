@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Check, X, UserPlus, Calendar as CalendarIcon, Clock, UsersRound, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, X, UserPlus, Calendar as CalendarIcon, Clock, UsersRound, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, addDays, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
