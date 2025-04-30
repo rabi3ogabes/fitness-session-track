@@ -117,7 +117,7 @@ const AdminDashboard = () => {
           />
           <StatsCard
             title="Monthly Payments"
-            value={`$${adminData.stats.payments * 85}`}
+            value={`QAR ${adminData.stats.payments * 85}`}
             icon={<CreditCard className="h-6 w-6 text-gym-blue" />}
             change="15%"
             positive={true}
@@ -237,7 +237,7 @@ const AdminDashboard = () => {
                       <p className="text-xs text-gray-500">{payment.date}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">${payment.amount}</p>
+                      <p className="font-medium">QAR {payment.amount}</p>
                       <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
                         {payment.status}
                       </span>
