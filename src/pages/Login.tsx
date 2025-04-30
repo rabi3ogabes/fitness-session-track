@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -25,6 +24,8 @@ const Login = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [yearView, setYearView] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   
   const [isLoading, setIsLoading] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
@@ -33,6 +34,9 @@ const Login = () => {
   const { login, signup, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Generate years for the year selector
+  const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
 
   useEffect(() => {
     // Load logo from local storage
@@ -127,6 +131,22 @@ const Login = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Function to handle year selection
+  const handleYearSelect = (year: number) => {
+    setSelectedYear(year);
+    setYearView(false);
+    // Set date to January 1st of the selected year to help with month view navigation
+    const newDate = new Date(year, 0, 1);
+    if (!selectedDate) {
+      setSelectedDate(newDate);
+    } else {
+      // Keep the same month and day, just change the year
+      const newDate = new Date(selectedDate);
+      newDate.setFullYear(year);
+      setSelectedDate(newDate);
     }
   };
 
@@ -259,12 +279,47 @@ const Login = () => {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        initialFocus
-                      />
+                      <div className="p-2 flex justify-between items-center border-b">
+                        <Button 
+                          variant="outline" 
+                          className="text-sm"
+                          onClick={() => setYearView(!yearView)}
+                        >
+                          {yearView ? "Show Calendar" : "Select Year"}
+                        </Button>
+                        {!yearView && (
+                          <div className="text-sm font-medium">
+                            {selectedDate ? format(selectedDate, "yyyy") : new Date().getFullYear()}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {yearView ? (
+                        <div className="p-2 h-64 overflow-y-auto grid grid-cols-3 gap-2">
+                          {years.map((year) => (
+                            <Button
+                              key={year}
+                              variant="ghost"
+                              className={cn(
+                                "text-sm",
+                                selectedYear === year && "bg-primary text-primary-foreground"
+                              )}
+                              onClick={() => handleYearSelect(year)}
+                            >
+                              {year}
+                            </Button>
+                          ))}
+                        </div>
+                      ) : (
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={setSelectedDate}
+                          defaultMonth={selectedDate || new Date(selectedYear, 0)}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      )}
                     </PopoverContent>
                   </Popover>
                 </div>
