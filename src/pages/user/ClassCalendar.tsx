@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Mock user data
 const userData = {
@@ -96,7 +97,7 @@ const systemSettings = {
 const ClassCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [bookedClasses, setBookedClasses] = useState<number[]>([]);
-  const [selectedClass, setSelectedClass] = useState<number | null>(null);
+  const [selectedClasses, setSelectedClasses] = useState<number[]>([]);
   const { toast } = useToast();
   
   // Calculate if sessions are low (25% or less)
@@ -129,22 +130,32 @@ const ClassCalendar = () => {
     );
   };
 
-  const handleBookClass = (classId: number) => {
-    if (userData.remainingSessions <= 0) {
+  const toggleClassSelection = (classId: number) => {
+    setSelectedClasses(prev => {
+      if (prev.includes(classId)) {
+        return prev.filter(id => id !== classId);
+      } else {
+        return [...prev, classId];
+      }
+    });
+  };
+
+  const handleBookMultipleClasses = () => {
+    if (userData.remainingSessions < selectedClasses.length) {
       toast({
-        title: "No sessions remaining",
-        description: "Please purchase a membership to book more sessions.",
+        title: "Not enough sessions",
+        description: `You need ${selectedClasses.length} sessions but have only ${userData.remainingSessions} remaining.`,
         variant: "destructive"
       });
       return;
     }
 
-    setSelectedClass(classId);
-    setBookedClasses([...bookedClasses, classId]);
+    setBookedClasses([...bookedClasses, ...selectedClasses]);
     toast({
-      title: "Class booked successfully!",
-      description: "Your session has been booked. The trainer has been notified.",
+      title: "Classes booked successfully!",
+      description: `You've booked ${selectedClasses.length} classes. The trainers have been notified.`,
     });
+    setSelectedClasses([]);
   };
   
   const handleCancelBooking = (classId: number, classTime: string, className: string) => {
@@ -166,7 +177,6 @@ const ClassCalendar = () => {
     }
     
     setBookedClasses(bookedClasses.filter(id => id !== classId));
-    setSelectedClass(null);
     
     toast({
       title: "Class cancelled",
@@ -226,14 +236,26 @@ const ClassCalendar = () => {
             <div className="md:col-span-2">
               {selectedDate && (
                 <div>
-                  <h3 className="text-lg font-medium mb-4">
-                    Classes for {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'Selected date'}
-                  </h3>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">
+                      Classes for {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'Selected date'}
+                    </h3>
+                    
+                    {selectedClasses.length > 0 && (
+                      <Button 
+                        onClick={handleBookMultipleClasses}
+                        className="bg-gym-blue hover:bg-gym-dark-blue"
+                      >
+                        Book Selected ({selectedClasses.length})
+                      </Button>
+                    )}
+                  </div>
                   
                   {classesForSelectedDate.length > 0 ? (
                     <div className="space-y-4">
                       {classesForSelectedDate.map((cls) => {
                         const isBooked = bookedClasses.includes(cls.id);
+                        const isSelected = selectedClasses.includes(cls.id);
                         const isPastCancellationWindow = () => {
                           const classHour = parseInt(cls.time.split(':')[0]);
                           const now = new Date();
@@ -245,13 +267,25 @@ const ClassCalendar = () => {
                         return (
                           <Card key={cls.id} className={cn(
                             "transition-all hover:shadow",
-                            isBooked ? "border-2 border-gym-blue" : ""
+                            isBooked ? "border-2 border-gym-blue" : "",
+                            isSelected ? "border-2 border-green-500" : ""
                           )}>
                             <CardHeader className="pb-2">
                               <div className="flex justify-between items-start">
-                                <div>
-                                  <CardTitle>{cls.name}</CardTitle>
-                                  <CardDescription>{cls.time}</CardDescription>
+                                <div className="flex items-center space-x-2">
+                                  {!isBooked && (
+                                    <Checkbox 
+                                      checked={isSelected}
+                                      onCheckedChange={() => toggleClassSelection(cls.id)}
+                                      disabled={cls.enrolled >= cls.capacity || isBooked || userData.remainingSessions <= 0}
+                                      className="border-gym-blue"
+                                      id={`class-${cls.id}`}
+                                    />
+                                  )}
+                                  <div>
+                                    <CardTitle>{cls.name}</CardTitle>
+                                    <CardDescription>{cls.time}</CardDescription>
+                                  </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-1">
                                   <Badge variant={cls.enrolled >= cls.capacity ? "destructive" : "outline"}>
@@ -279,13 +313,17 @@ const ClassCalendar = () => {
                                 </Button>
                               ) : (
                                 <Button 
-                                  onClick={() => handleBookClass(cls.id)}
-                                  className="w-full bg-gym-blue hover:bg-gym-dark-blue"
+                                  onClick={() => toggleClassSelection(cls.id)}
+                                  className={cn(
+                                    "w-full",
+                                    isSelected ? "bg-green-500 hover:bg-green-600" : "bg-gym-blue hover:bg-gym-dark-blue"
+                                  )}
                                   disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0}
                                 >
-                                  {cls.enrolled >= cls.capacity ? "Class Full" : 
-                                   userData.remainingSessions <= 0 ? "No Sessions Left" : 
-                                   "Book Class"}
+                                  {isSelected ? "Selected" : 
+                                    cls.enrolled >= cls.capacity ? "Class Full" : 
+                                    userData.remainingSessions <= 0 ? "No Sessions Left" : 
+                                    "Select Class"}
                                 </Button>
                               )}
                             </CardFooter>

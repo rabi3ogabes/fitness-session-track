@@ -1,177 +1,279 @@
 
+import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Check, CreditCard } from "lucide-react";
 
 // Mock membership data
 const membershipData = {
   current: {
-    type: "Basic",
-    sessions: {
-      total: 4,
-      used: 1,
-      remaining: 3,
-    },
-    startDate: "2025-04-01",
-    expiryDate: "2025-05-01",
+    name: "Basic",
+    type: "Monthly",
+    startDate: "April 1, 2025",
+    endDate: "May 1, 2025",
+    sessions: 12,
+    sessionsRemaining: 7,
+    price: 250, // QR
+    automatic: true,
   },
-  options: [
-    {
-      id: 1,
-      name: "Basic",
-      sessions: 1,
-      price: 25,
-      description: "Perfect for trying out our gym facilities and classes",
-    },
-    {
-      id: 2,
-      name: "Standard",
-      sessions: 4,
-      price: 80,
-      description: "Ideal for occasional gym-goers",
-      popular: true,
-    },
-    {
-      id: 3,
-      name: "Premium",
-      sessions: 12,
-      price: 180,
-      description: "Best value for regular attendees",
-    },
-  ],
   history: [
     {
       id: 1,
-      type: "Premium",
-      sessions: 12,
-      startDate: "2025-03-01",
-      expiryDate: "2025-04-01",
-      status: "Expired",
+      type: "Basic Monthly",
+      date: "April 1, 2025",
+      amount: 250, // QR
+      status: "Successful",
     },
     {
       id: 2,
-      type: "Standard",
-      sessions: 8,
-      startDate: "2025-02-01",
-      expiryDate: "2025-03-01",
-      status: "Expired",
+      type: "Basic Monthly",
+      date: "March 1, 2025",
+      amount: 250, // QR
+      status: "Successful",
+    },
+    {
+      id: 3,
+      type: "Premium Monthly",
+      date: "February 1, 2025",
+      amount: 350, // QR
+      status: "Successful",
     },
   ],
 };
 
+// Mock available plans
+const availablePlans = [
+  {
+    id: 1,
+    name: "Basic",
+    description: "Access to gym facilities and 12 sessions per month",
+    monthlyPrice: 250, // QR
+    yearlyPrice: 2500, // QR
+    features: [
+      "Full gym access",
+      "12 trainer sessions per month",
+      "Access to basic classes",
+      "Locker usage",
+    ],
+    recommended: false,
+  },
+  {
+    id: 2,
+    name: "Premium",
+    description: "Full access with 20 sessions per month and additional perks",
+    monthlyPrice: 350, // QR
+    yearlyPrice: 3500, // QR
+    features: [
+      "Full gym access",
+      "20 trainer sessions per month",
+      "Access to all classes",
+      "Towel service",
+      "1 guest pass per month",
+      "Nutritional consultation",
+    ],
+    recommended: true,
+  },
+  {
+    id: 3,
+    name: "Ultimate",
+    description: "Unlimited access with personal training and premium amenities",
+    monthlyPrice: 500, // QR
+    yearlyPrice: 5000, // QR
+    features: [
+      "Full gym access",
+      "Unlimited trainer sessions",
+      "Access to all classes",
+      "Towel service",
+      "3 guest passes per month",
+      "Nutritional consultation",
+      "Personalized workout plan",
+      "Massage session once a month",
+    ],
+    recommended: false,
+  },
+];
+
 const UserMembership = () => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedMembership, setSelectedMembership] = useState<null | typeof membershipData.options[0]>(null);
-  const { toast } = useToast();
-
-  const handlePurchase = () => {
-    if (!selectedMembership) return;
-    
-    toast({
-      title: "Purchase request submitted",
-      description: `Your request to purchase the ${selectedMembership.name} membership has been submitted for admin approval.`,
-    });
-    
-    setIsDialogOpen(false);
-    setSelectedMembership(null);
-  };
-
+  const [billingCycle, setBillingCycle] = useState("monthly");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("credit-card");
+  
   return (
-    <DashboardLayout title="My Membership">
+    <DashboardLayout title="Membership">
       <div className="space-y-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-bold mb-4">Current Membership</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-4 border border-gray-200 rounded-md">
-              <p className="text-sm text-gray-500">Membership Type</p>
-              <p className="text-xl font-bold text-gym-blue">{membershipData.current.type}</p>
-            </div>
-            <div className="p-4 border border-gray-200 rounded-md">
-              <p className="text-sm text-gray-500">Sessions</p>
-              <p className="text-xl font-bold text-gym-blue">
-                {membershipData.current.sessions.remaining}/{membershipData.current.sessions.total}
-              </p>
-              <p className="text-xs text-gray-500">
-                {membershipData.current.sessions.used} used
-              </p>
-            </div>
-            <div className="p-4 border border-gray-200 rounded-md">
-              <p className="text-sm text-gray-500">Valid Until</p>
-              <p className="text-xl font-bold text-gym-blue">{membershipData.current.expiryDate}</p>
-              <p className="text-xs text-gray-500">
-                Started on {membershipData.current.startDate}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-bold mb-6">Membership Options</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {membershipData.options.map((option) => (
-              <div
-                key={option.id}
-                className={`border rounded-lg overflow-hidden flex flex-col ${
-                  option.popular ? "border-gym-blue" : "border-gray-200"
-                }`}
-              >
-                {option.popular && (
-                  <div className="bg-gym-blue text-white py-1 px-3 text-center text-sm">
-                    Most Popular
-                  </div>
-                )}
-                <div className="p-6 flex-1">
-                  <h3 className="text-xl font-bold mb-2">{option.name}</h3>
-                  <p className="text-3xl font-bold text-gym-blue mb-2">
-                    ${option.price}
-                  </p>
-                  <p className="text-gray-600 mb-4">{option.sessions} sessions</p>
-                  <p className="text-sm text-gray-500 mb-6">
-                    {option.description}
-                  </p>
-                  <Button
-                    onClick={() => {
-                      setSelectedMembership(option);
-                      setIsDialogOpen(true);
+        {/* Current Membership */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Current Membership</CardTitle>
+            <CardDescription>Your current membership details and usage</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-medium text-lg">{membershipData.current.name} Membership ({membershipData.current.type})</h3>
+                <p className="text-gray-500 mt-1">
+                  From {membershipData.current.startDate} to {membershipData.current.endDate}
+                </p>
+                <p className="mt-4">
+                  <span className="font-medium">Sessions:</span>{" "}
+                  {membershipData.current.sessionsRemaining} remaining out of{" "}
+                  {membershipData.current.sessions} total
+                </p>
+                <div className="mt-1 bg-gray-200 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-gym-blue h-2"
+                    style={{
+                      width: `${(membershipData.current.sessionsRemaining / membershipData.current.sessions) * 100}%`,
                     }}
-                    className={`w-full ${
-                      option.popular
-                        ? "bg-gym-blue hover:bg-gym-dark-blue text-white"
-                        : "bg-white text-gym-blue border border-gym-blue hover:bg-gym-light"
-                    }`}
-                    variant={option.popular ? "default" : "outline"}
-                  >
-                    Purchase
+                  ></div>
+                </div>
+              </div>
+              <div className="border-l-0 md:border-l border-gray-200 pl-0 md:pl-4 mt-4 md:mt-0">
+                <p className="font-medium">Payment</p>
+                <p className="text-2xl font-bold mt-1">
+                  QR {membershipData.current.price}<span className="text-sm font-normal">/month</span>
+                </p>
+                <p className="text-gray-500 mt-1">
+                  {membershipData.current.automatic
+                    ? "Automatic renewal enabled"
+                    : "Automatic renewal disabled"}
+                </p>
+                <div className="mt-4 flex space-x-2">
+                  <Button variant="outline" size="sm">
+                    Disable Auto-Renewal
+                  </Button>
+                  <Button size="sm" className="bg-gym-blue hover:bg-gym-dark-blue">
+                    Upgrade Plan
                   </Button>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Available Plans */}
+        <div>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">Available Plans</h2>
+            <div className="bg-gray-100 rounded-md p-1">
+              <button
+                className={`px-4 py-1 rounded-md transition ${
+                  billingCycle === "monthly"
+                    ? "bg-white shadow-sm"
+                    : "text-gray-500"
+                }`}
+                onClick={() => setBillingCycle("monthly")}
+              >
+                Monthly
+              </button>
+              <button
+                className={`px-4 py-1 rounded-md transition ${
+                  billingCycle === "yearly"
+                    ? "bg-white shadow-sm"
+                    : "text-gray-500"
+                }`}
+                onClick={() => setBillingCycle("yearly")}
+              >
+                Yearly (save 10%)
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {availablePlans.map((plan) => (
+              <Card
+                key={plan.id}
+                className={`${
+                  plan.recommended
+                    ? "border-2 border-gym-blue relative"
+                    : ""
+                }`}
+              >
+                {plan.recommended && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gym-blue text-white px-3 py-1 rounded-full text-xs font-medium">
+                    Recommended
+                  </div>
+                )}
+                <CardHeader>
+                  <CardTitle>{plan.name}</CardTitle>
+                  <CardDescription>{plan.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="mt-1 mb-4">
+                    <p className="text-3xl font-bold">
+                      QR{" "}
+                      {billingCycle === "monthly"
+                        ? plan.monthlyPrice
+                        : plan.yearlyPrice}
+                      <span className="text-sm font-normal">
+                        /{billingCycle === "monthly" ? "month" : "year"}
+                      </span>
+                    </p>
+                  </div>
+
+                  <ul className="space-y-2">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-center">
+                        <Check className="h-4 w-4 text-gym-blue mr-2" />
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                <CardFooter>
+                  <Button
+                    className={`w-full ${
+                      plan.recommended
+                        ? "bg-gym-blue hover:bg-gym-dark-blue"
+                        : ""
+                    }`}
+                  >
+                    {membershipData.current.name === plan.name
+                      ? "Current Plan"
+                      : "Select Plan"}
+                  </Button>
+                </CardFooter>
+              </Card>
             ))}
           </div>
-          <p className="text-sm text-gray-500 mt-4">
-            * All memberships have a validity of 30 days from the date of purchase.
-          </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-bold mb-4">Membership History</h2>
-          {membershipData.history.length > 0 ? (
+        {/* Payment History */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment History</CardTitle>
+            <CardDescription>Your recent membership payments</CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Sessions
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Start Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Expiry Date
+                      Amount
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
@@ -179,23 +281,26 @@ const UserMembership = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {membershipData.history.map((membership) => (
-                    <tr key={membership.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium">{membership.type}</div>
+                  {membershipData.history.map((payment) => (
+                    <tr key={payment.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {payment.date}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {payment.type}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {membership.sessions}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {membership.startDate}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {membership.expiryDate}
+                        QR {payment.amount}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
-                          {membership.status}
+                        <span
+                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            payment.status === "Successful"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {payment.status}
                         </span>
                       </td>
                     </tr>
@@ -203,52 +308,91 @@ const UserMembership = () => {
                 </tbody>
               </table>
             </div>
-          ) : (
-            <p className="text-gray-500">No membership history available.</p>
-          )}
-        </div>
-      </div>
+          </CardContent>
+        </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirm Membership Purchase</DialogTitle>
-          </DialogHeader>
+        {/* Update Payment Method */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Method</CardTitle>
+            <CardDescription>Update your payment details</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="credit-card">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger
+                  value="credit-card"
+                  onClick={() => setSelectedPaymentMethod("credit-card")}
+                >
+                  Credit Card
+                </TabsTrigger>
+                <TabsTrigger
+                  value="paypal"
+                  onClick={() => setSelectedPaymentMethod("paypal")}
+                >
+                  PayPal
+                </TabsTrigger>
+              </TabsList>
 
-          <div className="py-4">
-            {selectedMembership && (
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-500">Membership Type</p>
-                  <p className="font-medium">{selectedMembership.name}</p>
+              <TabsContent value="credit-card">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <Label htmlFor="cardName">Cardholder Name</Label>
+                      <Input
+                        id="cardName"
+                        placeholder="John Doe"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <Label htmlFor="cardNumber">Card Number</Label>
+                      <Input
+                        id="cardNumber"
+                        placeholder="**** **** **** ****"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="expiry">Expiry Date</Label>
+                      <Input
+                        id="expiry"
+                        placeholder="MM/YY"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="cvc">CVC</Label>
+                      <Input id="cvc" placeholder="***" className="mt-1" />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">Sessions</p>
-                  <p className="font-medium">{selectedMembership.sessions}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Price</p>
-                  <p className="font-medium">${selectedMembership.price}</p>
-                </div>
-                <div className="border-t pt-4">
-                  <p className="text-sm">
-                    Please pay at the gym reception. Your membership will be activated after payment confirmation.
+              </TabsContent>
+
+              <TabsContent value="paypal">
+                <div className="text-center py-6">
+                  <p className="mb-4">
+                    You will be redirected to PayPal to complete the setup.
                   </p>
+                  <Button className="bg-[#0070ba] hover:bg-[#005ea6]">
+                    Connect with PayPal
+                  </Button>
                 </div>
-              </div>
-            )}
-          </div>
+              </TabsContent>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handlePurchase} className="bg-gym-blue hover:bg-gym-dark-blue">
-              Confirm Purchase
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <div className="mt-6 flex justify-end">
+                <Button
+                  className="bg-gym-blue hover:bg-gym-dark-blue"
+                  disabled={!selectedPaymentMethod}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Save Payment Method
+                </Button>
+              </div>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
     </DashboardLayout>
   );
 };
