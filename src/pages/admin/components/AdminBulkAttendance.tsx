@@ -36,6 +36,7 @@ export const AdminBulkAttendance = ({ className, classId, date = new Date() }: A
   const [attendees, setAttendees] = useState(mockClassAttendees);
   const [selectAll, setSelectAll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [originalAttendees, setOriginalAttendees] = useState(mockClassAttendees);
 
   // Initialize data when dialog opens
   useEffect(() => {
@@ -45,10 +46,13 @@ export const AdminBulkAttendance = ({ className, classId, date = new Date() }: A
       
       // Simulate API call delay
       setTimeout(() => {
+        // Store original data for comparison
+        setOriginalAttendees([...mockClassAttendees]);
+        
         // Check if any attendees are already marked present
         const hasPresent = mockClassAttendees.some(a => a.isPresent);
         setSelectAll(hasPresent && mockClassAttendees.every(a => a.isPresent));
-        setAttendees(mockClassAttendees);
+        setAttendees([...mockClassAttendees]);
         setIsLoading(false);
       }, 500);
     }
@@ -67,17 +71,13 @@ export const AdminBulkAttendance = ({ className, classId, date = new Date() }: A
   };
 
   const handleToggleAttendee = (id: number, value: boolean) => {
-    setAttendees(prev => 
-      prev.map(item => 
-        item.id === id ? { ...item, isPresent: value } : item
-      )
-    );
-    
-    // Update selectAll state based on all items
     const updatedAttendees = attendees.map(item => 
       item.id === id ? { ...item, isPresent: value } : item
     );
     
+    setAttendees(updatedAttendees);
+    
+    // Update selectAll state based on all items
     setSelectAll(updatedAttendees.every(item => item.isPresent));
   };
 
@@ -86,6 +86,24 @@ export const AdminBulkAttendance = ({ className, classId, date = new Date() }: A
     
     // In a real app, this would be an API call
     setTimeout(() => {
+      // Update the original data source with our changes
+      // This is important: we need to ensure our changes are applied globally
+      const updatedData = attendees.map(attendee => {
+        return {
+          ...attendee,
+          status: attendee.isPresent ? "Present" : "Absent"
+        };
+      });
+      
+      // In a real app, you would update your data source/store
+      // For now, we'll update our mock data
+      for (let i = 0; i < mockClassAttendees.length; i++) {
+        const updated = updatedData.find(a => a.id === mockClassAttendees[i].id);
+        if (updated) {
+          mockClassAttendees[i] = updated;
+        }
+      }
+      
       setIsLoading(false);
       setIsOpen(false);
       
