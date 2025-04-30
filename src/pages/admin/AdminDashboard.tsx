@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -174,6 +173,32 @@ const AdminDashboard = () => {
                 </table>
               </div>
             </div>
+            
+            {/* Recent Payments (moved below Recent Members) */}
+            <div className="mt-6 bg-white rounded-lg shadow-md p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Recent Payments</h2>
+                <a href="/admin/payments" className="text-sm text-gym-blue hover:underline">
+                  View All
+                </a>
+              </div>
+              <div className="space-y-3">
+                {adminData.recentPayments.map((payment) => (
+                  <div key={payment.id} className="flex justify-between items-center p-3 border border-gray-200 rounded-md">
+                    <div>
+                      <p className="font-medium">{payment.member}</p>
+                      <p className="text-xs text-gray-500">{payment.date}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">QAR {payment.amount}</p>
+                      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                        {payment.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="lg:col-span-1">
@@ -221,31 +246,6 @@ const AdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
-
-            <div className="mt-6 bg-white rounded-lg shadow-md p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Recent Payments</h2>
-                <a href="/admin/payments" className="text-sm text-gym-blue hover:underline">
-                  View All
-                </a>
-              </div>
-              <div className="space-y-3">
-                {adminData.recentPayments.map((payment) => (
-                  <div key={payment.id} className="flex justify-between items-center p-3 border border-gray-200 rounded-md">
-                    <div>
-                      <p className="font-medium">{payment.member}</p>
-                      <p className="text-xs text-gray-500">{payment.date}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">QAR {payment.amount}</p>
-                      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-                        {payment.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </div>
