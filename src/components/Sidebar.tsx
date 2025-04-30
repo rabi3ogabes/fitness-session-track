@@ -1,3 +1,4 @@
+
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -11,7 +12,6 @@ import {
   CalendarDays,
   CreditCard,
   Settings,
-  CalendarCheck,
   BadgeCheck,
   BarChart3,
   LogOut,
@@ -66,14 +66,12 @@ const Sidebar = () => {
   const userNavItems = [
     { name: "Dashboard", path: "/dashboard", icon: <Home className="h-5 w-5" /> },
     { name: "Calendar", path: "/user/calendar", icon: <Calendar className="h-5 w-5" /> },
-    { name: "Class Schedule", path: "/user/schedule", icon: <CalendarCheck className="h-5 w-5" /> },
     { name: "Membership", path: "/user/membership", icon: <BadgeCheck className="h-5 w-5" /> },
   ];
   
   const trainerNavItems = [
     { name: "Dashboard", path: "/trainer", icon: <Home className="h-5 w-5" /> },
     { name: "Attendees", path: "/admin/bookings", icon: <CalendarDays className="h-5 w-5" /> },
-    { name: "Class Schedule", path: "/user/schedule", icon: <CalendarCheck className="h-5 w-5" /> },
     { name: "Members", path: "/admin/members", icon: <UsersRound className="h-5 w-5" /> },
   ];
 
