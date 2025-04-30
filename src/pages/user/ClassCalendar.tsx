@@ -272,6 +272,17 @@ const ClassCalendar = () => {
     });
   };
 
+  // Custom day content renderer for the calendar
+  const DayContent = (props: any) => {
+    const { date, ...otherProps } = props;
+    return (
+      <div className="flex flex-col items-center">
+        <div {...otherProps} />
+        {renderClassTypeDots(date)}
+      </div>
+    );
+  };
+
   return (
     <DashboardLayout title="Book a Class">
       <div className="mb-6">
@@ -319,12 +330,7 @@ const ClassCalendar = () => {
                       hasClass: "bg-gym-light text-gym-blue font-bold"
                     }}
                     components={{
-                      DayContent: ({ date, ...props }) => (
-                        <div className="flex flex-col items-center">
-                          <div {...props} />
-                          {renderClassTypeDots(date)}
-                        </div>
-                      ),
+                      DayContent: DayContent,
                     }}
                   />
                 </div>
