@@ -1,4 +1,4 @@
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ import {
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAdmin, isTrainer, logout, user } = useAuth();
   const isMobile = useIsMobile();
   const [logo, setLogo] = useState<string | null>(null);
@@ -45,6 +46,11 @@ const Sidebar = () => {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   const adminNavItems = [
     { name: "Dashboard", path: "/admin", icon: <Home className="h-5 w-5" /> },
@@ -167,7 +173,7 @@ const Sidebar = () => {
           </a>
           
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
             title="Logout"
           >

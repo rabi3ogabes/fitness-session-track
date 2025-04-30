@@ -19,6 +19,11 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
     return null;
   }
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <div className="min-h-screen flex bg-gray-50">
       <Sidebar />
@@ -27,7 +32,7 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
           <h1 className="text-2xl font-bold text-gray-800">{title}</h1>
           <div>
             <button
-              onClick={() => logout()}
+              onClick={handleLogout}
               className="px-4 py-2 bg-gym-blue hover:bg-gym-dark-blue text-white rounded-md transition-colors"
             >
               Logout
