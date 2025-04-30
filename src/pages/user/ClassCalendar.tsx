@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Calendar } from "@/components/ui/calendar";
@@ -6,7 +5,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Bell, AlertCircle } from "lucide-react";
+import { CalendarDays, Bell, AlertCircle, Check, X } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -17,6 +16,14 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Mock user data
 const userData = {
@@ -156,6 +163,7 @@ const ClassCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [bookedClasses, setBookedClasses] = useState<number[]>([]);
   const [selectedClasses, setSelectedClasses] = useState<number[]>([]);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const { toast } = useToast();
   
   // Calculate if sessions are low (25% or less)
@@ -238,12 +246,22 @@ const ClassCalendar = () => {
       return;
     }
 
+    // Open confirmation dialog instead of directly booking
+    setConfirmDialogOpen(true);
+  };
+  
+  const confirmBooking = () => {
     setBookedClasses([...bookedClasses, ...selectedClasses]);
     toast({
       title: "Classes booked successfully!",
       description: `You've booked ${selectedClasses.length} classes. The trainers have been notified.`,
     });
     setSelectedClasses([]);
+    setConfirmDialogOpen(false);
+  };
+  
+  const cancelBookingConfirmation = () => {
+    setConfirmDialogOpen(false);
   };
   
   const handleCancelBooking = (classId: number, classTime: string, className: string) => {
@@ -282,6 +300,10 @@ const ClassCalendar = () => {
       </div>
     );
   };
+
+  const selectedClassesData = selectedClasses.map(id => 
+    mockClasses.find(cls => cls.id === id)
+  ).filter(Boolean);
 
   return (
     <DashboardLayout title="Book a Class">
@@ -474,6 +496,58 @@ const ClassCalendar = () => {
           </div>
         </div>
       </div>
+
+      {/* Booking confirmation dialog */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Class Booking</DialogTitle>
+            <DialogDescription>
+              You're about to book the following classes:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="max-h-[300px] overflow-y-auto space-y-2">
+              {selectedClassesData.map((cls: any) => (
+                <div key={cls.id} className="flex items-center justify-between border-b pb-2">
+                  <div>
+                    <p className="font-medium">{cls.name}</p>
+                    <p className="text-sm text-gray-500">{format(cls.date, 'MMM d')} • {cls.time}</p>
+                  </div>
+                  <Badge variant="outline" className={`${classTypeColors[cls.type as keyof typeof classTypeColors]?.bg || ''} ${classTypeColors[cls.type as keyof typeof classTypeColors]?.text || ''} capitalize`}>
+                    {cls.type}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-4 p-3 bg-gray-50 rounded-md">
+              <div className="flex justify-between">
+                <span>Total sessions required:</span>
+                <span className="font-bold">{selectedClasses.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Your remaining sessions:</span>
+                <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-gym-blue")}>
+                  {userData.remainingSessions}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2">
+            <Button variant="outline" onClick={cancelBookingConfirmation} className="w-full sm:w-auto">
+              <X className="mr-2 h-4 w-4" />
+              Cancel
+            </Button>
+            <Button onClick={confirmBooking} className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue">
+              <Check className="mr-2 h-4 w-4" />
+              Confirm Booking
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

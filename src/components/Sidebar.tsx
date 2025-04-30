@@ -1,4 +1,3 @@
-
 import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -20,7 +19,7 @@ import {
 
 const Sidebar = () => {
   const location = useLocation();
-  const { isAdmin, isTrainer, logout } = useAuth();
+  const { isAdmin, isTrainer, logout, user } = useAuth();
   const isMobile = useIsMobile();
 
   const adminNavItems = [
@@ -50,11 +49,18 @@ const Sidebar = () => {
   ];
 
   let navItems = userNavItems;
+  let userRole = "Member";
+  
   if (isAdmin) {
     navItems = adminNavItems;
+    userRole = "Admin";
   } else if (isTrainer) {
     navItems = trainerNavItems;
+    userRole = "Trainer";
   }
+
+  // Mock user name - in a real app, this would come from the auth context
+  const userName = user?.name || "John Doe";
 
   return (
     <div className={cn(
@@ -62,14 +68,24 @@ const Sidebar = () => {
       isMobile ? "w-16" : "w-64"
     )}>
       <div>
-        <div className="p-4 flex items-center justify-center">
+        {/* Logo Section */}
+        <div className="p-4 flex flex-col items-center justify-center border-b">
           <h2 className={cn(
-            "text-gym-dark font-bold",
+            "text-gym-blue font-bold",
             isMobile ? "text-xl" : "text-2xl"
           )}>
             {isMobile ? "GM" : "GYM SYSTEM"}
           </h2>
+          
+          {/* User info below the logo */}
+          {!isMobile && (
+            <div className="mt-2 text-center">
+              <p className="text-sm font-medium">{userName}</p>
+              <p className="text-xs text-gray-500">{userRole}</p>
+            </div>
+          )}
         </div>
+        
         <nav className="mt-6">
           <ul className="space-y-1">
             {navItems.map((item) => (
