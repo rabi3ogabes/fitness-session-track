@@ -2,13 +2,14 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarIcon, ChevronLeft, ChevronRight, Check, X } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight, Check, X, Users, Save } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { mockClasses, getBookingsForClass, getClassesForDate } from "../mockData";
 import { useAttendanceManager } from "../utils/attendanceUtils";
 import { mockBookings } from "../mockData";
 import { useState } from "react";
+import { BulkAttendanceDialog } from "./BulkAttendanceDialog";
 
 interface AttendeesSectionProps {
   selectedDateForAttendees: Date;
@@ -25,11 +26,18 @@ export const AttendeesSection = ({
 }: AttendeesSectionProps) => {
   const [bookings, setBookings] = useState(mockBookings);
   const { markAttendance } = useAttendanceManager();
+  const [isBulkAttendanceOpen, setIsBulkAttendanceOpen] = useState(false);
   
   const classesForAttendees = getClassesForDate(selectedDateForAttendees);
   
   const handleMarkAttendance = (bookingId: number, present: boolean) => {
     markAttendance(bookingId, present, bookings, setBookings);
+  };
+
+  const handleOpenBulkAttendance = () => {
+    if (selectedClassForAttendees) {
+      setIsBulkAttendanceOpen(true);
+    }
   };
   
   return (
@@ -119,12 +127,21 @@ export const AttendeesSection = ({
                   return cls ? ` - ${cls.name} (${cls.time})` : '';
                 })()}
               </h3>
-              <Badge variant="outline">
-                {(() => {
-                  const cls = mockClasses.find(c => c.id === selectedClassForAttendees);
-                  return cls ? `${cls.enrolled}/${cls.capacity}` : '';
-                })()}
-              </Badge>
+              <div className="flex space-x-2">
+                <Badge variant="outline">
+                  {(() => {
+                    const cls = mockClasses.find(c => c.id === selectedClassForAttendees);
+                    return cls ? `${cls.enrolled}/${cls.capacity}` : '';
+                  })()}
+                </Badge>
+                <Button 
+                  onClick={handleOpenBulkAttendance}
+                  className="bg-gym-blue hover:bg-gym-dark-blue"
+                  size="sm"
+                >
+                  <Users className="h-4 w-4 mr-2" /> Manage Attendance
+                </Button>
+              </div>
             </div>
             
             {(() => {
@@ -204,6 +221,14 @@ export const AttendeesSection = ({
           </div>
         )}
       </div>
+      
+      {/* Bulk Attendance Dialog */}
+      <BulkAttendanceDialog
+        isOpen={isBulkAttendanceOpen}
+        onOpenChange={setIsBulkAttendanceOpen}
+        selectedClass={selectedClassForAttendees}
+        selectedDate={selectedDateForAttendees}
+      />
     </div>
   );
 };

@@ -37,6 +37,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
+import { AdminBulkAttendance } from "./components/AdminBulkAttendance";
 
 // Mock data
 const initialBookings = [
@@ -311,6 +312,8 @@ const Bookings = () => {
                 </div>
               </PopoverContent>
             </Popover>
+            
+            <AdminBulkAttendance date={selectedDate} />
             
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>

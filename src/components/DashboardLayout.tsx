@@ -1,4 +1,3 @@
-
 import { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -39,7 +38,7 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
             </button>
           </div>
         </header>
-        <main className="p-4 md:p-6">{children}</main>
+        <main className="p-4 md:p-6 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );
