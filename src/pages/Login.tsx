@@ -3,13 +3,27 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
+  // Login state
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  
+  // Signup state
+  const [phone, setPhone] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [name, setName] = useState("");
+  
   const [isLoading, setIsLoading] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
-  const { login, isAdmin } = useAuth();
+  const [activeTab, setActiveTab] = useState("login");
+  
+  const { login, signup, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -21,12 +35,12 @@ const Login = () => {
     }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
+      const success = await login(identifier, password);
       
       if (success) {
         toast({
@@ -43,13 +57,64 @@ const Login = () => {
       } else {
         toast({
           title: "Login failed",
-          description: "Invalid email or password. Please try again.",
+          description: "Invalid phone number or password. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
       toast({
         title: "Login error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // Validate phone number format
+      if (!/^\d{8}$/.test(phone)) {
+        toast({
+          title: "Invalid phone number",
+          description: "Please enter an 8-digit Qatar phone number",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if passwords match
+      if (signupPassword !== confirmPassword) {
+        toast({
+          title: "Passwords don't match",
+          description: "Please ensure both passwords are the same",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const success = await signup(phone, signupPassword, name);
+      
+      if (success) {
+        toast({
+          title: "Signup successful",
+          description: "Your account has been created. You can now log in.",
+        });
+        
+        // Switch to login tab
+        setActiveTab("login");
+        setIdentifier(phone);
+        setPassword(signupPassword);
+      }
+    } catch (error) {
+      toast({
+        title: "Signup error",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
@@ -80,60 +145,124 @@ const Login = () => {
       
       <div className="max-w-md w-full mx-auto space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-2xl font-bold text-gray-900">Sign in to your account</h2>
+          <h2 className="mt-6 text-2xl font-bold text-gray-900">Welcome to FitTrack Pro</h2>
           <p className="mt-2 text-sm text-gray-600">
             Demo accounts: admin@gym.com, user@gym.com, trainer@gym.com (password: admin123, user123, trainer123)
           </p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email-address" className="sr-only">
-                Email address
-              </label>
-              <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-gym-blue focus:border-gym-blue focus:z-10 sm:text-sm"
-                placeholder="Email address"
-              />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="login">
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <form className="space-y-4" onSubmit={handleLogin}>
+                <div className="space-y-2">
+                  <Label htmlFor="identifier">Phone Number or Email</Label>
+                  <Input
+                    id="identifier"
+                    placeholder="Enter 8-digit phone number or email"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-gray-500">
+                    For example: 66666666 or user@example.com
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Signing in..." : "Sign in"}
+                </Button>
+              </form>
             </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-gym-blue focus:border-gym-blue focus:z-10 sm:text-sm"
-                placeholder="Password"
-              />
+          </TabsContent>
+          
+          <TabsContent value="signup">
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <form className="space-y-4" onSubmit={handleSignup}>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    placeholder="Enter your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number (8 digits)</Label>
+                  <Input
+                    id="phone"
+                    placeholder="Enter 8-digit Qatar phone number"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-gray-500">
+                    Your phone number will be your username
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="signupPassword">Password</Label>
+                  <Input
+                    id="signupPassword"
+                    type="password"
+                    placeholder="Create a password"
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-gray-500">
+                    By default, your phone number will be your password
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="Confirm your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Creating account..." : "Create account"}
+                </Button>
+              </form>
             </div>
-          </div>
-
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gym-blue hover:bg-gym-dark-blue focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gym-blue ${
-                isLoading ? "opacity-70 cursor-not-allowed" : ""
-              }`}
-            >
-              {isLoading ? "Signing in..." : "Sign in"}
-            </button>
-          </div>
-        </form>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
