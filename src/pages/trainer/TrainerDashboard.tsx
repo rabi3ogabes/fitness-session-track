@@ -9,13 +9,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { format } from "date-fns";
 import { CalendarSection } from "./components/CalendarSection";
 import { ClassesSection } from "./components/ClassesSection";
-import { AttendeesSection } from "./components/AttendeesSection";
 import { ClassDetailsDialog } from "./components/ClassDetailsDialog";
 import { NewMemberDialog, NewMemberButton } from "./components/NewMemberDialog";
 import { mockBookings } from "./mockData";
+import { format } from "date-fns";
 
 const TrainerDashboard = () => {
   const { isTrainer, isAuthenticated } = useAuth();
@@ -29,10 +28,6 @@ const TrainerDashboard = () => {
   // New member registration dialog
   const [isNewMemberDialogOpen, setIsNewMemberDialogOpen] = useState(false);
   const [isClassDetailsOpen, setIsClassDetailsOpen] = useState(false);
-  
-  // State for attendees view
-  const [selectedClassForAttendees, setSelectedClassForAttendees] = useState<number | null>(null);
-  const [selectedDateForAttendees, setSelectedDateForAttendees] = useState<Date>(new Date());
   
   // Check authentication and redirect if necessary
   useEffect(() => {
@@ -50,7 +45,6 @@ const TrainerDashboard = () => {
   const handleViewClassDetails = (classId: number) => {
     setSelectedClass(classId);
     setIsClassDetailsOpen(true);
-    console.log("Opening dialog for class:", classId, "Dialog state:", isClassDetailsOpen);
   };
   
   const handleRegisterMember = (newMember: any) => {
@@ -80,7 +74,6 @@ const TrainerDashboard = () => {
         <TabsList className="w-full mb-4 overflow-x-auto flex-wrap justify-start md:justify-start">
           <TabsTrigger value="calendar">Calendar View</TabsTrigger>
           <TabsTrigger value="classes">Classes & Bookings</TabsTrigger>
-          <TabsTrigger value="attendees">Attendees</TabsTrigger>
         </TabsList>
         
         <TabsContent value="calendar">
@@ -102,15 +95,6 @@ const TrainerDashboard = () => {
             viewMode={viewMode}
             setViewMode={setViewMode}
             handleViewClassDetails={handleViewClassDetails}
-          />
-        </TabsContent>
-        
-        <TabsContent value="attendees">
-          <AttendeesSection 
-            selectedDateForAttendees={selectedDateForAttendees}
-            setSelectedDateForAttendees={setSelectedDateForAttendees}
-            selectedClassForAttendees={selectedClassForAttendees}
-            setSelectedClassForAttendees={setSelectedClassForAttendees}
           />
         </TabsContent>
       </Tabs>

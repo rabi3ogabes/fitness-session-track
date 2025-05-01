@@ -26,6 +26,7 @@ import UserBooking from "./pages/user/UserBooking";
 import UserSchedule from "./pages/user/UserSchedule";
 import ClassCalendar from "./pages/user/ClassCalendar";
 import TrainerDashboard from "./pages/trainer/TrainerDashboard";
+import AttendeesPage from "./pages/trainer/AttendeesPage";
 
 // Context
 import { AuthProvider } from "./context/AuthContext";
@@ -107,6 +108,11 @@ const App = () => (
             <Route path="/trainer" element={
               <ProtectedRoute>
                 <TrainerDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/trainer/attendees" element={
+              <ProtectedRoute>
+                <AttendeesPage />
               </ProtectedRoute>
             } />
 
