@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, AlertCircle, User, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Login = () => {
   // Login state
@@ -33,6 +34,7 @@ const Login = () => {
   const [activeTab, setActiveTab] = useState("login");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showDemoHelp, setShowDemoHelp] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const { login, signup, isAdmin, isTrainer, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -91,12 +93,14 @@ const Login = () => {
         setPassword('trainer123');
         break;
     }
+    setError(null);
     setShowDemoHelp(false);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
     try {
       // Add console logs to help debug
@@ -104,9 +108,10 @@ const Login = () => {
       
       await login(identifier, password);
       // Login success will be handled by the useEffect that watches isAuthenticated
-    } catch (error) {
-      // Error is now handled in the AuthContext
+    } catch (error: any) {
+      // Display error message
       console.error("Login error caught in component:", error);
+      setError(error?.message || "Failed to login. Please check your credentials and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -115,6 +120,7 @@ const Login = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
     try {
       // Validate phone number format
@@ -124,6 +130,7 @@ const Login = () => {
           description: "Please enter an 8-digit Qatar phone number",
           variant: "destructive",
         });
+        setError("Please enter an 8-digit Qatar phone number");
         setIsLoading(false);
         return;
       }
@@ -135,6 +142,7 @@ const Login = () => {
           description: "Please ensure both passwords are the same",
           variant: "destructive",
         });
+        setError("Passwords don't match. Please ensure both passwords are the same");
         setIsLoading(false);
         return;
       }
@@ -158,9 +166,10 @@ const Login = () => {
         setIdentifier(email);
         setPassword(signupPassword);
       }
-    } catch (error) {
-      // Error is now handled in the AuthContext
+    } catch (error: any) {
+      // Display error message
       console.error("Signup error caught in component:", error);
+      setError(error?.message || "Failed to sign up. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -259,6 +268,14 @@ const Login = () => {
         </div>
         
         <OfflineWarning />
+
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">

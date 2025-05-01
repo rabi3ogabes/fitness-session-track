@@ -51,7 +51,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check for an existing session
+    // Set up auth state change listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state change event:", event);
+        if (session) {
+          console.log("New session established:", session.user.id);
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || '',
+          });
+
+          // In a real implementation, fetch user profile
+          const mockUserProfile = {
+            sessions_remaining: 7, 
+            total_sessions: 12
+          };
+          setUserProfile(mockUserProfile);
+
+          // For mock purposes
+          const mockRole = localStorage.getItem('userRole') || 'user';
+          setRole(mockRole);
+          console.log("User role set to:", mockRole);
+        } else {
+          setUser(null);
+          setUserProfile(null);
+          setRole(null);
+          console.log("Session cleared");
+        }
+        setLoading(false);
+      }
+    );
+
+    // Then check for an existing session
     const checkSession = async () => {
       try {
         console.log("Checking for existing session...");
@@ -97,39 +130,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     checkSession();
-
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state change event:", event);
-        if (session) {
-          console.log("New session established:", session.user.id);
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || '',
-          });
-
-          // In a real implementation, fetch user profile
-          const mockUserProfile = {
-            sessions_remaining: 7, 
-            total_sessions: 12
-          };
-          setUserProfile(mockUserProfile);
-
-          // For mock purposes
-          const mockRole = localStorage.getItem('userRole') || 'user';
-          setRole(mockRole);
-          console.log("User role set to:", mockRole);
-        } else {
-          setUser(null);
-          setUserProfile(null);
-          setRole(null);
-          console.log("Session cleared");
-        }
-        setLoading(false);
-      }
-    );
 
     return () => {
       subscription?.unsubscribe();
@@ -214,29 +214,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // Improved error handling
+      let errorMessage = "Login failed. Please check your credentials and try again.";
+      
       if (error.message?.includes("Invalid login credentials")) {
-        toast({
-          title: "Invalid credentials",
-          description: "The email or password you entered is incorrect.",
-          variant: "destructive",
-        });
+        errorMessage = "The email or password you entered is incorrect.";
       } else if (!navigator.onLine || error.message?.includes("NetworkError") || error.message?.includes("network")) {
-        toast({
-          title: "Connection Error",
-          description: "Unable to connect to the authentication service. Please check your internet connection.",
-          variant: "destructive",
-        });
+        errorMessage = "Unable to connect to the authentication service. Please check your internet connection.";
       } else {
-        // Provide better error messages
-        const errorMessage = error.message || "An unexpected error occurred. Please try again.";
-        
-        toast({
-          title: "Login failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
+        errorMessage = error.message || "An unexpected error occurred. Please try again.";
       }
-      throw error;
+      
+      toast({
+        title: "Login failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      
+      throw new Error(errorMessage);
     }
   };
 
@@ -270,23 +264,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Signup error:", error);
       
       // Check if it's a network error
+      let errorMessage = "Sign up failed. Please try again later.";
+      
       if (!navigator.onLine || error.message?.includes("NetworkError")) {
-        toast({
-          title: "Network Error",
-          description: "Unable to connect to the authentication service. Please check your internet connection.",
-          variant: "destructive",
-        });
+        errorMessage = "Unable to connect to the authentication service. Please check your internet connection.";
       } else {
-        // Provide better error messages
-        const errorMessage = error.message || "An unexpected error occurred. Please try again.";
-        
-        toast({
-          title: "Sign up failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
+        errorMessage = error.message || "An unexpected error occurred. Please try again.";
       }
-      return false;
+      
+      toast({
+        title: "Sign up failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      
+      throw new Error(errorMessage);
     }
   };
 

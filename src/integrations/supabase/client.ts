@@ -12,7 +12,8 @@ const supabaseOptions = {
     storage: localStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false
+    detectSessionInUrl: true,
+    flowType: 'implicit'
   }
 };
 
