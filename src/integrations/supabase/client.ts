@@ -15,13 +15,13 @@ const supabaseOptions = {
     detectSessionInUrl: false
   },
   global: {
-    fetch: (...args: [RequestInfo | URL, RequestInit?]): Promise<Response> => {
-      // Enhanced fetch with improved retry mechanism and shorter timeout
+    fetch: (...args) => {
+      // Enhanced fetch with improved timeout and retry logic
       const [resource, config] = args;
       
-      // Use AbortController for timeout handling with reduced timeout for faster feedback
+      // Use AbortController for timeout handling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 25000); // Reduced to 25 seconds
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // Extended to 30 seconds
       
       // Add signal to the request config
       const updatedConfig = {
@@ -35,33 +35,13 @@ const supabaseOptions = {
         }
       };
       
-      // Implementation of retry logic with faster retry attempts
-      const MAX_RETRIES = 2; // Reduced to 2 retries
-      let retryCount = 0;
-      
-      const fetchWithRetry = async (): Promise<Response> => {
-        try {
-          const response = await fetch(resource, updatedConfig);
+      return fetch(resource, updatedConfig)
+        .then(response => {
           clearTimeout(timeoutId);
           return response;
-        } catch (error) {
+        })
+        .catch(error => {
           clearTimeout(timeoutId);
-          
-          // If we still have retries left and it's a network error, try again
-          if (retryCount < MAX_RETRIES && 
-              (error instanceof Error && error.name === 'AbortError' || 
-               error instanceof TypeError && error.message.includes('Network'))) {
-            
-            retryCount++;
-            console.log(`Retrying database connection (attempt ${retryCount}/${MAX_RETRIES})...`);
-            
-            // Faster exponential backoff: 500ms, 1s
-            const backoffTime = Math.pow(2, retryCount - 1) * 500;
-            
-            return new Promise(resolve => {
-              setTimeout(() => resolve(fetchWithRetry()), backoffTime);
-            });
-          }
           
           // Log detailed error information to help with debugging
           console.error(`Supabase fetch error for ${resource}:`, error);
@@ -70,10 +50,7 @@ const supabaseOptions = {
           throw error instanceof Error ? 
             new Error(`Database connection failed: ${error.message}`) : 
             new Error('Database connection failed');
-        }
-      };
-      
-      return fetchWithRetry();
+        });
     }
   }
 };
@@ -81,11 +58,7 @@ const supabaseOptions = {
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(
-  SUPABASE_URL, 
-  SUPABASE_PUBLISHABLE_KEY,
-  supabaseOptions
-);
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, supabaseOptions);
 
 // Security helper function to check if a user is authenticated before making DB calls
 export const requireAuth = async (callback: () => Promise<any>) => {
