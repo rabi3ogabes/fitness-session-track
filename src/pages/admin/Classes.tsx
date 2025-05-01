@@ -10,38 +10,9 @@ import AddClassDialog from "./components/classes/AddClassDialog";
 import EditClassDialog from "./components/classes/EditClassDialog";
 import { ClassModel, RecurringPattern, ClassInsert, ClassUpdate } from "./components/classes/ClassTypes";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
-// Fallback data to use when API fails
-const fallbackClasses: ClassModel[] = [
-  {
-    id: 1,
-    name: "Yoga",
-    trainer: "Jane Smith",
-    trainers: ["Jane Smith"],
-    schedule: "05/10/2025",
-    capacity: 15,
-    enrolled: 8,
-    status: "Active",
-    gender: "All",
-    startTime: "09:00",
-    endTime: "10:00"
-  },
-  {
-    id: 2,
-    name: "Pilates",
-    trainer: "Mike Johnson",
-    trainers: ["Mike Johnson"],
-    schedule: "05/11/2025",
-    capacity: 12,
-    enrolled: 6,
-    status: "Active",
-    gender: "All",
-    startTime: "11:00",
-    endTime: "12:00"
-  }
-];
-
-// Fallback trainers list - used only if Supabase fetch fails
+// Keep fallback trainers list for use if Supabase fetch fails
 const fallbackTrainers = [
   "Jane Smith",
   "Mike Johnson",
@@ -62,8 +33,6 @@ const Classes = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [useFallbackData, setUseFallbackData] = useState(false);
-  const [connectionAttempts, setConnectionAttempts] = useState(0);
   const { toast } = useToast();
 
   // Fetch classes from Supabase on component mount
@@ -78,11 +47,10 @@ const Classes = () => {
       setFetchError(null);
       
       console.log("Fetching classes from Supabase...");
-      setConnectionAttempts(prev => prev + 1);
       
       // Use AbortController for timeout functionality
       const abortController = new AbortController();
-      const timeoutId = setTimeout(() => abortController.abort(), 15000); // Extended timeout to 15 seconds
+      const timeoutId = setTimeout(() => abortController.abort(), 15000); // 15 second timeout
       
       const { data, error } = await supabase
         .from('classes')
@@ -115,41 +83,30 @@ const Classes = () => {
         
         console.log("Formatted classes:", formattedClasses);
         setClasses(formattedClasses);
-        setUseFallbackData(false);
-        
-        // Reset connection attempts on successful fetch
-        setConnectionAttempts(0);
         
         toast({
-          title: "Connection Restored",
-          description: "Successfully connected to the database.",
+          title: "Classes Loaded",
+          description: "Successfully loaded classes from the database.",
         });
       } else {
         console.log("No classes data received");
-        if (connectionAttempts < 2) {
-          toast({
-            title: "No classes found",
-            description: "There are currently no classes in the database. Add a new class to get started.",
-          });
-        }
+        toast({
+          title: "No classes found",
+          description: "There are currently no classes in the database. Add a new class to get started.",
+        });
         setClasses([]);
       }
     } catch (error: any) {
       console.error("Error fetching classes:", error);
       setFetchError(error.message || "Failed to fetch classes");
       
-      // If network error and we're not already using fallback data, suggest using fallback data
-      if ((error.message?.includes('NetworkError') || error.message?.includes('fetch') || error.name === 'AbortError') && !useFallbackData) {
-        toast({
-          title: "Connection Issue",
-          description: "Unable to connect to the database. Using demo data for now.",
-          variant: "destructive",
-        });
-        setClasses(fallbackClasses);
-        setUseFallbackData(true);
-      } else if (!useFallbackData) {
-        setClasses([]);
-      }
+      toast({
+        title: "Error",
+        description: "Failed to load classes. Please try again.",
+        variant: "destructive",
+      });
+      
+      setClasses([]);
     } finally {
       setIsLoading(false);
     }
@@ -159,7 +116,7 @@ const Classes = () => {
     try {
       // Use AbortController for timeout functionality
       const abortController = new AbortController();
-      const timeoutId = setTimeout(() => abortController.abort(), 15000); // Extended timeout to 15 seconds
+      const timeoutId = setTimeout(() => abortController.abort(), 15000); // 15 second timeout
       
       const { data, error } = await supabase
         .from('trainers')
@@ -189,7 +146,6 @@ const Classes = () => {
 
   const handleRetry = useCallback(() => {
     setRetryCount(prev => prev + 1);
-    setUseFallbackData(false);
     toast({
       title: "Retrying",
       description: "Attempting to reconnect to the database...",
@@ -206,26 +162,6 @@ const Classes = () => {
   const currentClass = selectedClassId ? classes.find(c => c.id === selectedClassId) || null : null;
 
   const toggleClassStatus = async (id: number) => {
-    // If using fallback data, just update the UI without trying to call Supabase
-    if (useFallbackData) {
-      setClasses(
-        classes.map((cls) =>
-          cls.id === id
-            ? {
-                ...cls,
-                status: cls.status === "Active" ? "Inactive" : "Active",
-              }
-            : cls
-        )
-      );
-      
-      toast({
-        title: "Demo Mode",
-        description: "Class status updated in demo mode only. Changes will not persist.",
-      });
-      return;
-    }
-    
     const classToUpdate = classes.find(cls => cls.id === id);
     if (!classToUpdate) return;
     
@@ -344,35 +280,6 @@ const Classes = () => {
   };
 
   const handleAddClass = async (newClass: ClassModel, recurringPattern?: RecurringPattern) => {
-    // If in demo mode, just update the UI
-    if (useFallbackData) {
-      const newId = Math.max(...classes.map(c => c.id)) + 1;
-      const newClassWithId = { ...newClass, id: newId };
-      
-      if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
-        // Generate recurring classes with mock ids
-        const generatedClasses = generateRecurringClasses(newClassWithId, recurringPattern)
-          .map((cls, index) => ({ ...cls, id: newId + index + 1 }));
-          
-        setClasses([...classes, ...generatedClasses]);
-        
-        toast({
-          title: "Demo Mode",
-          description: `${generatedClasses.length} recurring classes added in demo mode. Changes will not persist.`,
-        });
-      } else {
-        setClasses([...classes, newClassWithId]);
-        
-        toast({
-          title: "Demo Mode",
-          description: "Class added in demo mode. Changes will not persist.",
-        });
-      }
-      
-      setIsAddDialogOpen(false);
-      return;
-    }
-    
     try {
       if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
         // Generate recurring classes
@@ -489,22 +396,6 @@ const Classes = () => {
   };
 
   const handleUpdateClass = async (updatedClass: ClassModel) => {
-    // If in demo mode, just update the UI
-    if (useFallbackData) {
-      setClasses(
-        classes.map((cls) => cls.id === updatedClass.id ? updatedClass : cls)
-      );
-      
-      toast({
-        title: "Demo Mode",
-        description: "Class updated in demo mode. Changes will not persist.",
-      });
-      
-      setIsEditDialogOpen(false);
-      setSelectedClassId(null);
-      return;
-    }
-    
     try {
       const classToUpdate: ClassUpdate = {
         name: updatedClass.name,
@@ -571,15 +462,15 @@ const Classes = () => {
             Add New Class
           </Button>
           
-          {useFallbackData && (
+          {fetchError && (
             <Button 
               variant="outline" 
               size="default" 
               onClick={handleRetry} 
-              className="w-full sm:w-auto border-yellow-300 text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100"
+              className="w-full sm:w-auto"
             >
               <RefreshCw className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> 
-              {isLoading ? 'Connecting...' : 'Connect to Database'}
+              {isLoading ? 'Retrying...' : 'Retry Connection'}
             </Button>
           )}
         </div>
@@ -602,27 +493,7 @@ const Classes = () => {
         existingClasses={classes}
       />
 
-      {useFallbackData && (
-        <Alert className="mb-6 bg-yellow-50 border-yellow-200">
-          <AlertCircle className="h-5 w-5 text-yellow-600" />
-          <AlertTitle className="text-yellow-800">Demo Mode</AlertTitle>
-          <AlertDescription className="text-yellow-700">
-            You are currently viewing demo data due to connection issues. Changes will not be saved.
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRetry} 
-              className={`ml-2 border-yellow-300 text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={isLoading}
-            >
-              <RefreshCw className={`mr-1 h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} /> 
-              {isLoading ? 'Connecting...' : 'Try to reconnect'}
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {fetchError && !useFallbackData && (
+      {fetchError && (
         <Alert className="mb-6 bg-red-50 border-red-200">
           <AlertCircle className="h-5 w-5 text-red-600" />
           <AlertTitle className="text-red-800">Error loading classes</AlertTitle>
@@ -644,60 +515,44 @@ const Classes = () => {
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Class Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trainer(s)
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Schedule
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Time
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Capacity
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Gender
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Class Name</TableHead>
+                <TableHead>Trainer(s)</TableHead>
+                <TableHead>Schedule</TableHead>
+                <TableHead>Time</TableHead>
+                <TableHead>Capacity</TableHead>
+                <TableHead>Gender</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-gray-500">
                     <div className="flex justify-center items-center">
                       <RefreshCw className="animate-spin mr-2 h-4 w-4" />
                       Loading classes...
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : filteredClasses.length > 0 ? (
                 filteredClasses.map((cls) => (
-                  <tr key={cls.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <TableRow key={cls.id} className="hover:bg-gray-50">
+                    <TableCell>
                       <div className="font-medium text-gray-900">{cls.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       <div className="text-gray-500">
                         {cls.trainers && cls.trainers.length > 0 ? cls.trainers.join(", ") : cls.trainer || 'Not assigned'}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       <div className="text-gray-500">{cls.schedule || 'Not scheduled'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       <div className="text-gray-500 flex items-center">
                         <Clock className="h-3 w-3 mr-1" />
                         {cls.startTime && cls.endTime 
@@ -705,13 +560,13 @@ const Classes = () => {
                           : "Not set"
                         }
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       <div className="text-gray-500">
                         {cls.enrolled} / {cls.capacity}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${
                           cls.gender === "Male"
@@ -723,8 +578,8 @@ const Classes = () => {
                       >
                         {cls.gender || "All"}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       <span
                         className={`px-2 py-1 text-xs rounded-full ${
                           cls.status === "Active"
@@ -736,8 +591,8 @@ const Classes = () => {
                       >
                         {cls.status || 'Inactive'}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    </TableCell>
+                    <TableCell className="text-right">
                       <button
                         onClick={() => toggleClassStatus(cls.id)}
                         className="text-gym-blue hover:text-gym-dark-blue mr-3"
@@ -751,20 +606,20 @@ const Classes = () => {
                         <Pencil className="h-4 w-4 inline-block" />
                         <span className="ml-1">Edit</span>
                       </button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               ) : (
-                <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-gray-500">
                     {searchTerm ? 
                       "No classes found matching your search criteria." : 
                       "No classes found. Click 'Add New Class' to create one."}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
     </DashboardLayout>
