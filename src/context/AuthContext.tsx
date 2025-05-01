@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Session, User, AuthError } from '@supabase/supabase-js';
+import { Session, User as SupabaseUser, AuthError } from '@supabase/supabase-js';
 
 interface User {
   id: string;
