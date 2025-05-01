@@ -16,40 +16,20 @@ const supabaseOptions = {
   },
   global: {
     fetch: (...args) => {
-      // Enhanced fetch with improved timeout and retry logic
+      // Custom fetch with timeout handler
       const [resource, config] = args;
-      
-      // Use AbortController for timeout handling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // Extended to 30 seconds
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const signal = controller.signal;
       
-      // Add signal to the request config
-      const updatedConfig = {
-        ...config,
-        signal: controller.signal,
-        headers: {
-          ...config?.headers,
-          // Add cache control headers to prevent stale responses
-          'Cache-Control': 'no-cache, no-store',
-          'Pragma': 'no-cache'
-        }
-      };
-      
-      return fetch(resource, updatedConfig)
+      return fetch(resource, { ...config, signal })
         .then(response => {
           clearTimeout(timeoutId);
           return response;
         })
         .catch(error => {
           clearTimeout(timeoutId);
-          
-          // Log detailed error information to help with debugging
-          console.error(`Supabase fetch error for ${resource}:`, error);
-          
-          // Rethrow with more descriptive message
-          throw error instanceof Error ? 
-            new Error(`Database connection failed: ${error.message}`) : 
-            new Error('Database connection failed');
+          throw error;
         });
     }
   }
