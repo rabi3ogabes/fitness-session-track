@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Clock } from "lucide-react";
+import { Plus, Pencil, Clock, AlertCircle } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, parse, isBefore } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import AddClassDialog from "./components/classes/AddClassDialog";
@@ -30,6 +29,7 @@ const Classes = () => {
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [trainersList, setTrainersList] = useState<string[]>(fallbackTrainers);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Fetch classes from Supabase on component mount
@@ -41,6 +41,9 @@ const Classes = () => {
   const fetchClasses = async () => {
     try {
       setIsLoading(true);
+      setFetchError(null);
+      
+      console.log("Fetching classes from Supabase...");
       const { data, error } = await supabase
         .from('classes')
         .select('*');
@@ -49,25 +52,33 @@ const Classes = () => {
         throw error;
       }
 
+      console.log("Classes data received:", data);
+      
       if (data) {
         // Map Supabase fields to match our ClassModel structure
         const formattedClasses: ClassModel[] = data.map(cls => ({
           id: cls.id,
-          name: cls.name,
+          name: cls.name || '',
           trainer: cls.trainer || '',
           trainers: cls.trainers || [],
-          schedule: cls.schedule,
-          capacity: cls.capacity,
+          schedule: cls.schedule || '',
+          capacity: cls.capacity || 0,
           enrolled: cls.enrolled || 0,
           status: cls.status || 'Active',
           gender: cls.gender || 'All',
-          startTime: cls.start_time,
-          endTime: cls.end_time
+          startTime: cls.start_time || '',
+          endTime: cls.end_time || ''
         }));
+        
+        console.log("Formatted classes:", formattedClasses);
         setClasses(formattedClasses);
+      } else {
+        console.log("No classes data received");
+        setClasses([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching classes:", error);
+      setFetchError(error.message || "Failed to fetch classes");
       toast({
         title: "Error",
         description: "Failed to fetch classes. Using default data.",
@@ -424,6 +435,23 @@ const Classes = () => {
         existingClasses={classes}
       />
 
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start">
+          <AlertCircle className="text-red-500 mr-2 mt-0.5 h-5 w-5" />
+          <div>
+            <p className="font-medium text-red-800">Error loading classes</p>
+            <p className="text-red-600 text-sm">{fetchError}</p>
+            <Button 
+              variant="outline" 
+              className="mt-2 text-sm h-8"
+              onClick={() => fetchClasses()}
+            >
+              Retry
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -470,11 +498,11 @@ const Classes = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-gray-500">
-                        {cls.trainers ? cls.trainers.join(", ") : cls.trainer}
+                        {cls.trainers && cls.trainers.length > 0 ? cls.trainers.join(", ") : cls.trainer || 'Not assigned'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-gray-500">{cls.schedule}</div>
+                      <div className="text-gray-500">{cls.schedule || 'Not scheduled'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-gray-500 flex items-center">
@@ -513,7 +541,7 @@ const Classes = () => {
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {cls.status}
+                        {cls.status || 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -536,7 +564,9 @@ const Classes = () => {
               ) : (
                 <tr>
                   <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
-                    No classes found matching your search criteria.
+                    {searchTerm ? 
+                      "No classes found matching your search criteria." : 
+                      "No classes found. Click 'Add New Class' to create one."}
                   </td>
                 </tr>
               )}
