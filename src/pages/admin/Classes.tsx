@@ -4,55 +4,48 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Label } from "@/components/ui/label";
 import { Plus, Pencil } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { format, addDays, addWeeks, addMonths, parse, isBefore } from "date-fns";
+import AddClassDialog from "./components/classes/AddClassDialog";
+import EditClassDialog from "./components/classes/EditClassDialog";
+import { ClassModel, RecurringPattern } from "./components/classes/ClassTypes";
+
+// Mock trainer data
+const trainersList = [
+  "Jane Smith",
+  "Mike Johnson",
+  "Sarah Davis",
+  "Emma Wilson",
+  "Robert Brown",
+  "David Miller",
+  "Lisa Garcia",
+];
 
 // Mock data
-const initialClasses = [
-  { id: 1, name: "Morning Yoga", trainer: "Jane Smith", schedule: "Mon, Wed, Fri - 7:00 AM", capacity: 15, enrolled: 12, status: "Active" },
-  { id: 2, name: "HIIT Workout", trainer: "Mike Johnson", schedule: "Tue, Thu - 6:00 PM", capacity: 20, enrolled: 15, status: "Active" },
-  { id: 3, name: "Strength Training", trainer: "Sarah Davis", schedule: "Mon, Wed, Fri - 5:00 PM", capacity: 12, enrolled: 10, status: "Active" },
-  { id: 4, name: "Pilates", trainer: "Emma Wilson", schedule: "Tue, Thu - 9:00 AM", capacity: 15, enrolled: 7, status: "Active" },
-  { id: 5, name: "Spinning", trainer: "Robert Brown", schedule: "Mon, Wed - 6:00 PM", capacity: 18, enrolled: 18, status: "Full" },
+const initialClasses: ClassModel[] = [
+  { id: 1, name: "Morning Yoga", trainer: "Jane Smith", schedule: "Mon, Wed, Fri - 7:00 AM", capacity: 15, enrolled: 12, status: "Active", gender: "All" },
+  { id: 2, name: "HIIT Workout", trainer: "Mike Johnson", schedule: "Tue, Thu - 6:00 PM", capacity: 20, enrolled: 15, status: "Active", gender: "All" },
+  { id: 3, name: "Strength Training", trainer: "Sarah Davis", schedule: "Mon, Wed, Fri - 5:00 PM", capacity: 12, enrolled: 10, status: "Active", gender: "All" },
+  { id: 4, name: "Pilates", trainer: "Emma Wilson", schedule: "Tue, Thu - 9:00 AM", capacity: 15, enrolled: 7, status: "Active", gender: "Female" },
+  { id: 5, name: "Spinning", trainer: "Robert Brown", schedule: "Mon, Wed - 6:00 PM", capacity: 18, enrolled: 18, status: "Full", gender: "All" },
 ];
 
 const Classes = () => {
-  const [classes, setClasses] = useState(initialClasses);
+  const [classes, setClasses] = useState<ClassModel[]>(initialClasses);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
-  const [newClass, setNewClass] = useState({
-    name: "",
-    trainer: "",
-    schedule: "",
-    capacity: "",
-    enrolled: "0",
-    status: "Active"
-  });
-  const [editClass, setEditClass] = useState({
-    name: "",
-    trainer: "",
-    schedule: "",
-    capacity: "",
-    enrolled: "",
-    status: ""
-  });
   const { toast } = useToast();
 
   const filteredClasses = classes.filter(
     (cls) =>
       cls.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cls.trainer.toLowerCase().includes(searchTerm.toLowerCase())
+      (cls.trainer && cls.trainer.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (cls.trainers && cls.trainers.some(t => t.toLowerCase().includes(searchTerm.toLowerCase())))
   );
+
+  const currentClass = selectedClassId ? classes.find(c => c.id === selectedClassId) || null : null;
 
   const toggleClassStatus = (id: number) => {
     setClasses(
@@ -72,69 +65,122 @@ const Classes = () => {
     });
   };
 
-  const handleAddClass = () => {
+  // Generate classes based on recurring pattern
+  const generateRecurringClasses = (baseClass: ClassModel, pattern: RecurringPattern): ClassModel[] => {
+    const generatedClasses: ClassModel[] = [];
+    let currentId = Math.max(...classes.map(c => c.id)) + 1;
+    
+    // Parse the base date from the schedule
+    const baseDate = pattern.frequency === "Daily" ? 
+      new Date() : 
+      parse(baseClass.schedule, "MM/dd/yyyy", new Date());
+    
+    const endDate = new Date(pattern.repeatUntil);
+    
+    if (pattern.frequency === "Daily") {
+      // Generate daily classes
+      let currentDate = new Date(baseDate);
+      
+      while (isBefore(currentDate, endDate)) {
+        generatedClasses.push({
+          ...baseClass,
+          id: currentId++,
+          schedule: format(currentDate, "MM/dd/yyyy"),
+        });
+        
+        currentDate = addDays(currentDate, 1);
+      }
+    } else if (pattern.frequency === "Weekly") {
+      // Generate weekly classes for selected days
+      let currentWeek = new Date(baseDate);
+      const daysMap: Record<string, number> = {
+        "Sunday": 0,
+        "Monday": 1,
+        "Tuesday": 2,
+        "Wednesday": 3,
+        "Thursday": 4,
+        "Friday": 5,
+        "Saturday": 6
+      };
+      
+      while (isBefore(currentWeek, endDate)) {
+        for (const day of pattern.daysOfWeek) {
+          const dayNumber = daysMap[day];
+          const classDate = new Date(currentWeek);
+          // Set to the correct day of week
+          classDate.setDate(classDate.getDate() - classDate.getDay() + dayNumber);
+          
+          if (isBefore(classDate, endDate) && !isBefore(classDate, baseDate)) {
+            generatedClasses.push({
+              ...baseClass,
+              id: currentId++,
+              schedule: `${format(classDate, "MM/dd/yyyy")} (${day})`,
+            });
+          }
+        }
+        
+        currentWeek = addWeeks(currentWeek, 1);
+      }
+    } else if (pattern.frequency === "Monthly") {
+      // Generate monthly classes
+      let currentMonth = new Date(baseDate);
+      const dayOfMonth = currentMonth.getDate();
+      
+      while (isBefore(currentMonth, endDate)) {
+        generatedClasses.push({
+          ...baseClass,
+          id: currentId++,
+          schedule: format(currentMonth, "MM/dd/yyyy"),
+        });
+        
+        currentMonth = addMonths(currentMonth, 1);
+      }
+    }
+    
+    return generatedClasses;
+  };
+
+  const handleAddClass = (newClass: ClassModel, recurringPattern?: RecurringPattern) => {
     const newId = Math.max(...classes.map(c => c.id)) + 1;
     const classToAdd = {
+      ...newClass,
       id: newId,
-      name: newClass.name,
-      trainer: newClass.trainer,
-      schedule: newClass.schedule,
-      capacity: parseInt(newClass.capacity) || 0,
-      enrolled: parseInt(newClass.enrolled) || 0,
-      status: newClass.status
+      enrolled: parseInt(newClass.enrolled?.toString() || "0"),
+      capacity: parseInt(newClass.capacity?.toString() || "0"),
+      status: newClass.status || "Active",
     };
     
-    setClasses([...classes, classToAdd]);
+    if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
+      // Generate recurring classes
+      const generatedClasses = generateRecurringClasses(classToAdd, recurringPattern);
+      setClasses([...classes, ...generatedClasses]);
+      
+      toast({
+        title: "Classes added",
+        description: `${generatedClasses.length} recurring classes have been added successfully.`,
+      });
+    } else {
+      // Add a single class
+      setClasses([...classes, classToAdd]);
+      
+      toast({
+        title: "Class added",
+        description: "The new class has been successfully added.",
+      });
+    }
+    
     setIsAddDialogOpen(false);
-    
-    // Reset form
-    setNewClass({
-      name: "",
-      trainer: "",
-      schedule: "",
-      capacity: "",
-      enrolled: "0",
-      status: "Active"
-    });
-    
-    toast({
-      title: "Class added",
-      description: "The new class has been successfully added."
-    });
   };
 
   const handleEditClick = (id: number) => {
-    const classToEdit = classes.find(cls => cls.id === id);
-    if (classToEdit) {
-      setSelectedClassId(id);
-      setEditClass({
-        name: classToEdit.name,
-        trainer: classToEdit.trainer,
-        schedule: classToEdit.schedule,
-        capacity: classToEdit.capacity.toString(),
-        enrolled: classToEdit.enrolled.toString(),
-        status: classToEdit.status
-      });
-      setIsEditDialogOpen(true);
-    }
+    setSelectedClassId(id);
+    setIsEditDialogOpen(true);
   };
 
-  const handleUpdateClass = () => {
-    if (selectedClassId === null) return;
-    
+  const handleUpdateClass = (updatedClass: ClassModel) => {
     setClasses(
       classes.map((cls) =>
-        cls.id === selectedClassId
-          ? {
-              ...cls,
-              name: editClass.name,
-              trainer: editClass.trainer,
-              schedule: editClass.schedule,
-              capacity: parseInt(editClass.capacity) || 0,
-              enrolled: parseInt(editClass.enrolled) || 0,
-              status: editClass.status
-            }
-          : cls
+        cls.id === updatedClass.id ? updatedClass : cls
       )
     );
     
@@ -143,18 +189,8 @@ const Classes = () => {
     
     toast({
       title: "Class updated",
-      description: "The class has been successfully updated."
+      description: "The class has been successfully updated.",
     });
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setNewClass(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setEditClass(prev => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -168,167 +204,29 @@ const Classes = () => {
             className="sm:w-80"
           />
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue">
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Class
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Add New Class</DialogTitle>
-              <DialogDescription>
-                Create a new fitness class.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Class Name
-                </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={newClass.name}
-                  onChange={handleInputChange}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="trainer" className="text-right">
-                  Trainer
-                </Label>
-                <Input
-                  id="trainer"
-                  name="trainer"
-                  value={newClass.trainer}
-                  onChange={handleInputChange}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="schedule" className="text-right">
-                  Schedule
-                </Label>
-                <Input
-                  id="schedule"
-                  name="schedule"
-                  value={newClass.schedule}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Mon, Wed, Fri - 9:00 AM"
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="capacity" className="text-right">
-                  Capacity
-                </Label>
-                <Input
-                  id="capacity"
-                  name="capacity"
-                  type="number"
-                  value={newClass.capacity}
-                  onChange={handleInputChange}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="flex justify-end mt-4">
-                <Button 
-                  onClick={handleAddClass} 
-                  className="bg-gym-blue hover:bg-gym-dark-blue"
-                >
-                  Add Class
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue"
+          onClick={() => setIsAddDialogOpen(true)}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add New Class
+        </Button>
       </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Edit Class</DialogTitle>
-            <DialogDescription>
-              Update class information.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-name" className="text-right">
-                Class Name
-              </Label>
-              <Input
-                id="edit-name"
-                name="name"
-                value={editClass.name}
-                onChange={handleEditInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-trainer" className="text-right">
-                Trainer
-              </Label>
-              <Input
-                id="edit-trainer"
-                name="trainer"
-                value={editClass.trainer}
-                onChange={handleEditInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-schedule" className="text-right">
-                Schedule
-              </Label>
-              <Input
-                id="edit-schedule"
-                name="schedule"
-                value={editClass.schedule}
-                onChange={handleEditInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-capacity" className="text-right">
-                Capacity
-              </Label>
-              <Input
-                id="edit-capacity"
-                name="capacity"
-                type="number"
-                value={editClass.capacity}
-                onChange={handleEditInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-enrolled" className="text-right">
-                Enrolled
-              </Label>
-              <Input
-                id="edit-enrolled"
-                name="enrolled"
-                type="number"
-                value={editClass.enrolled}
-                onChange={handleEditInputChange}
-                className="col-span-3"
-              />
-            </div>
-            <div className="flex justify-end mt-4">
-              <Button 
-                onClick={handleUpdateClass} 
-                className="bg-gym-blue hover:bg-gym-dark-blue"
-              >
-                Update Class
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AddClassDialog 
+        isOpen={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onAddClass={handleAddClass}
+        trainers={trainersList}
+      />
+
+      <EditClassDialog
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        currentClass={currentClass}
+        onUpdateClass={handleUpdateClass}
+        trainers={trainersList}
+      />
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
@@ -339,13 +237,16 @@ const Classes = () => {
                   Class Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trainer
+                  Trainer(s)
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Schedule
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Capacity
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Gender
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -362,7 +263,9 @@ const Classes = () => {
                     <div className="font-medium text-gray-900">{cls.name}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-gray-500">{cls.trainer}</div>
+                    <div className="text-gray-500">
+                      {cls.trainers ? cls.trainers.join(", ") : cls.trainer}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-gray-500">{cls.schedule}</div>
@@ -371,6 +274,19 @@ const Classes = () => {
                     <div className="text-gray-500">
                       {cls.enrolled} / {cls.capacity}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        cls.gender === "Male"
+                          ? "bg-blue-100 text-blue-800"
+                          : cls.gender === "Female"
+                          ? "bg-pink-100 text-pink-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {cls.gender || "All"}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -396,14 +312,15 @@ const Classes = () => {
                       onClick={() => handleEditClick(cls.id)}
                       className="text-gym-blue hover:text-gym-dark-blue"
                     >
-                      Edit
+                      <Pencil className="h-4 w-4 inline-block" />
+                      <span className="ml-1">Edit</span>
                     </button>
                   </td>
                 </tr>
               ))}
               {filteredClasses.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                     No classes found matching your search criteria.
                   </td>
                 </tr>
