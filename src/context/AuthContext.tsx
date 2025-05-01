@@ -149,6 +149,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Invalid email format");
       }
       
+      // Check if demo credentials are being used
+      const isDemoCredential = 
+        (email === "admin@gym.com" && password === "admin123") ||
+        (email === "user@gym.com" && password === "user123") ||
+        (email === "trainer@gym.com" && password === "trainer123");
+      
+      if (isDemoCredential) {
+        console.log("Using demo credentials - bypassing Supabase auth");
+        
+        // Determine the role from the email
+        let mockRole = 'user';
+        if (email.includes('admin')) mockRole = 'admin';
+        if (email.includes('trainer')) mockRole = 'trainer';
+        
+        // Store the role in localStorage
+        localStorage.setItem('userRole', mockRole);
+        setRole(mockRole);
+        
+        // Create mock user object
+        const mockUser = {
+          id: `demo-${mockRole}-id`,
+          email: email,
+          name: mockRole.charAt(0).toUpperCase() + mockRole.slice(1),
+          role: mockRole
+        };
+        
+        setUser(mockUser);
+        setUserProfile({
+          sessions_remaining: 7,
+          total_sessions: 12
+        });
+        
+        toast({
+          title: "Demo login successful",
+          description: `You've been logged in as a ${mockRole}`
+        });
+        
+        return;
+      }
+      
+      // For non-demo accounts, use Supabase auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -193,42 +234,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     } catch (error: any) {
       console.error("Login error:", error);
-      
-      // For demo purposes, check if using demo credentials but having connection issues
-      const isDemoAccount = 
-        (email === "admin@gym.com" && password === "admin123") ||
-        (email === "user@gym.com" && password === "user123") ||
-        (email === "trainer@gym.com" && password === "trainer123");
-      
-      if (isDemoAccount && (error.message?.includes("NetworkError") || error.message?.includes("network") || !navigator.onLine)) {
-        console.log("Demo account login with network issue - bypassing for testing");
-        
-        // Mock successful login for demo accounts when offline or having connection issues
-        const mockRole = email.includes('admin') ? 'admin' : email.includes('trainer') ? 'trainer' : 'user';
-        localStorage.setItem('userRole', mockRole);
-        setRole(mockRole);
-        
-        // Create mock user
-        setUser({
-          id: 'demo-user-id',
-          email: email,
-          name: mockRole.charAt(0).toUpperCase() + mockRole.slice(1),
-          role: mockRole
-        });
-        
-        // Create mock profile
-        setUserProfile({
-          sessions_remaining: 7,
-          total_sessions: 12
-        });
-        
-        toast({
-          title: "Demo mode activated",
-          description: "You've been logged in using demo mode due to connection issues with Supabase."
-        });
-        
-        return;
-      }
       
       // Improved error handling
       let errorMessage = "Login failed. Please check your credentials and try again.";

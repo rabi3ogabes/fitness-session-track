@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -60,11 +61,15 @@ const Login = () => {
   // Check if user is already logged in and redirect accordingly
   useEffect(() => {
     if (isAuthenticated) {
+      console.log("User is authenticated, redirecting...");
       if (isAdmin) {
+        console.log("Redirecting to admin dashboard");
         navigate("/admin");
       } else if (isTrainer) {
+        console.log("Redirecting to trainer dashboard");
         navigate("/trainer");
       } else {
+        console.log("Redirecting to user dashboard");
         navigate("/dashboard");
       }
     }
@@ -103,22 +108,24 @@ const Login = () => {
     setError(null);
 
     try {
+      // Add more debugging
+      console.log(`Starting login with: ${identifier}, password length: ${password.length}`);
+      
       // Check for proper email format if it looks like an email
       if (identifier.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
         throw new Error("Please enter a valid email address");
       }
       
-      // Add console logs to help debug
-      console.log(`Starting login with: ${identifier}`);
-      
       // Increment login attempts counter
       setLoginAttempts(prev => prev + 1);
       
-      // Use email as identifier for demo accounts
+      // Use email as identifier for login
       const emailId = identifier.includes('@') ? identifier : `${identifier}@gym.com`;
+      console.log("Using email for login:", emailId);
       
       await login(emailId, password);
       // Login success will be handled by the useEffect that watches isAuthenticated
+      console.log("Login function completed successfully");
     } catch (error: any) {
       // Display error message
       console.error("Login error caught in component:", error);
@@ -141,6 +148,7 @@ const Login = () => {
           return; // Success case handled by useEffect
         } catch (retryError) {
           // Continue to show error below
+          console.error("Retry login error:", retryError);
         }
       }
       

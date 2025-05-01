@@ -6,15 +6,14 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://wlawjupusugrhojbywyq.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsYXdqdXB1c3VncmhvamJ5d3lxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMTIxOTYsImV4cCI6MjA2MTU4ODE5Nn0.-TMflVxBkU4MTTxRWd0jrSiNBCLhxnl8R4EqsrWrSlg";
 
-// Configure auth persistence options
+// Configure auth persistence options with proper type for flowType
 const supabaseOptions = {
   auth: {
     storage: localStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    // Fix the flowType type error by using the correct type
-    flowType: 'implicit' as const
+    flowType: 'implicit'
   }
 };
 
