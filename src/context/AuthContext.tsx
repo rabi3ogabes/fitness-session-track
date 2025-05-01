@@ -140,6 +140,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log("Login attempt for:", email);
       
+      if (!email || !password) {
+        throw new Error("Email and password are required");
+      }
+      
+      // Check if email is in the correct format
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new Error("Invalid email format");
+      }
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -147,15 +156,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error("Supabase auth error:", error);
+        
         // Provide better error messages based on error type
-        const errorMessage = error.message || "An unexpected error occurred. Please try again.";
+        let errorMessage = "An unexpected error occurred. Please try again.";
+        
+        if (error.message.includes("Invalid login credentials")) {
+          errorMessage = "The email or password you entered is incorrect.";
+        } else if (error.message.includes("Email not confirmed")) {
+          errorMessage = "Please verify your email before logging in.";
+        }
         
         toast({
           title: "Login failed",
           description: errorMessage,
           variant: "destructive",
         });
-        throw error;
+        
+        throw new Error(errorMessage);
       }
       
       console.log("Login successful for:", email);

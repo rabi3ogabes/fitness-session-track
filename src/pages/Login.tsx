@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -35,6 +34,7 @@ const Login = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showDemoHelp, setShowDemoHelp] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loginAttempts, setLoginAttempts] = useState(0);
   
   const { login, signup, isAdmin, isTrainer, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -103,15 +103,55 @@ const Login = () => {
     setError(null);
 
     try {
-      // Add console logs to help debug
-      console.log("Starting login with:", identifier);
+      // Check for proper email format if it looks like an email
+      if (identifier.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+        throw new Error("Please enter a valid email address");
+      }
       
-      await login(identifier, password);
+      // Add console logs to help debug
+      console.log(`Starting login with: ${identifier}`);
+      
+      // Increment login attempts counter
+      setLoginAttempts(prev => prev + 1);
+      
+      // Use email as identifier for demo accounts
+      const emailId = identifier.includes('@') ? identifier : `${identifier}@gym.com`;
+      
+      await login(emailId, password);
       // Login success will be handled by the useEffect that watches isAuthenticated
     } catch (error: any) {
       // Display error message
       console.error("Login error caught in component:", error);
-      setError(error?.message || "Failed to login. Please check your credentials and try again.");
+      
+      // Special handling for demo accounts
+      if ((identifier === 'admin' || identifier === 'user' || identifier === 'trainer') && 
+          (password === 'admin123' || password === 'user123' || password === 'trainer123')) {
+        // Auto-correct demo account format
+        const correctedEmail = `${identifier}@gym.com`;
+        setIdentifier(correctedEmail);
+        toast({
+          title: "Demo account format",
+          description: `Using ${correctedEmail} as the email format`,
+          variant: "default",
+        });
+        
+        // Try again with corrected format
+        try {
+          await login(correctedEmail, password);
+          return; // Success case handled by useEffect
+        } catch (retryError) {
+          // Continue to show error below
+        }
+      }
+      
+      // Provide clear error messages based on common issues
+      if (error.message?.includes("Invalid login credentials")) {
+        setError("The email or password you entered is incorrect. Please check your credentials and try again.");
+      } else if (!navigator.onLine) {
+        setError("You appear to be offline. Please check your internet connection and try again.");
+      } else {
+        setError(error?.message || "Failed to login. Please check your credentials and try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -267,7 +307,22 @@ const Login = () => {
           </div>
         </div>
         
-        <OfflineWarning />
+        {!isOnline && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-yellow-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  You appear to be offline. Please check your internet connection.
+                  <br />
+                  <span className="font-medium">Note:</span> Demo accounts will still work in offline mode.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -287,14 +342,14 @@ const Login = () => {
             <div className="bg-white p-6 rounded-lg shadow-md">
               <form className="space-y-4" onSubmit={handleLogin}>
                 <div className="space-y-2">
-                  <Label htmlFor="identifier">Phone Number or Email</Label>
+                  <Label htmlFor="identifier">Email Address</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                       <User size={18} />
                     </span>
                     <Input
                       id="identifier"
-                      placeholder="Enter 8-digit phone number or email"
+                      placeholder="Enter your email address"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       className="pl-10"
@@ -302,7 +357,7 @@ const Login = () => {
                     />
                   </div>
                   <p className="text-xs text-gray-500">
-                    For example: 66666666 or user@example.com
+                    For example: admin@gym.com, user@gym.com, trainer@gym.com
                   </p>
                 </div>
                 
@@ -331,6 +386,17 @@ const Login = () => {
                 >
                   {isLoading ? "Signing in..." : "Sign in"}
                 </Button>
+
+                {loginAttempts > 1 && error && (
+                  <div className="mt-3 text-sm text-gray-600">
+                    <p>Having trouble logging in?</p>
+                    <ul className="list-disc pl-5 mt-1">
+                      <li>For demo accounts, use full email (e.g., admin@gym.com)</li>
+                      <li>Passwords are case sensitive</li>
+                      <li>Try one of the demo account buttons above</li>
+                    </ul>
+                  </div>
+                )}
               </form>
             </div>
           </TabsContent>

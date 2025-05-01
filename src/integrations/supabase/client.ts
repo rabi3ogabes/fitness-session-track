@@ -13,7 +13,7 @@ const supabaseOptions = {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    flowType: 'implicit' as const
+    flowType: 'implicit'
   }
 };
 
