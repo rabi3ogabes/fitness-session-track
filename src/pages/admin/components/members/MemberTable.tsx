@@ -3,6 +3,9 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Edit, X, RotateCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Member {
   id: number;
@@ -112,29 +115,62 @@ const MemberTable = ({
                     />
                   </td>
                 )}
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                  {canEditMember(member) && (
-                    <button
-                      onClick={() => openEditDialog(member)}
-                      className="text-gym-blue hover:text-gym-dark-blue mr-2"
-                    >
-                      Edit
-                    </button>
-                  )}
-                  <button
-                    onClick={() => toggleMemberStatus(member.id)}
-                    className="text-gym-blue hover:text-gym-dark-blue mr-2"
-                  >
-                    {member.status === "Active" ? "Deactivate" : "Activate"}
-                  </button>
-                  {isAdmin && (
-                    <button
-                      onClick={() => resetPassword(member.id)}
-                      className="text-orange-600 hover:text-orange-800"
-                    >
-                      Reset Password
-                    </button>
-                  )}
+                <td className="px-6 py-4 whitespace-nowrap text-right space-x-2">
+                  <TooltipProvider>
+                    {canEditMember(member) && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            onClick={() => openEditDialog(member)} 
+                            variant="ghost" 
+                            size="icon"
+                            className="text-gym-blue hover:text-gym-dark-blue hover:bg-gray-100"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Edit</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          onClick={() => toggleMemberStatus(member.id)} 
+                          variant="ghost" 
+                          size="icon" 
+                          className={member.status === "Active" 
+                            ? "text-red-600 hover:text-red-800 hover:bg-red-50" 
+                            : "text-green-600 hover:text-green-800 hover:bg-green-50"}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{member.status === "Active" ? "Deactivate" : "Activate"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    {isAdmin && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            onClick={() => resetPassword(member.id)} 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-orange-600 hover:text-orange-800 hover:bg-orange-50"
+                          >
+                            <RotateCw className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Reset Password</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </TooltipProvider>
                 </td>
               </tr>
             ))}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Edit, X, RotateCw } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Mock data
 const initialTrainers = [
@@ -178,46 +187,34 @@ const Trainers = () => {
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact Info
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Gender
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Specialization
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+          <Table>
+            <TableHeader className="bg-gray-50">
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Contact Info</TableHead>
+                <TableHead>Gender</TableHead>
+                <TableHead>Specialization</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredTrainers.map((trainer) => (
-                <tr key={trainer.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                <TableRow key={trainer.id} className="hover:bg-gray-50">
+                  <TableCell>
                     <div className="font-medium text-gray-900">{trainer.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell>
                     <div className="text-gray-500">{trainer.email}</div>
                     <div className="text-gray-500">{trainer.phone}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell>
                     <div className="text-gray-500">{trainer.gender || "Not specified"}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell>
                     <div className="text-gray-500">{trainer.specialization}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell>
                     <span
                       className={`px-2 py-1 text-xs rounded-full ${
                         trainer.status === "Active"
@@ -227,44 +224,75 @@ const Trainers = () => {
                     >
                       {trainer.status}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => {
-                        setEditTrainer(trainer);
-                        setIsEditDialogOpen(true);
-                      }}
-                      className="text-gym-blue hover:text-gym-dark-blue mr-2"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => toggleTrainerStatus(trainer.id)}
-                      className={`${
-                        trainer.status === "Active" ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800"
-                      } mr-2`}
-                    >
-                      {trainer.status === "Active" ? "Deactivate" : "Activate"}
-                    </button>
-                    <button
-                      onClick={() => resetPassword(trainer)}
-                      className="text-orange-600 hover:text-orange-800"
-                    >
-                      Reset Password
-                    </button>
-                  </td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            onClick={() => {
+                              setEditTrainer(trainer);
+                              setIsEditDialogOpen(true);
+                            }} 
+                            variant="ghost" 
+                            size="icon"
+                            className="text-gym-blue hover:text-gym-dark-blue hover:bg-gray-100"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Edit</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            onClick={() => toggleTrainerStatus(trainer.id)} 
+                            variant="ghost" 
+                            size="icon" 
+                            className={trainer.status === "Active" 
+                              ? "text-red-600 hover:text-red-800 hover:bg-red-50" 
+                              : "text-green-600 hover:text-green-800 hover:bg-green-50"}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{trainer.status === "Active" ? "Deactivate" : "Activate"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            onClick={() => resetPassword(trainer)} 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-orange-600 hover:text-orange-800 hover:bg-orange-50"
+                          >
+                            <RotateCw className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Reset Password</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
+                </TableRow>
               ))}
 
               {filteredTrainers.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-gray-500">
                     No trainers found matching your search criteria.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
 
