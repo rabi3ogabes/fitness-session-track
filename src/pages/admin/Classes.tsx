@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +9,17 @@ import AddClassDialog from "./components/classes/AddClassDialog";
 import EditClassDialog from "./components/classes/EditClassDialog";
 import { ClassModel, RecurringPattern } from "./components/classes/ClassTypes";
 
-// Mock trainer data
-const trainersList = [
+// Mock data for initial classes
+const initialClasses: ClassModel[] = [
+  { id: 1, name: "Morning Yoga", trainer: "Jane Smith", schedule: "Mon, Wed, Fri - 7:00 AM", capacity: 15, enrolled: 12, status: "Active", gender: "All", startTime: "07:00", endTime: "08:00" },
+  { id: 2, name: "HIIT Workout", trainer: "Mike Johnson", schedule: "Tue, Thu - 6:00 PM", capacity: 20, enrolled: 15, status: "Active", gender: "All", startTime: "18:00", endTime: "19:00" },
+  { id: 3, name: "Strength Training", trainer: "Sarah Davis", schedule: "Mon, Wed, Fri - 5:00 PM", capacity: 12, enrolled: 10, status: "Active", gender: "All", startTime: "17:00", endTime: "18:00" },
+  { id: 4, name: "Pilates", trainer: "Emma Wilson", schedule: "Tue, Thu - 9:00 AM", capacity: 15, enrolled: 7, status: "Active", gender: "Female", startTime: "09:00", endTime: "10:00" },
+  { id: 5, name: "Spinning", trainer: "Robert Brown", schedule: "Mon, Wed - 6:00 PM", capacity: 18, enrolled: 18, status: "Full", gender: "All", startTime: "18:00", endTime: "19:00" },
+];
+
+// Fallback trainers list - used only if localStorage doesn't have trainers
+const fallbackTrainers = [
   "Jane Smith",
   "Mike Johnson",
   "Sarah Davis",
@@ -21,22 +29,35 @@ const trainersList = [
   "Lisa Garcia",
 ];
 
-// Mock data
-const initialClasses: ClassModel[] = [
-  { id: 1, name: "Morning Yoga", trainer: "Jane Smith", schedule: "Mon, Wed, Fri - 7:00 AM", capacity: 15, enrolled: 12, status: "Active", gender: "All", startTime: "07:00", endTime: "08:00" },
-  { id: 2, name: "HIIT Workout", trainer: "Mike Johnson", schedule: "Tue, Thu - 6:00 PM", capacity: 20, enrolled: 15, status: "Active", gender: "All", startTime: "18:00", endTime: "19:00" },
-  { id: 3, name: "Strength Training", trainer: "Sarah Davis", schedule: "Mon, Wed, Fri - 5:00 PM", capacity: 12, enrolled: 10, status: "Active", gender: "All", startTime: "17:00", endTime: "18:00" },
-  { id: 4, name: "Pilates", trainer: "Emma Wilson", schedule: "Tue, Thu - 9:00 AM", capacity: 15, enrolled: 7, status: "Active", gender: "Female", startTime: "09:00", endTime: "10:00" },
-  { id: 5, name: "Spinning", trainer: "Robert Brown", schedule: "Mon, Wed - 6:00 PM", capacity: 18, enrolled: 18, status: "Full", gender: "All", startTime: "18:00", endTime: "19:00" },
-];
-
 const Classes = () => {
   const [classes, setClasses] = useState<ClassModel[]>(initialClasses);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  const [trainersList, setTrainersList] = useState<string[]>(fallbackTrainers);
   const { toast } = useToast();
+
+  // Load trainers from localStorage on component mount
+  useEffect(() => {
+    try {
+      const storedTrainers = localStorage.getItem("trainers");
+      if (storedTrainers) {
+        const parsedTrainers = JSON.parse(storedTrainers);
+        // Extract just the trainer names from the trainer objects
+        const activeTrainerNames = parsedTrainers
+          .filter((trainer: any) => trainer.status === "Active")
+          .map((trainer: any) => trainer.name);
+        
+        if (activeTrainerNames.length > 0) {
+          setTrainersList(activeTrainerNames);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading trainers from localStorage:", error);
+      // Keep the fallback trainers if there's an error
+    }
+  }, []);
 
   const filteredClasses = classes.filter(
     (cls) =>
