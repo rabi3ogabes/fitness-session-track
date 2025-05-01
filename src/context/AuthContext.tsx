@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -51,54 +50,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check for an existing session
-    const checkSession = async () => {
-      try {
-        console.log("Checking for existing session...");
-        // Get session from Supabase
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          throw sessionError;
-        }
-
-        if (session) {
-          console.log("Session found:", session.user.id);
-          // Set user info
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || '',
-          });
-          
-          // In a real implementation, fetch user profile from profiles table
-          // For now, we'll use mock data
-          const mockUserProfile = {
-            sessions_remaining: 7,
-            total_sessions: 12
-          };
-          
-          setUserProfile(mockUserProfile);
-          
-          // For mock purposes, set role
-          // In a real app, you would fetch this from your database
-          const mockRole = localStorage.getItem('userRole') || 'user';
-          setRole(mockRole);
-          console.log("User role set to:", mockRole);
-        } else {
-          console.log("No session found");
-        }
-      } catch (error) {
-        console.error("Error checking session:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkSession();
-
-    // Set up auth state change listener
+    // Set up auth state change listener first to catch all auth events
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state change event:", event);
@@ -131,6 +83,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
+    // Check for an existing session after setting up the listener
+    const checkSession = async () => {
+      try {
+        console.log("Checking for existing session...");
+        // Set a timeout for faster response
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Session check timed out")), 5000)
+        );
+        
+        // Race between the session check and the timeout
+        const sessionPromise = supabase.auth.getSession();
+        const result = await Promise.race([sessionPromise, timeoutPromise])
+          .catch(error => {
+            console.log("Session check timed out, proceeding without session");
+            return { data: { session: null }, error: error };
+          });
+        
+        // If we got a real result (not from the timeout)
+        if ('data' in result && result.data.session) {
+          console.log("Session found:", result.data.session.user.id);
+          // Set user info
+          setUser({
+            id: result.data.session.user.id,
+            email: result.data.session.user.email || '',
+            name: result.data.session.user.user_metadata?.name || '',
+          });
+          
+          // In a real implementation, fetch user profile from profiles table
+          // For now, we'll use mock data
+          const mockUserProfile = {
+            sessions_remaining: 7,
+            total_sessions: 12
+          };
+          
+          setUserProfile(mockUserProfile);
+          
+          // For mock purposes, set role
+          // In a real app, you would fetch this from your database
+          const mockRole = localStorage.getItem('userRole') || 'user';
+          setRole(mockRole);
+          console.log("User role set to:", mockRole);
+        } else {
+          console.log("No session found or check timed out");
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        // Ensure loading is set to false even if there's an error
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+
     return () => {
       subscription?.unsubscribe();
     };
@@ -140,22 +146,96 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log("Login attempt for:", email);
       
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Set a timeout for the login request
+      const loginPromise = supabase.auth.signInWithPassword({
         email,
         password,
       });
-
-      if (error) {
-        console.error("Supabase auth error:", error);
-        // Provide better error messages based on error type
-        const errorMessage = error.message || "An unexpected error occurred. Please try again.";
-        
-        toast({
-          title: "Login failed",
-          description: errorMessage,
-          variant: "destructive",
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Login request timed out")), 10000)
+      );
+      
+      // Race between the login request and the timeout
+      const result = await Promise.race([loginPromise, timeoutPromise])
+        .catch(error => {
+          // If it's a timeout, check for demo credentials
+          const isDemoAccount = 
+            (email === "admin@gym.com" && password === "admin123") ||
+            (email === "user@gym.com" && password === "user123") ||
+            (email === "trainer@gym.com" && password === "trainer123");
+          
+          if (isDemoAccount) {
+            console.log("Login timed out for demo account - using fallback mode");
+            return { data: null, error: new Error("Connection timeout - using demo mode") };
+          }
+          
+          throw error;
         });
-        throw error;
+      
+      if ('error' in result && result.error) {
+        console.error("Supabase auth error:", result.error);
+        
+        // Check for demo accounts with connection issues
+        const isDemoAccount = 
+          (email === "admin@gym.com" && password === "admin123") ||
+          (email === "user@gym.com" && password === "user123") ||
+          (email === "trainer@gym.com" && password === "trainer123");
+        
+        if (isDemoAccount && (result.error.message?.includes("timeout") || result.error.message?.includes("NetworkError") || result.error.message?.includes("network") || !navigator.onLine)) {
+          console.log("Demo account login with network issue - bypassing for testing");
+          
+          // Mock successful login for demo accounts when offline or having connection issues
+          const mockRole = email.includes('admin') ? 'admin' : email.includes('trainer') ? 'trainer' : 'user';
+          localStorage.setItem('userRole', mockRole);
+          setRole(mockRole);
+          
+          // Create mock user
+          setUser({
+            id: 'demo-user-id',
+            email: email,
+            name: mockRole.charAt(0).toUpperCase() + mockRole.slice(1),
+            role: mockRole
+          });
+          
+          // Create mock profile
+          setUserProfile({
+            sessions_remaining: 7,
+            total_sessions: 12
+          });
+          
+          toast({
+            title: "Demo mode activated",
+            description: "You've been logged in using demo mode due to connection issues with Supabase."
+          });
+          
+          return;
+        }
+        
+        // Improved error handling
+        if (result.error.message?.includes("Invalid login credentials")) {
+          toast({
+            title: "Invalid credentials",
+            description: "The email or password you entered is incorrect.",
+            variant: "destructive",
+          });
+        } else if (!navigator.onLine || result.error.message?.includes("NetworkError") || result.error.message?.includes("network")) {
+          toast({
+            title: "Connection Error",
+            description: "Unable to connect to the authentication service. Please check your internet connection.",
+            variant: "destructive",
+          });
+        } else {
+          // Provide better error messages
+          const errorMessage = result.error.message || "An unexpected error occurred. Please try again.";
+          
+          toast({
+            title: "Login failed",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
+        throw result.error;
       }
       
       console.log("Login successful for:", email);

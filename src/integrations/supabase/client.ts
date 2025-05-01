@@ -15,13 +15,13 @@ const supabaseOptions = {
     detectSessionInUrl: false
   },
   global: {
-    fetch: (...args: [RequestInfo | URL, RequestInit?]) => {
-      // Enhanced fetch with improved retry mechanism
+    fetch: (...args: [RequestInfo | URL, RequestInit?]): Promise<Response> => {
+      // Enhanced fetch with improved retry mechanism and shorter timeout
       const [resource, config] = args;
       
-      // Use AbortController for timeout handling
+      // Use AbortController for timeout handling with reduced timeout for faster feedback
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000); // Extended to 45 seconds
+      const timeoutId = setTimeout(() => controller.abort(), 25000); // Reduced to 25 seconds
       
       // Add signal to the request config
       const updatedConfig = {
@@ -35,8 +35,8 @@ const supabaseOptions = {
         }
       };
       
-      // Implementation of retry logic
-      const MAX_RETRIES = 3;
+      // Implementation of retry logic with faster retry attempts
+      const MAX_RETRIES = 2; // Reduced to 2 retries
       let retryCount = 0;
       
       const fetchWithRetry = async (): Promise<Response> => {
@@ -55,8 +55,8 @@ const supabaseOptions = {
             retryCount++;
             console.log(`Retrying database connection (attempt ${retryCount}/${MAX_RETRIES})...`);
             
-            // Exponential backoff: 1s, 2s, 4s
-            const backoffTime = Math.pow(2, retryCount - 1) * 1000;
+            // Faster exponential backoff: 500ms, 1s
+            const backoffTime = Math.pow(2, retryCount - 1) * 500;
             
             return new Promise(resolve => {
               setTimeout(() => resolve(fetchWithRetry()), backoffTime);

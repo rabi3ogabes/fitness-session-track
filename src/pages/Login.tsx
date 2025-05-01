@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -29,10 +28,12 @@ const Login = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   
   const [isLoading, setIsLoading] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'offline' | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("login");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showDemoHelp, setShowDemoHelp] = useState(false);
+  const [loginAttempts, setLoginAttempts] = useState(0);
   
   const { login, signup, isAdmin, isTrainer, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -97,16 +98,42 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setConnectionStatus('connecting');
+    setLoginAttempts(prev => prev + 1);
 
     try {
       // Add console logs to help debug
       console.log("Starting login with:", identifier);
       
+      // Set a timeout to detect slow connections
+      const connectionTimeout = setTimeout(() => {
+        if (connectionStatus === 'connecting') {
+          toast({
+            title: "Slow connection detected",
+            description: "Connection is taking longer than expected. Please wait or try demo mode.",
+            variant: "warning",
+          });
+        }
+      }, 5000);
+      
       await login(identifier, password);
+      clearTimeout(connectionTimeout);
+      setConnectionStatus('connected');
       // Login success will be handled by the useEffect that watches isAuthenticated
     } catch (error) {
+      clearTimeout(connectionTimeout);
+      setConnectionStatus('offline');
       // Error is now handled in the AuthContext
       console.error("Login error caught in component:", error);
+      
+      // If multiple attempts fail, suggest demo mode
+      if (loginAttempts >= 2 && !isOnline) {
+        toast({
+          title: "Connection issues detected",
+          description: "Try using the demo accounts if you're having connection problems.",
+          variant: "warning",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -260,6 +287,14 @@ const Login = () => {
         
         <OfflineWarning />
         
+        {connectionStatus === 'connecting' && loginAttempts > 1 && (
+          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+            <p className="text-sm text-blue-700">
+              Connection is taking longer than usual. Demo accounts will work even with connection issues.
+            </p>
+          </div>
+        )}
+        
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Login</TabsTrigger>
@@ -312,7 +347,15 @@ const Login = () => {
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
                   disabled={isLoading}
                 >
-                  {isLoading ? "Signing in..." : "Sign in"}
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      {connectionStatus === 'connecting' && loginAttempts > 1 ? "Connecting..." : "Signing in..."}
+                    </div>
+                  ) : "Sign in"}
                 </Button>
               </form>
             </div>
