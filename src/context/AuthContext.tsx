@@ -1,282 +1,196 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-// Define user types
-export type UserRole = "admin" | "user" | "trainer";
-
-export interface User {
+interface User {
   id: string;
-  name: string;
   email: string;
-  role: UserRole;
-  phone?: string;
+  role?: string;
+}
+
+interface UserProfile {
+  sessions_remaining: number;
+  total_sessions: number;
 }
 
 interface AuthContextType {
-  user: User | null;
-  session: any; // Store full session object
-  login: (identifier: string, password: string) => Promise<boolean>;
-  signup: (phone: string, password: string, name: string, email?: string, dateOfBirth?: string) => Promise<boolean>;
-  logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
   isTrainer: boolean;
-  isUser: boolean;
+  user: User | null;
+  userProfile: UserProfile | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  isAuthenticated: false,
+  isAdmin: false,
+  isTrainer: false,
+  user: null,
+  userProfile: null,
+  login: async () => {},
+  logout: async () => {},
+  loading: true
+});
 
-// Sample users for demo - will be removed when Supabase auth is fully implemented
-const MOCK_USERS = [
-  {
-    id: "1",
-    name: "Admin User",
-    email: "admin@gym.com",
-    password: "admin123",
-    role: "admin" as UserRole
-  },
-  {
-    id: "2", 
-    name: "Regular User",
-    email: "user@gym.com",
-    password: "user123",
-    role: "user" as UserRole
-  },
-  {
-    id: "3",
-    name: "Trainer",
-    email: "trainer@gym.com",
-    password: "trainer123",
-    role: "trainer" as UserRole
-  }
-];
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Check for stored user on load
+  // For mock purposes, let's define roles
+  const [role, setRole] = useState<string | null>(null);
+
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Check for an existing session
+    const checkSession = async () => {
+      try {
+        // Get session from Supabase
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        if (session) {
+          // Set user info
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+          });
+          
+          // In a real implementation, fetch user profile from profiles table
+          // For now, we'll use mock data
+          const mockUserProfile = {
+            sessions_remaining: 7,
+            total_sessions: 12
+          };
+          
+          setUserProfile(mockUserProfile);
+          
+          // For mock purposes, set role
+          // In a real app, you would fetch this from your database
+          const mockRole = localStorage.getItem('userRole') || 'user';
+          setRole(mockRole);
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+
+    // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log("Auth state changed:", event, session);
-        setSession(session);
-        if (session?.user) {
-          // Use setTimeout to prevent potential recursion issues
-          setTimeout(() => {
-            fetchUserProfile(session.user.id);
-          }, 0);
+      async (event, session) => {
+        if (session) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+          });
+
+          // In a real implementation, fetch user profile
+          const mockUserProfile = {
+            sessions_remaining: 7, 
+            total_sessions: 12
+          };
+          setUserProfile(mockUserProfile);
+
+          // For mock purposes
+          const mockRole = localStorage.getItem('userRole') || 'user';
+          setRole(mockRole);
         } else {
           setUser(null);
+          setUserProfile(null);
+          setRole(null);
         }
+        setLoading(false);
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Existing session:", session);
-      setSession(session);
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
+  const login = async (email: string, password: string) => {
     try {
-      // Try to get user from Supabase profiles
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      if (error) {
-        console.error("Error fetching profile:", error);
-        // Fallback to mock users for demo
-        const mockUser = MOCK_USERS.find(u => u.id === userId);
-        if (mockUser) {
-          const { password: _, ...userWithoutPassword } = mockUser;
-          setUser(userWithoutPassword);
-        }
-        return;
-      }
-
-      if (data) {
-        // Determine role based on email for now
-        // In a real app, this would come from your profiles table
-        let role: UserRole = "user";
-        if (data.email?.includes("admin")) {
-          role = "admin";
-        } else if (data.email?.includes("trainer")) {
-          role = "trainer";
-        }
-
-        setUser({
-          id: data.id,
-          name: data.name || "User",
-          email: data.email || "",
-          role: role,
-          phone: data.phone_number
-        });
-      }
-    } catch (error) {
-      console.error("Error in fetchUserProfile:", error);
-    }
-  };
-
-  const login = async (identifier: string, password: string): Promise<boolean> => {
-    try {
-      // Check if identifier is an email or phone number
-      const isEmail = identifier.includes('@');
+      if (error) throw error;
       
-      let authResponse;
+      // For mock purposes, based on email determine role
+      let mockRole = 'user';
+      if (email.includes('admin')) mockRole = 'admin';
+      if (email.includes('trainer')) mockRole = 'trainer';
       
-      if (isEmail) {
-        // Login with email
-        authResponse = await supabase.auth.signInWithPassword({
-          email: identifier,
-          password: password,
-        });
-      } else {
-        // Login with phone as email (phone@example.com)
-        authResponse = await supabase.auth.signInWithPassword({
-          email: `${identifier}@example.com`,
-          password: password,
-        });
-      }
+      // Store the role in localStorage for mock purposes
+      localStorage.setItem('userRole', mockRole);
+      setRole(mockRole);
 
-      const { data, error } = authResponse;
-      
-      if (error) {
-        console.error("Auth error:", error);
-        
-        // Fallback to mock users for demo
-        const mockUser = MOCK_USERS.find(
-          u => (u.email === identifier || u.id === identifier) && u.password === password
-        );
-
-        if (mockUser) {
-          const { password: _, ...userWithoutPassword } = mockUser;
-          setUser(userWithoutPassword);
-          
-          // Create a fake session object for the mock user
-          const fakeSession = {
-            user: {
-              id: mockUser.id,
-              email: mockUser.email,
-            },
-            access_token: "mock_token"
-          };
-          setSession(fakeSession);
-          
-          return true;
-        }
-        return false;
-      }
-      
-      // Success - session will be handled by onAuthStateChange
-      return true;
-    } catch (error) {
+      toast({
+        title: "Login successful",
+        description: "You have been logged in successfully."
+      });
+    } catch (error: any) {
       console.error("Login error:", error);
       toast({
-        title: "Login error",
-        description: "An unexpected error occurred during login",
+        title: "Login failed",
+        description: error.message,
         variant: "destructive",
       });
-      return false;
+      throw error;
     }
   };
 
-  const signup = async (phone: string, password: string, name: string, email?: string, dateOfBirth?: string): Promise<boolean> => {
+  const logout = async () => {
     try {
-      // Validate phone number format (8 digits)
-      if (!/^\d{8}$/.test(phone)) {
-        toast({
-          title: "Invalid phone number",
-          description: "Please enter an 8-digit phone number",
-          variant: "destructive",
-        });
-        return false;
-      }
-
-      // Create user metadata including all provided info
-      const userData = {
-        phone_number: phone,
-        name: name,
-        email: email || '',
-        date_of_birth: dateOfBirth || ''
-      };
-
-      // Create a user with the phone number as the email (phone@example.com)
-      const { data, error } = await supabase.auth.signUp({
-        email: email || `${phone}@example.com`,
-        password: password,
-        options: {
-          data: userData
-        }
-      });
-
-      if (error) {
-        console.error("Signup error:", error);
-        toast({
-          title: "Signup failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return false;
-      }
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      localStorage.removeItem('userRole');
+      setUser(null);
+      setUserProfile(null);
+      setRole(null);
 
       toast({
-        title: "Signup successful",
-        description: "Your account has been created. You can now log in.",
+        title: "Logout successful",
+        description: "You have been logged out successfully."
       });
-      
-      return true;
-    } catch (error) {
-      console.error("Signup error:", error);
-      return false;
-    }
-  };
-
-  const logout = () => {
-    supabase.auth.signOut().then(() => {
-      setUser(null);
-      setSession(null);
-    }).catch(error => {
+    } catch (error: any) {
       console.error("Logout error:", error);
       toast({
-        title: "Logout error",
-        description: "An error occurred during logout",
+        title: "Logout failed",
+        description: error.message,
         variant: "destructive",
       });
-    });
+      throw error;
+    }
   };
 
-  const value = {
-    user,
-    session,
-    login,
-    signup,
-    logout,
-    isAuthenticated: !!user,
-    isAdmin: user?.role === "admin",
-    isTrainer: user?.role === "trainer",
-    isUser: user?.role === "user",
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  return (
+    <AuthContext.Provider
+      value={{
+        isAuthenticated: !!user,
+        isAdmin: role === 'admin',
+        isTrainer: role === 'trainer',
+        user,
+        userProfile,
+        login,
+        logout,
+        loading,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };

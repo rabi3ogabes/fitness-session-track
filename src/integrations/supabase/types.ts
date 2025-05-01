@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          attendance: boolean | null
+          booking_date: string
+          class_id: number
+          id: string
+          notes: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          attendance?: boolean | null
+          booking_date?: string
+          class_id: number
+          id?: string
+          notes?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          attendance?: boolean | null
+          booking_date?: string
+          class_id?: number
+          id?: string
+          notes?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -17,6 +47,8 @@ export type Database = {
           membership_type: string | null
           name: string | null
           phone_number: string
+          sessions_remaining: number | null
+          total_sessions: number | null
           updated_at: string | null
         }
         Insert: {
@@ -26,6 +58,8 @@ export type Database = {
           membership_type?: string | null
           name?: string | null
           phone_number: string
+          sessions_remaining?: number | null
+          total_sessions?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -35,6 +69,8 @@ export type Database = {
           membership_type?: string | null
           name?: string | null
           phone_number?: string
+          sessions_remaining?: number | null
+          total_sessions?: number | null
           updated_at?: string | null
         }
         Relationships: []

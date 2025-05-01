@@ -1,81 +1,158 @@
 
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingForm from "@/components/BookingForm";
-import { useState } from "react";
 import { Calendar, CheckCircle, XCircle } from "lucide-react";
-
-// Mock user booking data
-const userBookingData = {
-  remainingSessions: 7,
-  upcomingBookings: [
-    { 
-      id: 1, 
-      className: "Morning Yoga", 
-      date: "2025-05-01", 
-      time: "08:00 AM", 
-      trainer: "Jane Doe",
-      status: "Confirmed"
-    },
-    { 
-      id: 2, 
-      className: "HIIT Workout", 
-      date: "2025-05-03", 
-      time: "10:00 AM", 
-      trainer: "John Smith",
-      status: "Confirmed"
-    },
-  ],
-  pastBookings: [
-    { 
-      id: 3, 
-      className: "Strength Training", 
-      date: "2025-04-27", 
-      time: "02:00 PM", 
-      trainer: "Alex Johnson",
-      status: "Completed",
-      attendance: true
-    },
-    { 
-      id: 4, 
-      className: "Pilates", 
-      date: "2025-04-25", 
-      time: "04:00 PM", 
-      trainer: "Sarah Williams",
-      status: "Completed",
-      attendance: true
-    },
-    { 
-      id: 5, 
-      className: "Boxing", 
-      date: "2025-04-22", 
-      time: "06:00 PM", 
-      trainer: "Mike Tyson",
-      status: "Cancelled"
-    },
-  ]
-};
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const UserBooking = () => {
-  const [bookings, setBookings] = useState(userBookingData);
+  const [bookings, setBookings] = useState({
+    upcomingBookings: [],
+    pastBookings: [],
+    remainingSessions: 0
+  });
   const [activeTab, setActiveTab] = useState("upcoming");
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  const handleCancelBooking = (id: number) => {
-    setBookings({
-      ...bookings,
-      upcomingBookings: bookings.upcomingBookings.filter(
-        (booking) => booking.id !== id
-      ),
-      remainingSessions: bookings.remainingSessions + 1
-    });
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchUserData = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Get user profile data to get remaining sessions
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('sessions_remaining, total_sessions')
+          .eq('id', user.id)
+          .single();
+          
+        if (profileError) throw profileError;
+        
+        // For now, until we have real data, we'll use mock data
+        // In a real implementation, you would fetch bookings from Supabase
+        const upcomingBookings = [
+          { 
+            id: 1, 
+            className: "Morning Yoga", 
+            date: "2025-05-01", 
+            time: "08:00 AM", 
+            trainer: "Jane Doe",
+            status: "Confirmed"
+          },
+          { 
+            id: 2, 
+            className: "HIIT Workout", 
+            date: "2025-05-03", 
+            time: "10:00 AM", 
+            trainer: "John Smith",
+            status: "Confirmed"
+          },
+        ];
+        
+        const pastBookings = [
+          { 
+            id: 3, 
+            className: "Strength Training", 
+            date: "2025-04-27", 
+            time: "02:00 PM", 
+            trainer: "Alex Johnson",
+            status: "Completed",
+            attendance: true
+          },
+          { 
+            id: 4, 
+            className: "Pilates", 
+            date: "2025-04-25", 
+            time: "04:00 PM", 
+            trainer: "Sarah Williams",
+            status: "Completed",
+            attendance: true
+          },
+          { 
+            id: 5, 
+            className: "Boxing", 
+            date: "2025-04-22", 
+            time: "06:00 PM", 
+            trainer: "Mike Tyson",
+            status: "Cancelled"
+          },
+        ];
+        
+        setBookings({
+          upcomingBookings,
+          pastBookings,
+          remainingSessions: profileData?.sessions_remaining || 7
+        });
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        toast({
+          title: "Error loading data",
+          description: "Could not load your booking data. Please try again later.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchUserData();
+  }, [user, toast]);
+
+  const handleCancelBooking = async (id: number) => {
+    try {
+      // In a real app, we would update the booking in Supabase
+      // For now we'll just update the state
+      
+      setBookings({
+        ...bookings,
+        upcomingBookings: bookings.upcomingBookings.filter(
+          (booking) => booking.id !== id
+        ),
+        remainingSessions: bookings.remainingSessions + 1
+      });
+      
+      toast({
+        title: "Booking cancelled",
+        description: "Your booking has been successfully cancelled.",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      toast({
+        title: "Error cancelling booking",
+        description: "Could not cancel your booking. Please try again later.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleBookingComplete = () => {
-    // In a real app, we would add the new booking to the list
+  const handleBookingComplete = async () => {
+    // In a real app, we would update the booking in Supabase
+    // and refresh the bookings
     setBookings({
       ...bookings,
       remainingSessions: bookings.remainingSessions - 1
     });
+    
+    // Refresh the bookings list
+    // For a real app, this would fetch the updated bookings
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Book Session">
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Book Session">
