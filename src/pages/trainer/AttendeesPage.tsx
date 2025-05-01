@@ -10,7 +10,6 @@ import { UpcomingClassesList } from "./components/attendees/UpcomingClassesList"
 import { SelectedClassDetails } from "./components/attendees/SelectedClassDetails";
 import { getUpcomingClasses } from "./components/attendees/attendeesUtils";
 import { Users } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { mockClasses } from "./mockData";
@@ -63,52 +62,6 @@ const AttendeesPage = () => {
               selectedDate={selectedDateForAttendees}
               onDateChange={setSelectedDateForAttendees}
             />
-          </div>
-          
-          {/* Upcoming Classes Box Grid */}
-          <div className="mb-8">
-            <h3 className="text-lg font-medium mb-3">Upcoming Classes</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {upcomingClasses.flatMap(dayClasses => 
-                dayClasses.classes.map(cls => (
-                  <Card 
-                    key={`${cls.id}-${format(dayClasses.date, 'yyyy-MM-dd')}`}
-                    className={`cursor-pointer transition-all border-2 ${
-                      cls.id === selectedClassForAttendees ? 
-                      "border-gym-blue bg-gym-light" : 
-                      "border-gray-200 hover:border-gray-300"
-                    }`}
-                    onClick={() => handleClassSelect(cls.id, dayClasses.date)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-medium">{cls.name}</h4>
-                        <Badge>{cls.enrolled} members</Badge>
-                      </div>
-                      <p className="text-sm text-gray-500 mt-1">{format(dayClasses.date, "MMM d")}, {cls.time}</p>
-                      <p className="text-xs text-gray-500">Trainer: {cls.trainer}</p>
-                      
-                      <div className="mt-3 w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full ${
-                            cls.enrolled / cls.capacity >= 0.9 ? "bg-red-500" : 
-                            cls.enrolled / cls.capacity >= 0.7 ? "bg-amber-500" : 
-                            "bg-green-500"
-                          }`}
-                          style={{ width: `${(cls.enrolled / cls.capacity) * 100}%` }}
-                        ></div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-              
-              {upcomingClasses.flatMap(day => day.classes).length === 0 && (
-                <div className="col-span-full text-center py-8 border rounded-md">
-                  <p className="text-gray-500">No upcoming classes scheduled</p>
-                </div>
-              )}
-            </div>
           </div>
           
           {/* Upcoming Classes Section - Calendar view */}
