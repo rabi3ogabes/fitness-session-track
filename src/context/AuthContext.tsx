@@ -251,7 +251,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({
           title: "Network Error",
           description: "Unable to connect to the authentication service, but you've been logged out locally.",
-          variant: "warning",
+          variant: "destructive", // Changed from "warning" to "destructive"
         });
         
         // Still clear local user state even if network request fails
