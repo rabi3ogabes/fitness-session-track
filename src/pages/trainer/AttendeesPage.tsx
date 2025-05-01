@@ -3,16 +3,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { format } from "date-fns";
 import { BulkAttendanceDialog } from "./components/BulkAttendanceDialog";
 import { DateNavigator } from "./components/attendees/DateNavigator";
 import { UpcomingClassesList } from "./components/attendees/UpcomingClassesList";
-import { SelectedClassDetails } from "./components/attendees/SelectedClassDetails";
 import { getUpcomingClasses } from "./components/attendees/attendeesUtils";
 import { Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { mockClasses, getBookingsForClass } from "./mockData";
 
 const AttendeesPage = () => {
   const { isTrainer, isAuthenticated } = useAuth();
@@ -35,12 +30,6 @@ const AttendeesPage = () => {
   }, [isAuthenticated, isTrainer, navigate]);
   
   const upcomingClasses = getUpcomingClasses(selectedDateForAttendees);
-  
-  const handleOpenBulkAttendance = () => {
-    if (selectedClassForAttendees) {
-      setIsBulkAttendanceOpen(true);
-    }
-  };
   
   const handleClassSelect = (classId: number, date: Date) => {
     setSelectedClassForAttendees(classId);
@@ -76,40 +65,6 @@ const AttendeesPage = () => {
               onClassSelect={handleClassSelect}
             />
           </div>
-          
-          {/* Selected class details */}
-          {selectedClassForAttendees && (
-            <div>
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-lg font-medium">
-                  Selected Class
-                  {(() => {
-                    const cls = mockClasses.find(c => c.id === selectedClassForAttendees);
-                    return cls ? ` - ${cls.name} (${cls.time})` : '';
-                  })()}
-                </h3>
-                <Button 
-                  onClick={handleOpenBulkAttendance}
-                  className="bg-gym-blue hover:bg-gym-dark-blue"
-                  size="sm"
-                >
-                  <Users className="h-4 w-4 mr-2" /> Manage Attendance
-                </Button>
-              </div>
-              
-              <SelectedClassDetails 
-                selectedClassId={selectedClassForAttendees}
-                selectedDate={selectedDateForAttendees}
-                onManageAttendance={handleOpenBulkAttendance}
-              />
-            </div>
-          )}
-          
-          {!selectedClassForAttendees && (
-            <div className="border rounded-md text-center py-8 text-gray-500">
-              <p>Select a class to view attendees</p>
-            </div>
-          )}
         </div>
         
         {/* Bulk Attendance Dialog */}

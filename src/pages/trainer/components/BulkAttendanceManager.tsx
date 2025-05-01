@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,7 +20,7 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
   const [attendanceData, setAttendanceData] = useState<{ id: number; member: string; status: string; isPresent: boolean }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [selectAll, setSelectAll] = useState(false);
+  const [selectAll, setSelectAll] = useState(true); // Default to true to select all
 
   // Fetch bookings for the selected class and date
   useEffect(() => {
@@ -51,23 +52,25 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
       booking.class === (classId === 1 ? "Morning Yoga" : 
                         classId === 2 ? "HIIT Workout" : 
                         classId === 3 ? "Strength Training" : 
-                        classId === 4 ? "Pilates" : "")
+                        classId === 4 ? "Pilates" : 
+                        classId === 5 ? "Spin Class" :
+                        classId === 6 ? "Boxing" :
+                        classId === 7 ? "Zumba" : "")
     );
+
+    console.log("Filtered bookings:", filteredBookings);
     
+    // Mark all members as present by default
     const mappedAttendance = filteredBookings.map(booking => ({
       id: booking.id,
       member: booking.member,
-      status: booking.status,
-      isPresent: booking.status === "Present" || booking.status === "Completed"
+      status: "Present", // Set all to present by default
+      isPresent: true // All are present by default
     }));
     
+    console.log("Setting initial attendance data:", mappedAttendance);
     setAttendanceData(mappedAttendance);
-    
-    // Check if all are present to set selectAll initial state
-    const allPresent = mappedAttendance.length > 0 && 
-      mappedAttendance.every(item => item.isPresent);
-    setSelectAll(allPresent);
-    
+    setSelectAll(true); // All are selected by default
     setIsLoading(false);
   }, [classId, selectedDate]);
 
