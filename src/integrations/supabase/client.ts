@@ -81,7 +81,11 @@ const supabaseOptions = {
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, supabaseOptions);
+export const supabase = createClient<Database>(
+  SUPABASE_URL, 
+  SUPABASE_PUBLISHABLE_KEY, 
+  supabaseOptions as any // Type assertion to resolve type conflicts
+);
 
 // Security helper function to check if a user is authenticated before making DB calls
 export const requireAuth = async (callback: () => Promise<any>) => {

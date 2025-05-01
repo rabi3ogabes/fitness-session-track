@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -106,22 +107,22 @@ const Login = () => {
       console.log("Starting login with:", identifier);
       
       // Set a timeout to detect slow connections
-      const connectionTimeout = setTimeout(() => {
+      const connectionTimeoutId = setTimeout(() => {
         if (connectionStatus === 'connecting') {
           toast({
             title: "Slow connection detected",
             description: "Connection is taking longer than expected. Please wait or try demo mode.",
-            variant: "warning",
+            variant: "destructive",
           });
         }
       }, 5000);
       
       await login(identifier, password);
-      clearTimeout(connectionTimeout);
+      clearTimeout(connectionTimeoutId);
       setConnectionStatus('connected');
       // Login success will be handled by the useEffect that watches isAuthenticated
     } catch (error) {
-      clearTimeout(connectionTimeout);
+      clearTimeout(connectionTimeoutId);
       setConnectionStatus('offline');
       // Error is now handled in the AuthContext
       console.error("Login error caught in component:", error);
@@ -131,7 +132,7 @@ const Login = () => {
         toast({
           title: "Connection issues detected",
           description: "Try using the demo accounts if you're having connection problems.",
-          variant: "warning",
+          variant: "destructive",
         });
       }
     } finally {

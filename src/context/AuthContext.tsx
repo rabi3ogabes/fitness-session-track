@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -100,8 +101,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return { data: { session: null }, error: error };
           });
         
-        // If we got a real result (not from the timeout)
-        if ('data' in result && result.data.session) {
+        // Type guard to check if result has data property and session inside data
+        if ('data' in result && result.data && 'session' in result.data && result.data.session) {
           console.log("Session found:", result.data.session.user.id);
           // Set user info
           setUser({
@@ -182,7 +183,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           (email === "user@gym.com" && password === "user123") ||
           (email === "trainer@gym.com" && password === "trainer123");
         
-        if (isDemoAccount && (result.error.message?.includes("timeout") || result.error.message?.includes("NetworkError") || result.error.message?.includes("network") || !navigator.onLine)) {
+        // Safely access error message
+        const errorMessage = result.error instanceof Error ? result.error.message : String(result.error);
+        
+        if (isDemoAccount && (errorMessage.includes("timeout") || errorMessage.includes("NetworkError") || errorMessage.includes("network") || !navigator.onLine)) {
           console.log("Demo account login with network issue - bypassing for testing");
           
           // Mock successful login for demo accounts when offline or having connection issues
@@ -213,13 +217,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         
         // Improved error handling
-        if (result.error.message?.includes("Invalid login credentials")) {
+        if (errorMessage.includes("Invalid login credentials")) {
           toast({
             title: "Invalid credentials",
             description: "The email or password you entered is incorrect.",
             variant: "destructive",
           });
-        } else if (!navigator.onLine || result.error.message?.includes("NetworkError") || result.error.message?.includes("network")) {
+        } else if (!navigator.onLine || errorMessage.includes("NetworkError") || errorMessage.includes("network")) {
           toast({
             title: "Connection Error",
             description: "Unable to connect to the authentication service. Please check your internet connection.",
@@ -227,11 +231,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           });
         } else {
           // Provide better error messages
-          const errorMessage = result.error.message || "An unexpected error occurred. Please try again.";
+          const displayErrorMessage = errorMessage || "An unexpected error occurred. Please try again.";
           
           toast({
             title: "Login failed",
-            description: errorMessage,
+            description: displayErrorMessage,
             variant: "destructive",
           });
         }
@@ -263,7 +267,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         (email === "user@gym.com" && password === "user123") ||
         (email === "trainer@gym.com" && password === "trainer123");
       
-      if (isDemoAccount && (error.message?.includes("NetworkError") || error.message?.includes("network") || !navigator.onLine)) {
+      // Safely extract error message
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (isDemoAccount && (errorMessage.includes("NetworkError") || errorMessage.includes("network") || !navigator.onLine)) {
         console.log("Demo account login with network issue - bypassing for testing");
         
         // Mock successful login for demo accounts when offline or having connection issues
@@ -294,13 +301,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // Improved error handling
-      if (error.message?.includes("Invalid login credentials")) {
+      if (errorMessage.includes("Invalid login credentials")) {
         toast({
           title: "Invalid credentials",
           description: "The email or password you entered is incorrect.",
           variant: "destructive",
         });
-      } else if (!navigator.onLine || error.message?.includes("NetworkError") || error.message?.includes("network")) {
+      } else if (!navigator.onLine || errorMessage.includes("NetworkError") || errorMessage.includes("network")) {
         toast({
           title: "Connection Error",
           description: "Unable to connect to the authentication service. Please check your internet connection.",
@@ -308,11 +315,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       } else {
         // Provide better error messages
-        const errorMessage = error.message || "An unexpected error occurred. Please try again.";
+        const displayErrorMessage = errorMessage || "An unexpected error occurred. Please try again.";
         
         toast({
           title: "Login failed",
-          description: errorMessage,
+          description: displayErrorMessage,
           variant: "destructive",
         });
       }
@@ -349,8 +356,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Signup error:", error);
       
+      // Safely extract error message
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
       // Check if it's a network error
-      if (!navigator.onLine || error.message?.includes("NetworkError")) {
+      if (!navigator.onLine || errorMessage.includes("NetworkError")) {
         toast({
           title: "Network Error",
           description: "Unable to connect to the authentication service. Please check your internet connection.",
@@ -358,11 +368,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       } else {
         // Provide better error messages
-        const errorMessage = error.message || "An unexpected error occurred. Please try again.";
+        const displayErrorMessage = errorMessage || "An unexpected error occurred. Please try again.";
         
         toast({
           title: "Sign up failed",
-          description: errorMessage,
+          description: displayErrorMessage,
           variant: "destructive",
         });
       }
@@ -390,8 +400,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Logout error:", error);
       
+      // Safely extract error message
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
       // Check if it's a network error
-      if (!navigator.onLine || error.message?.includes("NetworkError")) {
+      if (!navigator.onLine || errorMessage.includes("NetworkError")) {
         toast({
           title: "Network Error",
           description: "Unable to connect to the authentication service, but you've been logged out locally.",
@@ -405,11 +418,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRole(null);
       } else {
         // Provide better error messages
-        const errorMessage = error.message || "An unexpected error occurred. Please try again.";
+        const displayErrorMessage = errorMessage || "An unexpected error occurred. Please try again.";
         
         toast({
           title: "Logout failed",
-          description: errorMessage,
+          description: displayErrorMessage,
           variant: "destructive",
         });
       }
