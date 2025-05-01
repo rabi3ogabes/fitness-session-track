@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -7,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { mockBookings } from "../mockData";
 import { format } from "date-fns";
 import { Check, Save, X, Users } from "lucide-react";
+import { saveAttendanceData, getAttendanceData } from "./attendees/attendeesUtils";
 
 interface BulkAttendanceProps {
   classId: number | null;
@@ -27,10 +27,21 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
     
     setIsLoading(true);
     
-    // In a real app, this would be an API call filtered by classId and date
-    // For now, we'll use mock data and filter it
+    // Format date for storage and lookup
     const formattedDate = format(selectedDate, "yyyy-MM-dd");
     
+    // Check if we have saved data first
+    const savedAttendance = getAttendanceData(classId, formattedDate);
+    
+    if (savedAttendance) {
+      // Use saved data if available
+      setAttendanceData(savedAttendance);
+      setSelectAll(savedAttendance.length > 0 && savedAttendance.every(item => item.isPresent));
+      setIsLoading(false);
+      return;
+    }
+    
+    // Otherwise use mock data and filter it
     // Get bookings for this class and date
     const filteredBookings = mockBookings.filter(booking => 
       booking.date === formattedDate && 
@@ -88,7 +99,15 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
 
   // Save all attendance changes
   const handleSaveAttendance = () => {
+    if (!classId) return;
+    
     setIsSaving(true);
+    
+    // Format date for storage
+    const formattedDate = format(selectedDate, "yyyy-MM-dd");
+    
+    // Save attendance data to localStorage for persistence
+    saveAttendanceData(classId, formattedDate, attendanceData);
     
     // In a real app, this would be an API call to update all records
     // For now we'll simulate a delay
