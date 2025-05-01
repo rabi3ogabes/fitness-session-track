@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +20,7 @@ const initialMembers: Member[] = [
   { id: 5, name: "Olivia Taylor", email: "olivia@example.com", phone: "(555) 567-8901", membership: "Basic", sessions: 4, remainingSessions: 0, status: "Active", birthday: "1995-01-30", canBeEditedByTrainers: false },
   { id: 6, name: "William Anderson", email: "william@example.com", phone: "(555) 678-9012", membership: "Standard", sessions: 8, remainingSessions: 6, status: "Active", birthday: "1987-09-17", canBeEditedByTrainers: true },
   { id: 7, name: "Sophia Thomas", email: "sophia@example.com", phone: "(555) 789-0123", membership: "Premium", sessions: 12, remainingSessions: 10, status: "Active", birthday: "1993-12-25", canBeEditedByTrainers: false },
-  { id: 8, name: "Alexander Hernandez", email: "alexander@example.com", phone: "(555) 890-1234", membership: "Basic", sessions: 4, remainingSessions: 1, status: "Inactive", canBeEditedByTrainers: true },
+  { id: 8, name: "Alexander Hernandez", email: "alexander@example.com", phone: "(555) 890-1234", membership: "Basic", sessions: 4, remainingSessions: 1, status: "Inactive", birthday: "1991-08-12", canBeEditedByTrainers: true },
 ];
 
 // Mock payment history data
