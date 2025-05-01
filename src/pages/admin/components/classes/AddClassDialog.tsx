@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Clock } from "lucide-react";
 import { ClassModel, RecurringPattern } from "./ClassTypes";
 import {
   Dialog,
@@ -24,6 +24,7 @@ interface AddClassDialogProps {
   onOpenChange: (open: boolean) => void;
   onAddClass: (newClass: ClassModel, recurring?: RecurringPattern) => void;
   trainers: string[];
+  existingClasses: ClassModel[];
 }
 
 const AddClassDialog: React.FC<AddClassDialogProps> = ({
@@ -31,6 +32,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
   onOpenChange,
   onAddClass,
   trainers,
+  existingClasses,
 }) => {
   const [newClass, setNewClass] = useState<ClassModel>({
     id: 0,
@@ -41,7 +43,9 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     capacity: 0,
     enrolled: 0,
     status: "Active",
-    gender: "All"
+    gender: "All",
+    startTime: "09:00",
+    endTime: "10:00"
   });
 
   const [isRecurring, setIsRecurring] = useState(false);
@@ -52,10 +56,67 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
   });
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [selectedTrainers, setSelectedTrainers] = useState<string[]>([]);
+  const [timeError, setTimeError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewClass(prev => ({ ...prev, [name]: value }));
+    
+    // Clear time error when times change
+    if (name === "startTime" || name === "endTime") {
+      validateTimes(name === "startTime" ? value : newClass.startTime, 
+                   name === "endTime" ? value : newClass.endTime);
+    }
+  };
+
+  const validateTimes = (startTime: string | undefined, endTime: string | undefined) => {
+    if (!startTime || !endTime) {
+      setTimeError("Start and end times are required");
+      return false;
+    }
+    
+    if (startTime >= endTime) {
+      setTimeError("End time must be after start time");
+      return false;
+    }
+    
+    setTimeError(null);
+    return true;
+  };
+
+  const checkForScheduleConflicts = () => {
+    // Only check if trainers are selected
+    if (selectedTrainers.length === 0) return null;
+
+    // Format for scheduled date
+    const scheduleDate = format(startDate, "MM/dd/yyyy");
+    const { startTime, endTime } = newClass;
+
+    // Check for conflicts with existing classes
+    for (const existingClass of existingClasses) {
+      // Skip classes that don't have time data yet
+      if (!existingClass.startTime || !existingClass.endTime) continue;
+      
+      // Skip classes on different dates
+      if (!existingClass.schedule.includes(scheduleDate)) continue;
+      
+      // Skip classes with no overlapping trainers
+      const existingTrainers = existingClass.trainers || [existingClass.trainer];
+      const hasCommonTrainer = selectedTrainers.some(trainer => 
+        existingTrainers.includes(trainer)
+      );
+      
+      if (!hasCommonTrainer) continue;
+
+      // Check for time overlap
+      if ((startTime! >= existingClass.startTime! && startTime! < existingClass.endTime!) ||
+          (endTime! > existingClass.startTime! && endTime! <= existingClass.endTime!) ||
+          (startTime! <= existingClass.startTime! && endTime! >= existingClass.endTime!)) {
+        return `Schedule conflict with ${existingClass.name} (${existingClass.schedule} ${existingClass.startTime}-${existingClass.endTime})`;
+      }
+    }
+    
+    return null;
   };
 
   const handleGenderChange = (value: string) => {
@@ -68,6 +129,9 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     } else {
       setSelectedTrainers(prev => prev.filter(t => t !== trainer));
     }
+    
+    // Check for conflicts each time a trainer is selected/deselected
+    setTimeError(null);
   };
 
   const handleDaySelection = (day: string, isChecked: boolean) => {
@@ -92,6 +156,18 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
   };
 
   const handleAddClass = () => {
+    // Validate times
+    if (!validateTimes(newClass.startTime, newClass.endTime)) {
+      return;
+    }
+    
+    // Check for schedule conflicts
+    const conflict = checkForScheduleConflicts();
+    if (conflict) {
+      setTimeError(conflict);
+      return;
+    }
+    
     // Update the class with selected trainers
     const classToAdd = {
       ...newClass,
@@ -113,7 +189,9 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
       capacity: 0,
       enrolled: 0,
       status: "Active",
-      gender: "All"
+      gender: "All",
+      startTime: "09:00",
+      endTime: "10:00"
     });
     setIsRecurring(false);
     setRecurringPattern({
@@ -122,6 +200,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
       repeatUntil: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd")
     });
     setSelectedTrainers([]);
+    setTimeError(null);
   };
 
   return (
@@ -211,6 +290,46 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                   />
                 </PopoverContent>
               </Popover>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="startTime" className="text-right">
+              Start Time*
+            </Label>
+            <div className="col-span-3">
+              <div className="flex items-center">
+                <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="startTime"
+                  name="startTime"
+                  type="time"
+                  value={newClass.startTime}
+                  onChange={handleInputChange}
+                  className="w-full"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="endTime" className="text-right">
+              End Time*
+            </Label>
+            <div className="col-span-3">
+              <div className="flex items-center">
+                <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="endTime"
+                  name="endTime"
+                  type="time"
+                  value={newClass.endTime}
+                  onChange={handleInputChange}
+                  className="w-full"
+                  required
+                />
+              </div>
             </div>
           </div>
           
@@ -315,11 +434,25 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
             </>
           )}
           
+          {timeError && (
+            <div className="col-span-4 text-destructive text-sm">
+              {timeError}
+            </div>
+          )}
+          
           <div className="flex justify-end mt-4">
             <Button 
               onClick={handleAddClass} 
               className="bg-gym-blue hover:bg-gym-dark-blue"
-              disabled={!newClass.name || !selectedTrainers.length || newClass.capacity <= 0 || (isRecurring && recurringPattern.daysOfWeek.length === 0)}
+              disabled={
+                !newClass.name || 
+                !selectedTrainers.length || 
+                newClass.capacity <= 0 || 
+                (isRecurring && recurringPattern.daysOfWeek.length === 0) ||
+                !newClass.startTime ||
+                !newClass.endTime ||
+                !!timeError
+              }
             >
               Add Class
             </Button>

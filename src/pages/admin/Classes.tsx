@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Clock } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, parse, isBefore } from "date-fns";
 import AddClassDialog from "./components/classes/AddClassDialog";
 import EditClassDialog from "./components/classes/EditClassDialog";
@@ -23,11 +23,11 @@ const trainersList = [
 
 // Mock data
 const initialClasses: ClassModel[] = [
-  { id: 1, name: "Morning Yoga", trainer: "Jane Smith", schedule: "Mon, Wed, Fri - 7:00 AM", capacity: 15, enrolled: 12, status: "Active", gender: "All" },
-  { id: 2, name: "HIIT Workout", trainer: "Mike Johnson", schedule: "Tue, Thu - 6:00 PM", capacity: 20, enrolled: 15, status: "Active", gender: "All" },
-  { id: 3, name: "Strength Training", trainer: "Sarah Davis", schedule: "Mon, Wed, Fri - 5:00 PM", capacity: 12, enrolled: 10, status: "Active", gender: "All" },
-  { id: 4, name: "Pilates", trainer: "Emma Wilson", schedule: "Tue, Thu - 9:00 AM", capacity: 15, enrolled: 7, status: "Active", gender: "Female" },
-  { id: 5, name: "Spinning", trainer: "Robert Brown", schedule: "Mon, Wed - 6:00 PM", capacity: 18, enrolled: 18, status: "Full", gender: "All" },
+  { id: 1, name: "Morning Yoga", trainer: "Jane Smith", schedule: "Mon, Wed, Fri - 7:00 AM", capacity: 15, enrolled: 12, status: "Active", gender: "All", startTime: "07:00", endTime: "08:00" },
+  { id: 2, name: "HIIT Workout", trainer: "Mike Johnson", schedule: "Tue, Thu - 6:00 PM", capacity: 20, enrolled: 15, status: "Active", gender: "All", startTime: "18:00", endTime: "19:00" },
+  { id: 3, name: "Strength Training", trainer: "Sarah Davis", schedule: "Mon, Wed, Fri - 5:00 PM", capacity: 12, enrolled: 10, status: "Active", gender: "All", startTime: "17:00", endTime: "18:00" },
+  { id: 4, name: "Pilates", trainer: "Emma Wilson", schedule: "Tue, Thu - 9:00 AM", capacity: 15, enrolled: 7, status: "Active", gender: "Female", startTime: "09:00", endTime: "10:00" },
+  { id: 5, name: "Spinning", trainer: "Robert Brown", schedule: "Mon, Wed - 6:00 PM", capacity: 18, enrolled: 18, status: "Full", gender: "All", startTime: "18:00", endTime: "19:00" },
 ];
 
 const Classes = () => {
@@ -218,6 +218,7 @@ const Classes = () => {
         onOpenChange={setIsAddDialogOpen}
         onAddClass={handleAddClass}
         trainers={trainersList}
+        existingClasses={classes}
       />
 
       <EditClassDialog
@@ -226,6 +227,7 @@ const Classes = () => {
         currentClass={currentClass}
         onUpdateClass={handleUpdateClass}
         trainers={trainersList}
+        existingClasses={classes}
       />
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -241,6 +243,9 @@ const Classes = () => {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Schedule
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Time
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Capacity
@@ -269,6 +274,15 @@ const Classes = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-gray-500">{cls.schedule}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-gray-500 flex items-center">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {cls.startTime && cls.endTime 
+                        ? `${cls.startTime} - ${cls.endTime}`
+                        : "Not set"
+                      }
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-gray-500">
@@ -320,7 +334,7 @@ const Classes = () => {
               ))}
               {filteredClasses.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                     No classes found matching your search criteria.
                   </td>
                 </tr>

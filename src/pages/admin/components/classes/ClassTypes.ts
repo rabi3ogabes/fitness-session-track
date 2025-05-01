@@ -10,6 +10,8 @@ export interface ClassModel {
   gender?: "Male" | "Female" | "All";
   trainers?: string[];
   recurrence?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface RecurringPattern {
