@@ -1,14 +1,20 @@
 
 import { getClassesForDate } from "../../mockData";
+import { addDays, subDays } from "date-fns";
 
-export const getUpcomingClasses = () => {
+export const getUpcomingClasses = (referenceDate: Date = new Date()) => {
   const result = [];
-  const today = new Date();
   
-  // Get classes for today and the next 6 days (week view)
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
+  // Get classes for the reference date and the next 6 days (week view)
+  for (let i = -1; i < 6; i++) {
+    let date;
+    if (i < 0) {
+      // For previous day
+      date = subDays(referenceDate, Math.abs(i));
+    } else {
+      // For current day and next days
+      date = addDays(referenceDate, i);
+    }
     
     const classesForDay = getClassesForDate(date);
     if (classesForDay.length > 0) {

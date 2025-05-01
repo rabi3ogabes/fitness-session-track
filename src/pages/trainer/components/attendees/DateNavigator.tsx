@@ -1,7 +1,10 @@
 
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import { format, addDays } from "date-fns";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { format, addDays, subDays } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { useState } from "react";
 
 interface DateNavigatorProps {
   selectedDate: Date;
@@ -9,18 +12,56 @@ interface DateNavigatorProps {
 }
 
 export const DateNavigator = ({ selectedDate, onDateChange }: DateNavigatorProps) => {
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  
+  const goToPreviousDay = () => {
+    onDateChange(subDays(selectedDate, 1));
+  };
+  
+  const goToNextDay = () => {
+    onDateChange(addDays(selectedDate, 1));
+  };
+  
+  const handleCalendarSelect = (date: Date | undefined) => {
+    if (date) {
+      onDateChange(date);
+      setIsCalendarOpen(false);
+    }
+  };
+  
   return (
     <div className="flex items-center space-x-2">
-      <CalendarIcon className="h-5 w-5 text-gray-500" />
-      <Button variant="outline" size="icon" onClick={() => onDateChange(addDays(selectedDate, -1))}>
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      <div className="font-medium">
-        {format(selectedDate, "MMMM d, yyyy")}
+      <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="flex items-center gap-2">
+            <CalendarIcon className="h-4 w-4 text-gray-500" />
+            <span className="font-medium hidden sm:inline">
+              {format(selectedDate, "MMMM d, yyyy")}
+            </span>
+            <span className="font-medium sm:hidden">
+              {format(selectedDate, "MMM d")}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={handleCalendarSelect}
+            initialFocus
+            className="p-3 pointer-events-auto bg-white"
+          />
+        </PopoverContent>
+      </Popover>
+      
+      <div className="flex gap-1">
+        <Button variant="outline" size="icon" onClick={goToPreviousDay}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon" onClick={goToNextDay}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
-      <Button variant="outline" size="icon" onClick={() => onDateChange(addDays(selectedDate, 1))}>
-        <ChevronRight className="h-4 w-4" />
-      </Button>
     </div>
   );
 };

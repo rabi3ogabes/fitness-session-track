@@ -12,7 +12,7 @@ import { getUpcomingClasses } from "./components/attendees/attendeesUtils";
 import { Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { mockClasses } from "./mockData";
+import { mockClasses, getBookingsForClass } from "./mockData";
 
 const AttendeesPage = () => {
   const { isTrainer, isAuthenticated } = useAuth();
@@ -34,7 +34,7 @@ const AttendeesPage = () => {
     }
   }, [isAuthenticated, isTrainer, navigate]);
   
-  const upcomingClasses = getUpcomingClasses();
+  const upcomingClasses = getUpcomingClasses(selectedDateForAttendees);
   
   const handleOpenBulkAttendance = () => {
     if (selectedClassForAttendees) {
@@ -45,6 +45,8 @@ const AttendeesPage = () => {
   const handleClassSelect = (classId: number, date: Date) => {
     setSelectedClassForAttendees(classId);
     setSelectedDateForAttendees(date);
+    // Immediately open the attendance management popup when a class is selected
+    setIsBulkAttendanceOpen(true);
   };
   
   // If still checking authentication, don't render anything yet

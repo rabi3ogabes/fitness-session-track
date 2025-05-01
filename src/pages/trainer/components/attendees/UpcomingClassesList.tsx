@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { format, isToday } from "date-fns";
 import { Users } from "lucide-react";
+import { getBookingsForClass } from "../../mockData";
 
 interface UpcomingClass {
   id: number;
@@ -47,6 +48,12 @@ export const UpcomingClassesList = ({
     );
   };
   
+  // Get actual enrollment numbers for a class
+  const getActualEnrollment = (classId: number) => {
+    const bookings = getBookingsForClass(classId);
+    return bookings.length;
+  };
+  
   return (
     <div className="space-y-6">
       {upcomingClasses.map((dayClasses) => (
@@ -65,7 +72,10 @@ export const UpcomingClassesList = ({
             {dayClasses.classes.map(cls => {
               const isSelected = cls.id === selectedClassForAttendees && 
                                 isSameDay(dayClasses.date, selectedDateForAttendees);
-              const percentFull = (cls.enrolled / cls.capacity) * 100;
+              
+              // Get actual number of enrolled members
+              const actualEnrolled = getActualEnrollment(cls.id);
+              const percentFull = (actualEnrolled / cls.capacity) * 100;
               
               return (
                 <Card 
@@ -86,7 +96,7 @@ export const UpcomingClassesList = ({
                           "bg-green-100 text-green-800"
                         )}
                       >
-                        {cls.enrolled}/{cls.capacity}
+                        {actualEnrolled}/{cls.capacity}
                       </Badge>
                     </div>
                   </CardHeader>
