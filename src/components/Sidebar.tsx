@@ -1,4 +1,3 @@
-
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -79,7 +78,6 @@ const Sidebar = () => {
   
   const trainerNavItems = [
     { name: "Dashboard", path: "/trainer", icon: <Home className="h-5 w-5" /> },
-    { name: "Attendees", path: "/admin/bookings", icon: <CalendarDays className="h-5 w-5" /> },
     { name: "Members", path: "/admin/members", icon: <UsersRound className="h-5 w-5" /> },
   ];
 
