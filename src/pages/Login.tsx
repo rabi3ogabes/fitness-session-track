@@ -64,22 +64,8 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const success = await login(identifier, password);
-      
-      if (success) {
-        toast({
-          title: "Login successful",
-          description: "Welcome back to FitTrack Pro!",
-        });
-        
-        // Navigation is now handled by the useEffect that watches isAuthenticated
-      } else {
-        toast({
-          title: "Login failed",
-          description: "Invalid phone number or password. Please try again.",
-          variant: "destructive",
-        });
-      }
+      await login(identifier, password);
+      // Login success will be handled by the useEffect that watches isAuthenticated
     } catch (error) {
       toast({
         title: "Login error",
