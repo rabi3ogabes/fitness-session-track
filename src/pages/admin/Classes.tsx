@@ -5,12 +5,20 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Clock } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, parse, isBefore } from "date-fns";
-import { supabase } from "@/integrations/supabase/client";
 import AddClassDialog from "./components/classes/AddClassDialog";
 import EditClassDialog from "./components/classes/EditClassDialog";
 import { ClassModel, RecurringPattern } from "./components/classes/ClassTypes";
 
-// Fallback trainers list - used only if Supabase fetch fails
+// Mock data for initial classes
+const initialClasses: ClassModel[] = [
+  { id: 1, name: "Morning Yoga", trainer: "Jane Smith", schedule: "Mon, Wed, Fri - 7:00 AM", capacity: 15, enrolled: 12, status: "Active", gender: "All", startTime: "07:00", endTime: "08:00" },
+  { id: 2, name: "HIIT Workout", trainer: "Mike Johnson", schedule: "Tue, Thu - 6:00 PM", capacity: 20, enrolled: 15, status: "Active", gender: "All", startTime: "18:00", endTime: "19:00" },
+  { id: 3, name: "Strength Training", trainer: "Sarah Davis", schedule: "Mon, Wed, Fri - 5:00 PM", capacity: 12, enrolled: 10, status: "Active", gender: "All", startTime: "17:00", endTime: "18:00" },
+  { id: 4, name: "Pilates", trainer: "Emma Wilson", schedule: "Tue, Thu - 9:00 AM", capacity: 15, enrolled: 7, status: "Active", gender: "Female", startTime: "09:00", endTime: "10:00" },
+  { id: 5, name: "Spinning", trainer: "Robert Brown", schedule: "Mon, Wed - 6:00 PM", capacity: 18, enrolled: 18, status: "Full", gender: "All", startTime: "18:00", endTime: "19:00" },
+];
+
+// Fallback trainers list - used only if localStorage doesn't have trainers
 const fallbackTrainers = [
   "Jane Smith",
   "Mike Johnson",
@@ -22,81 +30,34 @@ const fallbackTrainers = [
 ];
 
 const Classes = () => {
-  const [classes, setClasses] = useState<ClassModel[]>([]);
+  const [classes, setClasses] = useState<ClassModel[]>(initialClasses);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [trainersList, setTrainersList] = useState<string[]>(fallbackTrainers);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch classes from Supabase on component mount
+  // Load trainers from localStorage on component mount
   useEffect(() => {
-    fetchClasses();
-    fetchTrainers();
+    try {
+      const storedTrainers = localStorage.getItem("trainers");
+      if (storedTrainers) {
+        const parsedTrainers = JSON.parse(storedTrainers);
+        // Extract just the trainer names from the trainer objects
+        const activeTrainerNames = parsedTrainers
+          .filter((trainer: any) => trainer.status === "Active")
+          .map((trainer: any) => trainer.name);
+        
+        if (activeTrainerNames.length > 0) {
+          setTrainersList(activeTrainerNames);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading trainers from localStorage:", error);
+      // Keep the fallback trainers if there's an error
+    }
   }, []);
-
-  const fetchClasses = async () => {
-    try {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from('classes')
-        .select('*');
-      
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        // Map Supabase fields to match our ClassModel structure
-        const formattedClasses: ClassModel[] = data.map(cls => ({
-          id: cls.id,
-          name: cls.name,
-          trainer: cls.trainer || '',
-          trainers: cls.trainers || [],
-          schedule: cls.schedule,
-          capacity: cls.capacity,
-          enrolled: cls.enrolled || 0,
-          status: cls.status || 'Active',
-          gender: cls.gender || 'All',
-          startTime: cls.start_time,
-          endTime: cls.end_time
-        }));
-        setClasses(formattedClasses);
-      }
-    } catch (error) {
-      console.error("Error fetching classes:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch classes. Using default data.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchTrainers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('trainers')
-        .select('name')
-        .eq('status', 'Active');
-      
-      if (error) {
-        throw error;
-      }
-
-      if (data && data.length > 0) {
-        const trainerNames = data.map(trainer => trainer.name);
-        setTrainersList(trainerNames);
-      }
-    } catch (error) {
-      console.error("Error fetching trainers:", error);
-      // Keep using the fallback trainers list if there's an error
-    }
-  };
 
   const filteredClasses = classes.filter(
     (cls) =>
@@ -107,50 +68,28 @@ const Classes = () => {
 
   const currentClass = selectedClassId ? classes.find(c => c.id === selectedClassId) || null : null;
 
-  const toggleClassStatus = async (id: number) => {
-    const classToUpdate = classes.find(cls => cls.id === id);
-    if (!classToUpdate) return;
-    
-    const newStatus = classToUpdate.status === "Active" ? "Inactive" : "Active";
-    
-    try {
-      const { error } = await supabase
-        .from('classes')
-        .update({ status: newStatus })
-        .eq('id', id);
-      
-      if (error) {
-        throw error;
-      }
-      
-      setClasses(
-        classes.map((cls) =>
-          cls.id === id
-            ? {
-                ...cls,
-                status: newStatus,
-              }
-            : cls
-        )
-      );
+  const toggleClassStatus = (id: number) => {
+    setClasses(
+      classes.map((cls) =>
+        cls.id === id
+          ? {
+              ...cls,
+              status: cls.status === "Active" ? "Inactive" : "Active",
+            }
+          : cls
+      )
+    );
 
-      toast({
-        title: "Class status updated",
-        description: "The class status has been updated successfully",
-      });
-    } catch (error) {
-      console.error("Error updating class status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update class status.",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Class status updated",
+      description: "The class status has been updated successfully",
+    });
   };
 
   // Generate classes based on recurring pattern
   const generateRecurringClasses = (baseClass: ClassModel, pattern: RecurringPattern): ClassModel[] => {
     const generatedClasses: ClassModel[] = [];
+    let currentId = Math.max(...classes.map(c => c.id)) + 1;
     
     // Parse the base date from the schedule
     const baseDate = pattern.frequency === "Daily" ? 
@@ -166,7 +105,7 @@ const Classes = () => {
       while (isBefore(currentDate, endDate)) {
         generatedClasses.push({
           ...baseClass,
-          id: 0, // Will be assigned by Supabase
+          id: currentId++,
           schedule: format(currentDate, "MM/dd/yyyy"),
         });
         
@@ -195,7 +134,7 @@ const Classes = () => {
           if (isBefore(classDate, endDate) && !isBefore(classDate, baseDate)) {
             generatedClasses.push({
               ...baseClass,
-              id: 0, // Will be assigned by Supabase
+              id: currentId++,
               schedule: `${format(classDate, "MM/dd/yyyy")} (${day})`,
             });
           }
@@ -206,11 +145,12 @@ const Classes = () => {
     } else if (pattern.frequency === "Monthly") {
       // Generate monthly classes
       let currentMonth = new Date(baseDate);
+      const dayOfMonth = currentMonth.getDate();
       
       while (isBefore(currentMonth, endDate)) {
         generatedClasses.push({
           ...baseClass,
-          id: 0, // Will be assigned by Supabase
+          id: currentId++,
           schedule: format(currentMonth, "MM/dd/yyyy"),
         });
         
@@ -221,111 +161,32 @@ const Classes = () => {
     return generatedClasses;
   };
 
-  const handleAddClass = async (newClass: ClassModel, recurringPattern?: RecurringPattern) => {
-    try {
-      if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
-        // Generate recurring classes
-        const generatedClasses = generateRecurringClasses(newClass, recurringPattern);
-        
-        // Prepare the classes for insertion to Supabase
-        const classesForInsert = generatedClasses.map(cls => ({
-          name: cls.name,
-          trainer: cls.trainer,
-          trainers: cls.trainers || [],
-          schedule: cls.schedule,
-          capacity: parseInt(cls.capacity?.toString() || "0"),
-          enrolled: parseInt(cls.enrolled?.toString() || "0"),
-          status: cls.status || "Active",
-          gender: cls.gender || "All",
-          start_time: cls.startTime,
-          end_time: cls.endTime
-        }));
-        
-        const { data, error } = await supabase
-          .from('classes')
-          .insert(classesForInsert)
-          .select();
-        
-        if (error) {
-          throw error;
-        }
-
-        if (data) {
-          // Map the returned data to match our ClassModel structure
-          const addedClasses: ClassModel[] = data.map(cls => ({
-            id: cls.id,
-            name: cls.name,
-            trainer: cls.trainer || '',
-            trainers: cls.trainers || [],
-            schedule: cls.schedule,
-            capacity: cls.capacity,
-            enrolled: cls.enrolled || 0,
-            status: cls.status || 'Active',
-            gender: cls.gender as "Male" | "Female" | "All" | string,
-            startTime: cls.start_time,
-            endTime: cls.end_time
-          }));
-          
-          setClasses([...classes, ...addedClasses]);
-          
-          toast({
-            title: "Classes added",
-            description: `${addedClasses.length} recurring classes have been added successfully.`,
-          });
-        }
-      } else {
-        // Add a single class
-        const classToAdd = {
-          name: newClass.name,
-          trainer: newClass.trainer,
-          trainers: newClass.trainers || [],
-          schedule: newClass.schedule,
-          capacity: parseInt(newClass.capacity?.toString() || "0"),
-          enrolled: parseInt(newClass.enrolled?.toString() || "0"),
-          status: newClass.status || "Active",
-          gender: newClass.gender || "All",
-          start_time: newClass.startTime,
-          end_time: newClass.endTime
-        };
-        
-        const { data, error } = await supabase
-          .from('classes')
-          .insert([classToAdd])
-          .select();
-        
-        if (error) {
-          throw error;
-        }
-
-        if (data && data[0]) {
-          const addedClass: ClassModel = {
-            id: data[0].id,
-            name: data[0].name,
-            trainer: data[0].trainer || '',
-            trainers: data[0].trainers || [],
-            schedule: data[0].schedule,
-            capacity: data[0].capacity,
-            enrolled: data[0].enrolled || 0,
-            status: data[0].status || 'Active',
-            gender: data[0].gender as "Male" | "Female" | "All" | string,
-            startTime: data[0].start_time,
-            endTime: data[0].end_time
-          };
-          
-          setClasses([...classes, addedClass]);
-          
-          toast({
-            title: "Class added",
-            description: "The new class has been successfully added.",
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error adding class:", error);
+  const handleAddClass = (newClass: ClassModel, recurringPattern?: RecurringPattern) => {
+    const newId = Math.max(...classes.map(c => c.id)) + 1;
+    const classToAdd = {
+      ...newClass,
+      id: newId,
+      enrolled: parseInt(newClass.enrolled?.toString() || "0"),
+      capacity: parseInt(newClass.capacity?.toString() || "0"),
+      status: newClass.status || "Active",
+    };
+    
+    if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
+      // Generate recurring classes
+      const generatedClasses = generateRecurringClasses(classToAdd, recurringPattern);
+      setClasses([...classes, ...generatedClasses]);
+      
       toast({
-        title: "Error",
-        description: "Failed to add class.",
-        variant: "destructive",
+        title: "Classes added",
+        description: `${generatedClasses.length} recurring classes have been added successfully.`,
+      });
+    } else {
+      // Add a single class
+      setClasses([...classes, classToAdd]);
+      
+      toast({
+        title: "Class added",
+        description: "The new class has been successfully added.",
       });
     }
     
@@ -337,51 +198,20 @@ const Classes = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateClass = async (updatedClass: ClassModel) => {
-    try {
-      const classToUpdate = {
-        name: updatedClass.name,
-        trainer: updatedClass.trainer,
-        trainers: updatedClass.trainers || [],
-        schedule: updatedClass.schedule,
-        capacity: parseInt(updatedClass.capacity?.toString() || "0"),
-        enrolled: parseInt(updatedClass.enrolled?.toString() || "0"),
-        status: updatedClass.status || "Active",
-        gender: updatedClass.gender || "All",
-        start_time: updatedClass.startTime,
-        end_time: updatedClass.endTime
-      };
-      
-      const { error } = await supabase
-        .from('classes')
-        .update(classToUpdate)
-        .eq('id', updatedClass.id);
-      
-      if (error) {
-        throw error;
-      }
-      
-      setClasses(
-        classes.map((cls) =>
-          cls.id === updatedClass.id ? updatedClass : cls
-        )
-      );
-      
-      setIsEditDialogOpen(false);
-      setSelectedClassId(null);
-      
-      toast({
-        title: "Class updated",
-        description: "The class has been successfully updated.",
-      });
-    } catch (error) {
-      console.error("Error updating class:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update class.",
-        variant: "destructive",
-      });
-    }
+  const handleUpdateClass = (updatedClass: ClassModel) => {
+    setClasses(
+      classes.map((cls) =>
+        cls.id === updatedClass.id ? updatedClass : cls
+      )
+    );
+    
+    setIsEditDialogOpen(false);
+    setSelectedClassId(null);
+    
+    toast({
+      title: "Class updated",
+      description: "The class has been successfully updated.",
+    });
   };
 
   return (
@@ -453,84 +283,77 @@ const Classes = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
-                    Loading classes...
+              {filteredClasses.map((cls) => (
+                <tr key={cls.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="font-medium text-gray-900">{cls.name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-gray-500">
+                      {cls.trainers ? cls.trainers.join(", ") : cls.trainer}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-gray-500">{cls.schedule}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-gray-500 flex items-center">
+                      <Clock className="h-3 w-3 mr-1" />
+                      {cls.startTime && cls.endTime 
+                        ? `${cls.startTime} - ${cls.endTime}`
+                        : "Not set"
+                      }
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-gray-500">
+                      {cls.enrolled} / {cls.capacity}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        cls.gender === "Male"
+                          ? "bg-blue-100 text-blue-800"
+                          : cls.gender === "Female"
+                          ? "bg-pink-100 text-pink-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {cls.gender || "All"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        cls.status === "Active"
+                          ? "bg-green-100 text-green-800"
+                          : cls.status === "Full"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {cls.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => toggleClassStatus(cls.id)}
+                      className="text-gym-blue hover:text-gym-dark-blue mr-3"
+                    >
+                      {cls.status === "Active" ? "Deactivate" : "Activate"}
+                    </button>
+                    <button
+                      onClick={() => handleEditClick(cls.id)}
+                      className="text-gym-blue hover:text-gym-dark-blue"
+                    >
+                      <Pencil className="h-4 w-4 inline-block" />
+                      <span className="ml-1">Edit</span>
+                    </button>
                   </td>
                 </tr>
-              ) : filteredClasses.length > 0 ? (
-                filteredClasses.map((cls) => (
-                  <tr key={cls.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{cls.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-gray-500">
-                        {cls.trainers ? cls.trainers.join(", ") : cls.trainer}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-gray-500">{cls.schedule}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-gray-500 flex items-center">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {cls.startTime && cls.endTime 
-                          ? `${cls.startTime} - ${cls.endTime}`
-                          : "Not set"
-                        }
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-gray-500">
-                        {cls.enrolled} / {cls.capacity}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          cls.gender === "Male"
-                            ? "bg-blue-100 text-blue-800"
-                            : cls.gender === "Female"
-                            ? "bg-pink-100 text-pink-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {cls.gender || "All"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          cls.status === "Active"
-                            ? "bg-green-100 text-green-800"
-                            : cls.status === "Full"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {cls.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => toggleClassStatus(cls.id)}
-                        className="text-gym-blue hover:text-gym-dark-blue mr-3"
-                      >
-                        {cls.status === "Active" ? "Deactivate" : "Activate"}
-                      </button>
-                      <button
-                        onClick={() => handleEditClick(cls.id)}
-                        className="text-gym-blue hover:text-gym-dark-blue"
-                      >
-                        <Pencil className="h-4 w-4 inline-block" />
-                        <span className="ml-1">Edit</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
+              ))}
+              {filteredClasses.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                     No classes found matching your search criteria.
