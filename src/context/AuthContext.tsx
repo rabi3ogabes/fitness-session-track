@@ -23,7 +23,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  signup: (email: string, password: string, name: string, phone?: string, dob?: string) => Promise<boolean>; // Added signup function
+  signup: (email: string, password: string, name: string, phone?: string, dob?: string) => Promise<boolean>;
   loading: boolean;
 }
 
@@ -35,7 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   userProfile: null,
   login: async () => {},
   logout: async () => {},
-  signup: async () => false, // Default implementation returns false
+  signup: async () => false,
   loading: true
 });
 
@@ -131,7 +131,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
       
       // For mock purposes, based on email determine role
       let mockRole = 'user';
@@ -148,9 +155,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     } catch (error: any) {
       console.error("Login error:", error);
+      
+      // Provide better error messages for network issues
+      const errorMessage = error.message === "NetworkError when attempting to fetch resource." 
+        ? "Network error. Please check your internet connection and try again."
+        : error.message || "An unexpected error occurred. Please try again.";
+        
       toast({
         title: "Login failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;
@@ -182,9 +195,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return true;
     } catch (error: any) {
       console.error("Signup error:", error);
+      
+      // Provide better error messages for network issues
+      const errorMessage = error.message === "NetworkError when attempting to fetch resource." 
+        ? "Network error. Please check your internet connection and try again."
+        : error.message || "An unexpected error occurred. Please try again.";
+        
       toast({
         title: "Sign up failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
       return false;
@@ -207,9 +226,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     } catch (error: any) {
       console.error("Logout error:", error);
+      
+      // Provide better error messages for network issues
+      const errorMessage = error.message === "NetworkError when attempting to fetch resource." 
+        ? "Network error. Please check your internet connection and try again."
+        : error.message || "An unexpected error occurred. Please try again.";
+        
       toast({
         title: "Logout failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
       throw error;

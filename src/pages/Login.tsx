@@ -67,12 +67,7 @@ const Login = () => {
       await login(identifier, password);
       // Login success will be handled by the useEffect that watches isAuthenticated
     } catch (error) {
-      toast({
-        title: "Login error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
+      // Error is now handled in the AuthContext
       setIsLoading(false);
     }
   };
@@ -124,11 +119,7 @@ const Login = () => {
         setPassword(signupPassword);
       }
     } catch (error) {
-      toast({
-        title: "Signup error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
+      // Error is now handled in the AuthContext
     } finally {
       setIsLoading(false);
     }
