@@ -10,6 +10,7 @@ export interface Member {
   status: string;
   birthday: string;
   canBeEditedByTrainers: boolean;
+  gender?: "Male" | "Female"; // Adding gender field as optional to maintain compatibility
 }
 
 export interface PaymentHistoryItem {
@@ -23,4 +24,3 @@ export interface PaymentHistoryItem {
 export interface PaymentHistoryData {
   [key: number]: PaymentHistoryItem[];
 }
-

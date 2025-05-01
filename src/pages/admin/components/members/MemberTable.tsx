@@ -15,6 +15,7 @@ interface Member {
   status: string;
   birthday: string;
   canBeEditedByTrainers: boolean;
+  gender?: "Male" | "Female";
 }
 
 interface MemberTableProps {
@@ -51,6 +52,9 @@ const MemberTable = ({
                 Contact Info
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Gender
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Sessions
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -75,6 +79,9 @@ const MemberTable = ({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-gray-500">{member.email}</div>
                   <div className="text-gray-500">{member.phone}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-gray-500">{member.gender || "Not specified"}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="font-medium text-gray-900">
@@ -123,7 +130,7 @@ const MemberTable = ({
             ))}
             {filteredMembers.length === 0 && (
               <tr>
-                <td colSpan={isAdmin ? 6 : 5} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={isAdmin ? 7 : 6} className="px-6 py-4 text-center text-gray-500">
                   No members found matching your search criteria.
                 </td>
               </tr>

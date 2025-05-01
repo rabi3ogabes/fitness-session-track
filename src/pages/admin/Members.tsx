@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -13,14 +14,14 @@ import { Member, PaymentHistoryData } from "./components/members/types";
 
 // Mock data
 const initialMembers: Member[] = [
-  { id: 1, name: "Sarah Johnson", email: "sarah@example.com", phone: "(555) 123-4567", membership: "Premium", sessions: 12, remainingSessions: 8, status: "Active", birthday: "1990-05-15", canBeEditedByTrainers: false },
-  { id: 2, name: "Michael Brown", email: "michael@example.com", phone: "(555) 234-5678", membership: "Basic", sessions: 4, remainingSessions: 2, status: "Active", birthday: "1985-07-22", canBeEditedByTrainers: true },
-  { id: 3, name: "Emma Wilson", email: "emma@example.com", phone: "(555) 345-6789", membership: "Standard", sessions: 8, remainingSessions: 5, status: "Active", birthday: "1992-03-10", canBeEditedByTrainers: false },
-  { id: 4, name: "James Martinez", email: "james@example.com", phone: "(555) 456-7890", membership: "Premium", sessions: 12, remainingSessions: 9, status: "Inactive", birthday: "1988-11-05", canBeEditedByTrainers: true },
-  { id: 5, name: "Olivia Taylor", email: "olivia@example.com", phone: "(555) 567-8901", membership: "Basic", sessions: 4, remainingSessions: 0, status: "Active", birthday: "1995-01-30", canBeEditedByTrainers: false },
-  { id: 6, name: "William Anderson", email: "william@example.com", phone: "(555) 678-9012", membership: "Standard", sessions: 8, remainingSessions: 6, status: "Active", birthday: "1987-09-17", canBeEditedByTrainers: true },
-  { id: 7, name: "Sophia Thomas", email: "sophia@example.com", phone: "(555) 789-0123", membership: "Premium", sessions: 12, remainingSessions: 10, status: "Active", birthday: "1993-12-25", canBeEditedByTrainers: false },
-  { id: 8, name: "Alexander Hernandez", email: "alexander@example.com", phone: "(555) 890-1234", membership: "Basic", sessions: 4, remainingSessions: 1, status: "Inactive", birthday: "1991-08-12", canBeEditedByTrainers: true },
+  { id: 1, name: "Sarah Johnson", email: "sarah@example.com", phone: "(555) 123-4567", membership: "Premium", sessions: 12, remainingSessions: 8, status: "Active", birthday: "1990-05-15", canBeEditedByTrainers: false, gender: "Female" },
+  { id: 2, name: "Michael Brown", email: "michael@example.com", phone: "(555) 234-5678", membership: "Basic", sessions: 4, remainingSessions: 2, status: "Active", birthday: "1985-07-22", canBeEditedByTrainers: true, gender: "Male" },
+  { id: 3, name: "Emma Wilson", email: "emma@example.com", phone: "(555) 345-6789", membership: "Standard", sessions: 8, remainingSessions: 5, status: "Active", birthday: "1992-03-10", canBeEditedByTrainers: false, gender: "Female" },
+  { id: 4, name: "James Martinez", email: "james@example.com", phone: "(555) 456-7890", membership: "Premium", sessions: 12, remainingSessions: 9, status: "Inactive", birthday: "1988-11-05", canBeEditedByTrainers: true, gender: "Male" },
+  { id: 5, name: "Olivia Taylor", email: "olivia@example.com", phone: "(555) 567-8901", membership: "Basic", sessions: 4, remainingSessions: 0, status: "Active", birthday: "1995-01-30", canBeEditedByTrainers: false, gender: "Female" },
+  { id: 6, name: "William Anderson", email: "william@example.com", phone: "(555) 678-9012", membership: "Standard", sessions: 8, remainingSessions: 6, status: "Active", birthday: "1987-09-17", canBeEditedByTrainers: true, gender: "Male" },
+  { id: 7, name: "Sophia Thomas", email: "sophia@example.com", phone: "(555) 789-0123", membership: "Premium", sessions: 12, remainingSessions: 10, status: "Active", birthday: "1993-12-25", canBeEditedByTrainers: false, gender: "Female" },
+  { id: 8, name: "Alexander Hernandez", email: "alexander@example.com", phone: "(555) 890-1234", membership: "Basic", sessions: 4, remainingSessions: 1, status: "Inactive", birthday: "1991-08-12", canBeEditedByTrainers: true, gender: "Male" },
 ];
 
 // Mock payment history data
@@ -42,12 +43,23 @@ const paymentHistoryData: PaymentHistoryData = {
 };
 
 const Members = () => {
-  const [members, setMembers] = useState<Member[]>(initialMembers);
+  // Use localStorage to persist members data across page refreshes
+  const savedMembers = localStorage.getItem("gymMembers");
+  const [members, setMembers] = useState<Member[]>(
+    savedMembers ? JSON.parse(savedMembers) : initialMembers
+  );
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
   const { toast } = useToast();
+
+  // Update localStorage whenever members change
+  const updateMembers = (updatedMembers: Member[]) => {
+    setMembers(updatedMembers);
+    localStorage.setItem("gymMembers", JSON.stringify(updatedMembers));
+  };
 
   const filteredMembers = members.filter(
     (member) =>
@@ -65,8 +77,9 @@ const Members = () => {
       return;
     }
 
-    const id = Math.max(...members.map((m) => m.id)) + 1;
-    setMembers([...members, { ...newMember, id }]);
+    const id = Math.max(...members.map((m) => m.id), 0) + 1;
+    const updatedMembers = [...members, { ...newMember, id }];
+    updateMembers(updatedMembers);
     setIsAddDialogOpen(false);
 
     toast({
@@ -85,11 +98,10 @@ const Members = () => {
       return;
     }
 
-    setMembers(
-      members.map((member) =>
-        member.id === editedMember.id ? editedMember : member
-      )
+    const updatedMembers = members.map((member) =>
+      member.id === editedMember.id ? editedMember : member
     );
+    updateMembers(updatedMembers);
     setIsEditDialogOpen(false);
     
     toast({
@@ -104,16 +116,15 @@ const Members = () => {
   };
 
   const toggleMemberStatus = (id: number) => {
-    setMembers(
-      members.map((member) =>
-        member.id === id
-          ? {
-              ...member,
-              status: member.status === "Active" ? "Inactive" : "Active",
-            }
-          : member
-      )
+    const updatedMembers = members.map((member) =>
+      member.id === id
+        ? {
+            ...member,
+            status: member.status === "Active" ? "Inactive" : "Active",
+          }
+        : member
     );
+    updateMembers(updatedMembers);
 
     toast({
       title: "Member status updated",
@@ -122,16 +133,15 @@ const Members = () => {
   };
 
   const toggleTrainerEditAccess = (id: number) => {
-    setMembers(
-      members.map((member) =>
-        member.id === id
-          ? {
-              ...member,
-              canBeEditedByTrainers: !member.canBeEditedByTrainers,
-            }
-          : member
-      )
+    const updatedMembers = members.map((member) =>
+      member.id === id
+        ? {
+            ...member,
+            canBeEditedByTrainers: !member.canBeEditedByTrainers,
+          }
+        : member
     );
+    updateMembers(updatedMembers);
 
     const memberName = members.find(m => m.id === id)?.name;
     const newStatus = !members.find(m => m.id === id)?.canBeEditedByTrainers;

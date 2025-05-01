@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -26,6 +28,7 @@ interface Member {
   status: string;
   birthday: string;
   canBeEditedByTrainers: boolean;
+  gender?: "Male" | "Female";
 }
 
 interface PaymentHistoryItem {
@@ -129,6 +132,29 @@ const EditMemberDialog = ({
                     onChange={(e) => setEditedMember({ ...editedMember, phone: e.target.value })}
                     className="col-span-3"
                   />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <label className="text-right text-sm font-medium col-span-1">
+                    Gender*
+                  </label>
+                  <div className="col-span-3 flex items-center space-x-4">
+                    <RadioGroup
+                      defaultValue={editedMember.gender || "Male"}
+                      value={editedMember.gender || "Male"}
+                      onValueChange={(value: "Male" | "Female") => 
+                        setEditedMember({ ...editedMember, gender: value })}
+                      className="flex items-center gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="Male" id="edit-male" />
+                        <Label htmlFor="edit-male">Male</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="Female" id="edit-female" />
+                        <Label htmlFor="edit-female">Female</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <label className="text-right text-sm font-medium col-span-1">

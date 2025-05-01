@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 interface AddMemberDialogProps {
   isOpen: boolean;
@@ -23,7 +25,8 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
     sessions: 4,
     remainingSessions: 4,
     status: "Active",
-    canBeEditedByTrainers: true
+    canBeEditedByTrainers: true,
+    gender: "Male" // Default gender
   });
 
   const handleMembershipChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -74,6 +77,28 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
               onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
               className="col-span-3"
             />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label className="text-right text-sm font-medium col-span-1">
+              Gender*
+            </label>
+            <div className="col-span-3 flex items-center space-x-4">
+              <RadioGroup
+                defaultValue={newMember.gender}
+                value={newMember.gender}
+                onValueChange={(value) => setNewMember({ ...newMember, gender: value })}
+                className="flex items-center gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Male" id="male" />
+                  <Label htmlFor="male">Male</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Female" id="female" />
+                  <Label htmlFor="female">Female</Label>
+                </div>
+              </RadioGroup>
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <label className="text-right text-sm font-medium col-span-1">

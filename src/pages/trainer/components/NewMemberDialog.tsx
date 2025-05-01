@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { format } from "date-fns";
 import { UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -24,12 +25,17 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
     phone: "",
     birthday: format(new Date(), "yyyy-MM-dd"),
     membershipPlan: "1",
-    additionalSessions: "0"
+    additionalSessions: "0",
+    gender: "Male"
   });
   
   const handleNewMemberInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewMember(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleGenderChange = (value: string) => {
+    setNewMember(prev => ({ ...prev, gender: value }));
   };
   
   const handleRegisterMember = () => {
@@ -60,7 +66,8 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
       phone: "",
       birthday: format(new Date(), "yyyy-MM-dd"),
       membershipPlan: "1",
-      additionalSessions: "0"
+      additionalSessions: "0",
+      gender: "Male"
     });
   };
   
@@ -110,6 +117,28 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
               onChange={handleNewMemberInputChange}
               className="col-span-3"
             />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="member-gender" className="text-right">
+              Gender*
+            </Label>
+            <div className="col-span-3 flex items-center space-x-4">
+              <RadioGroup
+                defaultValue={newMember.gender}
+                value={newMember.gender}
+                onValueChange={handleGenderChange}
+                className="flex items-center gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Male" id="trainer-male" />
+                  <Label htmlFor="trainer-male">Male</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Female" id="trainer-female" />
+                  <Label htmlFor="trainer-female">Female</Label>
+                </div>
+              </RadioGroup>
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="member-birthday" className="text-right">
