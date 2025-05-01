@@ -77,10 +77,18 @@ const Classes = () => {
       setFetchError(null);
       
       console.log("Fetching classes from Supabase...");
+      
+      // Use AbortController for timeout functionality
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), 5000);
+      
       const { data, error } = await supabase
         .from('classes')
         .select('*')
-        .timeout(5000); // Adding timeout to prevent long-hanging requests
+        // Remove the .timeout() method as it's not supported
+        
+      // Clear the timeout
+      clearTimeout(timeoutId);
       
       if (error) {
         throw error;
@@ -120,7 +128,7 @@ const Classes = () => {
       setFetchError(error.message || "Failed to fetch classes");
       
       // If network error and we're not already using fallback data, suggest using fallback data
-      if ((error.message?.includes('NetworkError') || error.message?.includes('fetch')) && !useFallbackData) {
+      if ((error.message?.includes('NetworkError') || error.message?.includes('fetch') || error.name === 'AbortError') && !useFallbackData) {
         toast({
           title: "Connection Issue",
           description: "Unable to connect to the database. Using demo data for now.",
@@ -138,11 +146,18 @@ const Classes = () => {
 
   const fetchTrainers = async () => {
     try {
+      // Use AbortController for timeout functionality
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), 5000);
+      
       const { data, error } = await supabase
         .from('trainers')
         .select('name')
         .eq('status', 'Active')
-        .timeout(5000);
+        // Remove the .timeout() method as it's not supported
+        
+      // Clear the timeout
+      clearTimeout(timeoutId);
       
       if (error) {
         throw error;
