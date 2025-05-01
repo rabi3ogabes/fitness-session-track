@@ -126,8 +126,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      // Skip network check to avoid double network requests
-      // We'll let Supabase auth handle network errors directly
+      // Remove network check to avoid false negatives
+      // Some browsers may report online but still have connectivity issues with specific services
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -135,6 +135,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
+        // Provide better error messages based on error type
         const errorMessage = error.message || "An unexpected error occurred. Please try again.";
         
         toast({
@@ -161,10 +162,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Login error:", error);
       
-      // Check if it's a network error
-      if (!navigator.onLine || error.message?.includes("NetworkError")) {
+      // Improved error handling - focus on specific Supabase errors
+      if (error.message?.includes("Invalid login credentials")) {
         toast({
-          title: "Network Error",
+          title: "Invalid credentials",
+          description: "The email or password you entered is incorrect.",
+          variant: "destructive",
+        });
+      } else if (!navigator.onLine || error.message?.includes("NetworkError") || error.message?.includes("network")) {
+        toast({
+          title: "Connection Error",
           description: "Unable to connect to the authentication service. Please check your internet connection.",
           variant: "destructive",
         });
@@ -251,7 +258,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({
           title: "Network Error",
           description: "Unable to connect to the authentication service, but you've been logged out locally.",
-          variant: "destructive", // Changed from "warning" to "destructive"
+          variant: "destructive", 
         });
         
         // Still clear local user state even if network request fails

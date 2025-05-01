@@ -78,18 +78,10 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Check for connectivity issues first
-    if (!isOnline) {
-      toast({
-        title: "Network Error",
-        description: "You are currently offline. Please check your internet connection and try again.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-
     try {
+      // Add console logs to help debug
+      console.log("Starting login with:", identifier);
+      
       await login(identifier, password);
       // Login success will be handled by the useEffect that watches isAuthenticated
     } catch (error) {
@@ -103,17 +95,6 @@ const Login = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    // Check for connectivity issues first
-    if (!isOnline) {
-      toast({
-        title: "Network Error",
-        description: "You are currently offline. Please check your internet connection and try again.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
 
     try {
       // Validate phone number format
@@ -270,7 +251,7 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
-                  disabled={isLoading || !isOnline}
+                  disabled={isLoading}
                 >
                   {isLoading ? "Signing in..." : "Sign in"}
                 </Button>
@@ -408,7 +389,7 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
-                  disabled={isLoading || !isOnline}
+                  disabled={isLoading}
                 >
                   {isLoading ? "Creating account..." : "Create account"}
                 </Button>
