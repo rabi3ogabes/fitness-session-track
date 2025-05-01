@@ -30,12 +30,82 @@ interface ClassModel {
   endTime?: string;
 }
 
+// Sample data to use as fallback when database connection fails
+const sampleClasses: ClassModel[] = [
+  {
+    id: 1,
+    name: "Morning Yoga",
+    trainer: "Sarah Davis",
+    trainers: ["Sarah Davis"],
+    schedule: "Monday, Wednesday, Friday",
+    capacity: 20,
+    enrolled: 15,
+    status: "Active",
+    gender: "All",
+    startTime: "06:00",
+    endTime: "07:00"
+  },
+  {
+    id: 2,
+    name: "HIIT Training",
+    trainer: "Mike Johnson",
+    trainers: ["Mike Johnson"],
+    schedule: "Tuesday, Thursday",
+    capacity: 15,
+    enrolled: 12,
+    status: "Active",
+    gender: "All",
+    startTime: "18:00",
+    endTime: "19:00"
+  },
+  {
+    id: 3,
+    name: "Women's Pilates",
+    trainer: "Emma Wilson",
+    trainers: ["Emma Wilson"],
+    schedule: "Monday, Friday",
+    capacity: 12,
+    enrolled: 10,
+    status: "Active",
+    gender: "Female",
+    startTime: "09:00",
+    endTime: "10:00"
+  },
+  {
+    id: 4,
+    name: "Men's Boxing",
+    trainer: "Robert Brown",
+    trainers: ["Robert Brown"],
+    schedule: "Tuesday, Thursday, Saturday",
+    capacity: 15,
+    enrolled: 15,
+    status: "Full",
+    gender: "Male",
+    startTime: "19:30",
+    endTime: "21:00"
+  },
+  {
+    id: 5,
+    name: "Strength Training",
+    trainer: "David Miller",
+    trainers: ["David Miller", "Lisa Garcia"],
+    schedule: "Monday, Wednesday, Friday",
+    capacity: 18,
+    enrolled: 9,
+    status: "Active",
+    gender: "All",
+    startTime: "17:00",
+    endTime: "18:30"
+  }
+];
+
 const Classes = () => {
   const [classes, setClasses] = useState<ClassModel[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [usingSampleData, setUsingSampleData] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -46,12 +116,23 @@ const Classes = () => {
     try {
       setIsLoading(true);
       setFetchError(null);
+      setUsingSampleData(false);
       
       console.log("Fetching classes from Supabase...");
       
-      const { data, error } = await supabase
-        .from('classes')
-        .select('*');
+      // Use AbortController for timeout functionality
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), 8000); // 8 second timeout
+      
+      const { data, error } = await Promise.race([
+        supabase.from('classes').select('*'),
+        new Promise<any>((_, reject) => 
+          setTimeout(() => reject(new Error("Connection timed out")), 8000)
+        )
+      ]);
+      
+      // Clear the timeout
+      clearTimeout(timeoutId);
       
       if (error) {
         throw error;
@@ -82,20 +163,26 @@ const Classes = () => {
           description: "Successfully loaded classes from the database.",
         });
       } else {
-        setClasses([]);
+        // If no data from database, use sample data instead of empty array
+        setClasses(sampleClasses);
+        setUsingSampleData(true);
+        
         toast({
-          title: "No classes found",
-          description: "There are currently no classes in the database.",
+          title: "Sample Data Loaded",
+          description: "No classes found in database, showing sample data instead.",
         });
       }
     } catch (error: any) {
       console.error("Error fetching classes:", error);
       setFetchError(error.message || "Failed to fetch classes");
       
+      // Use sample data as fallback when database connection fails
+      setClasses(sampleClasses);
+      setUsingSampleData(true);
+      
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load classes. Please try again.",
+        title: "Using Sample Data",
+        description: "Connection issue detected. Showing sample data.",
       });
     } finally {
       setIsLoading(false);
@@ -111,6 +198,15 @@ const Classes = () => {
   };
 
   const handleAddClass = () => {
+    if (usingSampleData) {
+      toast({
+        title: "Using sample data",
+        description: "Cannot add classes while using sample data. Please reconnect to the database.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     toast({
       title: "Feature coming soon",
       description: "The add class functionality will be implemented soon.",
@@ -144,7 +240,7 @@ const Classes = () => {
             Add New Class
           </Button>
           
-          {fetchError && (
+          {usingSampleData && (
             <Button 
               variant="outline" 
               size="default" 
@@ -152,27 +248,27 @@ const Classes = () => {
               className="w-full sm:w-auto"
             >
               <RefreshCw className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> 
-              {isLoading ? 'Retrying...' : 'Retry Connection'}
+              {isLoading ? 'Connecting...' : 'Connect to Database'}
             </Button>
           )}
         </div>
       </div>
 
-      {fetchError && (
-        <Alert className="mb-6 bg-red-50 border-red-200">
-          <AlertCircle className="h-5 w-5 text-red-600" />
-          <AlertTitle className="text-red-800">Error loading classes</AlertTitle>
-          <AlertDescription className="text-red-700">
-            {fetchError}
+      {usingSampleData && (
+        <Alert className="mb-6 bg-amber-50 border-amber-200">
+          <AlertCircle className="h-5 w-5 text-amber-600" />
+          <AlertTitle className="text-amber-800">Sample Data Mode</AlertTitle>
+          <AlertDescription className="text-amber-700">
+            You are viewing sample data because we couldn't connect to the database. 
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleRetry} 
-              className={`ml-2 border-red-300 text-red-700 hover:text-red-800 hover:bg-red-100 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`ml-2 border-amber-300 text-amber-700 hover:text-amber-800 hover:bg-amber-100 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={isLoading}
             >
               <RefreshCw className={`mr-1 h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} /> 
-              {isLoading ? 'Retrying...' : 'Retry'}
+              {isLoading ? 'Connecting...' : 'Connect Now'}
             </Button>
           </AlertDescription>
         </Alert>
@@ -190,13 +286,14 @@ const Classes = () => {
                 <TableHead>Capacity</TableHead>
                 <TableHead>Gender</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-500">
-                    <div className="flex justify-center items-center">
+                  <TableCell colSpan={8} className="text-center text-gray-500">
+                    <div className="flex justify-center items-center py-10">
                       <RefreshCw className="animate-spin mr-2 h-4 w-4" />
                       Loading classes...
                     </div>
@@ -256,11 +353,34 @@ const Classes = () => {
                         {cls.status || 'Inactive'}
                       </span>
                     </TableCell>
+                    <TableCell className="text-right">
+                      <button
+                        onClick={() => {
+                          if (usingSampleData) {
+                            toast({
+                              title: "Using sample data",
+                              description: "Actions are disabled while using sample data.",
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                          
+                          toast({
+                            title: "Feature coming soon",
+                            description: "This action will be available soon.",
+                          });
+                        }}
+                        className="text-gym-blue hover:text-gym-dark-blue"
+                      >
+                        <Pencil className="h-4 w-4 inline-block" />
+                        <span className="ml-1">Edit</span>
+                      </button>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-gray-500">
+                  <TableCell colSpan={8} className="text-center text-gray-500">
                     {searchTerm ? 
                       "No classes found matching your search criteria." : 
                       "No classes found. Click 'Add New Class' to create one."}
