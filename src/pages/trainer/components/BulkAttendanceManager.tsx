@@ -26,6 +26,7 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
     if (!classId) return;
     
     setIsLoading(true);
+    console.log("Loading attendance data for class:", classId, "date:", format(selectedDate, "yyyy-MM-dd"));
     
     // Format date for storage and lookup
     const formattedDate = format(selectedDate, "yyyy-MM-dd");
@@ -34,6 +35,7 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
     const savedAttendance = getAttendanceData(classId, formattedDate);
     
     if (savedAttendance) {
+      console.log("Using saved attendance data:", savedAttendance);
       // Use saved data if available
       setAttendanceData(savedAttendance);
       setSelectAll(savedAttendance.length > 0 && savedAttendance.every(item => item.isPresent));
@@ -42,6 +44,7 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
     }
     
     // Otherwise use mock data and filter it
+    console.log("No saved data found, using mock data");
     // Get bookings for this class and date
     const filteredBookings = mockBookings.filter(booking => 
       booking.date === formattedDate && 
@@ -107,7 +110,7 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
     const formattedDate = format(selectedDate, "yyyy-MM-dd");
     
     // Save attendance data to localStorage for persistence
-    saveAttendanceData(classId, formattedDate, attendanceData);
+    const saved = saveAttendanceData(classId, formattedDate, attendanceData);
     
     // In a real app, this would be an API call to update all records
     // For now we'll simulate a delay
@@ -115,10 +118,18 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
       // Update would happen here
       setIsSaving(false);
       
-      toast({
-        title: "Attendance saved",
-        description: `Updated attendance for ${attendanceData.length} members`,
-      });
+      if (saved) {
+        toast({
+          title: "Attendance saved",
+          description: `Updated attendance for ${attendanceData.length} members`,
+        });
+      } else {
+        toast({
+          title: "Error saving attendance",
+          description: "There was a problem saving the attendance data",
+          variant: "destructive"
+        });
+      }
       
       if (onClose) onClose();
     }, 600);
