@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserPlus } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -190,7 +190,7 @@ const Members = () => {
           />
         </div>
         <Button onClick={() => setIsAddDialogOpen(true)} className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue">
-          Add New Member
+          <UserPlus className="h-4 w-4 mr-1" /> Register Walk-in Member
         </Button>
       </div>
 
@@ -292,7 +292,7 @@ const Members = () => {
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Member</DialogTitle>
+            <DialogTitle>Register New Member</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
