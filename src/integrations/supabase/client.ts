@@ -15,7 +15,7 @@ const supabaseOptions = {
     detectSessionInUrl: false
   },
   global: {
-    fetch: (...args) => {
+    fetch: (...args: [RequestInfo | URL, RequestInit?]) => {
       // Enhanced fetch with improved retry mechanism
       const [resource, config] = args;
       
@@ -39,7 +39,7 @@ const supabaseOptions = {
       const MAX_RETRIES = 3;
       let retryCount = 0;
       
-      const fetchWithRetry = async () => {
+      const fetchWithRetry = async (): Promise<Response> => {
         try {
           const response = await fetch(resource, updatedConfig);
           clearTimeout(timeoutId);

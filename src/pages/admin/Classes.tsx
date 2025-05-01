@@ -8,7 +8,7 @@ import { format, addDays, addWeeks, addMonths, parse, isBefore } from "date-fns"
 import { supabase } from "@/integrations/supabase/client";
 import AddClassDialog from "./components/classes/AddClassDialog";
 import EditClassDialog from "./components/classes/EditClassDialog";
-import { ClassModel, RecurringPattern } from "./components/classes/ClassTypes";
+import { ClassModel, RecurringPattern, ClassInsert, ClassUpdate } from "./components/classes/ClassTypes";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 // Fallback data to use when API fails
@@ -164,7 +164,7 @@ const Classes = () => {
       const { data, error } = await supabase
         .from('trainers')
         .select('name')
-        .eq('status', 'Active');
+        .eq('status', 'Active' as any); // Using type assertion to fix the error
       
       // Clear the timeout
       clearTimeout(timeoutId);
@@ -232,10 +232,14 @@ const Classes = () => {
     const newStatus = classToUpdate.status === "Active" ? "Inactive" : "Active";
     
     try {
+      const updateData: ClassUpdate = {
+        status: newStatus
+      };
+      
       const { error } = await supabase
         .from('classes')
-        .update({ status: newStatus })
-        .eq('id', id);
+        .update(updateData)
+        .eq('id', id as any); // Using type assertion
       
       if (error) {
         throw error;
@@ -375,7 +379,7 @@ const Classes = () => {
         const generatedClasses = generateRecurringClasses(newClass, recurringPattern);
         
         // Prepare the classes for insertion to Supabase
-        const classesForInsert = generatedClasses.map(cls => ({
+        const classesForInsert: ClassInsert[] = generatedClasses.map(cls => ({
           name: cls.name,
           trainer: cls.trainer,
           trainers: cls.trainers || [],
@@ -422,7 +426,7 @@ const Classes = () => {
         }
       } else {
         // Add a single class
-        const classToAdd = {
+        const classToAdd: ClassInsert = {
           name: newClass.name,
           trainer: newClass.trainer,
           trainers: newClass.trainers || [],
@@ -437,7 +441,7 @@ const Classes = () => {
         
         const { data, error } = await supabase
           .from('classes')
-          .insert([classToAdd])
+          .insert(classToAdd)
           .select();
         
         if (error) {
@@ -502,7 +506,7 @@ const Classes = () => {
     }
     
     try {
-      const classToUpdate = {
+      const classToUpdate: ClassUpdate = {
         name: updatedClass.name,
         trainer: updatedClass.trainer,
         trainers: updatedClass.trainers || [],
@@ -518,7 +522,7 @@ const Classes = () => {
       const { error } = await supabase
         .from('classes')
         .update(classToUpdate)
-        .eq('id', updatedClass.id);
+        .eq('id', updatedClass.id as any); // Using type assertion
       
       if (error) {
         throw error;
