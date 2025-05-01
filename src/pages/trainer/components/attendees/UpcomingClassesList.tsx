@@ -68,7 +68,7 @@ export const UpcomingClassesList = ({
             {format(dayClasses.date, "EEEE, MMMM d")}
           </h4>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
             {dayClasses.classes.map(cls => {
               const isSelected = cls.id === selectedClassForAttendees && 
                                 isSameDay(dayClasses.date, selectedDateForAttendees);
@@ -81,11 +81,20 @@ export const UpcomingClassesList = ({
                 <Card 
                   key={cls.id} 
                   className={cn(
-                    "cursor-pointer transition-all border-2",
-                    isSelected ? "border-gym-blue bg-gym-light" : "border-gray-200 hover:border-gray-300"
+                    "cursor-pointer transition-all overflow-hidden",
+                    isSelected ? "border-gym-blue ring-2 ring-gym-blue/20" : "hover:border-gray-300"
                   )}
                   onClick={() => onClassSelect(cls.id, dayClasses.date)}
                 >
+                  <div 
+                    className={cn(
+                      "h-2",
+                      percentFull >= 90 ? "bg-red-500" : 
+                      percentFull >= 70 ? "bg-amber-500" : 
+                      "bg-green-500"
+                    )}
+                  ></div>
+                  
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <h4 className="font-medium text-base">{cls.name}</h4>
@@ -100,20 +109,16 @@ export const UpcomingClassesList = ({
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent className="pb-2">
+                  <CardContent className="pb-4">
+                    <p className="text-sm text-gray-500">{format(dayClasses.date, "EEEE, MMMM d")}</p>
                     <p className="text-sm text-gray-500">{cls.time}</p>
-                    <p className="text-xs text-gray-500">Trainer: {cls.trainer}</p>
+                    <p className="text-xs text-gray-500 mb-3">Trainer: {cls.trainer}</p>
                     
-                    <div className="mt-3 w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
-                      <div 
-                        className={cn(
-                          "h-full",
-                          percentFull >= 90 ? "bg-red-500" : 
-                          percentFull >= 70 ? "bg-amber-500" : 
-                          "bg-green-500"
-                        )}
-                        style={{ width: `${percentFull}%` }}
-                      ></div>
+                    <div className="flex items-center justify-between mt-2">
+                      <div className="flex items-center text-sm text-gray-500">
+                        <Users className="h-4 w-4 mr-1 text-gym-blue" />
+                        <span>{actualEnrolled} enrolled</span>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
