@@ -83,8 +83,8 @@ const supabaseOptions = {
 
 export const supabase = createClient<Database>(
   SUPABASE_URL, 
-  SUPABASE_PUBLISHABLE_KEY, 
-  supabaseOptions as any // Type assertion to resolve type conflicts
+  SUPABASE_PUBLISHABLE_KEY,
+  supabaseOptions
 );
 
 // Security helper function to check if a user is authenticated before making DB calls

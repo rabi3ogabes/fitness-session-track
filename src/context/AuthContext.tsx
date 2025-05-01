@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Session, User, AuthError } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -89,7 +90,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         console.log("Checking for existing session...");
         // Set a timeout for faster response
-        const timeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise<{data: {session: null}, error: Error}>((_, reject) => 
           setTimeout(() => reject(new Error("Session check timed out")), 5000)
         );
         
@@ -98,7 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const result = await Promise.race([sessionPromise, timeoutPromise])
           .catch(error => {
             console.log("Session check timed out, proceeding without session");
-            return { data: { session: null }, error: error };
+            return { data: { session: null }, error: error as Error };
           });
         
         // Type guard to check if result has data property and session inside data
@@ -153,7 +154,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password,
       });
       
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise<{data: null, error: Error}>((_, reject) => 
         setTimeout(() => reject(new Error("Login request timed out")), 10000)
       );
       
@@ -258,7 +259,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Login successful",
         description: "You have been logged in successfully."
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
       
       // For demo purposes, check if using demo credentials but having connection issues
@@ -353,7 +354,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Signup error:", error);
       
       // Safely extract error message
@@ -397,7 +398,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Logout successful",
         description: "You have been logged out successfully."
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Logout error:", error);
       
       // Safely extract error message

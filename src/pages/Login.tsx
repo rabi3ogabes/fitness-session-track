@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -122,8 +121,6 @@ const Login = () => {
       setConnectionStatus('connected');
       // Login success will be handled by the useEffect that watches isAuthenticated
     } catch (error) {
-      clearTimeout(connectionTimeoutId);
-      setConnectionStatus('offline');
       // Error is now handled in the AuthContext
       console.error("Login error caught in component:", error);
       
