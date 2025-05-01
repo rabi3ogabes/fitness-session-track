@@ -13,7 +13,8 @@ const supabaseOptions = {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    flowType: 'implicit'
+    // Fix the flowType type error by using the correct type
+    flowType: 'implicit' as const
   }
 };
 

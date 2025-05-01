@@ -69,13 +69,15 @@ const BookingForm = ({ remainingSessions, onBookingComplete }: BookingFormProps)
     try {
       setIsLoading(true);
       
-      // Insert booking into database - Fix the type error by providing a single object, not an array
+      // Fix the type error by passing a single object to insert() instead of an array
+      // Note: Make sure to match the schema of the bookings table
       const { data, error } = await supabase
         .from('bookings')
         .insert({
           user_id: user.id,
           class_id: selectedClass,
-          status: 'confirmed'
+          status: 'confirmed',
+          booking_date: new Date().toISOString()
         });
       
       if (error) throw error;

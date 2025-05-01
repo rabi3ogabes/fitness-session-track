@@ -25,11 +25,11 @@ const UserBooking = () => {
       setIsLoading(true);
       
       try {
-        // Get user profile data to get remaining sessions - fixing type issue
+        // Get user profile data - fix type issue by converting user.id to string
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('sessions_remaining, total_sessions')
-          .eq('id', user.id)
+          .eq('id', String(user.id))
           .single();
           
         if (profileError) throw profileError;
@@ -84,10 +84,12 @@ const UserBooking = () => {
           },
         ];
         
-        // Fix the type error by properly handling potential undefined values
-        const sessionsRemaining = profileData && 'sessions_remaining' in profileData 
-          ? (profileData.sessions_remaining ?? 7) 
-          : 7;
+        // Fix the type error by handling profileData properly with type checking and optional chaining
+        let sessionsRemaining = 7; // Default value
+        
+        if (profileData && typeof profileData === 'object' && 'sessions_remaining' in profileData) {
+          sessionsRemaining = profileData.sessions_remaining ?? 7;
+        }
         
         setBookings({
           upcomingBookings,
