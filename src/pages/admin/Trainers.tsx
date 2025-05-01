@@ -1,18 +1,28 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 
 // Mock data
 const initialTrainers = [
-  { id: 1, name: "Jane Doe", email: "jane@example.com", phone: "(555) 123-4567", specialization: "Yoga, Pilates", status: "Active" },
-  { id: 2, name: "John Smith", email: "john@example.com", phone: "(555) 234-5678", specialization: "HIIT, Strength Training", status: "Active" },
-  { id: 3, name: "Alex Johnson", email: "alex@example.com", phone: "(555) 345-6789", specialization: "Strength Training, Boxing", status: "Active" },
-  { id: 4, name: "Sarah Williams", email: "sarah@example.com", phone: "(555) 456-7890", specialization: "Pilates, Yoga", status: "Inactive" },
-  { id: 5, name: "Mike Tyson", email: "mike@example.com", phone: "(555) 567-8901", specialization: "Boxing, Martial Arts", status: "Active" },
-  { id: 6, name: "Maria Garcia", email: "maria@example.com", phone: "(555) 678-9012", specialization: "Zumba, Dance Fitness", status: "Active" },
+  { id: 1, name: "Jane Doe", email: "jane@example.com", phone: "(555) 123-4567", specialization: "Yoga, Pilates", status: "Active", gender: "Female" },
+  { id: 2, name: "John Smith", email: "john@example.com", phone: "(555) 234-5678", specialization: "HIIT, Strength Training", status: "Active", gender: "Male" },
+  { id: 3, name: "Alex Johnson", email: "alex@example.com", phone: "(555) 345-6789", specialization: "Strength Training, Boxing", status: "Active", gender: "Male" },
+  { id: 4, name: "Sarah Williams", email: "sarah@example.com", phone: "(555) 456-7890", specialization: "Pilates, Yoga", status: "Inactive", gender: "Female" },
+  { id: 5, name: "Mike Tyson", email: "mike@example.com", phone: "(555) 567-8901", specialization: "Boxing, Martial Arts", status: "Active", gender: "Male" },
+  { id: 6, name: "Maria Garcia", email: "maria@example.com", phone: "(555) 678-9012", specialization: "Zumba, Dance Fitness", status: "Active", gender: "Female" },
+  { id: 7, name: "Lisa Garcia", email: "lisa@example.com", phone: "(555) 789-0123", specialization: "Yoga, Meditation", status: "Active", gender: "Female" },
 ];
 
 const Trainers = () => {
@@ -26,6 +36,7 @@ const Trainers = () => {
     phone: "",
     specialization: "",
     status: "Active",
+    gender: "Female",
   });
   const [editTrainer, setEditTrainer] = useState<typeof trainers[0] | null>(null);
   const { toast } = useToast();
@@ -79,6 +90,7 @@ const Trainers = () => {
       phone: "",
       specialization: "",
       status: "Active",
+      gender: "Female",
     });
 
     toast({
@@ -130,6 +142,24 @@ const Trainers = () => {
     });
   };
 
+  const resetPassword = async (trainer: typeof trainers[0]) => {
+    try {
+      // In a real implementation, this would call Supabase to reset the password
+      // For now, we'll just show a toast notification
+      
+      toast({
+        title: "Password reset successfully",
+        description: `${trainer.name}'s password has been reset to their phone number`,
+      });
+    } catch (error) {
+      toast({
+        title: "Password reset failed",
+        description: "An error occurred while resetting the password",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <DashboardLayout title="Trainer Management">
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -158,6 +188,9 @@ const Trainers = () => {
                   Contact Info
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Gender
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Specialization
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -179,6 +212,9 @@ const Trainers = () => {
                     <div className="text-gray-500">{trainer.phone}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-gray-500">{trainer.gender || "Not specified"}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-gray-500">{trainer.specialization}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -198,7 +234,7 @@ const Trainers = () => {
                         setEditTrainer(trainer);
                         setIsEditDialogOpen(true);
                       }}
-                      className="text-gym-blue hover:text-gym-dark-blue mr-4"
+                      className="text-gym-blue hover:text-gym-dark-blue mr-2"
                     >
                       Edit
                     </button>
@@ -206,9 +242,15 @@ const Trainers = () => {
                       onClick={() => toggleTrainerStatus(trainer.id)}
                       className={`${
                         trainer.status === "Active" ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800"
-                      }`}
+                      } mr-2`}
                     >
                       {trainer.status === "Active" ? "Deactivate" : "Activate"}
+                    </button>
+                    <button
+                      onClick={() => resetPassword(trainer)}
+                      className="text-orange-600 hover:text-orange-800"
+                    >
+                      Reset Password
                     </button>
                   </td>
                 </tr>
@@ -216,7 +258,7 @@ const Trainers = () => {
 
               {filteredTrainers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                     No trainers found matching your search criteria.
                   </td>
                 </tr>
@@ -266,6 +308,23 @@ const Trainers = () => {
                 onChange={(e) => setNewTrainer({ ...newTrainer, phone: e.target.value })}
                 className="col-span-3"
               />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label className="text-right text-sm font-medium col-span-1">
+                Gender
+              </label>
+              <Select
+                value={newTrainer.gender}
+                onValueChange={(value) => setNewTrainer({ ...newTrainer, gender: value })}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <label className="text-right text-sm font-medium col-span-1">
@@ -332,6 +391,23 @@ const Trainers = () => {
                   onChange={(e) => setEditTrainer({ ...editTrainer, phone: e.target.value })}
                   className="col-span-3"
                 />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-sm font-medium col-span-1">
+                  Gender
+                </label>
+                <Select
+                  value={editTrainer.gender || ""}
+                  onValueChange={(value) => setEditTrainer({ ...editTrainer, gender: value })}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <label className="text-right text-sm font-medium col-span-1">

@@ -24,13 +24,15 @@ interface MemberTableProps {
   toggleMemberStatus: (id: number) => void;
   toggleTrainerEditAccess: (id: number) => void;
   openEditDialog: (member: Member) => void;
+  resetPassword: (id: number) => void;
 }
 
 const MemberTable = ({
   filteredMembers,
   toggleMemberStatus,
   toggleTrainerEditAccess,
-  openEditDialog
+  openEditDialog,
+  resetPassword
 }: MemberTableProps) => {
   const { isAdmin, isTrainer } = useAuth();
 
@@ -121,10 +123,18 @@ const MemberTable = ({
                   )}
                   <button
                     onClick={() => toggleMemberStatus(member.id)}
-                    className="text-gym-blue hover:text-gym-dark-blue"
+                    className="text-gym-blue hover:text-gym-dark-blue mr-2"
                   >
                     {member.status === "Active" ? "Deactivate" : "Activate"}
                   </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => resetPassword(member.id)}
+                      className="text-orange-600 hover:text-orange-800"
+                    >
+                      Reset Password
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

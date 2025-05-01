@@ -151,6 +151,17 @@ const Members = () => {
       description: `${memberName} can ${newStatus ? 'now' : 'no longer'} be edited by trainers`,
     });
   };
+  
+  const resetMemberPassword = (id: number) => {
+    // In a real application, this would call an API to reset the password
+    const member = members.find(m => m.id === id);
+    if (member) {
+      toast({
+        title: "Password reset successfully",
+        description: `${member.name}'s password has been reset to their phone number`,
+      });
+    }
+  };
 
   return (
     <DashboardLayout title="Member Management">
@@ -166,6 +177,7 @@ const Members = () => {
         toggleMemberStatus={toggleMemberStatus}
         toggleTrainerEditAccess={toggleTrainerEditAccess}
         openEditDialog={openEditDialog}
+        resetPassword={resetMemberPassword}
       />
 
       <AddMemberDialog

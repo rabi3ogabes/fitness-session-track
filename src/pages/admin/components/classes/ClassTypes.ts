@@ -19,3 +19,13 @@ export interface RecurringPattern {
   daysOfWeek: string[];
   repeatUntil: string;
 }
+
+export interface Trainer {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  specialization: string;
+  status: string;
+  gender?: "Male" | "Female";
+}
