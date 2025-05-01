@@ -54,12 +54,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Check for an existing session
     const checkSession = async () => {
       try {
+        console.log("Checking for existing session...");
         // Get session from Supabase
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (sessionError) throw sessionError;
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          throw sessionError;
+        }
 
         if (session) {
+          console.log("Session found:", session.user.id);
           // Set user info
           setUser({
             id: session.user.id,
@@ -80,6 +85,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // In a real app, you would fetch this from your database
           const mockRole = localStorage.getItem('userRole') || 'user';
           setRole(mockRole);
+          console.log("User role set to:", mockRole);
+        } else {
+          console.log("No session found");
         }
       } catch (error) {
         console.error("Error checking session:", error);
@@ -93,7 +101,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state change event:", event);
         if (session) {
+          console.log("New session established:", session.user.id);
           setUser({
             id: session.user.id,
             email: session.user.email || '',
@@ -110,10 +120,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // For mock purposes
           const mockRole = localStorage.getItem('userRole') || 'user';
           setRole(mockRole);
+          console.log("User role set to:", mockRole);
         } else {
           setUser(null);
           setUserProfile(null);
           setRole(null);
+          console.log("Session cleared");
         }
         setLoading(false);
       }
@@ -126,8 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      // Remove network check to avoid false negatives
-      // Some browsers may report online but still have connectivity issues with specific services
+      console.log("Login attempt for:", email);
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -135,6 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
+        console.error("Supabase auth error:", error);
         // Provide better error messages based on error type
         const errorMessage = error.message || "An unexpected error occurred. Please try again.";
         
@@ -146,6 +158,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw error;
       }
       
+      console.log("Login successful for:", email);
+      
       // For mock purposes, based on email determine role
       let mockRole = 'user';
       if (email.includes('admin')) mockRole = 'admin';
@@ -154,6 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Store the role in localStorage for mock purposes
       localStorage.setItem('userRole', mockRole);
       setRole(mockRole);
+      console.log("Role set to:", mockRole);
 
       toast({
         title: "Login successful",
@@ -162,7 +177,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Login error:", error);
       
-      // Improved error handling - focus on specific Supabase errors
+      // For demo purposes, check if using demo credentials but having connection issues
+      const isDemoAccount = 
+        (email === "admin@gym.com" && password === "admin123") ||
+        (email === "user@gym.com" && password === "user123") ||
+        (email === "trainer@gym.com" && password === "trainer123");
+      
+      if (isDemoAccount && (error.message?.includes("NetworkError") || error.message?.includes("network") || !navigator.onLine)) {
+        console.log("Demo account login with network issue - bypassing for testing");
+        
+        // Mock successful login for demo accounts when offline or having connection issues
+        const mockRole = email.includes('admin') ? 'admin' : email.includes('trainer') ? 'trainer' : 'user';
+        localStorage.setItem('userRole', mockRole);
+        setRole(mockRole);
+        
+        // Create mock user
+        setUser({
+          id: 'demo-user-id',
+          email: email,
+          name: mockRole.charAt(0).toUpperCase() + mockRole.slice(1),
+          role: mockRole
+        });
+        
+        // Create mock profile
+        setUserProfile({
+          sessions_remaining: 7,
+          total_sessions: 12
+        });
+        
+        toast({
+          title: "Demo mode activated",
+          description: "You've been logged in using demo mode due to connection issues with Supabase."
+        });
+        
+        return;
+      }
+      
+      // Improved error handling
       if (error.message?.includes("Invalid login credentials")) {
         toast({
           title: "Invalid credentials",
@@ -191,6 +242,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signup = async (email: string, password: string, name: string, phone?: string, dob?: string) => {
     try {
+      console.log("Signup attempt for:", email);
       // Register new user
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -205,6 +257,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) throw error;
+      
+      console.log("Signup successful for:", email);
       
       toast({
         title: "Sign up successful",
@@ -238,6 +292,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
+      console.log("Logout attempt");
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
@@ -246,6 +301,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserProfile(null);
       setRole(null);
 
+      console.log("Logout successful");
+      
       toast({
         title: "Logout successful",
         description: "You have been logged out successfully."
@@ -258,7 +315,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         toast({
           title: "Network Error",
           description: "Unable to connect to the authentication service, but you've been logged out locally.",
-          variant: "destructive", 
+          variant: "destructive",
         });
         
         // Still clear local user state even if network request fails

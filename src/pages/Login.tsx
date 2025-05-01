@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, AlertCircle } from "lucide-react";
+import { CalendarIcon, AlertCircle, User, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Login = () => {
@@ -31,6 +32,7 @@ const Login = () => {
   const [logo, setLogo] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("login");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showDemoHelp, setShowDemoHelp] = useState(false);
   
   const { login, signup, isAdmin, isTrainer, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -73,6 +75,24 @@ const Login = () => {
       setLogo(savedLogo);
     }
   }, []);
+
+  const fillDemoCredentials = (type: 'admin' | 'user' | 'trainer') => {
+    switch(type) {
+      case 'admin':
+        setIdentifier('admin@gym.com');
+        setPassword('admin123');
+        break;
+      case 'user':
+        setIdentifier('user@gym.com');
+        setPassword('user123');
+        break;
+      case 'trainer':
+        setIdentifier('trainer@gym.com');
+        setPassword('trainer123');
+        break;
+    }
+    setShowDemoHelp(false);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,6 +194,8 @@ const Login = () => {
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
                 You appear to be offline. Please check your internet connection.
+                <br />
+                <span className="font-medium">Note:</span> Demo accounts will still work in offline mode.
               </p>
             </div>
           </div>
@@ -206,9 +228,34 @@ const Login = () => {
       <div className="max-w-md w-full mx-auto space-y-8">
         <div className="text-center">
           <h2 className="mt-6 text-2xl font-bold text-gray-900">Welcome to FitTrack Pro</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Demo accounts: admin@gym.com, user@gym.com, trainer@gym.com (password: admin123, user123, trainer123)
-          </p>
+          <div className="mt-2 text-sm text-gray-600">
+            <p className="mb-2">
+              Demo accounts: admin@gym.com, user@gym.com, trainer@gym.com (password: admin123, user123, trainer123)
+            </p>
+            <div className="flex justify-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => fillDemoCredentials('admin')}
+              >
+                Use Admin
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => fillDemoCredentials('user')}
+              >
+                Use User
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => fillDemoCredentials('trainer')}
+              >
+                Use Trainer
+              </Button>
+            </div>
+          </div>
         </div>
         
         <OfflineWarning />
@@ -224,13 +271,19 @@ const Login = () => {
               <form className="space-y-4" onSubmit={handleLogin}>
                 <div className="space-y-2">
                   <Label htmlFor="identifier">Phone Number or Email</Label>
-                  <Input
-                    id="identifier"
-                    placeholder="Enter 8-digit phone number or email"
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <User size={18} />
+                    </span>
+                    <Input
+                      id="identifier"
+                      placeholder="Enter 8-digit phone number or email"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
                   <p className="text-xs text-gray-500">
                     For example: 66666666 or user@example.com
                   </p>
@@ -238,14 +291,20 @@ const Login = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <Lock size={18} />
+                    </span>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
                 </div>
                 
                 <Button 
