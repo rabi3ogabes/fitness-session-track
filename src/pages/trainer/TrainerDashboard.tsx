@@ -3,14 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import { CalendarSection } from "./components/CalendarSection";
-import { ClassesSection } from "./components/ClassesSection";
 import { ClassDetailsDialog } from "./components/ClassDetailsDialog";
 import { NewMemberDialog, NewMemberButton } from "./components/NewMemberDialog";
 import { mockBookings } from "./mockData";
@@ -22,7 +15,6 @@ const TrainerDashboard = () => {
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [bookings, setBookings] = useState(mockBookings);
-  const [viewMode, setViewMode] = useState<"today" | "tomorrow" | "all">("today");
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   
   // New member registration dialog
@@ -70,34 +62,15 @@ const TrainerDashboard = () => {
   
   return (
     <DashboardLayout title="Trainer Dashboard">
-      <Tabs defaultValue="calendar" className="w-full">
-        <TabsList className="w-full mb-4 overflow-x-auto flex-wrap justify-start md:justify-start">
-          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
-          <TabsTrigger value="classes">Classes & Bookings</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="calendar">
-          <div className="flex justify-end mb-4">
-            <NewMemberButton onClick={() => setIsNewMemberDialogOpen(true)} />
-          </div>
-          <CalendarSection 
-            selectedDate={selectedDate}
-            setSelectedDate={setSelectedDate}
-            bookings={bookings}
-            handleViewClassDetails={handleViewClassDetails}
-          />
-        </TabsContent>
-        
-        <TabsContent value="classes">
-          <ClassesSection 
-            selectedDate={selectedDate}
-            setSelectedDate={setSelectedDate}
-            viewMode={viewMode}
-            setViewMode={setViewMode}
-            handleViewClassDetails={handleViewClassDetails}
-          />
-        </TabsContent>
-      </Tabs>
+      <div className="flex justify-end mb-4">
+        <NewMemberButton onClick={() => setIsNewMemberDialogOpen(true)} />
+      </div>
+      <CalendarSection 
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        bookings={bookings}
+        handleViewClassDetails={handleViewClassDetails}
+      />
       
       {/* Class details dialog - moved outside tabs to ensure it renders properly */}
       <ClassDetailsDialog 
