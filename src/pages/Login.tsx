@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -10,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Login = () => {
@@ -31,6 +30,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("login");
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   
   const { login, signup, isAdmin, isTrainer, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -38,6 +38,20 @@ const Login = () => {
 
   // Generate years for the year selector
   const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
+
+  // Check online status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Check if user is already logged in and redirect accordingly
   useEffect(() => {
@@ -64,27 +78,24 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      // Check for internet connectivity first
-      try {
-        await fetch('https://wlawjupusugrhojbywyq.supabase.co/rest/v1/', { 
-          method: 'HEAD', 
-          cache: 'no-store'
-        });
-      } catch (networkError) {
-        toast({
-          title: "Network Error",
-          description: "Please check your internet connection and try again.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
+    // Check for connectivity issues first
+    if (!isOnline) {
+      toast({
+        title: "Network Error",
+        description: "You are currently offline. Please check your internet connection and try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
 
+    try {
       await login(identifier, password);
       // Login success will be handled by the useEffect that watches isAuthenticated
     } catch (error) {
       // Error is now handled in the AuthContext
+      console.error("Login error caught in component:", error);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -92,6 +103,17 @@ const Login = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    // Check for connectivity issues first
+    if (!isOnline) {
+      toast({
+        title: "Network Error",
+        description: "You are currently offline. Please check your internet connection and try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
 
     try {
       // Validate phone number format
@@ -137,6 +159,7 @@ const Login = () => {
       }
     } catch (error) {
       // Error is now handled in the AuthContext
+      console.error("Signup error caught in component:", error);
     } finally {
       setIsLoading(false);
     }
@@ -156,6 +179,27 @@ const Login = () => {
       newDate.setFullYear(year);
       setSelectedDate(newDate);
     }
+  };
+
+  // Display offline warning
+  const OfflineWarning = () => {
+    if (!isOnline) {
+      return (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-yellow-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                You appear to be offline. Please check your internet connection.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -185,6 +229,8 @@ const Login = () => {
             Demo accounts: admin@gym.com, user@gym.com, trainer@gym.com (password: admin123, user123, trainer123)
           </p>
         </div>
+        
+        <OfflineWarning />
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
@@ -224,7 +270,7 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
-                  disabled={isLoading}
+                  disabled={isLoading || !isOnline}
                 >
                   {isLoading ? "Signing in..." : "Sign in"}
                 </Button>
@@ -362,7 +408,7 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
-                  disabled={isLoading}
+                  disabled={isLoading || !isOnline}
                 >
                   {isLoading ? "Creating account..." : "Create account"}
                 </Button>

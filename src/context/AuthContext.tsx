@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -6,7 +7,7 @@ interface User {
   id: string;
   email: string;
   role?: string;
-  name?: string; // Added name property
+  name?: string;
 }
 
 interface UserProfile {
@@ -63,7 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser({
             id: session.user.id,
             email: session.user.email || '',
-            name: session.user.user_metadata?.name || '', // Set name from metadata
+            name: session.user.user_metadata?.name || '',
           });
           
           // In a real implementation, fetch user profile from profiles table
@@ -96,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser({
             id: session.user.id,
             email: session.user.email || '',
-            name: session.user.user_metadata?.name || '', // Set name from metadata
+            name: session.user.user_metadata?.name || '',
           });
 
           // In a real implementation, fetch user profile
@@ -125,20 +126,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      // Check network connectivity first
-      try {
-        await fetch('https://wlawjupusugrhojbywyq.supabase.co/rest/v1/', { 
-          method: 'HEAD',
-          cache: 'no-store'
-        });
-      } catch (networkError) {
-        toast({
-          title: "Network Error",
-          description: "Unable to connect to the authentication service. Please check your internet connection.",
-          variant: "destructive",
-        });
-        throw new Error("Network connectivity issue detected");
-      }
+      // Skip network check to avoid double network requests
+      // We'll let Supabase auth handle network errors directly
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -146,9 +135,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
+        const errorMessage = error.message || "An unexpected error occurred. Please try again.";
+        
         toast({
           title: "Login failed",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
         throw error;
@@ -170,16 +161,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Login error:", error);
       
-      // Provide better error messages for network issues
-      const errorMessage = error.message === "NetworkError when attempting to fetch resource." 
-        ? "Network error. Please check your internet connection and try again."
-        : error.message || "An unexpected error occurred. Please try again.";
+      // Check if it's a network error
+      if (!navigator.onLine || error.message?.includes("NetworkError")) {
+        toast({
+          title: "Network Error",
+          description: "Unable to connect to the authentication service. Please check your internet connection.",
+          variant: "destructive",
+        });
+      } else {
+        // Provide better error messages
+        const errorMessage = error.message || "An unexpected error occurred. Please try again.";
         
-      toast({
-        title: "Login failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+        toast({
+          title: "Login failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
       throw error;
     }
   };
@@ -210,16 +208,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Signup error:", error);
       
-      // Provide better error messages for network issues
-      const errorMessage = error.message === "NetworkError when attempting to fetch resource." 
-        ? "Network error. Please check your internet connection and try again."
-        : error.message || "An unexpected error occurred. Please try again.";
+      // Check if it's a network error
+      if (!navigator.onLine || error.message?.includes("NetworkError")) {
+        toast({
+          title: "Network Error",
+          description: "Unable to connect to the authentication service. Please check your internet connection.",
+          variant: "destructive",
+        });
+      } else {
+        // Provide better error messages
+        const errorMessage = error.message || "An unexpected error occurred. Please try again.";
         
-      toast({
-        title: "Sign up failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+        toast({
+          title: "Sign up failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
       return false;
     }
   };
@@ -241,16 +246,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Logout error:", error);
       
-      // Provide better error messages for network issues
-      const errorMessage = error.message === "NetworkError when attempting to fetch resource." 
-        ? "Network error. Please check your internet connection and try again."
-        : error.message || "An unexpected error occurred. Please try again.";
+      // Check if it's a network error
+      if (!navigator.onLine || error.message?.includes("NetworkError")) {
+        toast({
+          title: "Network Error",
+          description: "Unable to connect to the authentication service, but you've been logged out locally.",
+          variant: "warning",
+        });
         
-      toast({
-        title: "Logout failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+        // Still clear local user state even if network request fails
+        localStorage.removeItem('userRole');
+        setUser(null);
+        setUserProfile(null);
+        setRole(null);
+      } else {
+        // Provide better error messages
+        const errorMessage = error.message || "An unexpected error occurred. Please try again.";
+        
+        toast({
+          title: "Logout failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
       throw error;
     }
   };
