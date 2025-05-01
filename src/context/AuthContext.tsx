@@ -7,6 +7,7 @@ interface User {
   id: string;
   email: string;
   role?: string;
+  name?: string; // Added name property
 }
 
 interface UserProfile {
@@ -22,6 +23,7 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  signup: (email: string, password: string, name: string, phone?: string, dob?: string) => Promise<boolean>; // Added signup function
   loading: boolean;
 }
 
@@ -33,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   userProfile: null,
   login: async () => {},
   logout: async () => {},
+  signup: async () => false, // Default implementation returns false
   loading: true
 });
 
@@ -61,6 +64,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser({
             id: session.user.id,
             email: session.user.email || '',
+            name: session.user.user_metadata?.name || '', // Set name from metadata
           });
           
           // In a real implementation, fetch user profile from profiles table
@@ -93,6 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser({
             id: session.user.id,
             email: session.user.email || '',
+            name: session.user.user_metadata?.name || '', // Set name from metadata
           });
 
           // In a real implementation, fetch user profile
@@ -152,6 +157,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const signup = async (email: string, password: string, name: string, phone?: string, dob?: string) => {
+    try {
+      // Register new user
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            phone_number: phone,
+            date_of_birth: dob,
+          }
+        }
+      });
+
+      if (error) throw error;
+      
+      toast({
+        title: "Sign up successful",
+        description: "Your account has been created. Please check your email for verification."
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      toast({
+        title: "Sign up failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   const logout = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -187,6 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         userProfile,
         login,
         logout,
+        signup,
         loading,
       }}
     >

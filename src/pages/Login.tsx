@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -120,14 +119,14 @@ const Login = () => {
       }
 
       const success = await signup(
-        phone, 
+        email, 
         signupPassword, 
         name, 
-        email, 
+        phone, 
         selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined
       );
       
-      if (success) {
+      if (success === true) {
         toast({
           title: "Signup successful",
           description: "Your account has been created. You can now log in.",
@@ -135,7 +134,7 @@ const Login = () => {
         
         // Switch to login tab
         setActiveTab("login");
-        setIdentifier(phone);
+        setIdentifier(email);
         setPassword(signupPassword);
       }
     } catch (error) {
