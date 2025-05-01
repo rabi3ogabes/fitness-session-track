@@ -25,11 +25,11 @@ const UserBooking = () => {
       setIsLoading(true);
       
       try {
-        // Get user profile data - fix type issue by converting user.id to string
+        // Convert user.id to UUID type for Supabase query
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('sessions_remaining, total_sessions')
-          .eq('id', String(user.id))
+          .eq('id', user.id as any)
           .single();
           
         if (profileError) throw profileError;

@@ -36,11 +36,11 @@ export const ClassDetailsDialog = ({
       setIsLoading(true);
       
       try {
-        // Pass selectedClass directly as a number without converting to string
+        // Convert selectedClass to string for the query to match the database type
         const { count, error } = await supabase
           .from('bookings')
           .select('*', { count: 'exact', head: true })
-          .eq('class_id', selectedClass);
+          .eq('class_id', String(selectedClass));
           
         if (error) throw error;
         
