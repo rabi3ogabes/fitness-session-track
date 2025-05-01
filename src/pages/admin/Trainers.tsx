@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
   Select,
@@ -39,6 +40,8 @@ const Trainers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [selectedTrainer, setSelectedTrainer] = useState<typeof initialTrainers[0] | null>(null);
   const [newTrainer, setNewTrainer] = useState({
     name: "",
     email: "",
@@ -151,15 +154,25 @@ const Trainers = () => {
     });
   };
 
-  const resetPassword = async (trainer: typeof trainers[0]) => {
+  const openResetPasswordDialog = (trainer: typeof trainers[0]) => {
+    setSelectedTrainer(trainer);
+    setIsResetPasswordDialogOpen(true);
+  };
+
+  const handleResetPassword = async () => {
+    if (!selectedTrainer) return;
+    
     try {
       // In a real implementation, this would call Supabase to reset the password
       // For now, we'll just show a toast notification
       
       toast({
         title: "Password reset successfully",
-        description: `${trainer.name}'s password has been reset to their phone number`,
+        description: `${selectedTrainer.name}'s password has been reset to their phone number`,
       });
+      
+      setIsResetPasswordDialogOpen(false);
+      setSelectedTrainer(null);
     } catch (error) {
       toast({
         title: "Password reset failed",
@@ -267,7 +280,7 @@ const Trainers = () => {
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button 
-                            onClick={() => resetPassword(trainer)} 
+                            onClick={() => openResetPasswordDialog(trainer)} 
                             variant="ghost" 
                             size="icon" 
                             className="text-orange-600 hover:text-orange-800 hover:bg-orange-50"
@@ -460,6 +473,31 @@ const Trainers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Password Reset Confirmation Dialog */}
+      <AlertDialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Password</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedTrainer && (
+                <>
+                  Are you sure you want to reset the password for <strong>{selectedTrainer.name}</strong>?
+                  The new password will be their phone number: <strong>{selectedTrainer.phone}</strong>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsResetPasswordDialogOpen(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleResetPassword} className="bg-gym-blue hover:bg-gym-dark-blue">
+              Reset Password
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
