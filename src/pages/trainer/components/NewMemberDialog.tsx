@@ -34,7 +34,7 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
   
   const handleRegisterMember = () => {
     // Validate form
-    if (!newMember.name || !newMember.email) {
+    if (!newMember.name || !newMember.email || !newMember.phone) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields",
@@ -101,7 +101,7 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="member-phone" className="text-right">
-              Phone
+              Phone*
             </Label>
             <Input
               id="member-phone"

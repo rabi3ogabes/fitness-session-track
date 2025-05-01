@@ -75,7 +75,7 @@ const Members = () => {
   );
 
   const handleAddMember = () => {
-    if (!newMember.name || !newMember.email) {
+    if (!newMember.name || !newMember.email || !newMember.phone) {
       toast({
         title: "Required fields missing",
         description: "Please fill in all required fields",
@@ -320,7 +320,7 @@ const Members = () => {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <label className="text-right text-sm font-medium col-span-1">
-                Phone
+                Phone*
               </label>
               <Input
                 id="phone"
