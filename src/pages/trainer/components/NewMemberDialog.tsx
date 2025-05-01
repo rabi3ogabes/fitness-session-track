@@ -29,8 +29,15 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
     gender: "Male"
   });
   
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  
   const handleNewMemberInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    if (name === "phone") {
+      setPhoneError(null); // Clear error when user types in phone field
+    }
+    
     setNewMember(prev => ({ ...prev, [name]: value }));
   };
 
@@ -38,14 +45,32 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
     setNewMember(prev => ({ ...prev, gender: value }));
   };
   
+  const validatePhone = (phone: string) => {
+    // Basic phone number validation
+    // Requires at least 10 digits
+    const phoneRegex = /^\+?[0-9]{10,15}$/;
+    if (!phone) return "Phone number is required";
+    if (!phoneRegex.test(phone.replace(/[\s-]/g, ''))) {
+      return "Please enter a valid phone number (at least 10 digits)";
+    }
+    return null;
+  };
+  
   const handleRegisterMember = () => {
     // Validate form
-    if (!newMember.name || !newMember.email || !newMember.phone) {
+    if (!newMember.name || !newMember.email) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields",
         variant: "destructive"
       });
+      return;
+    }
+    
+    // Validate phone
+    const phoneValidationError = validatePhone(newMember.phone);
+    if (phoneValidationError) {
+      setPhoneError(phoneValidationError);
       return;
     }
     
@@ -69,6 +94,8 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
       additionalSessions: "0",
       gender: "Male"
     });
+    
+    setPhoneError(null);
   };
   
   return (
@@ -110,13 +137,18 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
             <Label htmlFor="member-phone" className="text-right">
               Phone*
             </Label>
-            <Input
-              id="member-phone"
-              name="phone"
-              value={newMember.phone}
-              onChange={handleNewMemberInputChange}
-              className="col-span-3"
-            />
+            <div className="col-span-3 space-y-1">
+              <Input
+                id="member-phone"
+                name="phone"
+                value={newMember.phone}
+                onChange={handleNewMemberInputChange}
+                className={phoneError ? "border-red-500" : ""}
+              />
+              {phoneError && (
+                <p className="text-sm text-red-500">{phoneError}</p>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="member-gender" className="text-right">

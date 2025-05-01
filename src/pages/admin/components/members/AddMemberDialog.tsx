@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 interface AddMemberDialogProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface AddMemberDialogProps {
 
 const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogProps) => {
   const { isAdmin } = useAuth();
+  const { toast } = useToast();
   const [newMember, setNewMember] = useState({
     name: "",
     email: "",
@@ -29,12 +31,45 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
     gender: "Male" // Default gender
   });
 
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const phone = e.target.value;
+    setNewMember({ ...newMember, phone });
+    
+    // Clear error when user types
+    if (phoneError) setPhoneError(null);
+  };
+
+  const validatePhone = (phone: string) => {
+    // Basic phone number validation
+    // Requires at least 10 digits
+    const phoneRegex = /^\+?[0-9]{10,15}$/;
+    if (!phone) return "Phone number is required";
+    if (!phoneRegex.test(phone.replace(/[\s-]/g, ''))) {
+      return "Please enter a valid phone number (at least 10 digits)";
+    }
+    return null;
+  };
+
   const handleMembershipChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const membership = e.target.value;
     let sessions = 4;
     if (membership === "Standard") sessions = 8;
     if (membership === "Premium") sessions = 12;
     setNewMember({ ...newMember, membership, sessions, remainingSessions: sessions });
+  };
+
+  const handleSubmit = () => {
+    // Validate phone
+    const phoneValidationError = validatePhone(newMember.phone);
+    if (phoneValidationError) {
+      setPhoneError(phoneValidationError);
+      return;
+    }
+    
+    // Submit if no errors
+    onAddMember(newMember);
   };
 
   return (
@@ -71,12 +106,17 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
             <label className="text-right text-sm font-medium col-span-1">
               Phone*
             </label>
-            <Input
-              id="phone"
-              value={newMember.phone}
-              onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
-              className="col-span-3"
-            />
+            <div className="col-span-3 space-y-1">
+              <Input
+                id="phone"
+                value={newMember.phone}
+                onChange={handlePhoneChange}
+                className={`${phoneError ? "border-red-500" : ""}`}
+              />
+              {phoneError && (
+                <p className="text-sm text-red-500">{phoneError}</p>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <label className="text-right text-sm font-medium col-span-1">
@@ -145,7 +185,7 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={() => onAddMember(newMember)} className="bg-gym-blue hover:bg-gym-dark-blue">
+          <Button onClick={handleSubmit} className="bg-gym-blue hover:bg-gym-dark-blue">
             Add Member
           </Button>
         </DialogFooter>

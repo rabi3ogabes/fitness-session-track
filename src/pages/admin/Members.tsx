@@ -2,6 +2,7 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // Components
 import MemberSearch from "./components/members/MemberSearch";
@@ -53,6 +54,8 @@ const Members = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
   const { toast } = useToast();
 
   // Update localStorage whenever members change
@@ -152,14 +155,22 @@ const Members = () => {
     });
   };
   
-  const resetMemberPassword = (id: number) => {
-    // In a real application, this would call an API to reset the password
-    const member = members.find(m => m.id === id);
+  const openResetPasswordDialog = (id: number) => {
+    setSelectedMemberId(id);
+    setIsResetPasswordDialogOpen(true);
+  };
+  
+  const confirmResetPassword = () => {
+    if (selectedMemberId === null) return;
+    
+    const member = members.find(m => m.id === selectedMemberId);
     if (member) {
       toast({
         title: "Password reset successfully",
         description: `${member.name}'s password has been reset to their phone number`,
       });
+      setIsResetPasswordDialogOpen(false);
+      setSelectedMemberId(null);
     }
   };
 
@@ -177,7 +188,7 @@ const Members = () => {
         toggleMemberStatus={toggleMemberStatus}
         toggleTrainerEditAccess={toggleTrainerEditAccess}
         openEditDialog={openEditDialog}
-        resetPassword={resetMemberPassword}
+        resetPassword={(id) => openResetPasswordDialog(id)}
       />
 
       <AddMemberDialog
@@ -193,6 +204,31 @@ const Members = () => {
         onEditMember={handleEditMember}
         paymentHistoryData={paymentHistoryData}
       />
+      
+      {/* Reset Password Confirmation Dialog */}
+      <AlertDialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Password</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedMemberId && (
+                <>
+                  Are you sure you want to reset the password for <strong>{members.find(m => m.id === selectedMemberId)?.name}</strong>?<br />
+                  The new password will be their phone number: <strong>{members.find(m => m.id === selectedMemberId)?.phone}</strong>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsResetPasswordDialogOpen(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmResetPassword} className="bg-gym-blue hover:bg-gym-dark-blue">
+              Reset Password
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
