@@ -70,16 +70,16 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     }
   };
 
-  const handleDaySelection = (day: string) => {
-    if (recurringPattern.daysOfWeek.includes(day)) {
+  const handleDaySelection = (day: string, isChecked: boolean) => {
+    if (isChecked) {
       setRecurringPattern({
         ...recurringPattern,
-        daysOfWeek: recurringPattern.daysOfWeek.filter(d => d !== day)
+        daysOfWeek: [...recurringPattern.daysOfWeek, day]
       });
     } else {
       setRecurringPattern({
         ...recurringPattern,
-        daysOfWeek: [...recurringPattern.daysOfWeek, day]
+        daysOfWeek: recurringPattern.daysOfWeek.filter(d => d !== day)
       });
     }
   };
@@ -276,7 +276,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                         <Checkbox 
                           id={`day-${day}`} 
                           checked={recurringPattern.daysOfWeek.includes(day)}
-                          onCheckedChange={(checked) => checked === true && handleDaySelection(day)}
+                          onCheckedChange={(checked) => handleDaySelection(day, checked === true)}
                         />
                         <Label htmlFor={`day-${day}`}>{day.substring(0, 3)}</Label>
                       </div>
