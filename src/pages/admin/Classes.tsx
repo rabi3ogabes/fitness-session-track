@@ -261,7 +261,7 @@ const Classes = () => {
             capacity: cls.capacity,
             enrolled: cls.enrolled || 0,
             status: cls.status || 'Active',
-            gender: cls.gender || 'All',
+            gender: cls.gender as "Male" | "Female" | "All" | string,
             startTime: cls.start_time,
             endTime: cls.end_time
           }));
@@ -307,7 +307,7 @@ const Classes = () => {
             capacity: data[0].capacity,
             enrolled: data[0].enrolled || 0,
             status: data[0].status || 'Active',
-            gender: data[0].gender || 'All',
+            gender: data[0].gender as "Male" | "Female" | "All" | string,
             startTime: data[0].start_time,
             endTime: data[0].end_time
           };

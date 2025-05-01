@@ -7,7 +7,7 @@ export interface ClassModel {
   capacity: number;
   enrolled: number;
   status: string;
-  gender?: "Male" | "Female" | "All";
+  gender: "Male" | "Female" | "All" | string;
   trainers?: string[];
   recurrence?: string;
   startTime?: string;
@@ -27,5 +27,5 @@ export interface Trainer {
   phone: string;
   specialization: string;
   status: string;
-  gender?: "Male" | "Female";
+  gender?: "Male" | "Female" | string;
 }
