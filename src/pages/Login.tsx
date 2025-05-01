@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -64,6 +65,22 @@ const Login = () => {
     setIsLoading(true);
 
     try {
+      // Check for internet connectivity first
+      try {
+        await fetch('https://wlawjupusugrhojbywyq.supabase.co/rest/v1/', { 
+          method: 'HEAD', 
+          cache: 'no-store'
+        });
+      } catch (networkError) {
+        toast({
+          title: "Network Error",
+          description: "Please check your internet connection and try again.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       await login(identifier, password);
       // Login success will be handled by the useEffect that watches isAuthenticated
     } catch (error) {

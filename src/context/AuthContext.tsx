@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -126,6 +125,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      // Check network connectivity first
+      try {
+        await fetch('https://wlawjupusugrhojbywyq.supabase.co/rest/v1/', { 
+          method: 'HEAD',
+          cache: 'no-store'
+        });
+      } catch (networkError) {
+        toast({
+          title: "Network Error",
+          description: "Unable to connect to the authentication service. Please check your internet connection.",
+          variant: "destructive",
+        });
+        throw new Error("Network connectivity issue detected");
+      }
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
