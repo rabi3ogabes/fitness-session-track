@@ -36,10 +36,11 @@ export const ClassDetailsDialog = ({
       setIsLoading(true);
       
       try {
+        // Fix type issue by using '.eq()' with string values
         const { count, error } = await supabase
           .from('bookings')
           .select('*', { count: 'exact', head: true })
-          .eq('class_id', selectedClass);
+          .eq('class_id', String(selectedClass));
           
         if (error) throw error;
         
@@ -59,7 +60,7 @@ export const ClassDetailsDialog = ({
     // For now, since we're using mock data, we'll set a mock booking count
     // In a real implementation with Supabase, you'd use the fetchBookingCount function
     if (isOpen && selectedClass) {
-      const mockBookingCounts = {
+      const mockBookingCounts: Record<number, number> = {
         1: 8,  // Morning Yoga: 8 bookings
         2: 10, // HIIT Workout: 10 bookings
         3: 5,  // Strength Training: 5 bookings
@@ -67,7 +68,7 @@ export const ClassDetailsDialog = ({
         5: 7   // Boxing: 7 bookings
       };
       
-      setBookings(mockBookingCounts[selectedClass as keyof typeof mockBookingCounts] || 0);
+      setBookings(mockBookingCounts[selectedClass] || 0);
     }
   }, [selectedClass, isOpen, toast]);
 

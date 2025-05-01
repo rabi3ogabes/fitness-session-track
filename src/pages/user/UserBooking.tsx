@@ -25,7 +25,7 @@ const UserBooking = () => {
       setIsLoading(true);
       
       try {
-        // Get user profile data to get remaining sessions
+        // Get user profile data to get remaining sessions - fixing type issue
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('sessions_remaining, total_sessions')
@@ -84,10 +84,15 @@ const UserBooking = () => {
           },
         ];
         
+        // Fix the type error by properly handling potential undefined values
+        const sessionsRemaining = profileData && 'sessions_remaining' in profileData 
+          ? (profileData.sessions_remaining ?? 7) 
+          : 7;
+        
         setBookings({
           upcomingBookings,
           pastBookings,
-          remainingSessions: profileData?.sessions_remaining || 7
+          remainingSessions: sessionsRemaining
         });
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -95,6 +100,13 @@ const UserBooking = () => {
           title: "Error loading data",
           description: "Could not load your booking data. Please try again later.",
           variant: "destructive"
+        });
+        
+        // Fallback to default values in case of error
+        setBookings({
+          upcomingBookings: [],
+          pastBookings: [],
+          remainingSessions: 7 // Default value
         });
       } finally {
         setIsLoading(false);
