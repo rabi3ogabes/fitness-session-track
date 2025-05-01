@@ -16,12 +16,12 @@ const supabaseOptions = {
   },
   global: {
     fetch: (...args) => {
-      // Enhanced fetch with improved timeout and retry logic
+      // Enhanced fetch with improved retry mechanism
       const [resource, config] = args;
       
       // Use AbortController for timeout handling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // Extended to 30 seconds
+      const timeoutId = setTimeout(() => controller.abort(), 45000); // Extended to 45 seconds
       
       // Add signal to the request config
       const updatedConfig = {
@@ -35,13 +35,33 @@ const supabaseOptions = {
         }
       };
       
-      return fetch(resource, updatedConfig)
-        .then(response => {
+      // Implementation of retry logic
+      const MAX_RETRIES = 3;
+      let retryCount = 0;
+      
+      const fetchWithRetry = async () => {
+        try {
+          const response = await fetch(resource, updatedConfig);
           clearTimeout(timeoutId);
           return response;
-        })
-        .catch(error => {
+        } catch (error) {
           clearTimeout(timeoutId);
+          
+          // If we still have retries left and it's a network error, try again
+          if (retryCount < MAX_RETRIES && 
+              (error instanceof Error && error.name === 'AbortError' || 
+               error instanceof TypeError && error.message.includes('Network'))) {
+            
+            retryCount++;
+            console.log(`Retrying database connection (attempt ${retryCount}/${MAX_RETRIES})...`);
+            
+            // Exponential backoff: 1s, 2s, 4s
+            const backoffTime = Math.pow(2, retryCount - 1) * 1000;
+            
+            return new Promise(resolve => {
+              setTimeout(() => resolve(fetchWithRetry()), backoffTime);
+            });
+          }
           
           // Log detailed error information to help with debugging
           console.error(`Supabase fetch error for ${resource}:`, error);
@@ -50,7 +70,10 @@ const supabaseOptions = {
           throw error instanceof Error ? 
             new Error(`Database connection failed: ${error.message}`) : 
             new Error('Database connection failed');
-        });
+        }
+      };
+      
+      return fetchWithRetry();
     }
   }
 };
