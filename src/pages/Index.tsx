@@ -260,170 +260,12 @@ const Index = () => {
                 Dashboard
               </Link>
             ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="px-4 py-2 text-gym-blue hover:text-gym-dark-blue transition-colors"
-                >
-                  Login
-                </Link>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button className="px-4 py-2 bg-gym-blue hover:bg-gym-dark-blue text-white rounded-md transition-colors">
-                      Sign Up
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="max-w-md">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Sign Up for Membership</AlertDialogTitle>
-                    </AlertDialogHeader>
-                    <form onSubmit={handleSignUp} className="mt-4 space-y-4">
-                      <div className="grid gap-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <label className="text-right text-sm font-medium col-span-1">
-                            Name*
-                          </label>
-                          <Input
-                            value={newMember.name}
-                            onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-                            className="col-span-3"
-                            placeholder="Full Name"
-                            required
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <label className="text-right text-sm font-medium col-span-1">
-                            Email*
-                          </label>
-                          <Input
-                            type="email"
-                            value={newMember.email}
-                            onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                            className="col-span-3"
-                            placeholder="Email Address"
-                            required
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <label className="text-right text-sm font-medium col-span-1">
-                            Phone
-                          </label>
-                          <Input
-                            value={newMember.phone}
-                            onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
-                            className="col-span-3"
-                            placeholder="8-digit Qatar Phone Number"
-                          />
-                          <div className="col-span-3 col-start-2">
-                            <p className="text-xs text-gray-500">
-                              Phone number will be your username and default password
-                            </p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <label className="text-right text-sm font-medium col-span-1">
-                            Birthday
-                          </label>
-                          <div className="col-span-3">
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-full justify-start text-left",
-                                    !selectedDate && "text-muted-foreground"
-                                  )}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {selectedDate ? format(selectedDate, "dd/MM/yyyy") : <span>Pick a date</span>}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0">
-                                <div className="p-2 flex justify-between items-center border-b">
-                                  <Button 
-                                    variant="outline" 
-                                    className="text-sm"
-                                    onClick={() => setYearView(!yearView)}
-                                  >
-                                    {yearView ? "Show Calendar" : "Select Year"}
-                                  </Button>
-                                  {!yearView && (
-                                    <div className="text-sm font-medium">
-                                      {selectedDate ? format(selectedDate, "yyyy") : new Date().getFullYear()}
-                                    </div>
-                                  )}
-                                </div>
-                                
-                                {yearView ? (
-                                  <div className="p-2 h-64 overflow-y-auto grid grid-cols-3 gap-2">
-                                    {years.map((year) => (
-                                      <Button
-                                        key={year}
-                                        variant="ghost"
-                                        className={cn(
-                                          "text-sm",
-                                          selectedYear === year && "bg-primary text-primary-foreground"
-                                        )}
-                                        onClick={() => handleYearSelect(year)}
-                                      >
-                                        {year}
-                                      </Button>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <Calendar
-                                    mode="single"
-                                    selected={selectedDate}
-                                    onSelect={setSelectedDate}
-                                    defaultMonth={selectedDate || new Date(selectedYear, 0)}
-                                    initialFocus
-                                    className={cn("p-3 pointer-events-auto")}
-                                  />
-                                )}
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <label className="text-right text-sm font-medium col-span-1">
-                            Membership
-                          </label>
-                          <select
-                            value={newMember.membership}
-                            onChange={(e) => {
-                              const membership = e.target.value;
-                              let sessions = 4;
-                              if (membership === "Standard") sessions = 8;
-                              if (membership === "Premium") sessions = 12;
-                              setNewMember({ ...newMember, membership, sessions, remainingSessions: sessions });
-                            }}
-                            className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent"
-                          >
-                            <option value="Basic">Basic (4 sessions)</option>
-                            <option value="Standard">Standard (8 sessions)</option>
-                            <option value="Premium">Premium (12 sessions)</option>
-                          </select>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-end gap-2 pt-4">
-                        <AlertDialogClose ref={closeDialogRef} asChild>
-                          <Button type="button" variant="outline">
-                            Cancel
-                          </Button>
-                        </AlertDialogClose>
-                        <Button 
-                          type="submit" 
-                          disabled={isProcessing}
-                          className="bg-gym-blue hover:bg-gym-dark-blue text-white"
-                        >
-                          {isProcessing ? "Processing..." : "Submit"}
-                        </Button>
-                      </div>
-                    </form>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </>
+              <Link
+                to="/login"
+                className="px-4 py-2 bg-gym-blue hover:bg-gym-dark-blue text-white rounded-md transition-colors"
+              >
+                Sign Up / Login
+              </Link>
             )}
           </div>
         </div>
@@ -470,13 +312,7 @@ const Index = () => {
                 to="/login"
                 className="px-6 py-3 bg-gym-blue hover:bg-gym-dark-blue rounded-md font-medium transition-colors"
               >
-                Log In
-              </Link>
-              <Link
-                to="/login"
-                className="px-6 py-3 border border-white hover:bg-white hover:text-black rounded-md font-medium transition-colors"
-              >
-                Sign Up
+                Sign Up / Login
               </Link>
             </div>
           )}
