@@ -3,12 +3,43 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Clock, AlertCircle } from "lucide-react";
+import { Plus, Pencil, Clock, AlertCircle, RefreshCw } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, parse, isBefore } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import AddClassDialog from "./components/classes/AddClassDialog";
 import EditClassDialog from "./components/classes/EditClassDialog";
 import { ClassModel, RecurringPattern } from "./components/classes/ClassTypes";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+
+// Fallback data to use when API fails
+const fallbackClasses: ClassModel[] = [
+  {
+    id: 1,
+    name: "Yoga",
+    trainer: "Jane Smith",
+    trainers: ["Jane Smith"],
+    schedule: "05/10/2025",
+    capacity: 15,
+    enrolled: 8,
+    status: "Active",
+    gender: "All",
+    startTime: "09:00",
+    endTime: "10:00"
+  },
+  {
+    id: 2,
+    name: "Pilates",
+    trainer: "Mike Johnson",
+    trainers: ["Mike Johnson"],
+    schedule: "05/11/2025",
+    capacity: 12,
+    enrolled: 6,
+    status: "Active",
+    gender: "All",
+    startTime: "11:00",
+    endTime: "12:00"
+  }
+];
 
 // Fallback trainers list - used only if Supabase fetch fails
 const fallbackTrainers = [
@@ -30,13 +61,15 @@ const Classes = () => {
   const [trainersList, setTrainersList] = useState<string[]>(fallbackTrainers);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [useFallbackData, setUseFallbackData] = useState(false);
   const { toast } = useToast();
 
   // Fetch classes from Supabase on component mount
   useEffect(() => {
     fetchClasses();
     fetchTrainers();
-  }, []);
+  }, [retryCount]);
 
   const fetchClasses = async () => {
     try {
@@ -46,7 +79,8 @@ const Classes = () => {
       console.log("Fetching classes from Supabase...");
       const { data, error } = await supabase
         .from('classes')
-        .select('*');
+        .select('*')
+        .timeout(5000); // Adding timeout to prevent long-hanging requests
       
       if (error) {
         throw error;
@@ -54,7 +88,7 @@ const Classes = () => {
 
       console.log("Classes data received:", data);
       
-      if (data) {
+      if (data && data.length > 0) {
         // Map Supabase fields to match our ClassModel structure
         const formattedClasses: ClassModel[] = data.map(cls => ({
           id: cls.id,
@@ -65,27 +99,38 @@ const Classes = () => {
           capacity: cls.capacity || 0,
           enrolled: cls.enrolled || 0,
           status: cls.status || 'Active',
-          gender: cls.gender || 'All',
+          gender: (cls.gender || 'All') as "All" | "Male" | "Female",
           startTime: cls.start_time || '',
           endTime: cls.end_time || ''
         }));
         
         console.log("Formatted classes:", formattedClasses);
         setClasses(formattedClasses);
+        setUseFallbackData(false);
       } else {
         console.log("No classes data received");
+        toast({
+          title: "No classes found",
+          description: "There are currently no classes in the database. Add a new class to get started.",
+        });
         setClasses([]);
       }
     } catch (error: any) {
       console.error("Error fetching classes:", error);
       setFetchError(error.message || "Failed to fetch classes");
-      toast({
-        title: "Error",
-        description: "Failed to fetch classes. Using default data.",
-        variant: "destructive",
-      });
-      // Initialize with empty array to avoid undefined errors
-      setClasses([]);
+      
+      // If network error and we're not already using fallback data, suggest using fallback data
+      if ((error.message?.includes('NetworkError') || error.message?.includes('fetch')) && !useFallbackData) {
+        toast({
+          title: "Connection Issue",
+          description: "Unable to connect to the database. Using demo data for now.",
+          variant: "destructive",
+        });
+        setClasses(fallbackClasses);
+        setUseFallbackData(true);
+      } else if (!useFallbackData) {
+        setClasses([]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +141,8 @@ const Classes = () => {
       const { data, error } = await supabase
         .from('trainers')
         .select('name')
-        .eq('status', 'Active');
+        .eq('status', 'Active')
+        .timeout(5000);
       
       if (error) {
         throw error;
@@ -112,6 +158,15 @@ const Classes = () => {
     }
   };
 
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    setUseFallbackData(false);
+    toast({
+      title: "Retrying",
+      description: "Attempting to reconnect to the database...",
+    });
+  };
+
   const filteredClasses = classes.filter(
     (cls) =>
       cls.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -122,6 +177,26 @@ const Classes = () => {
   const currentClass = selectedClassId ? classes.find(c => c.id === selectedClassId) || null : null;
 
   const toggleClassStatus = async (id: number) => {
+    // If using fallback data, just update the UI without trying to call Supabase
+    if (useFallbackData) {
+      setClasses(
+        classes.map((cls) =>
+          cls.id === id
+            ? {
+                ...cls,
+                status: cls.status === "Active" ? "Inactive" : "Active",
+              }
+            : cls
+        )
+      );
+      
+      toast({
+        title: "Demo Mode",
+        description: "Class status updated in demo mode only. Changes will not persist.",
+      });
+      return;
+    }
+    
     const classToUpdate = classes.find(cls => cls.id === id);
     if (!classToUpdate) return;
     
@@ -236,6 +311,35 @@ const Classes = () => {
   };
 
   const handleAddClass = async (newClass: ClassModel, recurringPattern?: RecurringPattern) => {
+    // If in demo mode, just update the UI
+    if (useFallbackData) {
+      const newId = Math.max(...classes.map(c => c.id)) + 1;
+      const newClassWithId = { ...newClass, id: newId };
+      
+      if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
+        // Generate recurring classes with mock ids
+        const generatedClasses = generateRecurringClasses(newClassWithId, recurringPattern)
+          .map((cls, index) => ({ ...cls, id: newId + index + 1 }));
+          
+        setClasses([...classes, ...generatedClasses]);
+        
+        toast({
+          title: "Demo Mode",
+          description: `${generatedClasses.length} recurring classes added in demo mode. Changes will not persist.`,
+        });
+      } else {
+        setClasses([...classes, newClassWithId]);
+        
+        toast({
+          title: "Demo Mode",
+          description: "Class added in demo mode. Changes will not persist.",
+        });
+      }
+      
+      setIsAddDialogOpen(false);
+      return;
+    }
+    
     try {
       if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
         // Generate recurring classes
@@ -275,7 +379,7 @@ const Classes = () => {
             capacity: cls.capacity,
             enrolled: cls.enrolled || 0,
             status: cls.status || 'Active',
-            gender: cls.gender || 'All',
+            gender: (cls.gender || 'All') as "All" | "Male" | "Female",
             startTime: cls.start_time,
             endTime: cls.end_time
           }));
@@ -321,7 +425,7 @@ const Classes = () => {
             capacity: data[0].capacity,
             enrolled: data[0].enrolled || 0,
             status: data[0].status || 'Active',
-            gender: data[0].gender || 'All',
+            gender: (data[0].gender || 'All') as "All" | "Male" | "Female",
             startTime: data[0].start_time,
             endTime: data[0].end_time
           };
@@ -352,6 +456,22 @@ const Classes = () => {
   };
 
   const handleUpdateClass = async (updatedClass: ClassModel) => {
+    // If in demo mode, just update the UI
+    if (useFallbackData) {
+      setClasses(
+        classes.map((cls) => cls.id === updatedClass.id ? updatedClass : cls)
+      );
+      
+      toast({
+        title: "Demo Mode",
+        description: "Class updated in demo mode. Changes will not persist.",
+      });
+      
+      setIsEditDialogOpen(false);
+      setSelectedClassId(null);
+      return;
+    }
+    
     try {
       const classToUpdate = {
         name: updatedClass.name,
@@ -435,21 +555,40 @@ const Classes = () => {
         existingClasses={classes}
       />
 
-      {fetchError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start">
-          <AlertCircle className="text-red-500 mr-2 mt-0.5 h-5 w-5" />
-          <div>
-            <p className="font-medium text-red-800">Error loading classes</p>
-            <p className="text-red-600 text-sm">{fetchError}</p>
+      {useFallbackData && (
+        <Alert className="mb-6 bg-yellow-50 border-yellow-200">
+          <AlertCircle className="h-5 w-5 text-yellow-600" />
+          <AlertTitle className="text-yellow-800">Demo Mode</AlertTitle>
+          <AlertDescription className="text-yellow-700">
+            You are currently viewing demo data due to connection issues. Changes will not be saved.
             <Button 
               variant="outline" 
-              className="mt-2 text-sm h-8"
-              onClick={() => fetchClasses()}
+              size="sm" 
+              onClick={handleRetry} 
+              className="ml-2 border-yellow-300 text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100"
             >
-              Retry
+              <RefreshCw className="mr-1 h-3 w-3" /> Try to reconnect
             </Button>
-          </div>
-        </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {fetchError && !useFallbackData && (
+        <Alert className="mb-6 bg-red-50 border-red-200">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <AlertTitle className="text-red-800">Error loading classes</AlertTitle>
+          <AlertDescription className="text-red-700">
+            {fetchError}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRetry} 
+              className="ml-2 border-red-300 text-red-700 hover:text-red-800 hover:bg-red-100"
+            >
+              <RefreshCw className="mr-1 h-3 w-3" /> Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -487,7 +626,10 @@ const Classes = () => {
               {isLoading ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
-                    Loading classes...
+                    <div className="flex justify-center items-center">
+                      <RefreshCw className="animate-spin mr-2 h-4 w-4" />
+                      Loading classes...
+                    </div>
                   </td>
                 </tr>
               ) : filteredClasses.length > 0 ? (
