@@ -1,45 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Clock, AlertCircle, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Clock } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, parse, isBefore } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import AddClassDialog from "./components/classes/AddClassDialog";
 import EditClassDialog from "./components/classes/EditClassDialog";
 import { ClassModel, RecurringPattern } from "./components/classes/ClassTypes";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-
-// Fallback data to use when API fails
-const fallbackClasses: ClassModel[] = [
-  {
-    id: 1,
-    name: "Yoga",
-    trainer: "Jane Smith",
-    trainers: ["Jane Smith"],
-    schedule: "05/10/2025",
-    capacity: 15,
-    enrolled: 8,
-    status: "Active",
-    gender: "All",
-    startTime: "09:00",
-    endTime: "10:00"
-  },
-  {
-    id: 2,
-    name: "Pilates",
-    trainer: "Mike Johnson",
-    trainers: ["Mike Johnson"],
-    schedule: "05/11/2025",
-    capacity: 12,
-    enrolled: 6,
-    status: "Active",
-    gender: "All",
-    startTime: "11:00",
-    endTime: "12:00"
-  }
-];
 
 // Fallback trainers list - used only if Supabase fetch fails
 const fallbackTrainers = [
@@ -58,98 +27,51 @@ const Classes = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
-  const [trainersList, setTrainersList] = useState<string[]>([]);
+  const [trainersList, setTrainersList] = useState<string[]>(fallbackTrainers);
   const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  const [useFallbackData, setUseFallbackData] = useState(false);
-  const [connectionAttempts, setConnectionAttempts] = useState(0);
   const { toast } = useToast();
 
   // Fetch classes from Supabase on component mount
   useEffect(() => {
     fetchClasses();
     fetchTrainers();
-  }, [retryCount]);
+  }, []);
 
   const fetchClasses = async () => {
     try {
       setIsLoading(true);
-      setFetchError(null);
-      
-      console.log("Fetching classes from Supabase...");
-      setConnectionAttempts(prev => prev + 1);
-      
-      // Use AbortController for timeout functionality
-      const abortController = new AbortController();
-      const timeoutId = setTimeout(() => abortController.abort(), 15000); // Extended timeout to 15 seconds
-      
       const { data, error } = await supabase
         .from('classes')
         .select('*');
-      
-      // Clear the timeout
-      clearTimeout(timeoutId);
       
       if (error) {
         throw error;
       }
 
-      console.log("Classes data received:", data);
-      
-      if (data && data.length > 0) {
+      if (data) {
         // Map Supabase fields to match our ClassModel structure
         const formattedClasses: ClassModel[] = data.map(cls => ({
           id: cls.id,
-          name: cls.name || '',
+          name: cls.name,
           trainer: cls.trainer || '',
           trainers: cls.trainers || [],
-          schedule: cls.schedule || '',
-          capacity: cls.capacity || 0,
+          schedule: cls.schedule,
+          capacity: cls.capacity,
           enrolled: cls.enrolled || 0,
           status: cls.status || 'Active',
-          gender: (cls.gender || 'All') as "All" | "Male" | "Female",
-          startTime: cls.start_time || '',
-          endTime: cls.end_time || ''
+          gender: cls.gender || 'All',
+          startTime: cls.start_time,
+          endTime: cls.end_time
         }));
-        
-        console.log("Formatted classes:", formattedClasses);
         setClasses(formattedClasses);
-        setUseFallbackData(false);
-        
-        // Reset connection attempts on successful fetch
-        setConnectionAttempts(0);
-        
-        toast({
-          title: "Connection Restored",
-          description: "Successfully connected to the database.",
-        });
-      } else {
-        console.log("No classes data received");
-        if (connectionAttempts < 2) {
-          toast({
-            title: "No classes found",
-            description: "There are currently no classes in the database. Add a new class to get started.",
-          });
-        }
-        setClasses([]);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching classes:", error);
-      setFetchError(error.message || "Failed to fetch classes");
-      
-      // If network error and we're not already using fallback data, suggest using fallback data
-      if ((error.message?.includes('NetworkError') || error.message?.includes('fetch') || error.name === 'AbortError') && !useFallbackData) {
-        toast({
-          title: "Connection Issue",
-          description: "Unable to connect to the database. Using demo data for now.",
-          variant: "destructive",
-        });
-        setClasses(fallbackClasses);
-        setUseFallbackData(true);
-      } else if (!useFallbackData) {
-        setClasses([]);
-      }
+      toast({
+        title: "Error",
+        description: "Failed to fetch classes. Using default data.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -157,17 +79,10 @@ const Classes = () => {
 
   const fetchTrainers = async () => {
     try {
-      // Use AbortController for timeout functionality
-      const abortController = new AbortController();
-      const timeoutId = setTimeout(() => abortController.abort(), 15000); // Extended timeout to 15 seconds
-      
       const { data, error } = await supabase
         .from('trainers')
         .select('name')
         .eq('status', 'Active');
-      
-      // Clear the timeout
-      clearTimeout(timeoutId);
       
       if (error) {
         throw error;
@@ -176,25 +91,12 @@ const Classes = () => {
       if (data && data.length > 0) {
         const trainerNames = data.map(trainer => trainer.name);
         setTrainersList(trainerNames);
-      } else {
-        // If no data from API, use fallback trainers
-        setTrainersList(fallbackTrainers);
       }
     } catch (error) {
       console.error("Error fetching trainers:", error);
       // Keep using the fallback trainers list if there's an error
-      setTrainersList(fallbackTrainers);
     }
   };
-
-  const handleRetry = useCallback(() => {
-    setRetryCount(prev => prev + 1);
-    setUseFallbackData(false);
-    toast({
-      title: "Retrying",
-      description: "Attempting to reconnect to the database...",
-    });
-  }, [toast]);
 
   const filteredClasses = classes.filter(
     (cls) =>
@@ -206,26 +108,6 @@ const Classes = () => {
   const currentClass = selectedClassId ? classes.find(c => c.id === selectedClassId) || null : null;
 
   const toggleClassStatus = async (id: number) => {
-    // If using fallback data, just update the UI without trying to call Supabase
-    if (useFallbackData) {
-      setClasses(
-        classes.map((cls) =>
-          cls.id === id
-            ? {
-                ...cls,
-                status: cls.status === "Active" ? "Inactive" : "Active",
-              }
-            : cls
-        )
-      );
-      
-      toast({
-        title: "Demo Mode",
-        description: "Class status updated in demo mode only. Changes will not persist.",
-      });
-      return;
-    }
-    
     const classToUpdate = classes.find(cls => cls.id === id);
     if (!classToUpdate) return;
     
@@ -340,35 +222,6 @@ const Classes = () => {
   };
 
   const handleAddClass = async (newClass: ClassModel, recurringPattern?: RecurringPattern) => {
-    // If in demo mode, just update the UI
-    if (useFallbackData) {
-      const newId = Math.max(...classes.map(c => c.id)) + 1;
-      const newClassWithId = { ...newClass, id: newId };
-      
-      if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
-        // Generate recurring classes with mock ids
-        const generatedClasses = generateRecurringClasses(newClassWithId, recurringPattern)
-          .map((cls, index) => ({ ...cls, id: newId + index + 1 }));
-          
-        setClasses([...classes, ...generatedClasses]);
-        
-        toast({
-          title: "Demo Mode",
-          description: `${generatedClasses.length} recurring classes added in demo mode. Changes will not persist.`,
-        });
-      } else {
-        setClasses([...classes, newClassWithId]);
-        
-        toast({
-          title: "Demo Mode",
-          description: "Class added in demo mode. Changes will not persist.",
-        });
-      }
-      
-      setIsAddDialogOpen(false);
-      return;
-    }
-    
     try {
       if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
         // Generate recurring classes
@@ -408,7 +261,7 @@ const Classes = () => {
             capacity: cls.capacity,
             enrolled: cls.enrolled || 0,
             status: cls.status || 'Active',
-            gender: (cls.gender || 'All') as "All" | "Male" | "Female",
+            gender: cls.gender as "Male" | "Female" | "All" | string,
             startTime: cls.start_time,
             endTime: cls.end_time
           }));
@@ -454,7 +307,7 @@ const Classes = () => {
             capacity: data[0].capacity,
             enrolled: data[0].enrolled || 0,
             status: data[0].status || 'Active',
-            gender: (data[0].gender || 'All') as "All" | "Male" | "Female",
+            gender: data[0].gender as "Male" | "Female" | "All" | string,
             startTime: data[0].start_time,
             endTime: data[0].end_time
           };
@@ -485,22 +338,6 @@ const Classes = () => {
   };
 
   const handleUpdateClass = async (updatedClass: ClassModel) => {
-    // If in demo mode, just update the UI
-    if (useFallbackData) {
-      setClasses(
-        classes.map((cls) => cls.id === updatedClass.id ? updatedClass : cls)
-      );
-      
-      toast({
-        title: "Demo Mode",
-        description: "Class updated in demo mode. Changes will not persist.",
-      });
-      
-      setIsEditDialogOpen(false);
-      setSelectedClassId(null);
-      return;
-    }
-    
     try {
       const classToUpdate = {
         name: updatedClass.name,
@@ -558,27 +395,13 @@ const Classes = () => {
             className="sm:w-80"
           />
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-          <Button 
-            className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue"
-            onClick={() => setIsAddDialogOpen(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add New Class
-          </Button>
-          
-          {useFallbackData && (
-            <Button 
-              variant="outline" 
-              size="default" 
-              onClick={handleRetry} 
-              className="w-full sm:w-auto border-yellow-300 text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100"
-            >
-              <RefreshCw className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> 
-              {isLoading ? 'Connecting...' : 'Connect to Database'}
-            </Button>
-          )}
-        </div>
+        <Button 
+          className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue"
+          onClick={() => setIsAddDialogOpen(true)}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add New Class
+        </Button>
       </div>
 
       <AddClassDialog 
@@ -597,46 +420,6 @@ const Classes = () => {
         trainers={trainersList}
         existingClasses={classes}
       />
-
-      {useFallbackData && (
-        <Alert className="mb-6 bg-yellow-50 border-yellow-200">
-          <AlertCircle className="h-5 w-5 text-yellow-600" />
-          <AlertTitle className="text-yellow-800">Demo Mode</AlertTitle>
-          <AlertDescription className="text-yellow-700">
-            You are currently viewing demo data due to connection issues. Changes will not be saved.
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRetry} 
-              className={`ml-2 border-yellow-300 text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={isLoading}
-            >
-              <RefreshCw className={`mr-1 h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} /> 
-              {isLoading ? 'Connecting...' : 'Try to reconnect'}
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {fetchError && !useFallbackData && (
-        <Alert className="mb-6 bg-red-50 border-red-200">
-          <AlertCircle className="h-5 w-5 text-red-600" />
-          <AlertTitle className="text-red-800">Error loading classes</AlertTitle>
-          <AlertDescription className="text-red-700">
-            {fetchError}
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleRetry} 
-              className={`ml-2 border-red-300 text-red-700 hover:text-red-800 hover:bg-red-100 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={isLoading}
-            >
-              <RefreshCw className={`mr-1 h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} /> 
-              {isLoading ? 'Retrying...' : 'Retry'}
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
@@ -673,10 +456,7 @@ const Classes = () => {
               {isLoading ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
-                    <div className="flex justify-center items-center">
-                      <RefreshCw className="animate-spin mr-2 h-4 w-4" />
-                      Loading classes...
-                    </div>
+                    Loading classes...
                   </td>
                 </tr>
               ) : filteredClasses.length > 0 ? (
@@ -687,11 +467,11 @@ const Classes = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-gray-500">
-                        {cls.trainers && cls.trainers.length > 0 ? cls.trainers.join(", ") : cls.trainer || 'Not assigned'}
+                        {cls.trainers ? cls.trainers.join(", ") : cls.trainer}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-gray-500">{cls.schedule || 'Not scheduled'}</div>
+                      <div className="text-gray-500">{cls.schedule}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-gray-500 flex items-center">
@@ -730,7 +510,7 @@ const Classes = () => {
                             : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {cls.status || 'Inactive'}
+                        {cls.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -753,9 +533,7 @@ const Classes = () => {
               ) : (
                 <tr>
                   <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
-                    {searchTerm ? 
-                      "No classes found matching your search criteria." : 
-                      "No classes found. Click 'Add New Class' to create one."}
+                    No classes found matching your search criteria.
                   </td>
                 </tr>
               )}

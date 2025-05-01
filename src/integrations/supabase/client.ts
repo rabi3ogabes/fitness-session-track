@@ -13,25 +13,6 @@ const supabaseOptions = {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false
-  },
-  global: {
-    fetch: (...args) => {
-      // Custom fetch with timeout handler
-      const [resource, config] = args;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      const signal = controller.signal;
-      
-      return fetch(resource, { ...config, signal })
-        .then(response => {
-          clearTimeout(timeoutId);
-          return response;
-        })
-        .catch(error => {
-          clearTimeout(timeoutId);
-          throw error;
-        });
-    }
   }
 };
 
