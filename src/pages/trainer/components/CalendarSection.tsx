@@ -3,9 +3,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Clock } from "lucide-react";
-import { format, isSameDay, addMonths, subMonths } from "date-fns";
+import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { format, isSameDay, addMonths, subMonths, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { mockClasses, isDayWithClass, getClassesForDate } from "../mockData";
 
@@ -31,6 +30,51 @@ export const CalendarSection = ({
   
   const handleNextMonth = () => {
     setCalendarDate(prev => addMonths(prev, 1));
+  };
+  
+  // Get all dates with classes in the current month
+  const datesWithClass = mockClasses.reduce((dates, cls) => {
+    const classDate = typeof cls.date === 'string' ? parseISO(cls.date) : cls.date;
+    const key = format(classDate, 'yyyy-MM-dd');
+    
+    if (!dates[key]) {
+      dates[key] = 0;
+    }
+    dates[key] += 1;
+    
+    return dates;
+  }, {} as Record<string, number>);
+  
+  // Custom day rendering for the calendar
+  const renderDay = (day: Date) => {
+    const dateKey = format(day, 'yyyy-MM-dd');
+    const classCount = datesWithClass[dateKey] || 0;
+    const isSelected = isSameDay(day, selectedDate);
+    
+    return (
+      <div className="relative flex flex-col items-center justify-center w-full h-full">
+        <div className={cn(
+          "flex items-center justify-center rounded-full w-8 h-8",
+          isSelected ? "bg-gym-blue text-white" : ""
+        )}>
+          {format(day, 'd')}
+        </div>
+        
+        {classCount > 0 && (
+          <div className="flex gap-1 mt-1">
+            {[...Array(Math.min(classCount, 3))].map((_, i) => (
+              <div 
+                key={i} 
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full", 
+                  isSelected ? "bg-white" : "bg-gym-blue"
+                )}
+              ></div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
   
   return (
@@ -80,28 +124,12 @@ export const CalendarSection = ({
               ))}
             </div>
             
-            {/* Calendar component without the Popover wrapper */}
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
+            {/* Custom calendar implementation */}
+            <CustomCalendar 
               month={calendarDate}
-              onMonthChange={setCalendarDate}
-              className="pointer-events-auto w-full bg-white"
-              modifiers={{
-                hasClass: isDayWithClass
-              }}
-              modifiersClassNames={{
-                hasClass: "bg-gym-light text-gym-blue font-bold"
-              }}
-              classNames={{
-                day: cn(
-                  "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
-                  "hover:bg-gym-light hover:text-gym-blue rounded-full"
-                ),
-                day_selected: "bg-gym-blue text-white hover:bg-gym-dark-blue hover:text-white rounded-full",
-                day_today: "border border-gym-blue text-gym-blue font-bold rounded-full",
-              }}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              renderDay={renderDay}
             />
           </div>
           
@@ -112,7 +140,11 @@ export const CalendarSection = ({
             
             {classesForView.length > 0 ? (
               classesForView.map(cls => (
-                <div key={cls.id} className="bg-gray-50 p-3 rounded-md border-l-4 border-gym-blue">
+                <div 
+                  key={cls.id} 
+                  className="bg-gray-50 p-3 rounded-md border-l-4 border-gym-blue cursor-pointer hover:bg-gray-100 transition-colors"
+                  onClick={() => handleViewClassDetails(cls.id)}
+                >
                   <div className="flex flex-wrap justify-between gap-2">
                     <div>
                       <p className="font-medium">{cls.name}</p>
@@ -136,6 +168,85 @@ export const CalendarSection = ({
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+};
+
+// Custom calendar component implementation
+interface CustomCalendarProps {
+  month: Date;
+  selectedDate: Date;
+  onSelectDate: (date: Date) => void;
+  renderDay?: (day: Date) => React.ReactNode;
+}
+
+const CustomCalendar = ({ month, selectedDate, onSelectDate, renderDay }: CustomCalendarProps) => {
+  // Get the first day of the month
+  const firstDayOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
+  // Get the last day of the month
+  const lastDayOfMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  
+  // Get the day of the week for the first day (0 = Sunday, 6 = Saturday)
+  const firstDayOfWeek = firstDayOfMonth.getDay();
+  
+  // Calculate how many days we need from the previous month to fill the first row
+  const daysFromPrevMonth = firstDayOfWeek;
+  
+  // Calculate the total number of days in the current month
+  const daysInMonth = lastDayOfMonth.getDate();
+  
+  // Calculate the total number of rows needed (including days from prev/next months)
+  const totalDays = daysFromPrevMonth + daysInMonth;
+  const rows = Math.ceil(totalDays / 7);
+  
+  // Generate calendar days array
+  const calendarDays: Date[] = [];
+  
+  // Add days from previous month if needed
+  const prevMonth = new Date(month.getFullYear(), month.getMonth(), 0);
+  const daysInPrevMonth = prevMonth.getDate();
+  
+  for (let i = daysInPrevMonth - daysFromPrevMonth + 1; i <= daysInPrevMonth; i++) {
+    calendarDays.push(new Date(prevMonth.getFullYear(), prevMonth.getMonth(), i));
+  }
+  
+  // Add days from current month
+  for (let i = 1; i <= daysInMonth; i++) {
+    calendarDays.push(new Date(month.getFullYear(), month.getMonth(), i));
+  }
+  
+  // Add days from next month if needed
+  const remainingCells = rows * 7 - calendarDays.length;
+  const nextMonth = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+  
+  for (let i = 1; i <= remainingCells; i++) {
+    calendarDays.push(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), i));
+  }
+  
+  return (
+    <div className="grid grid-cols-7 gap-1">
+      {calendarDays.map((day, index) => {
+        const isCurrentMonth = day.getMonth() === month.getMonth();
+        const isToday = isSameDay(day, new Date());
+        const isSelected = isSameDay(day, selectedDate);
+        
+        return (
+          <div
+            key={index}
+            className={cn(
+              "h-14 p-0.5 cursor-pointer flex flex-col items-center justify-center relative",
+              isCurrentMonth ? "text-gray-900" : "text-gray-400",
+              isToday && !isSelected && "border border-gym-blue rounded-md",
+              isSelected && "bg-gym-blue/10 rounded-md"
+            )}
+            onClick={() => onSelectDate(day)}
+          >
+            {renderDay ? renderDay(day) : (
+              <div className="text-center">{format(day, 'd')}</div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
