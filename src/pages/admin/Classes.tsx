@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,11 +58,12 @@ const Classes = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
-  const [trainersList, setTrainersList] = useState<string[]>(fallbackTrainers);
+  const [trainersList, setTrainersList] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [useFallbackData, setUseFallbackData] = useState(false);
+  const [connectionAttempts, setConnectionAttempts] = useState(0);
   const { toast } = useToast();
 
   // Fetch classes from Supabase on component mount
@@ -77,16 +78,16 @@ const Classes = () => {
       setFetchError(null);
       
       console.log("Fetching classes from Supabase...");
+      setConnectionAttempts(prev => prev + 1);
       
       // Use AbortController for timeout functionality
       const abortController = new AbortController();
-      const timeoutId = setTimeout(() => abortController.abort(), 5000);
+      const timeoutId = setTimeout(() => abortController.abort(), 15000); // Extended timeout to 15 seconds
       
       const { data, error } = await supabase
         .from('classes')
-        .select('*')
-        // Remove the .timeout() method as it's not supported
-        
+        .select('*');
+      
       // Clear the timeout
       clearTimeout(timeoutId);
       
@@ -115,12 +116,22 @@ const Classes = () => {
         console.log("Formatted classes:", formattedClasses);
         setClasses(formattedClasses);
         setUseFallbackData(false);
+        
+        // Reset connection attempts on successful fetch
+        setConnectionAttempts(0);
+        
+        toast({
+          title: "Connection Restored",
+          description: "Successfully connected to the database.",
+        });
       } else {
         console.log("No classes data received");
-        toast({
-          title: "No classes found",
-          description: "There are currently no classes in the database. Add a new class to get started.",
-        });
+        if (connectionAttempts < 2) {
+          toast({
+            title: "No classes found",
+            description: "There are currently no classes in the database. Add a new class to get started.",
+          });
+        }
         setClasses([]);
       }
     } catch (error: any) {
@@ -148,14 +159,13 @@ const Classes = () => {
     try {
       // Use AbortController for timeout functionality
       const abortController = new AbortController();
-      const timeoutId = setTimeout(() => abortController.abort(), 5000);
+      const timeoutId = setTimeout(() => abortController.abort(), 15000); // Extended timeout to 15 seconds
       
       const { data, error } = await supabase
         .from('trainers')
         .select('name')
-        .eq('status', 'Active')
-        // Remove the .timeout() method as it's not supported
-        
+        .eq('status', 'Active');
+      
       // Clear the timeout
       clearTimeout(timeoutId);
       
@@ -166,21 +176,25 @@ const Classes = () => {
       if (data && data.length > 0) {
         const trainerNames = data.map(trainer => trainer.name);
         setTrainersList(trainerNames);
+      } else {
+        // If no data from API, use fallback trainers
+        setTrainersList(fallbackTrainers);
       }
     } catch (error) {
       console.error("Error fetching trainers:", error);
       // Keep using the fallback trainers list if there's an error
+      setTrainersList(fallbackTrainers);
     }
   };
 
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     setRetryCount(prev => prev + 1);
     setUseFallbackData(false);
     toast({
       title: "Retrying",
       description: "Attempting to reconnect to the database...",
     });
-  };
+  }, [toast]);
 
   const filteredClasses = classes.filter(
     (cls) =>
@@ -544,13 +558,27 @@ const Classes = () => {
             className="sm:w-80"
           />
         </div>
-        <Button 
-          className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue"
-          onClick={() => setIsAddDialogOpen(true)}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add New Class
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <Button 
+            className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue"
+            onClick={() => setIsAddDialogOpen(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add New Class
+          </Button>
+          
+          {useFallbackData && (
+            <Button 
+              variant="outline" 
+              size="default" 
+              onClick={handleRetry} 
+              className="w-full sm:w-auto border-yellow-300 text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100"
+            >
+              <RefreshCw className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> 
+              {isLoading ? 'Connecting...' : 'Connect to Database'}
+            </Button>
+          )}
+        </div>
       </div>
 
       <AddClassDialog 
@@ -580,9 +608,11 @@ const Classes = () => {
               variant="outline" 
               size="sm" 
               onClick={handleRetry} 
-              className="ml-2 border-yellow-300 text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100"
+              className={`ml-2 border-yellow-300 text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isLoading}
             >
-              <RefreshCw className="mr-1 h-3 w-3" /> Try to reconnect
+              <RefreshCw className={`mr-1 h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} /> 
+              {isLoading ? 'Connecting...' : 'Try to reconnect'}
             </Button>
           </AlertDescription>
         </Alert>
@@ -598,9 +628,11 @@ const Classes = () => {
               variant="outline" 
               size="sm" 
               onClick={handleRetry} 
-              className="ml-2 border-red-300 text-red-700 hover:text-red-800 hover:bg-red-100"
+              className={`ml-2 border-red-300 text-red-700 hover:text-red-800 hover:bg-red-100 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isLoading}
             >
-              <RefreshCw className="mr-1 h-3 w-3" /> Retry
+              <RefreshCw className={`mr-1 h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} /> 
+              {isLoading ? 'Retrying...' : 'Retry'}
             </Button>
           </AlertDescription>
         </Alert>
