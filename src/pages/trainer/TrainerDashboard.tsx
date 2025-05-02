@@ -5,9 +5,11 @@ import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { CalendarSection } from "./components/CalendarSection";
 import { ClassDetailsDialog } from "./components/ClassDetailsDialog";
-import { NewMemberDialog, NewMemberButton } from "./components/NewMemberDialog";
+import NewMemberDialog from "./components/NewMemberDialog";
 import { mockBookings } from "./mockData";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 const TrainerDashboard = () => {
   const { isTrainer, isAuthenticated } = useAuth();
@@ -54,6 +56,17 @@ const TrainerDashboard = () => {
     setBookings([...bookings, bookingToAdd]);
     setIsNewMemberDialogOpen(false);
   };
+
+  // Custom NewMemberButton component
+  const NewMemberButton = ({ onClick }: { onClick: () => void }) => (
+    <Button 
+      onClick={onClick}
+      className="bg-gym-blue hover:bg-gym-dark-blue flex items-center gap-2"
+    >
+      <Plus size={16} />
+      <span>New Member</span>
+    </Button>
+  );
   
   // If still checking authentication, don't render anything yet
   if (!isAuthenticated) {
@@ -83,7 +96,11 @@ const TrainerDashboard = () => {
       <NewMemberDialog 
         isOpen={isNewMemberDialogOpen}
         onOpenChange={setIsNewMemberDialogOpen}
-        onRegister={handleRegisterMember}
+        onMemberAdded={() => {
+          // After member is added, you might want to refresh the list
+          // This is a placeholder for any refresh action
+          console.log("Member added successfully");
+        }}
       />
     </DashboardLayout>
   );
