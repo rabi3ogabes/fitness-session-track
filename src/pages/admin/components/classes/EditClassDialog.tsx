@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EditClassDialogProps {
   isOpen: boolean;
@@ -164,172 +165,175 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[600px] p-0 max-h-[90vh]">
+        <DialogHeader className="p-6 pb-2">
           <DialogTitle>Edit Class</DialogTitle>
           <DialogDescription>
             Update class information.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-name" className="text-right">
-              Class Name*
-            </Label>
-            <Input
-              id="edit-name"
-              name="name"
-              value={editClass.name}
-              onChange={handleInputChange}
-              className="col-span-3"
-              required
-            />
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Gender</Label>
-            <RadioGroup 
-              value={editClass.gender || "All"} 
-              onValueChange={handleGenderChange}
-              className="col-span-3 flex space-x-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="All" id="edit-all" />
-                <Label htmlFor="edit-all">All</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Male" id="edit-male" />
-                <Label htmlFor="edit-male">Male Only</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Female" id="edit-female" />
-                <Label htmlFor="edit-female">Female Only</Label>
-              </div>
-            </RadioGroup>
-          </div>
-          
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right pt-2">Trainers*</Label>
-            <div className="col-span-3 space-y-2">
-              {trainers.map((trainer) => (
-                <div key={trainer} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`edit-trainer-${trainer}`} 
-                    checked={selectedTrainers.includes(trainer)}
-                    onCheckedChange={(checked) => handleTrainerSelection(trainer, checked === true)}
-                  />
-                  <Label htmlFor={`edit-trainer-${trainer}`}>{trainer}</Label>
+        
+        <ScrollArea className="max-h-[calc(90vh-130px)] overflow-y-auto px-6">
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-name" className="text-right">
+                Class Name*
+              </Label>
+              <Input
+                id="edit-name"
+                name="name"
+                value={editClass.name}
+                onChange={handleInputChange}
+                className="col-span-3"
+                required
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Gender</Label>
+              <RadioGroup 
+                value={editClass.gender || "All"} 
+                onValueChange={handleGenderChange}
+                className="col-span-3 flex flex-wrap space-x-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="All" id="edit-all" />
+                  <Label htmlFor="edit-all">All</Label>
                 </div>
-              ))}
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Male" id="edit-male" />
+                  <Label htmlFor="edit-male">Male Only</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Female" id="edit-female" />
+                  <Label htmlFor="edit-female">Female Only</Label>
+                </div>
+              </RadioGroup>
             </div>
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-schedule" className="text-right">
-              Schedule
-            </Label>
-            <Input
-              id="edit-schedule"
-              name="schedule"
-              value={editClass.schedule}
-              onChange={handleInputChange}
-              className="col-span-3"
-            />
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-startTime" className="text-right">
-              Start Time*
-            </Label>
-            <div className="col-span-3">
-              <div className="flex items-center">
-                <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="edit-startTime"
-                  name="startTime"
-                  type="time"
-                  value={editClass.startTime || "09:00"}
-                  onChange={handleInputChange}
-                  className="w-full"
-                  required
-                />
+            
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label className="text-right pt-2">Trainers*</Label>
+              <div className="col-span-3 grid grid-cols-2 gap-2">
+                {trainers.map((trainer) => (
+                  <div key={trainer} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`edit-trainer-${trainer}`} 
+                      checked={selectedTrainers.includes(trainer)}
+                      onCheckedChange={(checked) => handleTrainerSelection(trainer, checked === true)}
+                    />
+                    <Label htmlFor={`edit-trainer-${trainer}`} className="text-sm">{trainer}</Label>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-endTime" className="text-right">
-              End Time*
-            </Label>
-            <div className="col-span-3">
-              <div className="flex items-center">
-                <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="edit-endTime"
-                  name="endTime"
-                  type="time"
-                  value={editClass.endTime || "10:00"}
-                  onChange={handleInputChange}
-                  className="w-full"
-                  required
-                />
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-schedule" className="text-right">
+                Schedule
+              </Label>
+              <Input
+                id="edit-schedule"
+                name="schedule"
+                value={editClass.schedule}
+                onChange={handleInputChange}
+                className="col-span-3"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-startTime" className="text-right">
+                Start Time*
+              </Label>
+              <div className="col-span-3">
+                <div className="flex items-center">
+                  <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="edit-startTime"
+                    name="startTime"
+                    type="time"
+                    value={editClass.startTime || "09:00"}
+                    onChange={handleInputChange}
+                    className="w-full"
+                    required
+                  />
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-capacity" className="text-right">
-              Capacity*
-            </Label>
-            <Input
-              id="edit-capacity"
-              name="capacity"
-              type="number"
-              value={editClass.capacity || ""}
-              onChange={handleInputChange}
-              className="col-span-3"
-              required
-              min="1"
-            />
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="edit-enrolled" className="text-right">
-              Enrolled
-            </Label>
-            <Input
-              id="edit-enrolled"
-              name="enrolled"
-              type="number"
-              value={editClass.enrolled || ""}
-              onChange={handleInputChange}
-              className="col-span-3"
-              min="0"
-            />
-          </div>
-          
-          {timeError && (
-            <div className="col-span-4 text-destructive text-sm">
-              {timeError}
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-endTime" className="text-right">
+                End Time*
+              </Label>
+              <div className="col-span-3">
+                <div className="flex items-center">
+                  <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="edit-endTime"
+                    name="endTime"
+                    type="time"
+                    value={editClass.endTime || "10:00"}
+                    onChange={handleInputChange}
+                    className="w-full"
+                    required
+                  />
+                </div>
+              </div>
             </div>
-          )}
-          
-          <div className="flex justify-end mt-4">
-            <Button 
-              onClick={handleUpdateClass} 
-              className="bg-gym-blue hover:bg-gym-dark-blue"
-              disabled={
-                !editClass.name || 
-                selectedTrainers.length === 0 || 
-                editClass.capacity <= 0 ||
-                !editClass.startTime ||
-                !editClass.endTime ||
-                !!timeError
-              }
-            >
-              Update Class
-            </Button>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-capacity" className="text-right">
+                Capacity*
+              </Label>
+              <Input
+                id="edit-capacity"
+                name="capacity"
+                type="number"
+                value={editClass.capacity || ""}
+                onChange={handleInputChange}
+                className="col-span-3"
+                required
+                min="1"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-enrolled" className="text-right">
+                Enrolled
+              </Label>
+              <Input
+                id="edit-enrolled"
+                name="enrolled"
+                type="number"
+                value={editClass.enrolled || ""}
+                onChange={handleInputChange}
+                className="col-span-3"
+                min="0"
+              />
+            </div>
+            
+            {timeError && (
+              <div className="col-span-4 text-destructive text-sm">
+                {timeError}
+              </div>
+            )}
           </div>
+        </ScrollArea>
+        
+        <div className="p-6 pt-2 flex justify-end border-t">
+          <Button 
+            onClick={handleUpdateClass} 
+            className="bg-gym-blue hover:bg-gym-dark-blue"
+            disabled={
+              !editClass.name || 
+              selectedTrainers.length === 0 || 
+              editClass.capacity <= 0 ||
+              !editClass.startTime ||
+              !editClass.endTime ||
+              !!timeError
+            }
+          >
+            Update Class
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

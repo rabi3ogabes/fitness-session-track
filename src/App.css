@@ -149,3 +149,25 @@
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
 }
+
+/* Fix Dialog and PopoverContent z-index issues */
+.dialog-content {
+  z-index: 50;
+}
+
+.popover-content {
+  z-index: 60;
+}
+
+/* Make sure popovers are interactive */
+.pointer-events-auto {
+  pointer-events: auto !important;
+}
+
+/* Fix for calendar dropdowns */
+.calendar-wrapper {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 60;
+}

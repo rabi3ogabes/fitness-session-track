@@ -6,6 +6,7 @@ import { BulkAttendanceManager } from "./BulkAttendanceManager";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ClassDetailsDialogProps {
   isOpen: boolean;
@@ -76,21 +77,23 @@ export const ClassDetailsDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-xl mx-auto overflow-y-auto max-h-[90vh]">
+      <DialogContent className="w-full max-w-xl mx-auto p-0 max-h-[90vh]">
         {cls ? (
           <>
-            <DialogHeader className="mb-4">
+            <DialogHeader className="p-6 pb-2">
               <DialogTitle className="text-xl">{cls.name}</DialogTitle>
               <DialogDescription className="text-sm">
                 {format(cls.date, "EEEE, MMMM d, yyyy")} • {cls.time} • {bookings}/{cls.capacity} enrolled
               </DialogDescription>
             </DialogHeader>
             
-            <BulkAttendanceManager 
-              classId={selectedClass}
-              selectedDate={cls.date}
-              onClose={() => onOpenChange(false)}
-            />
+            <ScrollArea className="max-h-[calc(90vh-130px)] overflow-y-auto px-6">
+              <BulkAttendanceManager 
+                classId={selectedClass}
+                selectedDate={cls.date}
+                onClose={() => onOpenChange(false)}
+              />
+            </ScrollArea>
           </>
         ) : (
           <div className="py-8 text-center">

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -236,7 +235,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
               <RadioGroup 
                 value={newClass.gender} 
                 onValueChange={handleGenderChange}
-                className="col-span-3 flex flex-wrap space-x-4"
+                className="col-span-3 flex flex-wrap gap-4"
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="All" id="all" />
@@ -291,6 +290,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                       selected={startDate}
                       onSelect={(date) => date && setStartDate(date)}
                       initialFocus
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
@@ -430,6 +430,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                             repeatUntil: format(date, "yyyy-MM-dd")
                           })}
                           initialFocus
+                          className={cn("p-3 pointer-events-auto")}
                         />
                       </PopoverContent>
                     </Popover>
@@ -446,7 +447,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
           </div>
         </ScrollArea>
         
-        <DialogFooter className="p-6 pt-2">
+        <DialogFooter className="p-6 pt-2 border-t">
           <Button 
             onClick={handleAddClass} 
             className="bg-gym-blue hover:bg-gym-dark-blue w-full sm:w-auto"
