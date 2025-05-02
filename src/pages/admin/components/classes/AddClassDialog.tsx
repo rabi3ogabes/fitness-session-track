@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -106,12 +107,23 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setNewClass(prev => ({ ...prev, [name]: value }));
+    
+    // For capacity, ensure it's a number
+    if (name === "capacity") {
+      setNewClass(prev => ({ 
+        ...prev, 
+        [name]: parseInt(value) || 0 
+      }));
+    } else {
+      setNewClass(prev => ({ ...prev, [name]: value }));
+    }
     
     // Clear time error when times change
     if (name === "startTime" || name === "endTime") {
-      validateTimes(name === "startTime" ? value : newClass.startTime, 
-                  name === "endTime" ? value : newClass.endTime);
+      validateTimes(
+        name === "startTime" ? value : newClass.startTime, 
+        name === "endTime" ? value : newClass.endTime
+      );
     }
   };
 
@@ -324,6 +336,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                     className="col-span-3"
                     placeholder="e.g. Morning Yoga"
                     required
+                    autoFocus
                   />
                 </div>
                 
@@ -401,12 +414,13 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                           {selectedDate ? format(selectedDate, "PPP") : "Select date"}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-50" align="start">
                         <Calendar
                           mode="single"
                           selected={selectedDate}
                           onSelect={setSelectedDate}
                           initialFocus
+                          className="pointer-events-auto"
                         />
                       </PopoverContent>
                     </Popover>
@@ -518,13 +532,14 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                                   {endDate ? format(endDate, "PPP") : "Select end date"}
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
+                              <PopoverContent className="w-auto p-0 z-50" align="start">
                                 <Calendar
                                   mode="single"
                                   selected={endDate}
                                   onSelect={setEndDate}
                                   initialFocus
                                   disabled={(date) => date < today}
+                                  className="pointer-events-auto"
                                 />
                               </PopoverContent>
                             </Popover>
