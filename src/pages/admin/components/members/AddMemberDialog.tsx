@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,12 +44,11 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
   };
 
   const validatePhone = (phone: string) => {
-    // Basic phone number validation
-    // Requires at least 10 digits
-    const phoneRegex = /^\+?[0-9]{10,15}$/;
+    // Updated validation - exactly 8 digits
+    const phoneRegex = /^\d{8}$/;
     if (!phone) return "Phone number is required";
     if (!phoneRegex.test(phone.replace(/[\s-]/g, ''))) {
-      return "Please enter a valid phone number (at least 10 digits)";
+      return "Please enter a valid phone number (exactly 8 digits)";
     }
     return null;
   };
@@ -102,9 +102,17 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
       if (data && data[0]) {
         // Map the Supabase response back to our application's format
         const addedMember = {
-          ...data[0],
-          remainingSessions: data[0].remaining_sessions,
-          canBeEditedByTrainers: data[0].can_be_edited_by_trainers,
+          id: data[0].id,
+          name: data[0].name,
+          email: data[0].email,
+          phone: data[0].phone || "",
+          membership: data[0].membership || "Basic",
+          sessions: data[0].sessions || 0,
+          remainingSessions: data[0].remaining_sessions || 0,
+          status: data[0].status || "Active",
+          birthday: data[0].birthday || "",
+          canBeEditedByTrainers: data[0].can_be_edited_by_trainers || false,
+          gender: data[0].gender || "Male"
         };
         
         // Submit to parent component to update UI
@@ -114,6 +122,23 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
           title: "Member added successfully",
           description: `${newMember.name} has been added as a member`,
         });
+        
+        // Reset form
+        setNewMember({
+          name: "",
+          email: "",
+          phone: "",
+          birthday: "",
+          membership: "Basic",
+          sessions: 4,
+          remainingSessions: 4,
+          status: "Active",
+          canBeEditedByTrainers: true,
+          gender: "Male"
+        });
+        
+        // Close dialog
+        onOpenChange(false);
       }
 
     } catch (error) {

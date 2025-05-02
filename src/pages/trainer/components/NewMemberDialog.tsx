@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { membershipPlans } from "../mockData";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NewMemberDialogProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
   });
   
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleNewMemberInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -46,17 +48,16 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
   };
   
   const validatePhone = (phone: string) => {
-    // Basic phone number validation
-    // Requires at least 10 digits
-    const phoneRegex = /^\+?[0-9]{10,15}$/;
+    // Basic phone number validation - exactly 8 digits
+    const phoneRegex = /^\d{8}$/;
     if (!phone) return "Phone number is required";
     if (!phoneRegex.test(phone.replace(/[\s-]/g, ''))) {
-      return "Please enter a valid phone number (at least 10 digits)";
+      return "Please enter a valid phone number (exactly 8 digits)";
     }
     return null;
   };
   
-  const handleRegisterMember = () => {
+  const handleRegisterMember = async () => {
     // Validate form
     if (!newMember.name || !newMember.email) {
       toast({
@@ -73,29 +74,81 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
       setPhoneError(phoneValidationError);
       return;
     }
+
+    setIsSubmitting(true);
     
-    // In a real app, this would create a new account, process payment, etc.
-    const selectedPlan = membershipPlans.find(plan => plan.id === parseInt(newMember.membershipPlan));
-    
-    toast({
-      title: "New member registered",
-      description: `${newMember.name} has been registered with the ${selectedPlan?.name} plan.`,
-    });
-    
-    onRegister(newMember);
-    
-    // Reset form
-    setNewMember({
-      name: "",
-      email: "",
-      phone: "",
-      birthday: format(new Date(), "yyyy-MM-dd"),
-      membershipPlan: "1",
-      additionalSessions: "0",
-      gender: "Male"
-    });
-    
-    setPhoneError(null);
+    try {
+      // Get the membership plan
+      const selectedPlan = membershipPlans.find(plan => plan.id === parseInt(newMember.membershipPlan));
+      const sessions = selectedPlan ? selectedPlan.sessions : 4;
+      const additionalSessions = parseInt(newMember.additionalSessions) || 0;
+      const totalSessions = sessions + additionalSessions;
+      
+      // Insert into Supabase
+      const { data, error } = await supabase
+        .from('members')
+        .insert([{
+          name: newMember.name,
+          email: newMember.email,
+          phone: newMember.phone,
+          birthday: newMember.birthday,
+          membership: selectedPlan ? selectedPlan.name : "Basic",
+          sessions: totalSessions,
+          remaining_sessions: totalSessions,
+          gender: newMember.gender,
+          status: "Active",
+          can_be_edited_by_trainers: true
+        }])
+        .select();
+        
+      if (error) {
+        console.error("Error registering member:", error);
+        toast({
+          title: "Registration failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "New member registered",
+        description: `${newMember.name} has been registered with the ${selectedPlan?.name} plan.`,
+      });
+      
+      // Format the data to match our expected structure
+      if (data && data[0]) {
+        const registeredMember = {
+          ...data[0],
+          remainingSessions: data[0].remaining_sessions,
+          canBeEditedByTrainers: data[0].can_be_edited_by_trainers
+        };
+        
+        onRegister(registeredMember);
+      }
+      
+      // Reset form
+      setNewMember({
+        name: "",
+        email: "",
+        phone: "",
+        birthday: format(new Date(), "yyyy-MM-dd"),
+        membershipPlan: "1",
+        additionalSessions: "0",
+        gender: "Male"
+      });
+      
+      setPhoneError(null);
+    } catch (err) {
+      console.error("Error registering member:", err);
+      toast({
+        title: "Registration failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
@@ -226,8 +279,9 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
             <Button 
               onClick={handleRegisterMember} 
               className="bg-gym-blue hover:bg-gym-dark-blue"
+              disabled={isSubmitting}
             >
-              Register & Mark Present
+              {isSubmitting ? "Registering..." : "Register & Mark Present"}
             </Button>
           </div>
         </div>

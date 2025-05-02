@@ -31,6 +31,9 @@ const Members = () => {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
+        setIsLoading(true);
+        console.log("Fetching members data...");
+        
         const { data, error } = await supabase
           .from('members')
           .select('*');
@@ -44,6 +47,8 @@ const Members = () => {
           });
           return;
         }
+        
+        console.log("Members data received:", data);
         
         // Transform data to match our Member interface
         const formattedMembers: Member[] = data.map((member: any) => ({
@@ -134,6 +139,7 @@ const Members = () => {
   );
 
   const handleAddMember = async (newMember: Member) => {
+    console.log("Adding new member to state:", newMember);
     // newMember already added to Supabase from the AddMemberDialog
     setMembers(prevMembers => [...prevMembers, newMember]);
     setIsAddDialogOpen(false);
@@ -163,6 +169,8 @@ const Members = () => {
         can_be_edited_by_trainers: editedMember.canBeEditedByTrainers,
         gender: editedMember.gender
       };
+      
+      console.log("Updating member with ID:", editedMember.id, memberData);
       
       const { error } = await supabase
         .from('members')
@@ -212,6 +220,8 @@ const Members = () => {
       if (!member) return;
       
       const newStatus = member.status === "Active" ? "Inactive" : "Active";
+      
+      console.log("Toggling status for member:", id, "to", newStatus);
       
       // Update in Supabase
       const { error } = await supabase
