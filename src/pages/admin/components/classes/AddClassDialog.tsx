@@ -16,8 +16,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AddClassDialogProps {
   isOpen: boolean;
@@ -205,259 +207,262 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] p-0">
+        <DialogHeader className="p-6 pb-2">
           <DialogTitle>Add New Class</DialogTitle>
           <DialogDescription>
             Create a new fitness class with optional recurring schedule.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Class Name*
-            </Label>
-            <Input
-              id="name"
-              name="name"
-              value={newClass.name}
-              onChange={handleInputChange}
-              className="col-span-3"
-              required
-            />
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Gender</Label>
-            <RadioGroup 
-              value={newClass.gender} 
-              onValueChange={handleGenderChange}
-              className="col-span-3 flex space-x-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="All" id="all" />
-                <Label htmlFor="all">All</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Male" id="male" />
-                <Label htmlFor="male">Male Only</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Female" id="female" />
-                <Label htmlFor="female">Female Only</Label>
-              </div>
-            </RadioGroup>
-          </div>
-          
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right pt-2">Trainers*</Label>
-            <div className="col-span-3 space-y-2">
-              {trainers.map((trainer) => (
-                <div key={trainer} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`trainer-${trainer}`} 
-                    checked={selectedTrainers.includes(trainer)}
-                    onCheckedChange={(checked) => handleTrainerSelection(trainer, checked === true)}
-                  />
-                  <Label htmlFor={`trainer-${trainer}`}>{trainer}</Label>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label className="text-right">Start Date*</Label>
-            <div className="col-span-3">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={(date) => date && setStartDate(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="startTime" className="text-right">
-              Start Time*
-            </Label>
-            <div className="col-span-3">
-              <div className="flex items-center">
-                <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="startTime"
-                  name="startTime"
-                  type="time"
-                  value={newClass.startTime}
-                  onChange={handleInputChange}
-                  className="w-full"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="endTime" className="text-right">
-              End Time*
-            </Label>
-            <div className="col-span-3">
-              <div className="flex items-center">
-                <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="endTime"
-                  name="endTime"
-                  type="time"
-                  value={newClass.endTime}
-                  onChange={handleInputChange}
-                  className="w-full"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="capacity" className="text-right">
-              Capacity*
-            </Label>
-            <Input
-              id="capacity"
-              name="capacity"
-              type="number"
-              value={newClass.capacity || ""}
-              onChange={handleInputChange}
-              className="col-span-3"
-              required
-              min="1"
-            />
-          </div>
-          
-          <div className="grid grid-cols-4 items-center gap-4">
-            <div className="text-right">
-              <Checkbox 
-                id="recurring" 
-                checked={isRecurring}
-                onCheckedChange={(checked) => setIsRecurring(checked === true)}
+        
+        <ScrollArea className="max-h-[calc(90vh-130px)] overflow-y-auto px-6">
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Class Name*
+              </Label>
+              <Input
+                id="name"
+                name="name"
+                value={newClass.name}
+                onChange={handleInputChange}
+                className="col-span-3"
+                required
               />
             </div>
-            <Label htmlFor="recurring" className="col-span-3">
-              Set up recurring schedule
-            </Label>
-          </div>
-          
-          {isRecurring && (
-            <>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Frequency</Label>
-                <RadioGroup 
-                  value={recurringPattern.frequency} 
-                  onValueChange={(v) => handleFrequencyChange(v as "Daily" | "Weekly" | "Monthly")}
-                  className="col-span-3 flex space-x-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Daily" id="daily" />
-                    <Label htmlFor="daily">Daily</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Weekly" id="weekly" />
-                    <Label htmlFor="weekly">Weekly</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="Monthly" id="monthly" />
-                    <Label htmlFor="monthly">Monthly</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-              
-              {recurringPattern.frequency === "Weekly" && (
-                <div className="grid grid-cols-4 items-start gap-4">
-                  <Label className="text-right pt-2">Days of Week</Label>
-                  <div className="col-span-3 grid grid-cols-4 gap-2">
-                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
-                      <div key={day} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={`day-${day}`} 
-                          checked={recurringPattern.daysOfWeek.includes(day)}
-                          onCheckedChange={(checked) => handleDaySelection(day, checked === true)}
-                        />
-                        <Label htmlFor={`day-${day}`}>{day.substring(0, 3)}</Label>
-                      </div>
-                    ))}
-                  </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Gender</Label>
+              <RadioGroup 
+                value={newClass.gender} 
+                onValueChange={handleGenderChange}
+                className="col-span-3 flex flex-wrap space-x-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="All" id="all" />
+                  <Label htmlFor="all">All</Label>
                 </div>
-              )}
-              
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Repeat Until</Label>
-                <div className="col-span-3">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {recurringPattern.repeatUntil ? recurringPattern.repeatUntil : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={new Date(recurringPattern.repeatUntil)}
-                        onSelect={(date) => date && setRecurringPattern({
-                          ...recurringPattern,
-                          repeatUntil: format(date, "yyyy-MM-dd")
-                        })}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Male" id="male" />
+                  <Label htmlFor="male">Male Only</Label>
                 </div>
-              </div>
-            </>
-          )}
-          
-          {timeError && (
-            <div className="col-span-4 text-destructive text-sm">
-              {timeError}
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Female" id="female" />
+                  <Label htmlFor="female">Female Only</Label>
+                </div>
+              </RadioGroup>
             </div>
-          )}
-          
-          <div className="flex justify-end mt-4">
-            <Button 
-              onClick={handleAddClass} 
-              className="bg-gym-blue hover:bg-gym-dark-blue"
-              disabled={
-                !newClass.name || 
-                !selectedTrainers.length || 
-                newClass.capacity <= 0 || 
-                (isRecurring && recurringPattern.daysOfWeek.length === 0) ||
-                !newClass.startTime ||
-                !newClass.endTime ||
-                !!timeError
-              }
-            >
-              Add Class
-            </Button>
+            
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label className="text-right pt-2">Trainers*</Label>
+              <div className="col-span-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {trainers.map((trainer) => (
+                  <div key={trainer} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`trainer-${trainer}`} 
+                      checked={selectedTrainers.includes(trainer)}
+                      onCheckedChange={(checked) => handleTrainerSelection(trainer, checked === true)}
+                    />
+                    <Label htmlFor={`trainer-${trainer}`} className="text-sm">{trainer}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Start Date*</Label>
+              <div className="col-span-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => date && setStartDate(date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="startTime" className="text-right">
+                Start Time*
+              </Label>
+              <div className="col-span-3">
+                <div className="flex items-center">
+                  <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="startTime"
+                    name="startTime"
+                    type="time"
+                    value={newClass.startTime}
+                    onChange={handleInputChange}
+                    className="w-full"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="endTime" className="text-right">
+                End Time*
+              </Label>
+              <div className="col-span-3">
+                <div className="flex items-center">
+                  <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="endTime"
+                    name="endTime"
+                    type="time"
+                    value={newClass.endTime}
+                    onChange={handleInputChange}
+                    className="w-full"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="capacity" className="text-right">
+                Capacity*
+              </Label>
+              <Input
+                id="capacity"
+                name="capacity"
+                type="number"
+                value={newClass.capacity || ""}
+                onChange={handleInputChange}
+                className="col-span-3"
+                required
+                min="1"
+              />
+            </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <div className="text-right">
+                <Checkbox 
+                  id="recurring" 
+                  checked={isRecurring}
+                  onCheckedChange={(checked) => setIsRecurring(checked === true)}
+                />
+              </div>
+              <Label htmlFor="recurring" className="col-span-3">
+                Set up recurring schedule
+              </Label>
+            </div>
+            
+            {isRecurring && (
+              <>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Frequency</Label>
+                  <RadioGroup 
+                    value={recurringPattern.frequency} 
+                    onValueChange={(v) => handleFrequencyChange(v as "Daily" | "Weekly" | "Monthly")}
+                    className="col-span-3 flex flex-wrap gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="Daily" id="daily" />
+                      <Label htmlFor="daily">Daily</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="Weekly" id="weekly" />
+                      <Label htmlFor="weekly">Weekly</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="Monthly" id="monthly" />
+                      <Label htmlFor="monthly">Monthly</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
+                {recurringPattern.frequency === "Weekly" && (
+                  <div className="grid grid-cols-4 items-start gap-4">
+                    <Label className="text-right pt-2">Days of Week</Label>
+                    <div className="col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => (
+                        <div key={day} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`day-${day}`} 
+                            checked={recurringPattern.daysOfWeek.includes(day)}
+                            onCheckedChange={(checked) => handleDaySelection(day, checked === true)}
+                          />
+                          <Label htmlFor={`day-${day}`} className="text-sm">{day.substring(0, 3)}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Repeat Until</Label>
+                  <div className="col-span-3">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {recurringPattern.repeatUntil ? recurringPattern.repeatUntil : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={new Date(recurringPattern.repeatUntil)}
+                          onSelect={(date) => date && setRecurringPattern({
+                            ...recurringPattern,
+                            repeatUntil: format(date, "yyyy-MM-dd")
+                          })}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              </>
+            )}
+            
+            {timeError && (
+              <div className="col-span-4 text-destructive text-sm">
+                {timeError}
+              </div>
+            )}
           </div>
-        </div>
+        </ScrollArea>
+        
+        <DialogFooter className="p-6 pt-2">
+          <Button 
+            onClick={handleAddClass} 
+            className="bg-gym-blue hover:bg-gym-dark-blue w-full sm:w-auto"
+            disabled={
+              !newClass.name || 
+              !selectedTrainers.length || 
+              newClass.capacity <= 0 || 
+              (isRecurring && recurringPattern.frequency === "Weekly" && recurringPattern.daysOfWeek.length === 0) ||
+              !newClass.startTime ||
+              !newClass.endTime ||
+              !!timeError
+            }
+          >
+            Add Class
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

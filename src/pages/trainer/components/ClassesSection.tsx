@@ -29,12 +29,15 @@ export const ClassesSection = ({
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <h2 className="text-xl font-bold">Class Schedule & Bookings</h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
             <Button 
               variant={viewMode === "today" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("today")}
-              className={viewMode === "today" ? "bg-gym-blue hover:bg-gym-dark-blue" : ""}
+              className={cn(
+                "flex-1 md:flex-none",
+                viewMode === "today" ? "bg-gym-blue hover:bg-gym-dark-blue" : ""
+              )}
             >
               Today
             </Button>
@@ -42,7 +45,10 @@ export const ClassesSection = ({
               variant={viewMode === "tomorrow" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("tomorrow")}
-              className={viewMode === "tomorrow" ? "bg-gym-blue hover:bg-gym-dark-blue" : ""}
+              className={cn(
+                "flex-1 md:flex-none",
+                viewMode === "tomorrow" ? "bg-gym-blue hover:bg-gym-dark-blue" : ""
+              )}
             >
               Tomorrow
             </Button>
@@ -50,7 +56,10 @@ export const ClassesSection = ({
               variant={viewMode === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("all")}
-              className={viewMode === "all" ? "bg-gym-blue hover:bg-gym-dark-blue" : ""}
+              className={cn(
+                "flex-1 md:flex-none",
+                viewMode === "all" ? "bg-gym-blue hover:bg-gym-dark-blue" : ""
+              )}
             >
               Custom Date
             </Button>
@@ -106,7 +115,7 @@ export const ClassesSection = ({
                       </div>
                       <Button 
                         size="sm" 
-                        className="bg-gym-blue hover:bg-gym-dark-blue"
+                        className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue"
                         onClick={() => handleViewClassDetails(cls.id)}
                       >
                         View Attendees

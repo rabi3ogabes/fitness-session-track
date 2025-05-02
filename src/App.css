@@ -48,7 +48,7 @@
   color: #888;
 }
 
-/* Mobile-first responsive adjustments */
+/* Enhanced Mobile-first responsive adjustments */
 .responsive-container {
   width: 100%;
   padding: 0 1rem;
@@ -71,4 +71,81 @@
     max-width: 1280px;
     margin: 0 auto;
   }
+}
+
+/* Dialog Responsive Fixes */
+.dialog-responsive {
+  max-height: 90vh;
+  overflow-y: auto;
+  width: calc(100% - 2rem);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+  .dialog-responsive {
+    width: calc(100% - 1rem);
+    padding: 1rem;
+  }
+}
+
+/* Responsive Table Fixes */
+.responsive-table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(155, 155, 155, 0.5);
+  border-radius: 20px;
+}
+
+/* Mobile optimization for forms */
+@media (max-width: 640px) {
+  .responsive-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .responsive-form-grid > .text-right {
+    text-align: left !important;
+    margin-bottom: 0.25rem;
+  }
+  
+  .responsive-form-grid > .col-span-3 {
+    grid-column: span 1 / span 1 !important;
+  }
+}
+
+/* Mobile optimized buttons */
+.mobile-full {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .mobile-full {
+    width: auto;
+  }
+}
+
+/* Fix for modals on small screens */
+.modal-fix {
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
 }

@@ -76,12 +76,12 @@ export const ClassDetailsDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="w-full max-w-xl mx-auto overflow-y-auto max-h-[90vh]">
         {cls ? (
           <>
-            <DialogHeader>
-              <DialogTitle>{cls.name}</DialogTitle>
-              <DialogDescription>
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-xl">{cls.name}</DialogTitle>
+              <DialogDescription className="text-sm">
                 {format(cls.date, "EEEE, MMMM d, yyyy")} • {cls.time} • {bookings}/{cls.capacity} enrolled
               </DialogDescription>
             </DialogHeader>

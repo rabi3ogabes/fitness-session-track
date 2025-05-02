@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -256,28 +257,28 @@ const Classes = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Class Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Trainer(s)
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                   Schedule
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                   Time
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                   Capacity
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                   Gender
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -285,18 +286,18 @@ const Classes = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredClasses.map((cls) => (
                 <tr key={cls.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-4 whitespace-nowrap">
                     <div className="font-medium text-gray-900">{cls.name}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-4 whitespace-nowrap">
                     <div className="text-gray-500">
                       {cls.trainers ? cls.trainers.join(", ") : cls.trainer}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-4 whitespace-nowrap hidden md:table-cell">
                     <div className="text-gray-500">{cls.schedule}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-4 whitespace-nowrap hidden sm:table-cell">
                     <div className="text-gray-500 flex items-center">
                       <Clock className="h-3 w-3 mr-1" />
                       {cls.startTime && cls.endTime 
@@ -305,12 +306,12 @@ const Classes = () => {
                       }
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-4 whitespace-nowrap hidden sm:table-cell">
                     <div className="text-gray-500">
                       {cls.enrolled} / {cls.capacity}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-4 whitespace-nowrap hidden md:table-cell">
                     <span
                       className={`px-2 py-1 text-xs rounded-full ${
                         cls.gender === "Male"
@@ -323,7 +324,7 @@ const Classes = () => {
                       {cls.gender || "All"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 py-1 text-xs rounded-full ${
                         cls.status === "Active"
@@ -336,26 +337,28 @@ const Classes = () => {
                       {cls.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => toggleClassStatus(cls.id)}
-                      className="text-gym-blue hover:text-gym-dark-blue mr-3"
-                    >
-                      {cls.status === "Active" ? "Deactivate" : "Activate"}
-                    </button>
-                    <button
-                      onClick={() => handleEditClick(cls.id)}
-                      className="text-gym-blue hover:text-gym-dark-blue"
-                    >
-                      <Pencil className="h-4 w-4 inline-block" />
-                      <span className="ml-1">Edit</span>
-                    </button>
+                  <td className="px-3 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex flex-col sm:flex-row justify-end gap-2">
+                      <button
+                        onClick={() => toggleClassStatus(cls.id)}
+                        className="text-gym-blue hover:text-gym-dark-blue text-xs sm:text-sm"
+                      >
+                        {cls.status === "Active" ? "Deactivate" : "Activate"}
+                      </button>
+                      <button
+                        onClick={() => handleEditClick(cls.id)}
+                        className="text-gym-blue hover:text-gym-dark-blue text-xs sm:text-sm flex items-center justify-center sm:justify-start"
+                      >
+                        <Pencil className="h-3 w-3 sm:h-4 sm:w-4 inline-block" />
+                        <span className="ml-1">Edit</span>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
               {filteredClasses.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={8} className="px-3 py-4 text-center text-gray-500">
                     No classes found matching your search criteria.
                   </td>
                 </tr>
