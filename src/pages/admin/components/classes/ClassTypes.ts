@@ -16,6 +16,14 @@ export interface ClassModel {
   created_at?: string;
   start_time?: string;
   end_time?: string;
+  // Add a description field for better class information
+  description?: string;
+  // Add a location field to specify where the class is held
+  location?: string;
+  // Add a color field for visual identification in calendars
+  color?: string;
+  // Add a difficulty level
+  difficulty?: "Beginner" | "Intermediate" | "Advanced" | string;
 }
 
 export interface RecurringPattern {
@@ -58,4 +66,51 @@ export interface ClassFormState {
   startTime: string;
   endTime: string;
   endDate?: Date;
+  // Add new fields
+  description?: string;
+  location?: string;
+  difficulty?: "Beginner" | "Intermediate" | "Advanced";
+  color?: string;
 }
+
+// Add a utility function to format class times
+export const formatClassTime = (startTime: string, endTime: string): string => {
+  if (!startTime || !endTime) return "Time not set";
+  
+  // Convert 24h format to 12h format with AM/PM
+  const formatTime = (time: string): string => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+  };
+  
+  return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+};
+
+// Add a utility function to check for schedule conflicts
+export const checkScheduleConflict = (
+  classA: Pick<ClassModel, 'schedule' | 'startTime' | 'endTime' | 'trainers'>,
+  classB: Pick<ClassModel, 'schedule' | 'startTime' | 'endTime' | 'trainers'>
+): boolean => {
+  // Skip if different dates or missing time data
+  if (classA.schedule !== classB.schedule || 
+      !classA.startTime || !classA.endTime || 
+      !classB.startTime || !classB.endTime) {
+    return false;
+  }
+  
+  // Check for trainer overlap
+  const hasCommonTrainer = (classA.trainers || []).some(trainerA => 
+    (classB.trainers || []).includes(trainerA)
+  );
+  
+  if (!hasCommonTrainer) return false;
+  
+  // Check for time overlap
+  return (
+    (classA.startTime >= classB.startTime && classA.startTime < classB.endTime) ||
+    (classA.endTime > classB.startTime && classA.endTime <= classB.endTime) ||
+    (classA.startTime <= classB.startTime && classA.endTime >= classB.endTime)
+  );
+};
