@@ -9,6 +9,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CalendarIcon, Clock } from "lucide-react";
 import { ClassModel, RecurringPattern, ClassFormState } from "./ClassTypes";
 import {
@@ -192,6 +199,13 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     }));
   };
 
+  const handleDifficultyChange = (difficulty: string) => {
+    setFormState(prev => ({
+      ...prev,
+      difficulty: difficulty as "Beginner" | "Intermediate" | "Advanced"
+    }));
+  };
+
   const validateTimes = (startTime: string | undefined, endTime: string | undefined) => {
     if (!startTime || !endTime) {
       setTimeError("Start and end times are required");
@@ -314,7 +328,11 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
         status: "Active",
         gender: formState.gender,
         startTime: formState.startTime,
-        endTime: formState.endTime
+        endTime: formState.endTime,
+        difficulty: formState.difficulty,
+        location: formState.location,
+        description: formState.description,
+        color: formState.color
       };
       
       let recurringPattern: RecurringPattern | undefined;
@@ -352,30 +370,17 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     }
   };
 
-  const renderTimeSelect = (id: string, label: string, value: string, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void) => (
-    <div className="grid grid-cols-4 items-center gap-4">
-      <Label htmlFor={id} className="text-right">{label}*</Label>
-      <div className="col-span-3">
-        <div className="flex items-center">
-          <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-          <select
-            id={id}
-            name={id}
-            value={value}
-            onChange={onChange}
-            className="w-full border border-input h-10 rounded-md px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            required
-          >
-            {timeOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    </div>
-  );
+  const handleTimeChange = (field: string, value: string) => {
+    setFormState(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    
+    validateTimes(
+      field === "startTime" ? value : formState.startTime,
+      field === "endTime" ? value : formState.endTime
+    );
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -432,6 +437,53 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                       <Label htmlFor="female">Female Only</Label>
                     </div>
                   </RadioGroup>
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="difficulty" className="text-right">
+                    Difficulty
+                  </Label>
+                  <Select 
+                    value={formState.difficulty} 
+                    onValueChange={handleDifficultyChange}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Beginner">Beginner</SelectItem>
+                      <SelectItem value="Intermediate">Intermediate</SelectItem>
+                      <SelectItem value="Advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="location" className="text-right">
+                    Location
+                  </Label>
+                  <Input
+                    id="location"
+                    name="location"
+                    value={formState.location || ""}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    placeholder="e.g. Main Studio"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-4 items-start gap-4">
+                  <Label htmlFor="description" className="text-right pt-2">
+                    Description
+                  </Label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formState.description || ""}
+                    onChange={(e) => setFormState(prev => ({ ...prev, description: e.target.value }))}
+                    className="col-span-3 h-24 border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                    placeholder="Describe the class content"
+                  />
                 </div>
                 
                 <div className="grid grid-cols-4 items-start gap-4">
@@ -491,15 +543,19 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                     <div className="grid grid-cols-4 gap-4">
                       <Label className="text-right pt-2">Frequency</Label>
                       <div className="col-span-3">
-                        <select
-                          value={formState.recurringFrequency}
-                          onChange={(e) => handleFrequencyChange(e.target.value)}
-                          className="w-full border border-gray-300 rounded-md p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        <Select 
+                          value={formState.recurringFrequency} 
+                          onValueChange={handleFrequencyChange}
                         >
-                          <option value="Weekly">Weekly</option>
-                          <option value="Monthly">Monthly</option>
-                          <option value="Daily">Daily</option>
-                        </select>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Daily">Daily</SelectItem>
+                            <SelectItem value="Weekly">Weekly</SelectItem>
+                            <SelectItem value="Monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     
@@ -582,12 +638,59 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                   </div>
                 )}
                 
-                {renderTimeSelect("startTime", "Start Time", formState.startTime, handleInputChange)}
-                {renderTimeSelect("endTime", "End Time", formState.endTime, handleInputChange)}
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Start Time*</Label>
+                  <div className="col-span-3">
+                    <Select
+                      value={formState.startTime}
+                      onValueChange={(value) => handleTimeChange("startTime", value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <div className="flex items-center">
+                          <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                          <SelectValue />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent position="popper">
+                        {timeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">End Time*</Label>
+                  <div className="col-span-3">
+                    <Select
+                      value={formState.endTime}
+                      onValueChange={(value) => handleTimeChange("endTime", value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <div className="flex items-center">
+                          <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                          <SelectValue />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent position="popper">
+                        {timeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 
                 {timeError && (
-                  <div className="col-span-4 text-destructive text-sm">
-                    {timeError}
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <div className="col-span-4 text-destructive text-sm">
+                      {timeError}
+                    </div>
                   </div>
                 )}
               </div>
