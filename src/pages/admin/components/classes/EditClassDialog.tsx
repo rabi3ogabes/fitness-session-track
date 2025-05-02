@@ -64,7 +64,16 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setEditClass(prev => ({ ...prev, [name]: value }));
+    console.log(`Edit input change - field: ${name}, value: ${value}`);
+    
+    if (name === "capacity") {
+      setEditClass(prev => ({ 
+        ...prev, 
+        [name]: parseInt(value) || 0 
+      }));
+    } else {
+      setEditClass(prev => ({ ...prev, [name]: value }));
+    }
     
     // Clear time error when times change
     if (name === "startTime" || name === "endTime") {
