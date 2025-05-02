@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +25,7 @@ const Members = () => {
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
   const { toast } = useToast();
   const [paymentHistoryData, setPaymentHistoryData] = useState<PaymentHistoryData>({});
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Add a refresh trigger
 
   // Fetch members data from Supabase
   useEffect(() => {
@@ -49,6 +49,13 @@ const Members = () => {
         }
         
         console.log("Members data received:", data);
+        
+        if (!data || data.length === 0) {
+          console.log("No members found in the database");
+          setMembers([]);
+          setIsLoading(false);
+          return;
+        }
         
         // Transform data to match our Member interface
         const formattedMembers: Member[] = data.map((member: any) => ({
@@ -79,7 +86,7 @@ const Members = () => {
     };
 
     fetchMembers();
-  }, [toast]);
+  }, [toast, refreshTrigger]); // Add refreshTrigger to dependencies
 
   // Fetch payment history data
   useEffect(() => {
@@ -140,9 +147,8 @@ const Members = () => {
 
   const handleAddMember = async (newMember: Member) => {
     console.log("Adding new member to state:", newMember);
-    // newMember already added to Supabase from the AddMemberDialog
-    setMembers(prevMembers => [...prevMembers, newMember]);
-    setIsAddDialogOpen(false);
+    // Instead of just updating the state, trigger a refresh
+    setRefreshTrigger(prev => prev + 1);
   };
 
   const handleEditMember = async (editedMember: Member) => {

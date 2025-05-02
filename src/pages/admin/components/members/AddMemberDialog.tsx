@@ -69,6 +69,16 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
       return;
     }
 
+    // Basic validation
+    if (!newMember.name || !newMember.email) {
+      toast({
+        title: "Missing information",
+        description: "Name and email are required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     try {

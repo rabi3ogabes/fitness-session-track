@@ -84,6 +84,8 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
       const additionalSessions = parseInt(newMember.additionalSessions) || 0;
       const totalSessions = sessions + additionalSessions;
       
+      console.log("Attempting to insert new member into database...");
+      
       // Insert into Supabase
       const { data, error } = await supabase
         .from('members')
@@ -110,6 +112,8 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
         });
         return;
       }
+      
+      console.log("Member registration successful, received data:", data);
 
       toast({
         title: "New member registered",
@@ -139,6 +143,9 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
       });
       
       setPhoneError(null);
+      
+      // Close dialog
+      onOpenChange(false);
     } catch (err) {
       console.error("Error registering member:", err);
       toast({
