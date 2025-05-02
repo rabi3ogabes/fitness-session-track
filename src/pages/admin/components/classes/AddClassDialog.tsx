@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -107,6 +106,8 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    console.log(`Input change - field: ${name}, value: ${value}`);
     
     // For capacity, ensure it's a number
     if (name === "capacity") {
