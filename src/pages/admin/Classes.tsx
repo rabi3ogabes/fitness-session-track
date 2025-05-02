@@ -41,13 +41,21 @@ const Classes = () => {
         }
 
         if (data) {
-          setClasses(data.map(cls => ({
-            ...cls,
-            // Make sure all the required fields are present
+          const formattedClasses: ClassModel[] = data.map(cls => ({
+            id: cls.id,
+            name: cls.name,
+            trainer: cls.trainer || "",
+            trainers: cls.trainers || [],
+            schedule: cls.schedule,
+            capacity: cls.capacity,
             enrolled: cls.enrolled || 0,
+            status: cls.status || "Active",
             gender: cls.gender || "All",
-            status: cls.status || "Active"
-          })));
+            startTime: cls.start_time || "",
+            endTime: cls.end_time || "",
+          }));
+          
+          setClasses(formattedClasses);
         }
       } catch (err) {
         console.error("Error fetching classes:", err);
@@ -318,13 +326,21 @@ const Classes = () => {
         }
         
         if (data) {
-          // Add the inserted classes to the local state
-          setClasses(prevClasses => [...prevClasses, ...data.map(cls => ({
-            ...cls,
-            startTime: cls.start_time,
-            endTime: cls.end_time,
-            enrolled: cls.enrolled || 0
-          }))]);
+          const formattedClasses: ClassModel[] = data.map(cls => ({
+            id: cls.id,
+            name: cls.name,
+            trainer: cls.trainer || "",
+            trainers: cls.trainers || [],
+            schedule: cls.schedule,
+            capacity: cls.capacity,
+            enrolled: cls.enrolled || 0,
+            status: cls.status || "Active",
+            gender: cls.gender || "All",
+            startTime: cls.start_time || "",
+            endTime: cls.end_time || "",
+          }));
+          
+          setClasses(prevClasses => [...prevClasses, ...formattedClasses]);
         }
         
         toast({
@@ -349,13 +365,21 @@ const Classes = () => {
         }
         
         if (data && data[0]) {
-          // Add the inserted class to the local state
-          setClasses(prevClasses => [...prevClasses, {
-            ...data[0],
-            startTime: data[0].start_time,
-            endTime: data[0].end_time,
-            enrolled: data[0].enrolled || 0
-          }]);
+          const formattedClass: ClassModel = {
+            id: data[0].id,
+            name: data[0].name,
+            trainer: data[0].trainer || "",
+            trainers: data[0].trainers || [],
+            schedule: data[0].schedule,
+            capacity: data[0].capacity,
+            enrolled: data[0].enrolled || 0,
+            status: data[0].status || "Active",
+            gender: data[0].gender || "All",
+            startTime: data[0].start_time || "",
+            endTime: data[0].end_time || "",
+          };
+          
+          setClasses(prevClasses => [...prevClasses, formattedClass]);
         }
         
         toast({

@@ -7,11 +7,15 @@ export interface ClassModel {
   capacity: number;
   enrolled: number;
   status: string;
-  gender?: "Male" | "Female" | "All";
+  gender?: "Male" | "Female" | "All" | string;
   trainers?: string[];
   recurrence?: string;
   startTime?: string;
   endTime?: string;
+  // Add properties that come from Supabase
+  created_at?: string;
+  start_time?: string;
+  end_time?: string;
 }
 
 export interface RecurringPattern {
