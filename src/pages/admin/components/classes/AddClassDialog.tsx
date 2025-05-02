@@ -67,7 +67,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
   const [timeError, setTimeError] = useState<string | null>(null);
 
   // Reset form when dialog is opened or closed
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       // Reset form
       setNewClass({
@@ -95,7 +95,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
   }, [isOpen, today]);
 
   // Update schedule when date changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (selectedDate) {
       setNewClass(prev => ({
         ...prev,
