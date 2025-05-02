@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -195,6 +194,32 @@ const Login = () => {
         return;
       }
 
+      // Check email format
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        toast({
+          title: "Invalid email format",
+          description: "Please enter a valid email address",
+          variant: "destructive",
+        });
+        setError("Please enter a valid email address");
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if name is provided
+      if (!name.trim()) {
+        toast({
+          title: "Name is required",
+          description: "Please enter your full name",
+          variant: "destructive",
+        });
+        setError("Please enter your full name");
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("Signup attempt for:", email);
+      
       const success = await signup(
         email, 
         signupPassword, 
@@ -204,6 +229,8 @@ const Login = () => {
       );
       
       if (success === true) {
+        console.log("Signup successful for:", email);
+        
         toast({
           title: "Signup successful",
           description: "Your account has been created. You can now log in.",
@@ -213,6 +240,29 @@ const Login = () => {
         setActiveTab("login");
         setIdentifier(email);
         setPassword(signupPassword);
+        
+        // Also register in members table for admin/trainer view
+        try {
+          const { error: memberError } = await supabase
+            .from('members')
+            .insert([{
+              name: name,
+              email: email,
+              phone: phone,
+              birthday: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null,
+              membership: "Basic",
+              sessions: 4,
+              remaining_sessions: 4,
+              status: "Active",
+              gender: "Male" // Default gender
+            }]);
+          
+          if (memberError) {
+            console.error("Error registering in members table:", memberError);
+          }
+        } catch (memberErr) {
+          console.error("Error adding to members table:", memberErr);
+        }
       }
     } catch (error: any) {
       // Display error message

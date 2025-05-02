@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -32,8 +32,8 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
     gender: "Male" // Default gender
   });
   const [isLoading, setIsLoading] = useState(false);
-
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const phone = e.target.value;
@@ -41,6 +41,10 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
     
     // Clear error when user types
     if (phoneError) setPhoneError(null);
+    if (formErrors.phone) {
+      const { phone, ...rest } = formErrors;
+      setFormErrors(rest);
+    }
   };
 
   const validatePhone = (phone: string) => {
@@ -53,6 +57,28 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
     return null;
   };
 
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!newMember.name.trim()) {
+      errors.name = "Name is required";
+    }
+    
+    if (!newMember.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newMember.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+    
+    const phoneError = validatePhone(newMember.phone);
+    if (phoneError) {
+      errors.phone = phoneError;
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleMembershipChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const membership = e.target.value;
     let sessions = 4;
@@ -61,27 +87,27 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
     setNewMember({ ...newMember, membership, sessions, remainingSessions: sessions });
   };
 
-  const handleSubmit = async () => {
-    // Validate phone
-    const phoneValidationError = validatePhone(newMember.phone);
-    if (phoneValidationError) {
-      setPhoneError(phoneValidationError);
-      return;
+  const handleFieldChange = (field: string, value: string) => {
+    setNewMember({ ...newMember, [field]: value });
+    
+    // Clear error when field changes
+    if (formErrors[field]) {
+      const { [field]: _, ...rest } = formErrors;
+      setFormErrors(rest);
     }
+  };
 
-    // Basic validation
-    if (!newMember.name || !newMember.email) {
-      toast({
-        title: "Missing information",
-        description: "Name and email are required fields",
-        variant: "destructive",
-      });
+  const handleSubmit = async () => {
+    // Validate form
+    if (!validateForm()) {
       return;
     }
 
     setIsLoading(true);
     
     try {
+      console.log("Submitting member data:", newMember);
+      
       // Insert the new member into Supabase
       const { data, error } = await supabase
         .from('members')
@@ -146,6 +172,7 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
           canBeEditedByTrainers: true,
           gender: "Male"
         });
+        setFormErrors({});
         
         // Close dialog
         onOpenChange(false);
@@ -168,30 +195,41 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Register New Member</DialogTitle>
+          <DialogDescription>Fill in the required information to add a new member.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <label className="text-right text-sm font-medium col-span-1">
               Name*
             </label>
-            <Input
-              id="name"
-              value={newMember.name}
-              onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-              className="col-span-3"
-            />
+            <div className="col-span-3 space-y-1">
+              <Input
+                id="name"
+                value={newMember.name}
+                onChange={(e) => handleFieldChange('name', e.target.value)}
+                className={`${formErrors.name ? "border-red-500" : ""}`}
+              />
+              {formErrors.name && (
+                <p className="text-sm text-red-500">{formErrors.name}</p>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <label className="text-right text-sm font-medium col-span-1">
               Email*
             </label>
-            <Input
-              id="email"
-              type="email"
-              value={newMember.email}
-              onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-              className="col-span-3"
-            />
+            <div className="col-span-3 space-y-1">
+              <Input
+                id="email"
+                type="email"
+                value={newMember.email}
+                onChange={(e) => handleFieldChange('email', e.target.value)}
+                className={`${formErrors.email ? "border-red-500" : ""}`}
+              />
+              {formErrors.email && (
+                <p className="text-sm text-red-500">{formErrors.email}</p>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <label className="text-right text-sm font-medium col-span-1">
@@ -202,10 +240,11 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
                 id="phone"
                 value={newMember.phone}
                 onChange={handlePhoneChange}
-                className={`${phoneError ? "border-red-500" : ""}`}
+                className={`${formErrors.phone ? "border-red-500" : ""}`}
+                placeholder="8-digit phone number"
               />
-              {phoneError && (
-                <p className="text-sm text-red-500">{phoneError}</p>
+              {formErrors.phone && (
+                <p className="text-sm text-red-500">{formErrors.phone}</p>
               )}
             </div>
           </div>
@@ -239,7 +278,7 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
               id="birthday"
               type="date"
               value={newMember.birthday}
-              onChange={(e) => setNewMember({ ...newMember, birthday: e.target.value })}
+              onChange={(e) => handleFieldChange('birthday', e.target.value)}
               className="col-span-3"
             />
           </div>

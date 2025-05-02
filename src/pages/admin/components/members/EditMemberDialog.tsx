@@ -1,8 +1,8 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,32 +18,7 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-
-interface Member {
-  id: number;
-  name: string;
-  email: string;
-  phone: string;
-  membership: string;
-  sessions: number;
-  remainingSessions: number;
-  status: string;
-  birthday: string;
-  canBeEditedByTrainers: boolean;
-  gender?: "Male" | "Female";
-}
-
-interface PaymentHistoryItem {
-  id: number;
-  date: string;
-  amount: number;
-  description: string;
-  status: string;
-}
-
-interface PaymentHistoryData {
-  [key: number]: PaymentHistoryItem[];
-}
+import { Member, PaymentHistoryData, PaymentHistoryItem } from "./types";
 
 interface EditMemberDialogProps {
   isOpen: boolean;
@@ -64,11 +39,15 @@ const EditMemberDialog = ({
   const [selectedTab, setSelectedTab] = useState("personal");
   const [editedMember, setEditedMember] = useState<Member | null>(currentMember);
   const [isLoading, setIsLoading] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Update edited member when currentMember changes
-  if (currentMember && (!editedMember || editedMember.id !== currentMember.id)) {
-    setEditedMember({...currentMember});
-  }
+  useEffect(() => {
+    if (currentMember) {
+      setEditedMember({...currentMember});
+      setFormErrors({});
+    }
+  }, [currentMember]);
 
   if (!editedMember) return null;
 
@@ -80,10 +59,75 @@ const EditMemberDialog = ({
     setEditedMember({ ...editedMember, membership, sessions });
   };
 
+  const validatePhone = (phone: string) => {
+    // Updated validation - exactly 8 digits
+    const phoneRegex = /^\d{8}$/;
+    if (!phone) return "Phone number is required";
+    if (!phoneRegex.test(phone.replace(/[\s-]/g, ''))) {
+      return "Please enter a valid phone number (exactly 8 digits)";
+    }
+    return null;
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!editedMember.name.trim()) {
+      errors.name = "Name is required";
+    }
+    
+    if (!editedMember.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editedMember.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+    
+    const phoneError = validatePhone(editedMember.phone);
+    if (phoneError) {
+      errors.phone = phoneError;
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleFieldChange = (field: string, value: string | number) => {
+    setEditedMember({ ...editedMember, [field]: value });
+    
+    // Clear error when field changes
+    if (formErrors[field]) {
+      const { [field]: _, ...rest } = formErrors;
+      setFormErrors(rest);
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const phone = e.target.value;
+    setEditedMember({ ...editedMember, phone });
+    
+    // Clear error when user types
+    if (formErrors.phone) {
+      const { phone, ...rest } = formErrors;
+      setFormErrors(rest);
+    }
+  };
+
   const handleSaveChanges = async () => {
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+
     setIsLoading(true);
-    onEditMember(editedMember);
-    setIsLoading(false);
+    
+    try {
+      console.log("Saving member changes:", editedMember);
+      onEditMember(editedMember);
+    } catch (error) {
+      console.error("Error saving member changes:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -91,6 +135,7 @@ const EditMemberDialog = ({
       <DialogContent className="sm:max-w-md p-0 max-h-[90vh]">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>Edit Member</DialogTitle>
+          <DialogDescription>Update member information</DialogDescription>
         </DialogHeader>
         
         <ScrollArea className="max-h-[calc(90vh-150px)]">
@@ -114,35 +159,51 @@ const EditMemberDialog = ({
                     <label className="text-right text-sm font-medium col-span-1">
                       Name*
                     </label>
-                    <Input
-                      id="edit-name"
-                      value={editedMember.name}
-                      onChange={(e) => setEditedMember({ ...editedMember, name: e.target.value })}
-                      className="col-span-3"
-                    />
+                    <div className="col-span-3 space-y-1">
+                      <Input
+                        id="edit-name"
+                        value={editedMember.name}
+                        onChange={(e) => handleFieldChange('name', e.target.value)}
+                        className={`${formErrors.name ? "border-red-500" : ""}`}
+                      />
+                      {formErrors.name && (
+                        <p className="text-sm text-red-500">{formErrors.name}</p>
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <label className="text-right text-sm font-medium col-span-1">
                       Email*
                     </label>
-                    <Input
-                      id="edit-email"
-                      type="email"
-                      value={editedMember.email}
-                      onChange={(e) => setEditedMember({ ...editedMember, email: e.target.value })}
-                      className="col-span-3"
-                    />
+                    <div className="col-span-3 space-y-1">
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={editedMember.email}
+                        onChange={(e) => handleFieldChange('email', e.target.value)}
+                        className={`${formErrors.email ? "border-red-500" : ""}`}
+                      />
+                      {formErrors.email && (
+                        <p className="text-sm text-red-500">{formErrors.email}</p>
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <label className="text-right text-sm font-medium col-span-1">
                       Phone*
                     </label>
-                    <Input
-                      id="edit-phone"
-                      value={editedMember.phone}
-                      onChange={(e) => setEditedMember({ ...editedMember, phone: e.target.value })}
-                      className="col-span-3"
-                    />
+                    <div className="col-span-3 space-y-1">
+                      <Input
+                        id="edit-phone"
+                        value={editedMember.phone}
+                        onChange={handlePhoneChange}
+                        className={`${formErrors.phone ? "border-red-500" : ""}`}
+                        placeholder="8-digit phone number"
+                      />
+                      {formErrors.phone && (
+                        <p className="text-sm text-red-500">{formErrors.phone}</p>
+                      )}
+                    </div>
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <label className="text-right text-sm font-medium col-span-1">
@@ -175,7 +236,7 @@ const EditMemberDialog = ({
                       id="edit-birthday"
                       type="date"
                       value={editedMember.birthday}
-                      onChange={(e) => setEditedMember({ ...editedMember, birthday: e.target.value })}
+                      onChange={(e) => handleFieldChange('birthday', e.target.value)}
                       className="col-span-3"
                     />
                   </div>
@@ -222,7 +283,7 @@ const EditMemberDialog = ({
                       </label>
                       <select
                         value={editedMember.status}
-                        onChange={(e) => setEditedMember({ ...editedMember, status: e.target.value })}
+                        onChange={(e) => handleFieldChange('status', e.target.value)}
                         className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent"
                       >
                         <option value="Active">Active</option>

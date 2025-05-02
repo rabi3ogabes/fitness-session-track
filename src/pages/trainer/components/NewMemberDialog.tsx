@@ -1,54 +1,71 @@
 
-import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { format } from "date-fns";
-import { UserPlus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { membershipPlans } from "../mockData";
 import { supabase } from "@/integrations/supabase/client";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+
+interface MembershipPlan {
+  name: string;
+  sessions: number;
+}
 
 interface NewMemberDialogProps {
   isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  onRegister: (member: any) => void;
+  onOpenChange: (isOpen: boolean) => void;
+  onMemberAdded: () => void;
 }
 
-export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberDialogProps) => {
+const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialogProps) => {
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([
+    { name: "Basic", sessions: 4 },
+    { name: "Standard", sessions: 8 },
+    { name: "Premium", sessions: 12 }
+  ]);
+  
+  const [selectedPlan, setSelectedPlan] = useState<MembershipPlan | null>(membershipPlans[0]);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [newMember, setNewMember] = useState({
     name: "",
     email: "",
     phone: "",
-    birthday: format(new Date(), "yyyy-MM-dd"),
-    membershipPlan: "1",
+    birthday: "",
+    membership: selectedPlan?.name || "Basic",
+    sessions: selectedPlan?.sessions || 4,
     additionalSessions: "0",
     gender: "Male"
   });
   
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const handleNewMemberInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    
-    if (name === "phone") {
-      setPhoneError(null); // Clear error when user types in phone field
+  useEffect(() => {
+    if (selectedPlan) {
+      setNewMember(prev => ({ 
+        ...prev, 
+        membership: selectedPlan.name,
+        sessions: selectedPlan.sessions
+      }));
     }
-    
-    setNewMember(prev => ({ ...prev, [name]: value }));
-  };
+  }, [selectedPlan]);
 
-  const handleGenderChange = (value: string) => {
-    setNewMember(prev => ({ ...prev, gender: value }));
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const phone = e.target.value;
+    setNewMember({ ...newMember, phone });
+    
+    // Clear error when user types
+    if (phoneError) setPhoneError(null);
+    if (formErrors.phone) {
+      const { phone, ...rest } = formErrors;
+      setFormErrors(rest);
+    }
   };
   
   const validatePhone = (phone: string) => {
-    // Basic phone number validation - exactly 8 digits
+    // Updated validation - exactly 8 digits
     const phoneRegex = /^\d{8}$/;
     if (!phone) return "Phone number is required";
     if (!phoneRegex.test(phone.replace(/[\s-]/g, ''))) {
@@ -56,30 +73,54 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
     }
     return null;
   };
-  
-  const handleRegisterMember = async () => {
-    // Validate form
-    if (!newMember.name || !newMember.email) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
-      return;
+
+  const handleInputChange = (field: string, value: string) => {
+    setNewMember({ ...newMember, [field]: value });
+    
+    // Clear error when field changes
+    if (formErrors[field]) {
+      const { [field]: _, ...rest } = formErrors;
+      setFormErrors(rest);
+    }
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    if (!newMember.name.trim()) {
+      errors.name = "Name is required";
     }
     
-    // Validate phone
+    if (!newMember.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newMember.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+    
     const phoneValidationError = validatePhone(newMember.phone);
     if (phoneValidationError) {
-      setPhoneError(phoneValidationError);
+      errors.phone = phoneValidationError;
+    }
+    
+    const additionalSessions = parseInt(newMember.additionalSessions);
+    if (isNaN(additionalSessions) || additionalSessions < 0) {
+      errors.additionalSessions = "Please enter a valid number (0 or greater)";
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
       return;
     }
-
-    setIsSubmitting(true);
+    
+    setIsLoading(true);
     
     try {
-      // Get the membership plan
-      const selectedPlan = membershipPlans.find(plan => plan.id === parseInt(newMember.membershipPlan));
       const sessions = selectedPlan ? selectedPlan.sessions : 4;
       const additionalSessions = parseInt(newMember.additionalSessions) || 0;
       const totalSessions = sessions + additionalSessions;
@@ -89,24 +130,26 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
       // Insert into Supabase
       const { data, error } = await supabase
         .from('members')
-        .insert([{
-          name: newMember.name,
-          email: newMember.email,
-          phone: newMember.phone,
-          birthday: newMember.birthday,
-          membership: selectedPlan ? selectedPlan.name : "Basic",
-          sessions: totalSessions,
-          remaining_sessions: totalSessions,
-          gender: newMember.gender,
-          status: "Active",
-          can_be_edited_by_trainers: true
-        }])
+        .insert([
+          {
+            name: newMember.name,
+            email: newMember.email,
+            phone: newMember.phone,
+            birthday: newMember.birthday,
+            membership: newMember.membership,
+            sessions: totalSessions,
+            remaining_sessions: totalSessions,
+            status: "Active",
+            can_be_edited_by_trainers: true,
+            gender: newMember.gender
+          }
+        ])
         .select();
-        
+
       if (error) {
-        console.error("Error registering member:", error);
+        console.error("Error adding member:", error);
         toast({
-          title: "Registration failed",
+          title: "Failed to register member",
           description: error.message,
           variant: "destructive",
         });
@@ -117,31 +160,27 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
 
       toast({
         title: "New member registered",
-        description: `${newMember.name} has been registered with the ${selectedPlan?.name} plan.`,
+        description: `${newMember.name} has been successfully registered`,
       });
-      
-      // Format the data to match our expected structure
-      if (data && data[0]) {
-        const registeredMember = {
-          ...data[0],
-          remainingSessions: data[0].remaining_sessions,
-          canBeEditedByTrainers: data[0].can_be_edited_by_trainers
-        };
-        
-        onRegister(registeredMember);
-      }
-      
+
       // Reset form
       setNewMember({
         name: "",
         email: "",
         phone: "",
-        birthday: format(new Date(), "yyyy-MM-dd"),
-        membershipPlan: "1",
+        birthday: "",
+        membership: membershipPlans[0].name,
+        sessions: membershipPlans[0].sessions,
         additionalSessions: "0",
         gender: "Male"
       });
       
+      setSelectedPlan(membershipPlans[0]);
+      
+      // Notify parent component
+      onMemberAdded();
+      
+      setFormErrors({});
       setPhoneError(null);
       
       // Close dialog
@@ -149,158 +188,179 @@ export const NewMemberDialog = ({ isOpen, onOpenChange, onRegister }: NewMemberD
     } catch (err) {
       console.error("Error registering member:", err);
       toast({
-        title: "Registration failed",
+        title: "Failed to register member",
         description: "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Register New Member</DialogTitle>
-          <DialogDescription>
-            Create a new account and membership for a walk-in member.
-          </DialogDescription>
+          <DialogTitle>Register New Walk-In Member</DialogTitle>
+          <DialogDescription>Enter member details to register them in the system</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="member-name" className="text-right">
+            <label className="text-right text-sm font-medium col-span-1">
               Name*
-            </Label>
-            <Input
-              id="member-name"
-              name="name"
-              value={newMember.name}
-              onChange={handleNewMemberInputChange}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="member-email" className="text-right">
-              Email*
-            </Label>
-            <Input
-              id="member-email"
-              name="email"
-              type="email"
-              value={newMember.email}
-              onChange={handleNewMemberInputChange}
-              className="col-span-3"
-            />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="member-phone" className="text-right">
-              Phone*
-            </Label>
+            </label>
             <div className="col-span-3 space-y-1">
               <Input
-                id="member-phone"
-                name="phone"
-                value={newMember.phone}
-                onChange={handleNewMemberInputChange}
-                className={phoneError ? "border-red-500" : ""}
+                id="name"
+                value={newMember.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                className={`${formErrors.name ? "border-red-500" : ""}`}
               />
-              {phoneError && (
-                <p className="text-sm text-red-500">{phoneError}</p>
+              {formErrors.name && (
+                <p className="text-sm text-red-500">{formErrors.name}</p>
               )}
             </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="member-gender" className="text-right">
-              Gender*
-            </Label>
+            <label className="text-right text-sm font-medium col-span-1">
+              Email*
+            </label>
+            <div className="col-span-3 space-y-1">
+              <Input
+                id="email"
+                type="email"
+                value={newMember.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                className={`${formErrors.email ? "border-red-500" : ""}`}
+              />
+              {formErrors.email && (
+                <p className="text-sm text-red-500">{formErrors.email}</p>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label className="text-right text-sm font-medium col-span-1">
+              Phone*
+            </label>
+            <div className="col-span-3 space-y-1">
+              <Input
+                id="phone"
+                value={newMember.phone}
+                onChange={handlePhoneChange}
+                className={`${formErrors.phone ? "border-red-500" : ""}`}
+                placeholder="8-digit phone number"
+              />
+              {formErrors.phone && (
+                <p className="text-sm text-red-500">{formErrors.phone}</p>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label className="text-right text-sm font-medium col-span-1">
+              Gender
+            </label>
             <div className="col-span-3 flex items-center space-x-4">
               <RadioGroup
-                defaultValue={newMember.gender}
+                defaultValue="Male"
                 value={newMember.gender}
-                onValueChange={handleGenderChange}
+                onValueChange={(value) => handleInputChange('gender', value)}
                 className="flex items-center gap-4"
               >
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Male" id="trainer-male" />
-                  <Label htmlFor="trainer-male">Male</Label>
+                  <RadioGroupItem value="Male" id="gender-male" />
+                  <Label htmlFor="gender-male">Male</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Female" id="trainer-female" />
-                  <Label htmlFor="trainer-female">Female</Label>
+                  <RadioGroupItem value="Female" id="gender-female" />
+                  <Label htmlFor="gender-female">Female</Label>
                 </div>
               </RadioGroup>
             </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="member-birthday" className="text-right">
+            <label className="text-right text-sm font-medium col-span-1">
               Birthday
-            </Label>
+            </label>
             <Input
-              id="member-birthday"
-              name="birthday"
+              id="birthday"
               type="date"
               value={newMember.birthday}
-              onChange={handleNewMemberInputChange}
+              onChange={(e) => handleInputChange('birthday', e.target.value)}
               className="col-span-3"
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="membership-plan" className="text-right">
-              Membership Plan
-            </Label>
-            <Select 
-              name="membershipPlan" 
-              value={newMember.membershipPlan}
-              onValueChange={(value) => handleNewMemberInputChange({
-                target: { name: "membershipPlan", value }
-              } as React.ChangeEvent<HTMLSelectElement>)}
-            >
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select a plan" />
-              </SelectTrigger>
-              <SelectContent>
-                {membershipPlans.map(plan => (
-                  <SelectItem key={plan.id} value={plan.id.toString()}>
-                    {plan.name} - QAR {plan.price} ({plan.sessions} sessions)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <label className="text-right text-sm font-medium col-span-1">
+              Membership
+            </label>
+            <div className="col-span-3 grid grid-cols-3 gap-2">
+              {membershipPlans.map((plan) => (
+                <Button
+                  key={plan.name}
+                  type="button"
+                  variant={selectedPlan?.name === plan.name ? "default" : "outline"}
+                  className={selectedPlan?.name === plan.name ? "bg-gym-blue hover:bg-gym-dark-blue" : ""}
+                  onClick={() => setSelectedPlan(plan)}
+                >
+                  {plan.name}
+                </Button>
+              ))}
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="additional-sessions" className="text-right">
-              Extra Sessions
-            </Label>
-            <Input
-              id="additional-sessions"
-              name="additionalSessions"
-              type="number"
-              min="0"
-              value={newMember.additionalSessions}
-              onChange={handleNewMemberInputChange}
-              className="col-span-3"
-            />
+            <label className="text-right text-sm font-medium col-span-1">
+              Base Sessions
+            </label>
+            <div className="col-span-3 flex items-center">
+              <span className="text-sm font-medium bg-gray-100 px-3 py-2 rounded-md">
+                {selectedPlan ? selectedPlan.sessions : 4} sessions
+              </span>
+            </div>
           </div>
-          <div className="flex justify-end mt-4">
-            <Button 
-              onClick={handleRegisterMember} 
-              className="bg-gym-blue hover:bg-gym-dark-blue"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Registering..." : "Register & Mark Present"}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label className="text-right text-sm font-medium col-span-1">
+              Additional
+            </label>
+            <div className="col-span-3 space-y-1">
+              <Input
+                id="additional-sessions"
+                type="number"
+                min="0"
+                value={newMember.additionalSessions}
+                onChange={(e) => handleInputChange('additionalSessions', e.target.value)}
+                className={`${formErrors.additionalSessions ? "border-red-500" : ""}`}
+              />
+              {formErrors.additionalSessions && (
+                <p className="text-sm text-red-500">{formErrors.additionalSessions}</p>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label className="text-right text-sm font-medium col-span-1">
+              Total
+            </label>
+            <div className="col-span-3 flex items-center">
+              <span className="text-sm font-medium bg-gray-100 px-3 py-2 rounded-md">
+                {selectedPlan ? selectedPlan.sessions + (parseInt(newMember.additionalSessions) || 0) : 4} sessions
+              </span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+              Cancel
             </Button>
-          </div>
-        </div>
+            <Button 
+              type="submit"
+              className="bg-gym-blue hover:bg-gym-dark-blue"
+              disabled={isLoading}
+            >
+              {isLoading ? "Registering..." : "Register Member"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
 };
 
-export const NewMemberButton = ({ onClick }: { onClick: () => void }) => {
-  return (
-    <Button size="sm" className="bg-gym-blue hover:bg-gym-dark-blue" onClick={onClick}>
-      <UserPlus className="h-4 w-4 mr-1" /> Register Walk-in Member
-    </Button>
-  );
-};
+export default NewMemberDialog;
