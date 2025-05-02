@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AddMemberDialogProps {
   isOpen: boolean;
@@ -30,6 +30,7 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
     canBeEditedByTrainers: true,
     gender: "Male" // Default gender
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
@@ -60,16 +61,71 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
     setNewMember({ ...newMember, membership, sessions, remainingSessions: sessions });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Validate phone
     const phoneValidationError = validatePhone(newMember.phone);
     if (phoneValidationError) {
       setPhoneError(phoneValidationError);
       return;
     }
+
+    setIsLoading(true);
     
-    // Submit if no errors
-    onAddMember(newMember);
+    try {
+      // Insert the new member into Supabase
+      const { data, error } = await supabase
+        .from('members')
+        .insert([{
+          name: newMember.name,
+          email: newMember.email,
+          phone: newMember.phone,
+          birthday: newMember.birthday,
+          membership: newMember.membership,
+          sessions: newMember.sessions,
+          remaining_sessions: newMember.remainingSessions,
+          status: newMember.status,
+          can_be_edited_by_trainers: newMember.canBeEditedByTrainers,
+          gender: newMember.gender
+        }])
+        .select();
+
+      if (error) {
+        console.error("Error adding member:", error);
+        toast({
+          title: "Failed to add member",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data && data[0]) {
+        // Map the Supabase response back to our application's format
+        const addedMember = {
+          ...data[0],
+          remainingSessions: data[0].remaining_sessions,
+          canBeEditedByTrainers: data[0].can_be_edited_by_trainers,
+        };
+        
+        // Submit to parent component to update UI
+        onAddMember(addedMember);
+        
+        toast({
+          title: "Member added successfully",
+          description: `${newMember.name} has been added as a member`,
+        });
+      }
+
+    } catch (error) {
+      console.error("Error adding member:", error);
+      toast({
+        title: "Failed to add member",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -185,8 +241,12 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} className="bg-gym-blue hover:bg-gym-dark-blue">
-            Add Member
+          <Button 
+            onClick={handleSubmit} 
+            className="bg-gym-blue hover:bg-gym-dark-blue"
+            disabled={isLoading}
+          >
+            {isLoading ? "Adding..." : "Add Member"}
           </Button>
         </DialogFooter>
       </DialogContent>

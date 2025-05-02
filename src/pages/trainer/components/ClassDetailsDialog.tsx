@@ -1,7 +1,6 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { format } from "date-fns";
-import { mockClasses, getBookingsForClass } from "../mockData";
 import { BulkAttendanceManager } from "./BulkAttendanceManager";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,14 +19,51 @@ export const ClassDetailsDialog = ({
   selectedClass 
 }: ClassDetailsDialogProps) => {
   const { toast } = useToast();
+  const [classData, setClassData] = useState<any>(null);
   const [bookings, setBookings] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Helper function to get class data
-  const getClassData = () => {
-    if (!selectedClass) return null;
-    return mockClasses.find(c => c.id === selectedClass);
-  };
+  // Fetch class data when selected class changes
+  useEffect(() => {
+    const fetchClassData = async () => {
+      if (!selectedClass || !isOpen) return;
+      
+      setIsLoading(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('classes')
+          .select('*')
+          .eq('id', selectedClass)
+          .single();
+          
+        if (error) {
+          console.error("Error fetching class:", error);
+          toast({
+            title: "Error loading class",
+            description: "Could not load class information.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        if (data) {
+          // Format date string if needed
+          setClassData({
+            ...data,
+            date: new Date(), // This will be replaced with proper date parsing in a real app
+            time: `${data.start_time || '00:00'} - ${data.end_time || '00:00'}`
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching class data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchClassData();
+  }, [selectedClass, isOpen, toast]);
 
   // Fetch bookings count for this class
   useEffect(() => {
@@ -43,7 +79,15 @@ export const ClassDetailsDialog = ({
           .select('*', { count: 'exact', head: true })
           .eq('class_id', selectedClass);
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching booking count:", error);
+          toast({
+            title: "Error loading data",
+            description: "Could not load booking information.",
+            variant: "destructive"
+          });
+          return;
+        }
         
         setBookings(count || 0);
       } catch (error) {
@@ -58,48 +102,40 @@ export const ClassDetailsDialog = ({
       }
     };
     
-    // For now, since we're using mock data, we'll set a mock booking count
-    // In a real implementation with Supabase, you'd use the fetchBookingCount function
     if (isOpen && selectedClass) {
-      const mockBookingCounts: Record<number, number> = {
-        1: 8,  // Morning Yoga: 8 bookings
-        2: 10, // HIIT Workout: 10 bookings
-        3: 5,  // Strength Training: 5 bookings
-        4: 6,  // Pilates: 6 bookings
-        5: 7   // Boxing: 7 bookings
-      };
-      
-      setBookings(mockBookingCounts[selectedClass] || 0);
+      fetchBookingCount();
     }
   }, [selectedClass, isOpen, toast]);
 
-  const cls = getClassData();
+  if (isLoading || !classData) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="w-full max-w-xl mx-auto">
+          <div className="py-8 text-center">
+            <p>{isLoading ? "Loading class data..." : "Class data not found"}</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-xl mx-auto p-0 max-h-[90vh]">
-        {cls ? (
-          <>
-            <DialogHeader className="p-6 pb-2">
-              <DialogTitle className="text-xl">{cls.name}</DialogTitle>
-              <DialogDescription className="text-sm">
-                {format(cls.date, "EEEE, MMMM d, yyyy")} • {cls.time} • {bookings}/{cls.capacity} enrolled
-              </DialogDescription>
-            </DialogHeader>
-            
-            <ScrollArea className="max-h-[calc(90vh-130px)] overflow-y-auto px-6">
-              <BulkAttendanceManager 
-                classId={selectedClass}
-                selectedDate={cls.date}
-                onClose={() => onOpenChange(false)}
-              />
-            </ScrollArea>
-          </>
-        ) : (
-          <div className="py-8 text-center">
-            <p>Class data not found</p>
-          </div>
-        )}
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle className="text-xl">{classData.name}</DialogTitle>
+          <DialogDescription className="text-sm">
+            {classData.schedule} • {classData.time} • {bookings}/{classData.capacity} enrolled
+          </DialogDescription>
+        </DialogHeader>
+        
+        <ScrollArea className="max-h-[calc(90vh-130px)] overflow-y-auto px-6">
+          <BulkAttendanceManager 
+            classId={selectedClass}
+            selectedDate={classData.date}
+            onClose={() => onOpenChange(false)}
+          />
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
