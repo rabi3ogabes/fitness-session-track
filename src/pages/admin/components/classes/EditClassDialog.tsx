@@ -29,6 +29,28 @@ interface EditClassDialogProps {
   existingClasses: ClassModel[];
 }
 
+// Time options for easier selection
+const timeOptions = [
+  { label: "5:00 AM", value: "05:00" },
+  { label: "6:00 AM", value: "06:00" },
+  { label: "7:00 AM", value: "07:00" },
+  { label: "8:00 AM", value: "08:00" },
+  { label: "9:00 AM", value: "09:00" },
+  { label: "10:00 AM", value: "10:00" },
+  { label: "11:00 AM", value: "11:00" },
+  { label: "12:00 PM", value: "12:00" },
+  { label: "1:00 PM", value: "13:00" },
+  { label: "2:00 PM", value: "14:00" },
+  { label: "3:00 PM", value: "15:00" },
+  { label: "4:00 PM", value: "16:00" },
+  { label: "5:00 PM", value: "17:00" },
+  { label: "6:00 PM", value: "18:00" },
+  { label: "7:00 PM", value: "19:00" },
+  { label: "8:00 PM", value: "20:00" },
+  { label: "9:00 PM", value: "21:00" },
+  { label: "10:00 PM", value: "22:00" },
+];
+
 const EditClassDialog: React.FC<EditClassDialogProps> = ({
   isOpen,
   onOpenChange,
@@ -149,6 +171,31 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
     setTimeError(null);
   };
 
+  const renderTimeSelect = (id: string, label: string, value: string | undefined, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void) => (
+    <div className="grid grid-cols-4 items-center gap-4">
+      <Label htmlFor={id} className="text-right">{label}*</Label>
+      <div className="col-span-3">
+        <div className="flex items-center">
+          <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+          <select
+            id={id}
+            name={id}
+            value={value || "09:00"}
+            onChange={onChange}
+            className="w-full border border-input h-10 rounded-md px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            required
+          >
+            {timeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+  
   const handleUpdateClass = () => {
     // Validate times
     if (!validateTimes(editClass.startTime, editClass.endTime)) {
@@ -249,45 +296,8 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
               />
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-startTime" className="text-right">
-                Start Time*
-              </Label>
-              <div className="col-span-3">
-                <div className="flex items-center">
-                  <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="edit-startTime"
-                    name="startTime"
-                    type="time"
-                    value={editClass.startTime || "09:00"}
-                    onChange={handleInputChange}
-                    className="w-full"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-endTime" className="text-right">
-                End Time*
-              </Label>
-              <div className="col-span-3">
-                <div className="flex items-center">
-                  <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="edit-endTime"
-                    name="endTime"
-                    type="time"
-                    value={editClass.endTime || "10:00"}
-                    onChange={handleInputChange}
-                    className="w-full"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
+            {renderTimeSelect("startTime", "Start Time", editClass.startTime, handleInputChange)}
+            {renderTimeSelect("endTime", "End Time", editClass.endTime, handleInputChange)}
             
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-capacity" className="text-right">

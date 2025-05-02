@@ -33,3 +33,29 @@ export interface Trainer {
   status: string;
   gender?: "Male" | "Female";
 }
+
+// New interfaces to simplify our UI
+export interface ScheduleDay {
+  label: string;
+  value: string;
+  isSelected: boolean;
+}
+
+export interface TimeOption {
+  label: string;
+  value: string;
+}
+
+export interface ClassFormState {
+  name: string;
+  gender: "Male" | "Female" | "All";
+  trainers: string[];
+  capacity: number;
+  schedule: string;
+  isRecurring: boolean;
+  recurringFrequency: "Daily" | "Weekly" | "Monthly";
+  selectedDays: string[];
+  startTime: string;
+  endTime: string;
+  endDate?: Date;
+}
