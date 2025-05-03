@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -109,12 +108,18 @@ const ClassSchedulePage = () => {
 
   const fetchTrainers = async () => {
     try {
+      console.log("Fetching trainers...");
       const { data, error } = await supabase
         .from("trainers")
         .select("id, name")
         .eq("status", "Active");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching trainers:", error);
+        throw error;
+      }
+      
+      console.log("Trainers fetched:", data);
       setTrainers(data || []);
     } catch (error) {
       console.error("Error fetching trainers:", error);
@@ -219,6 +224,7 @@ const ClassSchedulePage = () => {
 
   const onSubmit = async (values: FormValues) => {
     try {
+      console.log("Form values:", values);
       // Validate times
       if (values.startTime >= values.endTime) {
         toast({
@@ -445,7 +451,10 @@ const ClassSchedulePage = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {trainers.map(trainer => (
+                          {trainers.length === 0 && (
+                            <SelectItem value="no-trainers" disabled>No trainers available</SelectItem>
+                          )}
+                          {trainers.map((trainer) => (
                             <SelectItem key={trainer.id} value={trainer.name}>
                               {trainer.name}
                             </SelectItem>
