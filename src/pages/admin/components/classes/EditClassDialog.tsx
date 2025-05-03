@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -19,6 +18,13 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface EditClassDialogProps {
   isOpen: boolean;
@@ -75,11 +81,13 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
   
   const [selectedTrainers, setSelectedTrainers] = useState<string[]>([]);
   const [timeError, setTimeError] = useState<string | null>(null);
+  const [mainTrainer, setMainTrainer] = useState<string>("");
 
   useEffect(() => {
     if (currentClass) {
       setEditClass(currentClass);
       setSelectedTrainers(currentClass.trainers || [currentClass.trainer]);
+      setMainTrainer(currentClass.trainer || "");
       setTimeError(null);
     }
   }, [currentClass]);
@@ -163,12 +171,30 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
   const handleTrainerSelection = (trainer: string, isChecked: boolean) => {
     if (isChecked) {
       setSelectedTrainers(prev => [...prev, trainer]);
+      // If this is the first trainer selected or no main trainer set, make it the main trainer
+      if (selectedTrainers.length === 0 || !mainTrainer) {
+        setMainTrainer(trainer);
+      }
     } else {
       setSelectedTrainers(prev => prev.filter(t => t !== trainer));
+      // If removing the main trainer, select a new one or clear it
+      if (mainTrainer === trainer) {
+        const newTrainers = selectedTrainers.filter(t => t !== trainer);
+        setMainTrainer(newTrainers.length > 0 ? newTrainers[0] : "");
+      }
     }
     
     // Check for conflicts each time a trainer is selected/deselected
     setTimeError(null);
+  };
+
+  // Handler for changing the main trainer
+  const handleMainTrainerChange = (value: string) => {
+    setMainTrainer(value);
+    // Make sure this trainer is also in selectedTrainers
+    if (!selectedTrainers.includes(value)) {
+      setSelectedTrainers(prev => [...prev, value]);
+    }
   };
 
   const renderTimeSelect = (id: string, label: string, value: string | undefined, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void) => (
@@ -213,7 +239,7 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
       ...editClass,
       trainers: selectedTrainers,
       // For backward compatibility, keep the first trainer in the trainer field
-      trainer: selectedTrainers[0] || editClass.trainer
+      trainer: mainTrainer || selectedTrainers[0] || editClass.trainer
     };
     
     onUpdateClass(updatedClass);
@@ -245,6 +271,28 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
               />
             </div>
             
+            {/* Main Trainer Selection */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="main-trainer" className="text-right">Main Trainer*</Label>
+              <div className="col-span-3">
+                <Select
+                  value={mainTrainer}
+                  onValueChange={handleMainTrainerChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select main trainer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {trainers.map((trainer) => (
+                      <SelectItem key={trainer} value={trainer}>
+                        {trainer}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-4 items-center gap-4">
               <Label className="text-right">Gender</Label>
               <RadioGroup 
@@ -268,7 +316,7 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
             </div>
             
             <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right pt-2">Trainers*</Label>
+              <Label className="text-right pt-2">Additional Trainers</Label>
               <div className="col-span-3 grid grid-cols-2 gap-2">
                 {trainers.map((trainer) => (
                   <div key={trainer} className="flex items-center space-x-2">
@@ -344,6 +392,7 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
             className="bg-gym-blue hover:bg-gym-dark-blue"
             disabled={
               !editClass.name || 
+              !mainTrainer ||
               selectedTrainers.length === 0 || 
               editClass.capacity <= 0 ||
               !editClass.startTime ||
