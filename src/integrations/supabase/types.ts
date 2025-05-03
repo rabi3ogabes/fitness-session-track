@@ -43,10 +43,13 @@ export type Database = {
         Row: {
           capacity: number
           created_at: string | null
+          description: string | null
+          difficulty: string | null
           end_time: string | null
           enrolled: number | null
           gender: string | null
           id: number
+          location: string | null
           name: string
           schedule: string
           start_time: string | null
@@ -57,10 +60,13 @@ export type Database = {
         Insert: {
           capacity: number
           created_at?: string | null
+          description?: string | null
+          difficulty?: string | null
           end_time?: string | null
           enrolled?: number | null
           gender?: string | null
           id?: number
+          location?: string | null
           name: string
           schedule: string
           start_time?: string | null
@@ -71,10 +77,13 @@ export type Database = {
         Update: {
           capacity?: number
           created_at?: string | null
+          description?: string | null
+          difficulty?: string | null
           end_time?: string | null
           enrolled?: number | null
           gender?: string | null
           id?: number
+          location?: string | null
           name?: string
           schedule?: string
           start_time?: string | null
