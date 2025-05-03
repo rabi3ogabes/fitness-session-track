@@ -1,3 +1,4 @@
+
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -62,6 +63,7 @@ const Sidebar = () => {
     { name: "Dashboard", path: "/admin", icon: <Home className="h-5 w-5" /> },
     { name: "Members", path: "/admin/members", icon: <UsersRound className="h-5 w-5" /> },
     { name: "Trainers", path: "/admin/trainers", icon: <User className="h-5 w-5" /> },
+    { name: "Classes", path: "/admin/classes", icon: <Calendar className="h-5 w-5" /> },
     { name: "Memberships", path: "/admin/memberships", icon: <BadgeCheck className="h-5 w-5" /> },
     { name: "Payments", path: "/admin/payments", icon: <CreditCard className="h-5 w-5" /> },
     { name: "Reports", path: "/admin/reports", icon: <BarChart3 className="h-5 w-5" /> },

@@ -15,6 +15,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import Members from "./pages/admin/Members";
 import Trainers from "./pages/admin/Trainers";
 import Classes from "./pages/admin/Classes";
+import ClassSchedulePage from "./pages/admin/components/classes/ClassSchedulePage";
 import Memberships from "./pages/admin/Memberships";
 import Bookings from "./pages/admin/Bookings";
 import Payments from "./pages/admin/Payments";
@@ -38,6 +39,17 @@ const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isTrainer } = useAuth();
   
   if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  return children;
+};
+
+// Admin protected route
+const AdminProtectedRoute = ({ children }) => {
+  const { isAuthenticated, isAdmin } = useAuth();
+  
+  if (!isAuthenticated || !isAdmin) {
     return <Navigate to="/login" />;
   }
   
@@ -87,15 +99,51 @@ const App = () => (
             <Route path="/dashboard" element={<UserDashboardRedirect />} />
 
             {/* Admin Routes */}
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/members" element={<Members />} />
-            <Route path="/admin/trainers" element={<Trainers />} />
-            <Route path="/admin/classes" element={<Classes />} />
-            <Route path="/admin/memberships" element={<Memberships />} />
-            <Route path="/admin/bookings" element={<Bookings />} />
-            <Route path="/admin/payments" element={<Payments />} />
-            <Route path="/admin/reports" element={<Reports />} />
-            <Route path="/admin/settings" element={<Settings />} />
+            <Route path="/admin" element={
+              <AdminProtectedRoute>
+                <AdminDashboard />
+              </AdminProtectedRoute>
+            } />
+            <Route path="/admin/members" element={
+              <AdminProtectedRoute>
+                <Members />
+              </AdminProtectedRoute>
+            } />
+            <Route path="/admin/trainers" element={
+              <AdminProtectedRoute>
+                <Trainers />
+              </AdminProtectedRoute>
+            } />
+            <Route path="/admin/classes" element={
+              <AdminProtectedRoute>
+                <ClassSchedulePage />
+              </AdminProtectedRoute>
+            } />
+            <Route path="/admin/memberships" element={
+              <AdminProtectedRoute>
+                <Memberships />
+              </AdminProtectedRoute>
+            } />
+            <Route path="/admin/bookings" element={
+              <AdminProtectedRoute>
+                <Bookings />
+              </AdminProtectedRoute>
+            } />
+            <Route path="/admin/payments" element={
+              <AdminProtectedRoute>
+                <Payments />
+              </AdminProtectedRoute>
+            } />
+            <Route path="/admin/reports" element={
+              <AdminProtectedRoute>
+                <Reports />
+              </AdminProtectedRoute>
+            } />
+            <Route path="/admin/settings" element={
+              <AdminProtectedRoute>
+                <Settings />
+              </AdminProtectedRoute>
+            } />
 
             {/* User Routes */}
             <Route path="/user/profile" element={<UserProfile />} />
