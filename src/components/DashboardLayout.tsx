@@ -16,6 +16,7 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
   // Redirect if not authenticated after loading is complete
   useEffect(() => {
     if (!loading && !isAuthenticated) {
+      console.log("Not authenticated, redirecting to login from DashboardLayout");
       navigate("/login");
     }
   }, [isAuthenticated, loading, navigate]);

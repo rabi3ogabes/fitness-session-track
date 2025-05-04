@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -61,7 +60,9 @@ const Trainers = () => {
 
   // Check authentication when component mounts
   useEffect(() => {
+    console.log("Trainer component mounted, auth state:", isAuthenticated);
     if (!isAuthenticated) {
+      console.log("Not authenticated, redirecting to login from Trainers component");
       toast({
         title: "Authentication required",
         description: "You need to be logged in to access trainer data.",
@@ -69,13 +70,15 @@ const Trainers = () => {
       });
       navigate("/login");
     } else {
+      console.log("User is authenticated, fetching trainers");
       fetchTrainers();
     }
   }, [isAuthenticated, navigate]);
 
-  // Load trainers from Supabase on component mount
+  // Load trainers from Supabase when authentication changes
   useEffect(() => {
     if (isAuthenticated) {
+      console.log("Authentication changed, fetching trainers");
       fetchTrainers();
     }
   }, [isAuthenticated]);
@@ -83,11 +86,16 @@ const Trainers = () => {
   // Create a test trainer if none exists
   useEffect(() => {
     const initializeTrainers = async () => {
-      if (!isAuthenticated) return;
+      if (!isAuthenticated) {
+        console.log("Not authenticated, skipping trainer initialization");
+        return;
+      }
       
+      console.log("Initializing trainers");
       try {
         const success = await createTestTrainer();
         if (success) {
+          console.log("Test trainer created or already exists, refreshing trainer list");
           fetchTrainers(); // Refresh trainers list if a test trainer was created
         }
       } catch (error) {
@@ -101,13 +109,18 @@ const Trainers = () => {
   }, [isAuthenticated]);
 
   const fetchTrainers = async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      console.log("Not authenticated, skipping trainer fetch");
+      return;
+    }
     
+    console.log("Fetching trainers");
     setIsLoading(true);
     try {
       // Check if we have an authenticated session
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
+        console.log("No session found when fetching trainers");
         toast({
           title: "Authentication required",
           description: "You need to be logged in to access trainer data.",
@@ -117,6 +130,7 @@ const Trainers = () => {
         return;
       }
 
+      console.log("Session found, proceeding with trainer fetch");
       const { data, error } = await supabase
         .from("trainers")
         .select("*")
@@ -127,6 +141,7 @@ const Trainers = () => {
       }
 
       if (data) {
+        console.log(`Fetched ${data.length} trainers`);
         setTrainers(data);
       }
     } catch (error: any) {
@@ -149,7 +164,9 @@ const Trainers = () => {
   );
 
   const handleAddTrainer = async () => {
+    console.log("Add trainer button clicked, auth state:", isAuthenticated);
     if (!isAuthenticated) {
+      console.log("Not authenticated, showing error toast");
       toast({
         title: "Authentication required",
         description: "You need to be logged in to add trainers.",
@@ -160,6 +177,7 @@ const Trainers = () => {
     }
     
     if (!newTrainer.name || !newTrainer.email) {
+      console.log("Required fields missing, showing error toast");
       toast({
         title: "Required fields missing",
         description: "Please fill in all required fields",
@@ -172,6 +190,7 @@ const Trainers = () => {
       // Check if we have an authenticated session
       const { data: sessionData } = await supabase.auth.getSession();
       if (!sessionData.session) {
+        console.log("No session found when adding trainer");
         toast({
           title: "Authentication required",
           description: "You need to be logged in to add trainers.",
