@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { TrainerFormData } from "../trainers/types";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
 interface AddTrainerDialogProps {
   isOpen: boolean;
@@ -15,6 +17,8 @@ interface AddTrainerDialogProps {
 }
 
 const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDialogProps) => {
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [formData, setFormData] = useState<TrainerFormData>({
     name: "",
     email: "",
@@ -30,6 +34,26 @@ const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDial
 
   const handleSubmit = async () => {
     try {
+      // Check if user is authenticated first
+      if (!isAuthenticated) {
+        toast({
+          title: "Authentication required",
+          description: "You need to be logged in to add trainers.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validate required fields
+      if (!formData.name || !formData.email) {
+        toast({
+          title: "Required fields missing",
+          description: "Name and email are required fields.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Make a clean copy of the data to ensure proper format
       const submissionData: TrainerFormData = {
         name: formData.name.trim(),
@@ -40,6 +64,7 @@ const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDial
         gender: formData.gender || "Female",
       };
       
+      // Send data to parent component for processing
       await onAdd(submissionData);
       
       // Reset form after successful submission
@@ -53,6 +78,11 @@ const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDial
       });
     } catch (error) {
       console.error("Error in form submission:", error);
+      toast({
+        title: "Failed to add trainer",
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        variant: "destructive",
+      });
     }
   };
 
