@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { TrainerFormData } from "../trainers/types";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AddTrainerDialogProps {
   isOpen: boolean;
@@ -34,8 +34,21 @@ const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDial
 
   const handleSubmit = async () => {
     try {
-      // Check if user is authenticated first
-      if (!isAuthenticated) {
+      // Verify authentication directly with Supabase
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Session error in AddTrainerDialog:", sessionError);
+        toast({
+          title: "Authentication error",
+          description: "There was a problem verifying your authentication status.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!session) {
+        console.error("No session found in AddTrainerDialog");
         toast({
           title: "Authentication required",
           description: "You need to be logged in to add trainers.",
@@ -43,6 +56,8 @@ const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDial
         });
         return;
       }
+      
+      console.log("Session confirmed in AddTrainerDialog, proceeding with trainer creation");
       
       // Validate required fields
       if (!formData.name || !formData.email) {

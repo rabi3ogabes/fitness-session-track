@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -140,50 +139,13 @@ const Trainers = () => {
     }
 
     try {
-      // Check if we have an authenticated session first
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      // Use the createTrainer function from our hook instead of direct Supabase calls
+      const result = await createTrainer(trainerData);
       
-      if (sessionError) {
-        console.error("Session error:", sessionError);
-        throw sessionError;
-      }
-      
-      if (!sessionData.session) {
-        console.error("No authenticated session found");
-        toast({
-          title: "Authentication required",
-          description: "You need to be logged in to add trainers. No session found.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      console.log("Session found, proceeding with trainer creation");
-      
-      // With confirmed session, proceed to insert data
-      const { data, error } = await supabase
-        .from("trainers")
-        .insert([
-          {
-            name: trainerData.name,
-            email: trainerData.email,
-            phone: trainerData.phone || null,
-            specialization: trainerData.specialization || null,
-            status: trainerData.status || "Active",
-            gender: trainerData.gender || null
-          }
-        ])
-        .select();
-      
-      if (error) {
-        console.error("Supabase error:", error);
-        throw error;
-      }
-
-      if (data && data.length > 0) {
-        setTrainers([...trainers, data[0]]);
+      if (result.success && result.data && result.data.length > 0) {
+        setTrainers([...trainers, result.data[0]]);
         setIsAddDialogOpen(false);
-
+        
         toast({
           title: "Trainer added successfully",
           description: `${trainerData.name} has been added as a trainer`,

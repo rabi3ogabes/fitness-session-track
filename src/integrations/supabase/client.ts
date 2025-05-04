@@ -24,9 +24,15 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 
 // Security helper function to check if a user is authenticated before making DB calls
 export const requireAuth = async (callback: () => Promise<any>) => {
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error) {
+    console.error("Error checking session:", error);
+    throw new Error('Authentication verification failed');
+  }
   if (!session) {
+    console.error("No active session found");
     throw new Error('Authentication required');
   }
+  console.log("Authentication confirmed, executing protected operation");
   return callback();
 };
