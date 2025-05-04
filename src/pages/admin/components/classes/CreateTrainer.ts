@@ -21,9 +21,23 @@ export const useTrainerCreation = () => {
   const [isCreating, setIsCreating] = useState(false);
 
   // Function to check authentication before any operations
-  const checkAuthenticationStatus = () => {
+  const checkAuthenticationStatus = async () => {
     console.log("Checking authentication status, isAuthenticated:", isAuthenticated);
-    if (!isAuthenticated) {
+    
+    // Double-check with Supabase to confirm session is active
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error("Session check error:", error);
+      toast({
+        title: "Authentication error",
+        description: "There was a problem verifying your authentication status.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    if (!session) {
       console.error("Not authenticated in useTrainerCreation hook");
       toast({
         title: "Authentication required",
@@ -33,38 +47,21 @@ export const useTrainerCreation = () => {
       navigate("/login");
       return false;
     }
+    
     return true;
   };
 
   // Create a new trainer
   const createTrainer = async (trainerData: TrainerData) => {
-    console.log("Creating trainer, auth check result:", checkAuthenticationStatus());
-    if (!checkAuthenticationStatus()) return { success: false };
-    
     setIsCreating(true);
     console.log("Creating trainer with data:", trainerData);
     
     try {
-      // Check if we have an authenticated session
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      // Verify authentication with Supabase directly
+      const isAuth = await checkAuthenticationStatus();
+      if (!isAuth) return { success: false };
       
-      if (sessionError) {
-        console.error("Session error in createTrainer:", sessionError);
-        throw sessionError;
-      }
-      
-      if (!sessionData?.session) {
-        console.error("No session found in createTrainer");
-        toast({
-          title: "Authentication required",
-          description: "You need to be logged in to create trainers - no session found",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return { success: false };
-      }
-      
-      console.log("Session confirmed, proceeding with trainer creation");
+      console.log("Authentication confirmed, proceeding with trainer creation");
       
       const { data, error } = await supabase
         .from("trainers")
@@ -107,24 +104,12 @@ export const useTrainerCreation = () => {
 
   // Create a test trainer for demo purposes
   const createTestTrainer = async () => {
-    console.log("Creating test trainer, auth check result:", checkAuthenticationStatus());
-    if (!checkAuthenticationStatus()) return false;
-    
     try {
-      // Check if we have an authenticated session first
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      // Verify authentication with Supabase directly
+      const isAuth = await checkAuthenticationStatus();
+      if (!isAuth) return false;
       
-      if (sessionError) {
-        console.error("Session error:", sessionError);
-        return false;
-      }
-      
-      if (!sessionData.session) {
-        console.error("Authentication required to create test trainer - no session found");
-        return false;
-      }
-      
-      console.log("Session found, proceeding with trainer check/creation");
+      console.log("Authentication confirmed, proceeding with test trainer check/creation");
       
       // Check if we already have trainers
       const { data: existingTrainers, error: checkError } = await supabase

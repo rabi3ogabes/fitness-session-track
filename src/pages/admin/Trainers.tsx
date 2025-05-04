@@ -140,6 +140,27 @@ const Trainers = () => {
     }
 
     try {
+      // Check if we have an authenticated session first
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Session error:", sessionError);
+        throw sessionError;
+      }
+      
+      if (!sessionData.session) {
+        console.error("No authenticated session found");
+        toast({
+          title: "Authentication required",
+          description: "You need to be logged in to add trainers. No session found.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("Session found, proceeding with trainer creation");
+      
+      // With confirmed session, proceed to insert data
       const { data, error } = await supabase
         .from("trainers")
         .insert([
