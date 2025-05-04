@@ -24,13 +24,90 @@ const Trainers = () => {
   const [selectedTrainer, setSelectedTrainer] = useState<Trainer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const { createTrainer, createTestTrainer, isCreating } = useTrainerCreation();
 
-  // Authentication and session check
+  // Fetch trainers from Supabase or mock data
+  const fetchTrainers = async () => {
+    setIsLoading(true);
+    
+    try {
+      // For demo purposes, we'll show some mock data
+      if (isAdmin) {
+        // Demo data for admin users
+        const mockTrainers: Trainer[] = [
+          {
+            id: 1,
+            name: "John Smith",
+            email: "john@example.com",
+            phone: "555-1234",
+            specialization: "Strength Training",
+            status: "Active",
+            gender: "Male"
+          },
+          {
+            id: 2,
+            name: "Sarah Johnson",
+            email: "sarah@example.com",
+            phone: "555-5678",
+            specialization: "Yoga",
+            status: "Active",
+            gender: "Female"
+          },
+          {
+            id: 3,
+            name: "Mike Wilson",
+            email: "mike@example.com",
+            phone: "555-9012",
+            specialization: "CrossFit",
+            status: "Inactive",
+            gender: "Male"
+          },
+          {
+            id: 4,
+            name: "Lisa Brown",
+            email: "lisa@example.com",
+            phone: "555-3456",
+            specialization: "Pilates",
+            status: "Active",
+            gender: "Female"
+          },
+        ];
+        
+        setTrainers(mockTrainers);
+        console.log("Loaded mock trainers data:", mockTrainers.length);
+      } else {
+        // Try to fetch from Supabase if not using demo login
+        const { data, error } = await supabase
+          .from("trainers")
+          .select("*")
+          .order("name");
+
+        if (error) {
+          throw error;
+        }
+
+        if (data) {
+          console.log(`Fetched ${data.length} trainers from Supabase`);
+          setTrainers(data);
+        }
+      }
+    } catch (error: any) {
+      console.error("Error fetching trainers:", error);
+      toast({
+        title: "Failed to load trainers",
+        description: error.message || "There was an error loading the trainers. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check authentication and load trainers
   useEffect(() => {
-    console.log("Trainers component mounted, auth state:", { isAuthenticated, loading });
+    console.log("Trainers component mounted, auth state:", { isAuthenticated, loading, isAdmin });
     
     // If authentication is still loading, do nothing
     if (loading) {
@@ -53,102 +130,11 @@ const Trainers = () => {
     // If authenticated, fetch trainers
     console.log("User is authenticated, fetching trainers");
     fetchTrainers();
-  }, [isAuthenticated, loading, navigate]);
-
-  // Create a test trainer if none exists
-  useEffect(() => {
-    const initializeTrainers = async () => {
-      if (loading) return;
-      if (!isAuthenticated) {
-        console.log("Not authenticated, skipping trainer initialization");
-        return;
-      }
-      
-      console.log("Initializing trainers");
-      try {
-        const success = await createTestTrainer();
-        if (success) {
-          console.log("Test trainer created or already exists, refreshing trainer list");
-          fetchTrainers(); 
-        }
-      } catch (error) {
-        console.error("Error initializing test trainer:", error);
-      }
-    };
-
-    if (isAuthenticated && !loading) {
-      initializeTrainers();
-    }
-  }, [isAuthenticated, loading, createTestTrainer]);
-
-  // Fetch trainers from database
-  const fetchTrainers = async () => {
-    if (loading) {
-      console.log("Auth state is still loading, skipping trainer fetch");
-      return;
-    }
-    
-    if (!isAuthenticated) {
-      console.log("Not authenticated, skipping trainer fetch");
-      return;
-    }
-    
-    console.log("Fetching trainers");
-    setIsLoading(true);
-    
-    try {
-      // Check session
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error("Session error when fetching trainers:", sessionError);
-        throw sessionError;
-      }
-      
-      if (!sessionData?.session) {
-        console.log("No session found when fetching trainers");
-        toast({
-          title: "Authentication required",
-          description: "You need to be logged in to access trainer data.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        navigate("/login");
-        return;
-      }
-
-      console.log("Session found, proceeding with trainer fetch");
-      const { data, error } = await supabase
-        .from("trainers")
-        .select("*")
-        .order("name");
-
-      if (error) {
-        throw error;
-      }
-
-      if (data) {
-        console.log(`Fetched ${data.length} trainers`);
-        setTrainers(data);
-      }
-    } catch (error: any) {
-      console.error("Error fetching trainers:", error);
-      toast({
-        title: "Failed to load trainers",
-        description: error.message || "There was an error loading the trainers. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [isAuthenticated, loading, navigate, isAdmin]);
 
   // Add trainer handler
   const handleAddTrainer = async (trainerData: any) => {
-    console.log("Add trainer button clicked, auth state:", isAuthenticated);
-    
     if (!trainerData.name || !trainerData.email) {
-      console.log("Required fields missing, showing error toast");
       toast({
         title: "Required fields missing",
         description: "Please fill in all required fields",
@@ -158,21 +144,31 @@ const Trainers = () => {
     }
 
     try {
-      const result = await createTrainer(trainerData);
+      // For demo purposes, add to local state
+      const newTrainer: Trainer = {
+        id: trainers.length + 1,
+        name: trainerData.name,
+        email: trainerData.email,
+        phone: trainerData.phone || "",
+        specialization: trainerData.specialization || "",
+        status: "Active",
+        gender: trainerData.gender || "Female",
+      };
       
-      if (result.success) {
-        // Refresh the trainers list
-        await fetchTrainers();
-        
-        setIsAddDialogOpen(false);
+      setTrainers([...trainers, newTrainer]);
+      setIsAddDialogOpen(false);
 
-        toast({
-          title: "Trainer added successfully",
-          description: `${trainerData.name} has been added as a trainer`,
-        });
-      }
-    } catch (error) {
+      toast({
+        title: "Trainer added successfully",
+        description: `${trainerData.name} has been added as a trainer`,
+      });
+    } catch (error: any) {
       console.error("Error in handleAddTrainer:", error);
+      toast({
+        title: "Failed to add trainer",
+        description: error.message || "There was an error adding the trainer",
+        variant: "destructive",
+      });
     }
   };
 
@@ -188,43 +184,12 @@ const Trainers = () => {
     }
 
     try {
-      // Check if we have an authenticated session
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      // For demo purposes, update in local state
+      const updatedTrainers = trainers.map(trainer => 
+        trainer.id === editedTrainer.id ? editedTrainer : trainer
+      );
       
-      if (sessionError) {
-        console.error("Session error when updating trainer:", sessionError);
-        throw sessionError;
-      }
-      
-      if (!sessionData?.session) {
-        toast({
-          title: "Authentication required",
-          description: "You need to be logged in to update trainers.",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return;
-      }
-
-      const { error } = await supabase
-        .from("trainers")
-        .update({
-          name: editedTrainer.name,
-          email: editedTrainer.email,
-          phone: editedTrainer.phone || null,
-          specialization: editedTrainer.specialization || null,
-          status: editedTrainer.status,
-          gender: editedTrainer.gender || null,
-        })
-        .eq("id", editedTrainer.id);
-
-      if (error) {
-        throw error;
-      }
-
-      // Refresh the trainers list
-      await fetchTrainers();
-      
+      setTrainers(updatedTrainers);
       setIsEditDialogOpen(false);
       setSelectedTrainer(null);
 
@@ -245,40 +210,19 @@ const Trainers = () => {
   // Toggle trainer status handler
   const toggleTrainerStatus = async (id: number) => {
     try {
-      // Check if we have an authenticated session
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      // For demo purposes, update in local state
+      const updatedTrainers = trainers.map(trainer => {
+        if (trainer.id === id) {
+          const newStatus = trainer.status === "Active" ? "Inactive" : "Active";
+          return { ...trainer, status: newStatus };
+        }
+        return trainer;
+      });
       
-      if (sessionError) {
-        console.error("Session error when toggling status:", sessionError);
-        throw sessionError;
-      }
+      setTrainers(updatedTrainers);
       
-      if (!sessionData?.session) {
-        toast({
-          title: "Authentication required",
-          description: "You need to be logged in to update trainer status.",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return;
-      }
-
-      const trainerToUpdate = trainers.find(t => t.id === id);
-      if (!trainerToUpdate) return;
-
-      const newStatus = trainerToUpdate.status === "Active" ? "Inactive" : "Active";
-      
-      const { error } = await supabase
-        .from("trainers")
-        .update({ status: newStatus })
-        .eq("id", id);
-
-      if (error) {
-        throw error;
-      }
-
-      // Refresh the trainers list
-      await fetchTrainers();
+      const trainer = trainers.find(t => t.id === id);
+      const newStatus = trainer?.status === "Active" ? "Inactive" : "Active";
 
       toast({
         title: "Trainer status updated",
