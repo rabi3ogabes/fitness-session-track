@@ -36,7 +36,13 @@ const queryClient = new QueryClient();
 
 // Protected route component to handle redirections based on role
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, isTrainer } = useAuth();
+  const { isAuthenticated, isTrainer, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
+    </div>;
+  }
   
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
@@ -47,7 +53,13 @@ const ProtectedRoute = ({ children }) => {
 
 // Admin protected route
 const AdminProtectedRoute = ({ children }) => {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
+    </div>;
+  }
   
   if (!isAuthenticated || !isAdmin) {
     return <Navigate to="/login" />;
@@ -58,7 +70,13 @@ const AdminProtectedRoute = ({ children }) => {
 
 // Trainer home redirect component
 const TrainerHomeRedirect = () => {
-  const { isAuthenticated, isTrainer } = useAuth();
+  const { isAuthenticated, isTrainer, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
+    </div>;
+  }
   
   if (isAuthenticated && isTrainer) {
     return <Navigate to="/trainer" />;
@@ -69,7 +87,13 @@ const TrainerHomeRedirect = () => {
 
 // User dashboard component with role-based redirection
 const UserDashboardRedirect = () => {
-  const { isAuthenticated, isAdmin, isTrainer } = useAuth();
+  const { isAuthenticated, isAdmin, isTrainer, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
+    </div>;
+  }
   
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
