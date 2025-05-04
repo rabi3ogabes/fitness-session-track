@@ -25,6 +25,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { createTestTrainer } from "./components/classes/CreateTrainer";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface Trainer {
   id: number;
@@ -54,15 +56,35 @@ const Trainers = () => {
   const [editTrainer, setEditTrainer] = useState<Trainer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  // Check authentication when component mounts
+  useEffect(() => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "You need to be logged in to access trainer data.",
+        variant: "destructive",
+      });
+      navigate("/login");
+    } else {
+      fetchTrainers();
+    }
+  }, [isAuthenticated, navigate]);
 
   // Load trainers from Supabase on component mount
   useEffect(() => {
-    fetchTrainers();
-  }, []);
+    if (isAuthenticated) {
+      fetchTrainers();
+    }
+  }, [isAuthenticated]);
 
   // Create a test trainer if none exists
   useEffect(() => {
     const initializeTrainers = async () => {
+      if (!isAuthenticated) return;
+      
       try {
         const success = await createTestTrainer();
         if (success) {
@@ -73,10 +95,14 @@ const Trainers = () => {
       }
     };
 
-    initializeTrainers();
-  }, []);
+    if (isAuthenticated) {
+      initializeTrainers();
+    }
+  }, [isAuthenticated]);
 
   const fetchTrainers = async () => {
+    if (!isAuthenticated) return;
+    
     setIsLoading(true);
     try {
       // Check if we have an authenticated session
@@ -123,6 +149,16 @@ const Trainers = () => {
   );
 
   const handleAddTrainer = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Authentication required",
+        description: "You need to be logged in to add trainers.",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
+    
     if (!newTrainer.name || !newTrainer.email) {
       toast({
         title: "Required fields missing",
@@ -141,6 +177,7 @@ const Trainers = () => {
           description: "You need to be logged in to add trainers.",
           variant: "destructive",
         });
+        navigate("/login");
         return;
       }
 

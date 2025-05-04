@@ -4,9 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 export const createTestTrainer = async () => {
   try {
     // Check if we have an authenticated session first
-    const { data: sessionData } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (!sessionData.session) {
       console.error("Authentication required to create test trainer");
+      return false;
+    }
+    
+    if (sessionError) {
+      console.error("Session error:", sessionError);
       return false;
     }
     
