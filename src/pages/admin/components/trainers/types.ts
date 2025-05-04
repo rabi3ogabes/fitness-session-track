@@ -7,4 +7,5 @@ export interface Trainer {
   specialization?: string;
   status: string;
   gender?: string;
+  created_at?: string;
 }

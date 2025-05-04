@@ -28,14 +28,26 @@ const Trainers = () => {
   const navigate = useNavigate();
   const { createTrainer, createTestTrainer, isCreating } = useTrainerCreation();
 
-  // Fetch trainers from Supabase or mock data
+  // Fetch trainers from Supabase
   const fetchTrainers = async () => {
     setIsLoading(true);
     
     try {
-      // For demo purposes, we'll show some mock data
-      if (isAdmin) {
-        // Demo data for admin users
+      const { data, error } = await supabase
+        .from("trainers")
+        .select("*")
+        .order("name");
+
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        console.log(`Fetched ${data.length} trainers from Supabase`);
+        setTrainers(data);
+      } else {
+        // Fallback to mock data if no trainers in database
+        console.log("No trainers found in database, using mock data");
         const mockTrainers: Trainer[] = [
           {
             id: 1,
@@ -76,22 +88,6 @@ const Trainers = () => {
         ];
         
         setTrainers(mockTrainers);
-        console.log("Loaded mock trainers data:", mockTrainers.length);
-      } else {
-        // Try to fetch from Supabase if not using demo login
-        const { data, error } = await supabase
-          .from("trainers")
-          .select("*")
-          .order("name");
-
-        if (error) {
-          throw error;
-        }
-
-        if (data) {
-          console.log(`Fetched ${data.length} trainers from Supabase`);
-          setTrainers(data);
-        }
       }
     } catch (error: any) {
       console.error("Error fetching trainers:", error);
@@ -130,7 +126,7 @@ const Trainers = () => {
     // If authenticated, fetch trainers
     console.log("User is authenticated, fetching trainers");
     fetchTrainers();
-  }, [isAuthenticated, loading, navigate, isAdmin]);
+  }, [isAuthenticated, loading, navigate]);
 
   // Add trainer handler
   const handleAddTrainer = async (trainerData: any) => {
@@ -144,24 +140,33 @@ const Trainers = () => {
     }
 
     try {
-      // For demo purposes, add to local state
-      const newTrainer: Trainer = {
-        id: trainers.length + 1,
-        name: trainerData.name,
-        email: trainerData.email,
-        phone: trainerData.phone || "",
-        specialization: trainerData.specialization || "",
-        status: "Active",
-        gender: trainerData.gender || "Female",
-      };
+      const { data, error } = await supabase
+        .from("trainers")
+        .insert([
+          {
+            name: trainerData.name,
+            email: trainerData.email,
+            phone: trainerData.phone || null,
+            specialization: trainerData.specialization || null,
+            status: "Active",
+            gender: trainerData.gender || null
+          }
+        ])
+        .select();
       
-      setTrainers([...trainers, newTrainer]);
-      setIsAddDialogOpen(false);
+      if (error) {
+        throw error;
+      }
 
-      toast({
-        title: "Trainer added successfully",
-        description: `${trainerData.name} has been added as a trainer`,
-      });
+      if (data && data.length > 0) {
+        setTrainers([...trainers, data[0]]);
+        setIsAddDialogOpen(false);
+
+        toast({
+          title: "Trainer added successfully",
+          description: `${trainerData.name} has been added as a trainer`,
+        });
+      }
     } catch (error: any) {
       console.error("Error in handleAddTrainer:", error);
       toast({
@@ -184,7 +189,23 @@ const Trainers = () => {
     }
 
     try {
-      // For demo purposes, update in local state
+      const { error } = await supabase
+        .from("trainers")
+        .update({
+          name: editedTrainer.name,
+          email: editedTrainer.email,
+          phone: editedTrainer.phone,
+          specialization: editedTrainer.specialization,
+          status: editedTrainer.status,
+          gender: editedTrainer.gender
+        })
+        .eq("id", editedTrainer.id);
+      
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
       const updatedTrainers = trainers.map(trainer => 
         trainer.id === editedTrainer.id ? editedTrainer : trainer
       );
@@ -210,10 +231,24 @@ const Trainers = () => {
   // Toggle trainer status handler
   const toggleTrainerStatus = async (id: number) => {
     try {
-      // For demo purposes, update in local state
+      // Get current trainer status
+      const trainer = trainers.find(t => t.id === id);
+      if (!trainer) return;
+      
+      const newStatus = trainer.status === "Active" ? "Inactive" : "Active";
+      
+      const { error } = await supabase
+        .from("trainers")
+        .update({ status: newStatus })
+        .eq("id", id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
       const updatedTrainers = trainers.map(trainer => {
         if (trainer.id === id) {
-          const newStatus = trainer.status === "Active" ? "Inactive" : "Active";
           return { ...trainer, status: newStatus };
         }
         return trainer;
@@ -221,9 +256,6 @@ const Trainers = () => {
       
       setTrainers(updatedTrainers);
       
-      const trainer = trainers.find(t => t.id === id);
-      const newStatus = trainer?.status === "Active" ? "Inactive" : "Active";
-
       toast({
         title: "Trainer status updated",
         description: `Trainer is now ${newStatus}`,
