@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, requireAuth } from "@/integrations/supabase/client";
 
 // Components
 import MemberSearch from "./components/members/MemberSearch";
@@ -34,45 +34,47 @@ const Members = () => {
         setIsLoading(true);
         console.log("Fetching members data...");
         
-        const { data, error } = await supabase
-          .from('members')
-          .select('*');
+        // Use requireAuth to ensure authentication
+        await requireAuth(async () => {
+          const { data, error } = await supabase
+            .from('members')
+            .select('*');
+            
+          if (error) {
+            console.error("Error fetching members:", error);
+            toast({
+              title: "Failed to load members",
+              description: error.message,
+              variant: "destructive",
+            });
+            return;
+          }
           
-        if (error) {
-          console.error("Error fetching members:", error);
-          toast({
-            title: "Failed to load members",
-            description: error.message,
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        console.log("Members data received:", data);
-        
-        if (!data || data.length === 0) {
-          console.log("No members found in the database");
-          setMembers([]);
-          setIsLoading(false);
-          return;
-        }
-        
-        // Transform data to match our Member interface
-        const formattedMembers: Member[] = data.map((member: any) => ({
-          id: member.id,
-          name: member.name,
-          email: member.email,
-          phone: member.phone || "",
-          membership: member.membership || "Basic",
-          sessions: member.sessions || 0,
-          remainingSessions: member.remaining_sessions || 0,
-          status: member.status || "Active",
-          birthday: member.birthday || "",
-          canBeEditedByTrainers: member.can_be_edited_by_trainers || false,
-          gender: member.gender || "Male"
-        }));
-        
-        setMembers(formattedMembers);
+          console.log("Members data received:", data);
+          
+          if (!data || data.length === 0) {
+            console.log("No members found in the database");
+            setMembers([]);
+            return;
+          }
+          
+          // Transform data to match our Member interface
+          const formattedMembers: Member[] = data.map((member: any) => ({
+            id: member.id,
+            name: member.name,
+            email: member.email,
+            phone: member.phone || "",
+            membership: member.membership || "Basic",
+            sessions: member.sessions || 0,
+            remainingSessions: member.remaining_sessions || 0,
+            status: member.status || "Active",
+            birthday: member.birthday || "",
+            canBeEditedByTrainers: member.can_be_edited_by_trainers || false,
+            gender: member.gender || "Male"
+          }));
+          
+          setMembers(formattedMembers);
+        });
       } catch (err) {
         console.error("Error fetching members:", err);
         toast({
@@ -162,53 +164,51 @@ const Members = () => {
     }
 
     try {
-      // Prepare the data for Supabase (column names differ)
-      const memberData = {
-        name: editedMember.name,
-        email: editedMember.email,
-        phone: editedMember.phone,
-        membership: editedMember.membership,
-        sessions: editedMember.sessions,
-        remaining_sessions: editedMember.remainingSessions,
-        status: editedMember.status,
-        birthday: editedMember.birthday,
-        can_be_edited_by_trainers: editedMember.canBeEditedByTrainers,
-        gender: editedMember.gender
-      };
-      
-      console.log("Updating member with ID:", editedMember.id, memberData);
-      
-      const { error } = await supabase
-        .from('members')
-        .update(memberData)
-        .eq('id', editedMember.id);
+      // Use requireAuth for authentication
+      await requireAuth(async () => {
+        // Prepare the data for Supabase (column names differ)
+        const memberData = {
+          name: editedMember.name,
+          email: editedMember.email,
+          phone: editedMember.phone,
+          membership: editedMember.membership,
+          sessions: editedMember.sessions,
+          remaining_sessions: editedMember.remainingSessions,
+          status: editedMember.status,
+          birthday: editedMember.birthday,
+          can_be_edited_by_trainers: editedMember.canBeEditedByTrainers,
+          gender: editedMember.gender
+        };
         
-      if (error) {
-        console.error("Error updating member:", error);
+        console.log("Updating member with ID:", editedMember.id, memberData);
+        
+        const { error } = await supabase
+          .from('members')
+          .update(memberData)
+          .eq('id', editedMember.id);
+          
+        if (error) {
+          console.error("Error updating member:", error);
+          throw error;
+        }
+        
+        // Update local state
+        setMembers(prevMembers => 
+          prevMembers.map(member => member.id === editedMember.id ? editedMember : member)
+        );
+        
+        setIsEditDialogOpen(false);
+        
         toast({
-          title: "Failed to update member",
-          description: error.message,
-          variant: "destructive",
+          title: "Member updated successfully",
+          description: `${editedMember.name}'s information has been updated`,
         });
-        return;
-      }
-      
-      // Update local state
-      setMembers(prevMembers => 
-        prevMembers.map(member => member.id === editedMember.id ? editedMember : member)
-      );
-      
-      setIsEditDialogOpen(false);
-      
-      toast({
-        title: "Member updated successfully",
-        description: `${editedMember.name}'s information has been updated`,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error updating member:", err);
       toast({
         title: "Failed to update member",
-        description: "An unexpected error occurred",
+        description: err.message || "An unexpected error occurred",
         variant: "destructive",
       });
     }
@@ -229,38 +229,36 @@ const Members = () => {
       
       console.log("Toggling status for member:", id, "to", newStatus);
       
-      // Update in Supabase
-      const { error } = await supabase
-        .from('members')
-        .update({ status: newStatus })
-        .eq('id', id);
+      // Use requireAuth for authentication
+      await requireAuth(async () => {
+        // Update in Supabase
+        const { error } = await supabase
+          .from('members')
+          .update({ status: newStatus })
+          .eq('id', id);
+          
+        if (error) {
+          console.error("Error updating member status:", error);
+          throw error;
+        }
         
-      if (error) {
-        console.error("Error updating member status:", error);
-        toast({
-          title: "Failed to update status",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Update local state
-      setMembers(prevMembers => 
-        prevMembers.map(member => 
-          member.id === id ? { ...member, status: newStatus } : member
-        )
-      );
+        // Update local state
+        setMembers(prevMembers => 
+          prevMembers.map(member => 
+            member.id === id ? { ...member, status: newStatus } : member
+          )
+        );
 
-      toast({
-        title: "Member status updated",
-        description: "The member's status has been updated successfully",
+        toast({
+          title: "Member status updated",
+          description: "The member's status has been updated successfully",
+        });
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error toggling member status:", err);
       toast({
         title: "Failed to update status",
-        description: "An unexpected error occurred",
+        description: err.message || "An unexpected error occurred",
         variant: "destructive",
       });
     }
@@ -274,40 +272,38 @@ const Members = () => {
       
       const newTrainerAccess = !member.canBeEditedByTrainers;
       
-      // Update in Supabase
-      const { error } = await supabase
-        .from('members')
-        .update({ can_be_edited_by_trainers: newTrainerAccess })
-        .eq('id', id);
+      // Use requireAuth for authentication
+      await requireAuth(async () => {
+        // Update in Supabase
+        const { error } = await supabase
+          .from('members')
+          .update({ can_be_edited_by_trainers: newTrainerAccess })
+          .eq('id', id);
+          
+        if (error) {
+          console.error("Error updating trainer access:", error);
+          throw error;
+        }
         
-      if (error) {
-        console.error("Error updating trainer access:", error);
-        toast({
-          title: "Failed to update trainer access",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Update local state
-      setMembers(prevMembers => 
-        prevMembers.map(member => 
-          member.id === id ? { ...member, canBeEditedByTrainers: newTrainerAccess } : member
-        )
-      );
+        // Update local state
+        setMembers(prevMembers => 
+          prevMembers.map(member => 
+            member.id === id ? { ...member, canBeEditedByTrainers: newTrainerAccess } : member
+          )
+        );
 
-      const memberName = member.name;
-      
-      toast({
-        title: "Trainer access updated",
-        description: `${memberName} can ${newTrainerAccess ? 'now' : 'no longer'} be edited by trainers`,
+        const memberName = member.name;
+        
+        toast({
+          title: "Trainer access updated",
+          description: `${memberName} can ${newTrainerAccess ? 'now' : 'no longer'} be edited by trainers`,
+        });
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error toggling trainer edit access:", err);
       toast({
         title: "Failed to update trainer access",
-        description: "An unexpected error occurred",
+        description: err.message || "An unexpected error occurred",
         variant: "destructive",
       });
     }

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, requireAuth } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
@@ -126,69 +126,67 @@ const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialo
       
       console.log("Attempting to insert new member into database...");
       
-      // Insert into Supabase
-      const { data, error } = await supabase
-        .from('members')
-        .insert([
-          {
-            name: newMember.name,
-            email: newMember.email,
-            phone: newMember.phone,
-            birthday: newMember.birthday,
-            membership: newMember.membership,
-            sessions: totalSessions,
-            remaining_sessions: totalSessions,
-            status: "Active",
-            can_be_edited_by_trainers: true,
-            gender: newMember.gender
-          }
-        ])
-        .select();
+      // Use requireAuth to ensure authentication
+      await requireAuth(async () => {
+        // Insert into Supabase
+        const { data, error } = await supabase
+          .from('members')
+          .insert([
+            {
+              name: newMember.name,
+              email: newMember.email,
+              phone: newMember.phone,
+              birthday: newMember.birthday,
+              membership: newMember.membership,
+              sessions: totalSessions,
+              remaining_sessions: totalSessions,
+              status: "Active",
+              can_be_edited_by_trainers: true,
+              gender: newMember.gender
+            }
+          ])
+          .select();
 
-      if (error) {
-        console.error("Error adding member:", error);
+        if (error) {
+          console.error("Error adding member:", error);
+          throw error;
+        }
+        
+        console.log("Member registration successful, received data:", data);
+
         toast({
-          title: "Failed to register member",
-          description: error.message,
-          variant: "destructive",
+          title: "New member registered",
+          description: `${newMember.name} has been successfully registered`,
         });
-        return;
-      }
-      
-      console.log("Member registration successful, received data:", data);
 
-      toast({
-        title: "New member registered",
-        description: `${newMember.name} has been successfully registered`,
+        // Reset form
+        setNewMember({
+          name: "",
+          email: "",
+          phone: "",
+          birthday: "",
+          membership: membershipPlans[0].name,
+          sessions: membershipPlans[0].sessions,
+          additionalSessions: "0",
+          gender: "Male"
+        });
+        
+        setSelectedPlan(membershipPlans[0]);
+        
+        // Notify parent component
+        onMemberAdded();
+        
+        setFormErrors({});
+        setPhoneError(null);
+        
+        // Close dialog
+        onOpenChange(false);
       });
-
-      // Reset form
-      setNewMember({
-        name: "",
-        email: "",
-        phone: "",
-        birthday: "",
-        membership: membershipPlans[0].name,
-        sessions: membershipPlans[0].sessions,
-        additionalSessions: "0",
-        gender: "Male"
-      });
-      
-      setSelectedPlan(membershipPlans[0]);
-      
-      // Notify parent component
-      onMemberAdded();
-      
-      setFormErrors({});
-      setPhoneError(null);
-      
-      // Close dialog
-      onOpenChange(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error registering member:", err);
       toast({
         title: "Failed to register member",
-        description: "An unexpected error occurred",
+        description: err.message || "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
