@@ -5,15 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-
-interface TrainerFormData {
-  name: string;
-  email: string;
-  phone: string;
-  specialization: string;
-  status: string;
-  gender: string;
-}
+import { TrainerFormData } from "../trainers/types";
 
 interface AddTrainerDialogProps {
   isOpen: boolean;
@@ -37,15 +29,31 @@ const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDial
   };
 
   const handleSubmit = async () => {
-    await onAdd(formData);
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      specialization: "",
-      status: "Active",
-      gender: "Female",
-    });
+    try {
+      // Make a clean copy of the data to ensure proper format
+      const submissionData: TrainerFormData = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone?.trim() || "",
+        specialization: formData.specialization?.trim() || "",
+        status: formData.status || "Active",
+        gender: formData.gender || "Female",
+      };
+      
+      await onAdd(submissionData);
+      
+      // Reset form after successful submission
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        specialization: "",
+        status: "Active",
+        gender: "Female",
+      });
+    } catch (error) {
+      console.error("Error in form submission:", error);
+    }
   };
 
   return (
@@ -108,6 +116,23 @@ const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDial
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <label className="text-right text-sm font-medium col-span-1">
+              Status
+            </label>
+            <Select
+              value={formData.status}
+              onValueChange={(value) => handleChange("status", value)}
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label className="text-right text-sm font-medium col-span-1">
               Specialization
             </label>
             <Input
@@ -126,7 +151,7 @@ const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDial
           <Button 
             onClick={handleSubmit} 
             className="bg-gym-blue hover:bg-gym-dark-blue"
-            disabled={isCreating}
+            disabled={isCreating || !formData.name || !formData.email}
           >
             {isCreating ? (
               <>
