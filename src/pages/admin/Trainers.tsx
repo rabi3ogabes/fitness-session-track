@@ -64,7 +64,10 @@ const Trainers = () => {
   useEffect(() => {
     const initializeTrainers = async () => {
       try {
-        await createTestTrainer();
+        const success = await createTestTrainer();
+        if (success) {
+          fetchTrainers(); // Refresh trainers list if a test trainer was created
+        }
       } catch (error) {
         console.error("Error initializing test trainer:", error);
       }
@@ -76,6 +79,18 @@ const Trainers = () => {
   const fetchTrainers = async () => {
     setIsLoading(true);
     try {
+      // Check if we have an authenticated session
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        toast({
+          title: "Authentication required",
+          description: "You need to be logged in to access trainer data.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("trainers")
         .select("*")
@@ -88,11 +103,11 @@ const Trainers = () => {
       if (data) {
         setTrainers(data);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching trainers:", error);
       toast({
         title: "Failed to load trainers",
-        description: "There was an error loading the trainers. Please try again.",
+        description: error.message || "There was an error loading the trainers. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -118,6 +133,17 @@ const Trainers = () => {
     }
 
     try {
+      // Check if we have an authenticated session
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        toast({
+          title: "Authentication required",
+          description: "You need to be logged in to add trainers.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { data, error } = await supabase
         .from("trainers")
         .insert([
@@ -174,6 +200,17 @@ const Trainers = () => {
     }
 
     try {
+      // Check if we have an authenticated session
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        toast({
+          title: "Authentication required",
+          description: "You need to be logged in to update trainers.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from("trainers")
         .update({
@@ -212,6 +249,17 @@ const Trainers = () => {
 
   const toggleTrainerStatus = async (id: number) => {
     try {
+      // Check if we have an authenticated session
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        toast({
+          title: "Authentication required",
+          description: "You need to be logged in to update trainer status.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const trainerToUpdate = trainers.find(t => t.id === id);
       if (!trainerToUpdate) return;
 
