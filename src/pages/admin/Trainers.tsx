@@ -12,7 +12,7 @@ import TrainerList from "./components/trainers/TrainerList";
 import AddTrainerDialog from "./components/trainers/AddTrainerDialog";
 import EditTrainerDialog from "./components/trainers/EditTrainerDialog";
 import ResetPasswordDialog from "./components/trainers/ResetPasswordDialog";
-import { Trainer } from "./components/trainers/types";
+import { Trainer, TrainerFormData } from "./components/trainers/types";
 
 const Trainers = () => {
   // State management
@@ -129,7 +129,7 @@ const Trainers = () => {
   }, [isAuthenticated, loading, navigate]);
 
   // Add trainer handler
-  const handleAddTrainer = async (trainerData: any) => {
+  const handleAddTrainer = async (trainerData: TrainerFormData) => {
     if (!trainerData.name || !trainerData.email) {
       toast({
         title: "Required fields missing",
@@ -148,13 +148,14 @@ const Trainers = () => {
             email: trainerData.email,
             phone: trainerData.phone || null,
             specialization: trainerData.specialization || null,
-            status: "Active",
+            status: trainerData.status || "Active",
             gender: trainerData.gender || null
           }
         ])
         .select();
       
       if (error) {
+        console.error("Supabase error:", error);
         throw error;
       }
 

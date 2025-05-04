@@ -9,3 +9,5 @@ export interface Trainer {
   gender?: string;
   created_at?: string;
 }
+
+export type TrainerFormData = Omit<Trainer, 'id' | 'created_at'>;
