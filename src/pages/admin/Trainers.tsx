@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -39,6 +39,7 @@ interface Trainer {
 }
 
 const Trainers = () => {
+  // State management
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -60,21 +61,31 @@ const Trainers = () => {
   const navigate = useNavigate();
   const { createTrainer, createTestTrainer, isCreating } = useTrainerCreation();
 
-  // Check authentication when component mounts
+  // Authentication and session check
   useEffect(() => {
-    console.log("Trainer component mounted, auth state:", isAuthenticated);
-    if (!loading && !isAuthenticated) {
-      console.log("Not authenticated, redirecting to login from Trainers component");
+    console.log("Trainers component mounted, auth state:", { isAuthenticated, loading });
+    
+    // If authentication is still loading, do nothing
+    if (loading) {
+      console.log("Auth state is still loading...");
+      return;
+    }
+    
+    // If not authenticated after loading completes, redirect to login
+    if (!isAuthenticated) {
+      console.log("User is not authenticated, redirecting to login");
       toast({
         title: "Authentication required",
         description: "You need to be logged in to access trainer data.",
         variant: "destructive",
       });
       navigate("/login");
-    } else if (!loading && isAuthenticated) {
-      console.log("User is authenticated, fetching trainers");
-      fetchTrainers();
+      return;
     }
+    
+    // If authenticated, fetch trainers
+    console.log("User is authenticated, fetching trainers");
+    fetchTrainers();
   }, [isAuthenticated, loading, navigate]);
 
   // Create a test trainer if none exists
@@ -91,7 +102,7 @@ const Trainers = () => {
         const success = await createTestTrainer();
         if (success) {
           console.log("Test trainer created or already exists, refreshing trainer list");
-          fetchTrainers(); // Refresh trainers list if a test trainer was created
+          fetchTrainers(); 
         }
       } catch (error) {
         console.error("Error initializing test trainer:", error);
@@ -103,8 +114,13 @@ const Trainers = () => {
     }
   }, [isAuthenticated, loading, createTestTrainer]);
 
+  // Fetch trainers from database
   const fetchTrainers = async () => {
-    if (loading) return;
+    if (loading) {
+      console.log("Auth state is still loading, skipping trainer fetch");
+      return;
+    }
+    
     if (!isAuthenticated) {
       console.log("Not authenticated, skipping trainer fetch");
       return;
@@ -112,10 +128,17 @@ const Trainers = () => {
     
     console.log("Fetching trainers");
     setIsLoading(true);
+    
     try {
-      // Check if we have an authenticated session
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      // Check session
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Session error when fetching trainers:", sessionError);
+        throw sessionError;
+      }
+      
+      if (!sessionData?.session) {
         console.log("No session found when fetching trainers");
         toast({
           title: "Authentication required",
@@ -153,6 +176,7 @@ const Trainers = () => {
     }
   };
 
+  // Filter trainers based on search term
   const filteredTrainers = trainers.filter(
     (trainer) =>
       trainer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -160,6 +184,7 @@ const Trainers = () => {
       (trainer.specialization && trainer.specialization.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Add trainer handler
   const handleAddTrainer = async () => {
     console.log("Add trainer button clicked, auth state:", isAuthenticated);
     
@@ -200,6 +225,7 @@ const Trainers = () => {
     }
   };
 
+  // Edit trainer handler
   const handleEditTrainer = async () => {
     if (!editTrainer || !editTrainer.name || !editTrainer.email) {
       toast({
@@ -212,8 +238,14 @@ const Trainers = () => {
 
     try {
       // Check if we have an authenticated session
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Session error when updating trainer:", sessionError);
+        throw sessionError;
+      }
+      
+      if (!sessionData?.session) {
         toast({
           title: "Authentication required",
           description: "You need to be logged in to update trainers.",
@@ -259,11 +291,18 @@ const Trainers = () => {
     }
   };
 
+  // Toggle trainer status handler
   const toggleTrainerStatus = async (id: number) => {
     try {
       // Check if we have an authenticated session
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Session error when toggling status:", sessionError);
+        throw sessionError;
+      }
+      
+      if (!sessionData?.session) {
         toast({
           title: "Authentication required",
           description: "You need to be logged in to update trainer status.",
@@ -304,18 +343,18 @@ const Trainers = () => {
     }
   };
 
+  // Reset password dialog handler
   const openResetPasswordDialog = (trainer: Trainer) => {
     setSelectedTrainer(trainer);
     setIsResetPasswordDialogOpen(true);
   };
 
+  // Reset password handler
   const handleResetPassword = async () => {
     if (!selectedTrainer) return;
     
     try {
       // In a real implementation with authentication, this would call an API to reset the password
-      // For now, we'll just show a toast notification
-      
       toast({
         title: "Password reset requested",
         description: `A password reset email has been sent to ${selectedTrainer.email}`,
@@ -332,23 +371,24 @@ const Trainers = () => {
     }
   };
 
-  // If still loading auth state, show a spinner
+  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading authentication...</p>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // If not authenticated, don't render anything
+  // Not authenticated state
   if (!isAuthenticated) {
     return null;
   }
 
+  // Main component render
   return (
     <DashboardLayout title="Trainer Management">
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -360,7 +400,10 @@ const Trainers = () => {
             className="sm:w-80"
           />
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)} className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue">
+        <Button 
+          onClick={() => setIsAddDialogOpen(true)} 
+          className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue"
+        >
           Add New Trainer
         </Button>
       </div>

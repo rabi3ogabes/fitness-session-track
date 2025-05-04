@@ -22,8 +22,9 @@ export const useTrainerCreation = () => {
 
   // Function to check authentication before any operations
   const checkAuthenticationStatus = () => {
+    console.log("Checking authentication status, isAuthenticated:", isAuthenticated);
     if (!isAuthenticated) {
-      console.log("Not authenticated in useTrainerCreation hook");
+      console.error("Not authenticated in useTrainerCreation hook");
       toast({
         title: "Authentication required",
         description: "You need to be logged in to manage trainers.",
@@ -37,6 +38,7 @@ export const useTrainerCreation = () => {
 
   // Create a new trainer
   const createTrainer = async (trainerData: TrainerData) => {
+    console.log("Creating trainer, auth check result:", checkAuthenticationStatus());
     if (!checkAuthenticationStatus()) return { success: false };
     
     setIsCreating(true);
@@ -53,7 +55,13 @@ export const useTrainerCreation = () => {
       
       if (!sessionData?.session) {
         console.error("No session found in createTrainer");
-        throw new Error("Authentication required to create trainers - no session found");
+        toast({
+          title: "Authentication required",
+          description: "You need to be logged in to create trainers - no session found",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return { success: false };
       }
       
       console.log("Session confirmed, proceeding with trainer creation");
@@ -78,6 +86,11 @@ export const useTrainerCreation = () => {
       }
 
       console.log("Trainer created successfully:", data);
+      toast({
+        title: "Trainer created",
+        description: `${trainerData.name} has been added as a trainer`,
+      });
+      
       return { success: true, data };
     } catch (error: any) {
       console.error("Error in createTrainer function:", error);
@@ -94,6 +107,7 @@ export const useTrainerCreation = () => {
 
   // Create a test trainer for demo purposes
   const createTestTrainer = async () => {
+    console.log("Creating test trainer, auth check result:", checkAuthenticationStatus());
     if (!checkAuthenticationStatus()) return false;
     
     try {
