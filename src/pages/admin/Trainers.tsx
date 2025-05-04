@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -23,9 +24,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { createTestTrainer } from "./components/classes/CreateTrainer";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { useTrainerCreation } from "./components/classes/CreateTrainer";
 
 interface Trainer {
   id: number;
@@ -55,13 +56,14 @@ const Trainers = () => {
   const [editTrainer, setEditTrainer] = useState<Trainer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
+  const { createTrainer, createTestTrainer, isCreating } = useTrainerCreation();
 
   // Check authentication when component mounts
   useEffect(() => {
     console.log("Trainer component mounted, auth state:", isAuthenticated);
-    if (!isAuthenticated) {
+    if (!loading && !isAuthenticated) {
       console.log("Not authenticated, redirecting to login from Trainers component");
       toast({
         title: "Authentication required",
@@ -69,23 +71,16 @@ const Trainers = () => {
         variant: "destructive",
       });
       navigate("/login");
-    } else {
+    } else if (!loading && isAuthenticated) {
       console.log("User is authenticated, fetching trainers");
       fetchTrainers();
     }
-  }, [isAuthenticated, navigate]);
-
-  // Load trainers from Supabase when authentication changes
-  useEffect(() => {
-    if (isAuthenticated) {
-      console.log("Authentication changed, fetching trainers");
-      fetchTrainers();
-    }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loading, navigate]);
 
   // Create a test trainer if none exists
   useEffect(() => {
     const initializeTrainers = async () => {
+      if (loading) return;
       if (!isAuthenticated) {
         console.log("Not authenticated, skipping trainer initialization");
         return;
@@ -103,12 +98,13 @@ const Trainers = () => {
       }
     };
 
-    if (isAuthenticated) {
+    if (isAuthenticated && !loading) {
       initializeTrainers();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loading, createTestTrainer]);
 
   const fetchTrainers = async () => {
+    if (loading) return;
     if (!isAuthenticated) {
       console.log("Not authenticated, skipping trainer fetch");
       return;
@@ -127,6 +123,7 @@ const Trainers = () => {
           variant: "destructive",
         });
         setIsLoading(false);
+        navigate("/login");
         return;
       }
 
@@ -165,16 +162,6 @@ const Trainers = () => {
 
   const handleAddTrainer = async () => {
     console.log("Add trainer button clicked, auth state:", isAuthenticated);
-    if (!isAuthenticated) {
-      console.log("Not authenticated, showing error toast");
-      toast({
-        title: "Authentication required",
-        description: "You need to be logged in to add trainers.",
-        variant: "destructive",
-      });
-      navigate("/login");
-      return;
-    }
     
     if (!newTrainer.name || !newTrainer.email) {
       console.log("Required fields missing, showing error toast");
@@ -187,61 +174,29 @@ const Trainers = () => {
     }
 
     try {
-      // Check if we have an authenticated session
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        console.log("No session found when adding trainer");
-        toast({
-          title: "Authentication required",
-          description: "You need to be logged in to add trainers.",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("trainers")
-        .insert([
-          {
-            name: newTrainer.name,
-            email: newTrainer.email,
-            phone: newTrainer.phone || null,
-            specialization: newTrainer.specialization || null,
-            status: newTrainer.status,
-            gender: newTrainer.gender,
-          },
-        ])
-        .select();
-
-      if (error) {
-        throw error;
-      }
-
-      // Refresh the trainers list
-      await fetchTrainers();
+      const result = await createTrainer(newTrainer);
       
-      setIsAddDialogOpen(false);
-      setNewTrainer({
-        name: "",
-        email: "",
-        phone: "",
-        specialization: "",
-        status: "Active",
-        gender: "Female",
-      });
+      if (result.success) {
+        // Refresh the trainers list
+        await fetchTrainers();
+        
+        setIsAddDialogOpen(false);
+        setNewTrainer({
+          name: "",
+          email: "",
+          phone: "",
+          specialization: "",
+          status: "Active",
+          gender: "Female",
+        });
 
-      toast({
-        title: "Trainer added successfully",
-        description: `${newTrainer.name} has been added as a trainer`,
-      });
-    } catch (error: any) {
-      console.error("Error adding trainer:", error);
-      toast({
-        title: "Failed to add trainer",
-        description: error.message || "There was an error adding the trainer",
-        variant: "destructive",
-      });
+        toast({
+          title: "Trainer added successfully",
+          description: `${newTrainer.name} has been added as a trainer`,
+        });
+      }
+    } catch (error) {
+      console.error("Error in handleAddTrainer:", error);
     }
   };
 
@@ -264,6 +219,7 @@ const Trainers = () => {
           description: "You need to be logged in to update trainers.",
           variant: "destructive",
         });
+        navigate("/login");
         return;
       }
 
@@ -313,6 +269,7 @@ const Trainers = () => {
           description: "You need to be logged in to update trainer status.",
           variant: "destructive",
         });
+        navigate("/login");
         return;
       }
 
@@ -374,6 +331,23 @@ const Trainers = () => {
       });
     }
   };
+
+  // If still loading auth state, show a spinner
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, don't render anything
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <DashboardLayout title="Trainer Management">
@@ -586,8 +560,19 @@ const Trainers = () => {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddTrainer} className="bg-gym-blue hover:bg-gym-dark-blue">
-              Add Trainer
+            <Button 
+              onClick={handleAddTrainer} 
+              className="bg-gym-blue hover:bg-gym-dark-blue"
+              disabled={isCreating}
+            >
+              {isCreating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Add Trainer"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
