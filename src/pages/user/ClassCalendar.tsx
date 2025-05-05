@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -24,97 +25,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-// Mock user data
-const userData = {
-  name: "John Doe",
-  remainingSessions: 3,
-  totalSessions: 12,
-};
-
-// Mock class data - this would come from an API in a real app
-const mockClasses = [
-  {
-    id: 1,
-    name: "Morning Yoga",
-    type: "yoga",
-    date: new Date(2025, 4, 1), // May 1, 2025
-    time: "08:00 - 09:00",
-    trainer: "Jane Doe",
-    capacity: 15,
-    enrolled: 8,
-  },
-  {
-    id: 2,
-    name: "HIIT Workout",
-    type: "workout",
-    date: new Date(2025, 4, 1), // May 1, 2025
-    time: "18:00 - 19:00",
-    trainer: "John Smith",
-    capacity: 12,
-    enrolled: 10,
-  },
-  {
-    id: 3,
-    name: "Pilates",
-    type: "yoga",
-    date: new Date(2025, 4, 2), // May 2, 2025
-    time: "09:00 - 10:00",
-    trainer: "Sarah Williams",
-    capacity: 10,
-    enrolled: 5,
-  },
-  {
-    id: 4,
-    name: "Strength Training",
-    type: "workout",
-    date: new Date(2025, 4, 3), // May 3, 2025
-    time: "17:00 - 18:00",
-    trainer: "Alex Johnson",
-    capacity: 8,
-    enrolled: 6,
-  },
-  {
-    id: 5,
-    name: "Boxing",
-    type: "combat",
-    date: new Date(2025, 4, 4), // May 4, 2025
-    time: "18:00 - 19:00",
-    trainer: "Mike Tyson",
-    capacity: 8,
-    enrolled: 7,
-  },
-  {
-    id: 6,
-    name: "Zumba",
-    type: "dance",
-    date: new Date(2025, 4, 5), // May 5, 2025
-    time: "16:00 - 17:00",
-    trainer: "Maria Garcia",
-    capacity: 20,
-    enrolled: 12,
-  },
-  {
-    id: 7,
-    name: "Evening Yoga",
-    type: "yoga",
-    date: new Date(2025, 4, 1), // May 1, 2025
-    time: "19:00 - 20:00",
-    trainer: "Emily Chen",
-    capacity: 15,
-    enrolled: 6,
-  },
-  {
-    id: 8,
-    name: "CrossFit",
-    type: "workout",
-    date: new Date(2025, 4, 1), // May 1, 2025
-    time: "12:00 - 13:00",
-    trainer: "Chris Taylor",
-    capacity: 10,
-    enrolled: 8,
-  },
-];
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { ClassModel } from "@/pages/admin/components/classes/ClassTypes";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Class type colors mapping
 const classTypeColors = {
@@ -146,64 +60,193 @@ const classTypeColors = {
     dot: "bg-purple-500",
     calendarDay: "bg-purple-50"
   },
+  default: {
+    bg: "bg-gray-100",
+    text: "text-gray-800",
+    border: "border-gray-200",
+    dot: "bg-gray-500",
+    calendarDay: "bg-gray-50"
+  }
 };
 
-// Mock bookings data
-const mockBookings = [
-  { id: 1, classId: 3, userId: "user-1" },
-  { id: 2, classId: 5, userId: "user-1" },
-];
+interface ClassWithBooking extends ClassModel {
+  type?: string;
+  isBooked?: boolean;
+}
 
-// Mock system settings
+interface UserData {
+  name: string;
+  remainingSessions: number;
+  totalSessions: number;
+}
+
+// Mock system settings - in a real app, these would be fetched from the database
 const systemSettings = {
   cancellationTimeLimit: 4, // hours before class starts
 };
 
 const ClassCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [classes, setClasses] = useState<ClassWithBooking[]>([]);
   const [bookedClasses, setBookedClasses] = useState<number[]>([]);
   const [selectedClasses, setSelectedClasses] = useState<number[]>([]);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userData, setUserData] = useState<UserData>({
+    name: "",
+    remainingSessions: 0,
+    totalSessions: 0,
+  });
+  
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // Calculate if sessions are low (25% or less)
   const sessionsLow = userData.remainingSessions <= (userData.totalSessions * 0.25);
   
+  // Fetch user data from Supabase
   useEffect(() => {
-    // In a real app, this would fetch bookings from an API
-    const userBookedClassIds = mockBookings
-      .filter(booking => booking.userId === "user-1")
-      .map(booking => booking.classId);
+    const fetchUserData = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('name, sessions_remaining, total_sessions')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) {
+          console.error("Error fetching user data:", error);
+          throw error;
+        }
+        
+        setUserData({
+          name: data.name || "User",
+          remainingSessions: data.sessions_remaining || 0,
+          totalSessions: data.total_sessions || 0,
+        });
+      } catch (err) {
+        console.error("Error in fetchUserData:", err);
+        toast({
+          title: "Failed to load user data",
+          description: "Please refresh the page and try again",
+          variant: "destructive",
+        });
+      }
+    };
     
-    setBookedClasses(userBookedClassIds);
-  }, []);
+    fetchUserData();
+  }, [user, toast]);
+  
+  // Fetch classes from Supabase
+  useEffect(() => {
+    const fetchClasses = async () => {
+      setIsLoading(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('classes')
+          .select('*');
+        
+        if (error) {
+          console.error("Error fetching classes:", error);
+          throw error;
+        }
+        
+        // Transform and add type property (in a real app, this would be a field in the database)
+        const classesWithType = data.map((cls: ClassModel) => {
+          // Assign a type based on name or difficulty for demo purposes
+          // In a real app, this would be a proper field in the database
+          let type = 'default';
+          const name = cls.name.toLowerCase();
+          
+          if (name.includes('yoga') || name.includes('pilates')) {
+            type = 'yoga';
+          } else if (name.includes('boxing') || name.includes('mma')) {
+            type = 'combat';
+          } else if (name.includes('zumba') || name.includes('dance')) {
+            type = 'dance';
+          } else if (name.includes('workout') || name.includes('training') || name.includes('hiit')) {
+            type = 'workout';
+          }
+          
+          return { ...cls, type };
+        });
+        
+        setClasses(classesWithType);
+      } catch (err) {
+        console.error("Error in fetchClasses:", err);
+        toast({
+          title: "Failed to load classes",
+          description: "Please refresh the page and try again",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchClasses();
+  }, [toast]);
+  
+  // Fetch user bookings from Supabase
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('class_id')
+          .eq('user_id', user.id);
+        
+        if (error) {
+          console.error("Error fetching bookings:", error);
+          throw error;
+        }
+        
+        const bookedClassIds = data.map(booking => booking.class_id);
+        setBookedClasses(bookedClassIds);
+        
+        // Mark booked classes in the classes array
+        setClasses(prevClasses => 
+          prevClasses.map(cls => ({
+            ...cls,
+            isBooked: bookedClassIds.includes(cls.id)
+          }))
+        );
+      } catch (err) {
+        console.error("Error in fetchBookings:", err);
+      }
+    };
+    
+    fetchBookings();
+  }, [user]);
   
   // Get classes for the selected date
   const classesForSelectedDate = selectedDate 
-    ? mockClasses.filter(cls => 
-        cls.date.getDate() === selectedDate.getDate() &&
-        cls.date.getMonth() === selectedDate.getMonth() &&
-        cls.date.getFullYear() === selectedDate.getFullYear()
-      )
+    ? classes.filter(cls => {
+        const classDate = new Date(cls.schedule);
+        return isSameDay(classDate, selectedDate);
+      })
     : [];
   
   // Function to highlight dates with classes and show class types
   const isDayWithClass = (date: Date) => {
-    return mockClasses.some(cls => 
-      cls.date.getDate() === date.getDate() &&
-      cls.date.getMonth() === date.getMonth() &&
-      cls.date.getFullYear() === date.getFullYear()
-    );
+    return classes.some(cls => {
+      const classDate = new Date(cls.schedule);
+      return isSameDay(classDate, date);
+    });
   };
 
   // Get class types for a specific date
   const getClassTypesForDate = (date: Date) => {
-    return mockClasses
-      .filter(cls => 
-        cls.date.getDate() === date.getDate() &&
-        cls.date.getMonth() === date.getMonth() &&
-        cls.date.getFullYear() === date.getFullYear()
-      )
+    return classes
+      .filter(cls => {
+        const classDate = new Date(cls.schedule);
+        return isSameDay(classDate, date);
+      })
       .map(cls => cls.type)
       .filter((value, index, self) => self.indexOf(value) === index); // Get unique types
   };
@@ -219,7 +262,7 @@ const ClassCalendar = () => {
         {classTypes.map((type, idx) => (
           <div 
             key={idx}
-            className={`h-2 w-2 rounded-full ${classTypeColors[type as keyof typeof classTypeColors]?.dot || 'bg-gray-500'}`}
+            className={`h-2 w-2 rounded-full ${classTypeColors[type as keyof typeof classTypeColors]?.dot || classTypeColors.default.dot}`}
           />
         ))}
       </div>
@@ -250,21 +293,90 @@ const ClassCalendar = () => {
     setConfirmDialogOpen(true);
   };
   
-  const confirmBooking = () => {
-    setBookedClasses([...bookedClasses, ...selectedClasses]);
-    toast({
-      title: "Classes booked successfully!",
-      description: `You've booked ${selectedClasses.length} classes. The trainers have been notified.`,
-    });
-    setSelectedClasses([]);
-    setConfirmDialogOpen(false);
+  const confirmBooking = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "You need to be logged in to book classes",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // Prepare bookings data
+      const bookings = selectedClasses.map(classId => ({
+        user_id: user.id,
+        class_id: classId,
+        status: 'confirmed'
+      }));
+      
+      // Insert bookings into Supabase
+      const { error } = await supabase
+        .from('bookings')
+        .insert(bookings);
+      
+      if (error) {
+        console.error("Error booking classes:", error);
+        throw error;
+      }
+      
+      // Update local state
+      setBookedClasses([...bookedClasses, ...selectedClasses]);
+      
+      // Update classes to mark as booked
+      setClasses(prevClasses => 
+        prevClasses.map(cls => ({
+          ...cls,
+          isBooked: bookedClasses.includes(cls.id) || selectedClasses.includes(cls.id)
+        }))
+      );
+      
+      // Update user sessions
+      if (user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ 
+            sessions_remaining: userData.remainingSessions - selectedClasses.length 
+          })
+          .eq('id', user.id);
+        
+        if (profileError) {
+          console.error("Error updating user sessions:", profileError);
+          // We'll still consider the booking successful, but log the error
+        } else {
+          // Update local state for user data
+          setUserData({
+            ...userData,
+            remainingSessions: userData.remainingSessions - selectedClasses.length
+          });
+        }
+      }
+      
+      toast({
+        title: "Classes booked successfully!",
+        description: `You've booked ${selectedClasses.length} classes. The trainers have been notified.`,
+      });
+      
+      setSelectedClasses([]);
+      setConfirmDialogOpen(false);
+    } catch (err) {
+      console.error("Error in confirmBooking:", err);
+      toast({
+        title: "Failed to book classes",
+        description: "Please try again later",
+        variant: "destructive"
+      });
+    }
   };
   
   const cancelBookingConfirmation = () => {
     setConfirmDialogOpen(false);
   };
   
-  const handleCancelBooking = (classId: number, classTime: string, className: string) => {
+  const handleCancelBooking = async (classId: number, classTime: string, className: string) => {
+    if (!user) return;
+    
     // Calculate if cancellation is within allowed time limit
     const classHour = parseInt(classTime.split(':')[0]);
     const now = new Date();
@@ -282,12 +394,63 @@ const ClassCalendar = () => {
       return;
     }
     
-    setBookedClasses(bookedClasses.filter(id => id !== classId));
-    
-    toast({
-      title: "Class cancelled",
-      description: `You've successfully cancelled your ${className} class. The trainer has been notified.`,
-    });
+    try {
+      // Delete booking from Supabase
+      const { error } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('class_id', classId);
+      
+      if (error) {
+        console.error("Error cancelling booking:", error);
+        throw error;
+      }
+      
+      // Update local state
+      setBookedClasses(bookedClasses.filter(id => id !== classId));
+      
+      // Update classes to remove booked status
+      setClasses(prevClasses => 
+        prevClasses.map(cls => ({
+          ...cls,
+          isBooked: cls.id === classId ? false : cls.isBooked
+        }))
+      );
+      
+      // Update user sessions
+      if (user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ 
+            sessions_remaining: userData.remainingSessions + 1
+          })
+          .eq('id', user.id);
+        
+        if (profileError) {
+          console.error("Error updating user sessions:", profileError);
+          // We'll still consider the cancellation successful, but log the error
+        } else {
+          // Update local state for user data
+          setUserData({
+            ...userData,
+            remainingSessions: userData.remainingSessions + 1
+          });
+        }
+      }
+      
+      toast({
+        title: "Class cancelled",
+        description: `You've successfully cancelled your ${className} class. The trainer has been notified.`,
+      });
+    } catch (err) {
+      console.error("Error in handleCancelBooking:", err);
+      toast({
+        title: "Failed to cancel booking",
+        description: "Please try again later",
+        variant: "destructive"
+      });
+    }
   };
 
   // Custom day content renderer for the calendar
@@ -302,7 +465,7 @@ const ClassCalendar = () => {
   };
 
   const selectedClassesData = selectedClasses.map(id => 
-    mockClasses.find(cls => cls.id === id)
+    classes.find(cls => cls.id === id)
   ).filter(Boolean);
 
   return (
@@ -315,14 +478,18 @@ const ClassCalendar = () => {
               <p className="text-gray-500">Select a date to view available classes</p>
             </div>
             <div className="mt-3 md:mt-0">
-              <div className="flex items-center">
-                <CalendarDays className="mr-2 h-5 w-5 text-gym-blue" />
-                <span>
-                  Sessions remaining: <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-gym-blue")}>
-                    {userData.remainingSessions}
+              {isLoading ? (
+                <Skeleton className="h-10 w-48" />
+              ) : (
+                <div className="flex items-center">
+                  <CalendarDays className="mr-2 h-5 w-5 text-gym-blue" />
+                  <span>
+                    Sessions remaining: <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-gym-blue")}>
+                      {userData.remainingSessions}
+                    </span>
                   </span>
-                </span>
-              </div>
+                </div>
+              )}
               {sessionsLow && (
                 <div className="flex items-center mt-2 text-sm text-red-500">
                   <Bell className="mr-2 h-4 w-4" />
@@ -362,10 +529,12 @@ const ClassCalendar = () => {
                   <h3 className="text-sm font-medium mb-2">Class Types</h3>
                   <div className="space-y-2">
                     {Object.entries(classTypeColors).map(([type, colors]) => (
-                      <div key={type} className="flex items-center">
-                        <span className={`w-3 h-3 rounded-full ${colors.dot} mr-2`}></span>
-                        <span className="capitalize">{type}</span>
-                      </div>
+                      type !== 'default' && (
+                        <div key={type} className="flex items-center">
+                          <span className={`w-3 h-3 rounded-full ${colors.dot} mr-2`}></span>
+                          <span className="capitalize">{type}</span>
+                        </div>
+                      )
                     ))}
                   </div>
                 </div>
@@ -390,105 +559,121 @@ const ClassCalendar = () => {
                     )}
                   </div>
                   
-                  {classesForSelectedDate.length > 0 ? (
+                  {isLoading ? (
                     <div className="space-y-4">
-                      {classesForSelectedDate.map((cls) => {
-                        const isBooked = bookedClasses.includes(cls.id);
-                        const isSelected = selectedClasses.includes(cls.id);
-                        const typeColor = classTypeColors[cls.type as keyof typeof classTypeColors] || {
-                          bg: "bg-gray-100",
-                          text: "text-gray-800",
-                          border: "border-gray-200"
-                        };
-                        const isPastCancellationWindow = () => {
-                          const classHour = parseInt(cls.time.split(':')[0]);
-                          const now = new Date();
-                          const classDate = new Date(selectedDate!);
-                          classDate.setHours(classHour);
-                          return (classDate.getTime() - now.getTime()) / (1000 * 60 * 60) < systemSettings.cancellationTimeLimit;
-                        };
-                        
-                        return (
-                          <Card key={cls.id} className={cn(
-                            "transition-all hover:shadow",
-                            isBooked ? "border-2 border-gym-blue" : "",
-                            isSelected ? "border-2 border-green-500" : ""
-                          )}>
-                            <CardHeader className={`pb-2 ${typeColor.bg}`}>
-                              <div className="flex justify-between items-start">
-                                <div className="flex items-center space-x-2">
-                                  {!isBooked && (
-                                    <Checkbox 
-                                      checked={isSelected}
-                                      onCheckedChange={() => toggleClassSelection(cls.id)}
-                                      disabled={cls.enrolled >= cls.capacity || isBooked || userData.remainingSessions <= 0}
-                                      className="border-gym-blue"
-                                      id={`class-${cls.id}`}
-                                    />
-                                  )}
-                                  <div>
-                                    <CardTitle className={typeColor.text}>{cls.name}</CardTitle>
-                                    <CardDescription>{cls.time}</CardDescription>
-                                  </div>
-                                </div>
-                                <div className="flex flex-col items-end gap-1">
-                                  <Badge 
-                                    variant={cls.enrolled >= cls.capacity ? "destructive" : "outline"}
-                                    className={cls.enrolled >= cls.capacity ? "" : `${typeColor.border} ${typeColor.text}`}
-                                  >
-                                    {cls.enrolled >= cls.capacity ? "Full" : `${cls.enrolled}/${cls.capacity}`}
-                                  </Badge>
-                                  {isBooked && (
-                                    <Badge variant="secondary" className="bg-green-100 text-green-800">Booked</Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="pb-2">
-                              <div className="flex justify-between items-center">
-                                <p className="text-sm">Trainer: {cls.trainer}</p>
-                                <Badge variant="outline" className={`${typeColor.bg} ${typeColor.text} ${typeColor.border} capitalize`}>
-                                  {cls.type}
-                                </Badge>
-                              </div>
-                            </CardContent>
-                            <CardFooter>
-                              {isBooked ? (
-                                <Button 
-                                  onClick={() => handleCancelBooking(cls.id, cls.time.split(' ')[0], cls.name)}
-                                  className="w-full bg-red-500 hover:bg-red-600"
-                                  disabled={isPastCancellationWindow()}
-                                >
-                                  {isPastCancellationWindow() ? 
-                                    `Can't Cancel (< ${systemSettings.cancellationTimeLimit}h)` : 
-                                    "Cancel Booking"}
-                                </Button>
-                              ) : (
-                                <Button 
-                                  onClick={() => toggleClassSelection(cls.id)}
-                                  className={cn(
-                                    "w-full",
-                                    isSelected ? "bg-green-500 hover:bg-green-600" : "bg-gym-blue hover:bg-gym-dark-blue"
-                                  )}
-                                  disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0}
-                                >
-                                  {isSelected ? "Selected" : 
-                                    cls.enrolled >= cls.capacity ? "Class Full" : 
-                                    userData.remainingSessions <= 0 ? "No Sessions Left" : 
-                                    "Select Class"}
-                                </Button>
-                              )}
-                            </CardFooter>
-                          </Card>
-                        );
-                      })}
+                      {[1, 2, 3].map(i => (
+                        <Skeleton key={i} className="h-24 w-full" />
+                      ))}
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <CalendarDays className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                      <h4 className="text-lg font-medium">No classes scheduled</h4>
-                      <p>There are no classes available on this date.</p>
-                    </div>
+                    classesForSelectedDate.length > 0 ? (
+                      <div className="space-y-4">
+                        {classesForSelectedDate.map((cls) => {
+                          const isBooked = bookedClasses.includes(cls.id);
+                          const isSelected = selectedClasses.includes(cls.id);
+                          const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
+                          const typeColor = classTypeColors[typeKey] || classTypeColors.default;
+                          
+                          const isPastCancellationWindow = () => {
+                            if (!cls.start_time) return false;
+                            const classHour = parseInt(cls.start_time.split(':')[0]);
+                            const now = new Date();
+                            const classDate = new Date(selectedDate!);
+                            classDate.setHours(classHour);
+                            return (classDate.getTime() - now.getTime()) / (1000 * 60 * 60) < systemSettings.cancellationTimeLimit;
+                          };
+                          
+                          return (
+                            <Card key={cls.id} className={cn(
+                              "transition-all hover:shadow",
+                              isBooked ? "border-2 border-gym-blue" : "",
+                              isSelected ? "border-2 border-green-500" : ""
+                            )}>
+                              <CardHeader className={`pb-2 ${typeColor.bg}`}>
+                                <div className="flex justify-between items-start">
+                                  <div className="flex items-center space-x-2">
+                                    {!isBooked && (
+                                      <Checkbox 
+                                        checked={isSelected}
+                                        onCheckedChange={() => toggleClassSelection(cls.id)}
+                                        disabled={cls.enrolled >= cls.capacity || isBooked || userData.remainingSessions <= 0}
+                                        className="border-gym-blue"
+                                        id={`class-${cls.id}`}
+                                      />
+                                    )}
+                                    <div>
+                                      <CardTitle className={typeColor.text}>{cls.name}</CardTitle>
+                                      <CardDescription>
+                                        {cls.start_time && cls.end_time ? `${cls.start_time} - ${cls.end_time}` : "Time not specified"}
+                                      </CardDescription>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end gap-1">
+                                    <Badge 
+                                      variant={cls.enrolled >= cls.capacity ? "destructive" : "outline"}
+                                      className={cls.enrolled >= cls.capacity ? "" : `${typeColor.border} ${typeColor.text}`}
+                                    >
+                                      {cls.enrolled >= cls.capacity ? "Full" : `${cls.enrolled}/${cls.capacity}`}
+                                    </Badge>
+                                    {isBooked && (
+                                      <Badge variant="secondary" className="bg-green-100 text-green-800">Booked</Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="pb-2">
+                                <div className="flex justify-between items-center">
+                                  <p className="text-sm">Trainer: {cls.trainer}</p>
+                                  <Badge variant="outline" className={`${typeColor.bg} ${typeColor.text} ${typeColor.border} capitalize`}>
+                                    {cls.type || "General"}
+                                  </Badge>
+                                </div>
+                                {cls.description && (
+                                  <p className="text-sm text-gray-600 mt-2">{cls.description}</p>
+                                )}
+                              </CardContent>
+                              <CardFooter>
+                                {isBooked ? (
+                                  <Button 
+                                    onClick={() => handleCancelBooking(
+                                      cls.id, 
+                                      cls.start_time || "00:00", 
+                                      cls.name
+                                    )}
+                                    className="w-full bg-red-500 hover:bg-red-600"
+                                    disabled={isPastCancellationWindow()}
+                                  >
+                                    {isPastCancellationWindow() ? 
+                                      `Can't Cancel (< ${systemSettings.cancellationTimeLimit}h)` : 
+                                      "Cancel Booking"}
+                                  </Button>
+                                ) : (
+                                  <Button 
+                                    onClick={() => toggleClassSelection(cls.id)}
+                                    className={cn(
+                                      "w-full",
+                                      isSelected ? "bg-green-500 hover:bg-green-600" : "bg-gym-blue hover:bg-gym-dark-blue"
+                                    )}
+                                    disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0}
+                                  >
+                                    {isSelected ? "Selected" : 
+                                      cls.enrolled >= cls.capacity ? "Class Full" : 
+                                      userData.remainingSessions <= 0 ? "No Sessions Left" : 
+                                      "Select Class"}
+                                  </Button>
+                                )}
+                              </CardFooter>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <CalendarDays className="mx-auto h-12 w-12 opacity-30 mb-2" />
+                        <h4 className="text-lg font-medium">No classes scheduled</h4>
+                        <p>There are no classes available on this date.</p>
+                      </div>
+                    )
                   )}
                 </div>
               )}
@@ -513,10 +698,16 @@ const ClassCalendar = () => {
                 <div key={cls.id} className="flex items-center justify-between border-b pb-2">
                   <div>
                     <p className="font-medium">{cls.name}</p>
-                    <p className="text-sm text-gray-500">{format(cls.date, 'MMM d')} • {cls.time}</p>
+                    <p className="text-sm text-gray-500">
+                      {format(new Date(cls.schedule), 'MMM d')} • {cls.start_time} - {cls.end_time}
+                    </p>
                   </div>
-                  <Badge variant="outline" className={`${classTypeColors[cls.type as keyof typeof classTypeColors]?.bg || ''} ${classTypeColors[cls.type as keyof typeof classTypeColors]?.text || ''} capitalize`}>
-                    {cls.type}
+                  <Badge variant="outline" className={`${
+                    classTypeColors[cls.type as keyof typeof classTypeColors]?.bg || classTypeColors.default.bg
+                  } ${
+                    classTypeColors[cls.type as keyof typeof classTypeColors]?.text || classTypeColors.default.text
+                  } capitalize`}>
+                    {cls.type || "General"}
                   </Badge>
                 </div>
               ))}
