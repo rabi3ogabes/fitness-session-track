@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -15,12 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, Clock, Plus } from "lucide-react";
+import { CalendarIcon, Clock } from "lucide-react";
 import { ClassModel, RecurringPattern, ClassFormState } from "./ClassTypes";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -28,11 +29,6 @@ import {
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { supabase } from "@/integrations/supabase/client";
 
 interface AddClassDialogProps {
   isOpen: boolean;
@@ -74,24 +70,6 @@ const weekdays = [
   { label: "Sunday", value: "Sunday" },
 ];
 
-// Difficulty options
-const difficultyOptions = [
-  { label: "Beginner", value: "Beginner" },
-  { label: "Intermediate", value: "Intermediate" },
-  { label: "Advanced", value: "Advanced" },
-];
-
-// Color options for visual categorization
-const colorOptions = [
-  { label: "Blue", value: "#3b82f6" },
-  { label: "Red", value: "#ef4444" },
-  { label: "Green", value: "#10b981" },
-  { label: "Purple", value: "#8b5cf6" },
-  { label: "Orange", value: "#f97316" },
-  { label: "Pink", value: "#ec4899" },
-  { label: "Teal", value: "#14b8a6" },
-];
-
 const AddClassDialog: React.FC<AddClassDialogProps> = ({
   isOpen,
   onOpenChange,
@@ -101,13 +79,13 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
 }) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDirectDbInsert, setIsDirectDbInsert] = useState(false);
   const today = new Date();
   
   // Enhanced console logs to debug trainers data
   useEffect(() => {
     if (isOpen) {
       console.log("AddClassDialog opened with trainers:", trainers);
+      // Check if the trainers array is empty or undefined
       if (!trainers || trainers.length === 0) {
         console.warn("No trainers available in AddClassDialog. This might be a data loading issue.");
       }
@@ -125,20 +103,13 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     selectedDays: [format(today, "EEEE")],
     startTime: "17:00", // Default to 5:00 PM
     endTime: "18:00",   // Default to 6:00 PM
-    endDate: undefined,
-    description: "",
-    location: "",
-    difficulty: "Beginner",
-    color: "#3b82f6", // Default blue
-    equipment: "",
-    caloriesBurned: 0
+    endDate: undefined
   };
   
   const [formState, setFormState] = useState<ClassFormState>(initialFormState);
   const [selectedTab, setSelectedTab] = useState<string>("basic");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
   const [timeError, setTimeError] = useState<string | null>(null);
-  const [dbInsertResult, setDbInsertResult] = useState<string | null>(null);
 
   // Reset form when dialog is opened or closed
   useEffect(() => {
@@ -148,8 +119,6 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
       setSelectedDate(today);
       setTimeError(null);
       setSelectedTab("basic");
-      setDbInsertResult(null);
-      setIsDirectDbInsert(false);
     }
   }, [isOpen, today]);
 
@@ -163,11 +132,11 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     }
   }, [selectedDate]);
   
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     console.log(`Input change - field: ${name}, value: ${value}`);
     
-    if (name === "capacity" || name === "caloriesBurned") {
+    if (name === "capacity") {
       setFormState(prev => ({ 
         ...prev, 
         [name]: parseInt(value) || 0 
@@ -248,13 +217,6 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     }));
   };
 
-  const handleColorChange = (color: string) => {
-    setFormState(prev => ({
-      ...prev,
-      color: color
-    }));
-  };
-
   const validateTimes = (startTime: string | undefined, endTime: string | undefined) => {
     if (!startTime || !endTime) {
       setTimeError("Start and end times are required");
@@ -312,73 +274,6 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     return null;
   };
 
-  const insertDirectlyToDatabase = async () => {
-    try {
-      setIsSubmitting(true);
-      setDbInsertResult(null);
-      
-      // Create class object for database insertion
-      const classToInsert = {
-        name: formState.name,
-        trainer: formState.trainers[0] || "",
-        trainers: formState.trainers,
-        schedule: formState.schedule,
-        capacity: formState.capacity,
-        enrolled: 0,
-        status: "Active",
-        gender: formState.gender,
-        start_time: formState.startTime,
-        end_time: formState.endTime,
-        description: formState.description,
-        location: formState.location,
-        difficulty: formState.difficulty,
-        color: formState.color,
-      };
-      
-      // Insert to Supabase
-      const { data, error } = await supabase
-        .from('classes')
-        .insert([classToInsert])
-        .select();
-        
-      if (error) {
-        console.error("Database insertion error:", error);
-        setDbInsertResult(`Error: ${error.message}`);
-        toast({
-          title: "Database insertion failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (data) {
-        console.log("Database insertion successful:", data);
-        setDbInsertResult(`Success! Class "${formState.name}" inserted with ID: ${data[0].id}`);
-        toast({
-          title: "Class created successfully",
-          description: `Class "${formState.name}" has been added to the database.`,
-        });
-        
-        // Reset form after successful insertion
-        setFormState(initialFormState);
-        setTimeout(() => {
-          onOpenChange(false);
-        }, 2000);
-      }
-    } catch (err) {
-      console.error("Error in direct database insertion:", err);
-      setDbInsertResult(`Unexpected error: ${err}`);
-      toast({
-        title: "Database insertion failed",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleAddClass = async () => {
     if (!validateTimes(formState.startTime, formState.endTime)) {
       return;
@@ -429,12 +324,6 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
       return;
     }
     
-    // Direct database insertion if option is selected
-    if (isDirectDbInsert) {
-      await insertDirectlyToDatabase();
-      return;
-    }
-    
     try {
       setIsSubmitting(true);
       
@@ -454,9 +343,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
         difficulty: formState.difficulty,
         location: formState.location,
         description: formState.description,
-        color: formState.color,
-        equipment: formState.equipment,
-        caloriesBurned: formState.caloriesBurned
+        color: formState.color
       };
       
       let recurringPattern: RecurringPattern | undefined;
@@ -508,26 +395,25 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px] p-0 max-h-[90vh]">
-        <DialogHeader className="p-6 pb-2 bg-gradient-to-br from-gym-blue to-gym-dark-blue text-white rounded-t-lg">
-          <DialogTitle className="text-2xl font-bold">Create New Class</DialogTitle>
-          <p className="text-gray-100 mt-2">
-            Add a new fitness class to your schedule
-          </p>
+      <DialogContent className="sm:max-w-[600px] p-0 max-h-[90vh]">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle>Add New Class</DialogTitle>
+          <DialogDescription>
+            Create a new class for your schedule.
+          </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="max-h-[calc(90vh-130px)] overflow-y-auto px-6 pt-4">
-          <Tabs defaultValue="basic" value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-4">
-              <TabsTrigger value="basic" className="text-sm">Basic Info</TabsTrigger>
-              <TabsTrigger value="schedule" className="text-sm">Schedule</TabsTrigger>
-              <TabsTrigger value="details" className="text-sm">Details</TabsTrigger>
+        <ScrollArea className="max-h-[calc(90vh-130px)] overflow-y-auto px-6">
+          <Tabs defaultValue="basic" value={selectedTab} onValueChange={setSelectedTab}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="basic">Basic Info</TabsTrigger>
+              <TabsTrigger value="schedule">Schedule</TabsTrigger>
             </TabsList>
           
             <TabsContent value="basic" className="space-y-4 mt-4">
               <div className="space-y-4">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right font-medium">
+                  <Label htmlFor="name" className="text-right">
                     Class Name*
                   </Label>
                   <Input
@@ -536,14 +422,14 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                     value={formState.name}
                     onChange={handleInputChange}
                     className="col-span-3"
-                    placeholder="e.g. Upper Body Workout"
+                    placeholder="e.g. Upper Work"
                     required
                     autoFocus
                   />
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right font-medium">Gender</Label>
+                  <Label className="text-right">Gender</Label>
                   <RadioGroup 
                     value={formState.gender} 
                     onValueChange={handleGenderChange}
@@ -565,7 +451,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="difficulty" className="text-right font-medium">
+                  <Label htmlFor="difficulty" className="text-right">
                     Difficulty
                   </Label>
                   <Select 
@@ -576,17 +462,15 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                       <SelectValue placeholder="Select difficulty" />
                     </SelectTrigger>
                     <SelectContent>
-                      {difficultyOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="Beginner">Beginner</SelectItem>
+                      <SelectItem value="Intermediate">Intermediate</SelectItem>
+                      <SelectItem value="Advanced">Advanced</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="location" className="text-right font-medium">
+                  <Label htmlFor="location" className="text-right">
                     Location
                   </Label>
                   <Input
@@ -600,37 +484,37 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                 </div>
                 
                 <div className="grid grid-cols-4 items-start gap-4">
-                  <Label htmlFor="description" className="text-right pt-2 font-medium">
+                  <Label htmlFor="description" className="text-right pt-2">
                     Description
                   </Label>
-                  <Textarea
+                  <textarea
                     id="description"
                     name="description"
                     value={formState.description || ""}
-                    onChange={handleInputChange}
-                    className="col-span-3 h-24 min-h-[100px]"
-                    placeholder="Describe the class content, benefits, and what to expect"
+                    onChange={(e) => setFormState(prev => ({ ...prev, description: e.target.value }))}
+                    className="col-span-3 h-24 border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                    placeholder="Describe the class content"
                   />
                 </div>
                 
                 <div className="grid grid-cols-4 items-start gap-4">
-                  <Label className="text-right pt-2 font-medium">Trainers*</Label>
+                  <Label className="text-right pt-2">Trainers*</Label>
                   <div className="col-span-3">
                     {trainers && trainers.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-2 mt-1">
+                      <div className="grid grid-cols-2 gap-2">
                         {trainers.map((trainer) => (
-                          <div key={trainer} className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50">
+                          <div key={trainer} className="flex items-center space-x-2">
                             <Checkbox 
                               id={`trainer-${trainer}`} 
                               checked={formState.trainers.includes(trainer)}
                               onCheckedChange={(checked) => handleTrainerSelection(trainer, checked === true)}
                             />
-                            <Label htmlFor={`trainer-${trainer}`} className="text-sm cursor-pointer">{trainer}</Label>
+                            <Label htmlFor={`trainer-${trainer}`} className="text-sm">{trainer}</Label>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-amber-600 border border-amber-300 bg-amber-50 p-3 rounded-md">
+                      <div className="text-amber-600 border border-amber-300 bg-amber-50 p-2 rounded">
                         No trainers available. Please add trainers in the Trainers section before creating classes.
                       </div>
                     )}
@@ -638,7 +522,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="capacity" className="text-right font-medium">
+                  <Label htmlFor="capacity" className="text-right">
                     Capacity*
                   </Label>
                   <Input
@@ -659,7 +543,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
               <div className="space-y-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <div className="text-right pt-0.5">
-                    <Label htmlFor="isRecurring" className="font-medium">Recurring</Label>
+                    <Label htmlFor="isRecurring">Recurring</Label>
                   </div>
                   <div className="col-span-3">
                     <div className="flex items-center space-x-2">
@@ -676,7 +560,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                 {formState.isRecurring ? (
                   <div className="space-y-4">
                     <div className="grid grid-cols-4 gap-4">
-                      <Label className="text-right pt-2 font-medium">Frequency</Label>
+                      <Label className="text-right pt-2">Frequency</Label>
                       <div className="col-span-3">
                         <Select 
                           value={formState.recurringFrequency} 
@@ -696,16 +580,16 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                     
                     {formState.recurringFrequency === "Weekly" && (
                       <div className="grid grid-cols-4 gap-4 items-start">
-                        <Label className="text-right pt-2 font-medium">Days*</Label>
-                        <div className="col-span-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                        <Label className="text-right pt-2">Days*</Label>
+                        <div className="col-span-3 grid grid-cols-2 gap-2">
                           {weekdays.map((day) => (
-                            <div key={day.value} className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-50">
+                            <div key={day.value} className="flex items-center space-x-2">
                               <Checkbox 
                                 id={`day-${day.value}`} 
                                 checked={formState.selectedDays.includes(day.value)}
                                 onCheckedChange={(checked) => handleDaySelection(day.value, checked === true)}
                               />
-                              <Label htmlFor={`day-${day.value}`} className="text-sm cursor-pointer">{day.label}</Label>
+                              <Label htmlFor={`day-${day.value}`} className="text-sm">{day.label}</Label>
                             </div>
                           ))}
                         </div>
@@ -713,7 +597,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                     )}
                     
                     <div className="grid grid-cols-4 gap-4">
-                      <Label className="text-right pt-2 font-medium">Until*</Label>
+                      <Label className="text-right pt-2">Until*</Label>
                       <div className="col-span-3">
                         <Popover>
                           <PopoverTrigger asChild>
@@ -744,7 +628,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                   </div>
                 ) : (
                   <div className="grid grid-cols-4 items-start gap-4">
-                    <Label className="text-right pt-2 font-medium">Date*</Label>
+                    <Label className="text-right pt-2">Date*</Label>
                     <div className="col-span-3">
                       <Popover>
                         <PopoverTrigger asChild>
@@ -774,7 +658,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                 )}
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right font-medium">Start Time*</Label>
+                  <Label className="text-right">Start Time*</Label>
                   <div className="col-span-3">
                     <Select
                       value={formState.startTime}
@@ -798,7 +682,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right font-medium">End Time*</Label>
+                  <Label className="text-right">End Time*</Label>
                   <div className="col-span-3">
                     <Select
                       value={formState.endTime}
@@ -823,91 +707,8 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                 
                 {timeError && (
                   <div className="grid grid-cols-4 items-center gap-4">
-                    <div className="col-span-4 text-destructive text-sm p-2 bg-red-50 border border-red-200 rounded-md">
+                    <div className="col-span-4 text-destructive text-sm">
                       {timeError}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="details" className="space-y-4 mt-4">
-              <div className="space-y-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="color" className="text-right font-medium">
-                    Color Tag
-                  </Label>
-                  <div className="col-span-3">
-                    <div className="flex flex-wrap gap-2">
-                      {colorOptions.map((color) => (
-                        <div
-                          key={color.value}
-                          className={`w-8 h-8 rounded-full cursor-pointer transition-all ${
-                            formState.color === color.value ? 
-                            'ring-2 ring-offset-2 ring-black scale-110' : 'hover:scale-105'
-                          }`}
-                          style={{ backgroundColor: color.value }}
-                          onClick={() => handleColorChange(color.value)}
-                          title={color.label}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="equipment" className="text-right font-medium">
-                    Equipment
-                  </Label>
-                  <Input
-                    id="equipment"
-                    name="equipment"
-                    value={formState.equipment || ""}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                    placeholder="e.g. Dumbbells, Yoga mat"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="caloriesBurned" className="text-right font-medium">
-                    Est. Calories
-                  </Label>
-                  <Input
-                    id="caloriesBurned"
-                    name="caloriesBurned"
-                    type="number"
-                    value={formState.caloriesBurned || ""}
-                    onChange={handleInputChange}
-                    className="col-span-3"
-                    placeholder="Estimated calories burned"
-                    min="0"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <div className="text-right pt-0.5">
-                    <Label htmlFor="directInsert" className="font-medium">Database</Label>
-                  </div>
-                  <div className="col-span-3">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="directInsert" 
-                        checked={isDirectDbInsert}
-                        onCheckedChange={(checked) => setIsDirectDbInsert(checked === true)}
-                      />
-                      <Label htmlFor="directInsert">Insert directly to database (verify operation)</Label>
-                    </div>
-                  </div>
-                </div>
-                
-                {dbInsertResult && (
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <div className="col-span-4 p-3 rounded-md border text-sm" 
-                      className={`${dbInsertResult.startsWith("Success") ? 
-                        "bg-green-50 border-green-200 text-green-800" : 
-                        "bg-red-50 border-red-200 text-red-800"}`}>
-                      {dbInsertResult}
                     </div>
                   </div>
                 )}
@@ -916,10 +717,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
           </Tabs>
         </ScrollArea>
         
-        <div className="p-6 flex justify-between border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
+        <div className="p-6 pt-2 flex justify-end border-t">
           <Button 
             onClick={handleAddClass} 
             className="bg-gym-blue hover:bg-gym-dark-blue"
@@ -936,8 +734,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
               (formState.isRecurring && formState.recurringFrequency === "Weekly" && formState.selectedDays.length === 0)
             }
           >
-            {isSubmitting ? "Creating..." : isDirectDbInsert ? "Insert to Database" : 
-              formState.isRecurring ? "Add Recurring Classes" : "Add Class"}
+            {isSubmitting ? "Adding..." : formState.isRecurring ? "Add Recurring Classes" : "Add Class"}
           </Button>
         </div>
       </DialogContent>

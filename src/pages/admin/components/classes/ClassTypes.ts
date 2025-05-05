@@ -1,4 +1,3 @@
-
 export interface ClassModel {
   id: number;
   name: string;
@@ -24,12 +23,6 @@ export interface ClassModel {
   color?: string;
   // Add a difficulty level
   difficulty?: "Beginner" | "Intermediate" | "Advanced" | string;
-  // Add an image URL for class thumbnails
-  imageUrl?: string;
-  // Add equipment needed for the class
-  equipment?: string;
-  // Add max calories burned estimate
-  caloriesBurned?: number;
 }
 
 export interface RecurringPattern {
@@ -77,9 +70,6 @@ export interface ClassFormState {
   location?: string;
   difficulty?: "Beginner" | "Intermediate" | "Advanced";
   color?: string;
-  equipment?: string;
-  caloriesBurned?: number;
-  imageUrl?: string;
 }
 
 // Add a utility function to format class times

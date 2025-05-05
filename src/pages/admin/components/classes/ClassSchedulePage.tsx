@@ -66,7 +66,7 @@ const formSchema = z.object({
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
   isRecurring: z.boolean().default(false),
-  recurringFrequency: z.enum(["Weekly", "Monthly"]).optional(),
+  recurringFrequency: z.enum(["Daily", "Weekly", "Monthly"]).optional(),
   selectedDays: z.array(z.string()).min(1, "Select at least one day").optional(),
   description: z.string().optional(),
   location: z.string().optional(),
@@ -254,7 +254,6 @@ const ClassSchedulePage = () => {
     };
     
     if (frequency === "Daily") {
-      // Generate daily classes
       let currentDay = new Date(startDate);
       
       while (currentDay <= endDate) {
