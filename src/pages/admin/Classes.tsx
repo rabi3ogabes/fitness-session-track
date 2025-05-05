@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -73,7 +74,7 @@ const Classes = () => {
             description: cls.description || "",
             location: cls.location || "",
             difficulty: cls.difficulty || "",
-            color: cls.color || ""
+            color: cls.color || "#3b82f6" // Set a default blue color if not provided
           }));
           
           setClasses(formattedClasses);
@@ -366,7 +367,7 @@ const Classes = () => {
         description: newClass.description,
         location: newClass.location,
         difficulty: newClass.difficulty,
-        color: newClass.color
+        color: newClass.color || "#3b82f6" // Ensure color is included and has a default
       };
       
       console.log("Adding class with data:", classToAdd);
