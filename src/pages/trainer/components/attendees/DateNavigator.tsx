@@ -33,8 +33,8 @@ export const DateNavigator = ({ selectedDate, onDateChange }: DateNavigatorProps
     <div className="flex items-center space-x-2">
       <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4 text-gray-500" />
+          <Button variant="outline" className="flex items-center gap-2 bg-white">
+            <CalendarIcon className="h-4 w-4 text-gym-blue" />
             <span className="font-medium hidden sm:inline">
               {format(selectedDate, "MMMM d, yyyy")}
             </span>
@@ -55,10 +55,10 @@ export const DateNavigator = ({ selectedDate, onDateChange }: DateNavigatorProps
       </Popover>
       
       <div className="flex gap-1">
-        <Button variant="outline" size="icon" onClick={goToPreviousDay}>
+        <Button variant="outline" size="icon" onClick={goToPreviousDay} className="bg-white">
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" onClick={goToNextDay}>
+        <Button variant="outline" size="icon" onClick={goToNextDay} className="bg-white">
           <ChevronRight className="h-4 w-4" />
         </Button>
       </div>

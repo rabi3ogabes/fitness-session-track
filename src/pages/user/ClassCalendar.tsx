@@ -2,11 +2,11 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Calendar } from "@/components/ui/calendar";
-import { format, isSameDay } from "date-fns";
+import { format, isSameDay, parseISO, isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Bell, AlertCircle, Check, X } from "lucide-react";
+import { CalendarDays, Bell, AlertCircle, Check, X, Clock, BookOpen, Info, Users } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -26,9 +26,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, requireAuth } from "@/integrations/supabase/client";
 import { ClassModel } from "@/pages/admin/components/classes/ClassTypes";
 import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 // Class type colors mapping
 const classTypeColors = {
@@ -43,7 +54,7 @@ const classTypeColors = {
     bg: "bg-green-100",
     text: "text-green-800",
     border: "border-green-200",
-    dot: "bg-green-500",
+    dot: "bg-green-500", 
     calendarDay: "bg-green-50"
   },
   combat: {
@@ -80,10 +91,20 @@ interface UserData {
   totalSessions: number;
 }
 
-// Mock system settings - in a real app, these would be fetched from the database
+// System settings - in a real app, these would be fetched from the database
 const systemSettings = {
   cancellationTimeLimit: 4, // hours before class starts
 };
+
+// Booking validation schema
+const bookingSchema = z.object({
+  classIds: z.array(z.number()).min(1, "Please select at least one class"),
+  acceptTerms: z.boolean().refine(val => val === true, {
+    message: "You must accept the terms and conditions"
+  })
+});
+
+type BookingFormValues = z.infer<typeof bookingSchema>;
 
 const ClassCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -92,6 +113,7 @@ const ClassCalendar = () => {
   const [selectedClasses, setSelectedClasses] = useState<number[]>([]);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isBookingInProgress, setIsBookingInProgress] = useState(false);
   const [userData, setUserData] = useState<UserData>({
     name: "",
     remainingSessions: 0,
@@ -101,8 +123,22 @@ const ClassCalendar = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   
+  // Create form with validation
+  const form = useForm<BookingFormValues>({
+    resolver: zodResolver(bookingSchema),
+    defaultValues: {
+      classIds: [],
+      acceptTerms: false
+    }
+  });
+  
   // Calculate if sessions are low (25% or less)
   const sessionsLow = userData.remainingSessions <= (userData.totalSessions * 0.25);
+  
+  // Reset form values when selection changes
+  useEffect(() => {
+    form.setValue('classIds', selectedClasses);
+  }, [selectedClasses, form]);
   
   // Fetch user data from Supabase
   useEffect(() => {
@@ -147,27 +183,28 @@ const ClassCalendar = () => {
       try {
         const { data, error } = await supabase
           .from('classes')
-          .select('*');
+          .select('*')
+          .eq('status', 'Active')
+          .order('schedule', { ascending: true });
         
         if (error) {
           console.error("Error fetching classes:", error);
           throw error;
         }
         
-        // Transform and add type property (in a real app, this would be a field in the database)
+        // Transform and add type property based on class name or difficulty
         const classesWithType = data.map((cls: ClassModel) => {
-          // Assign a type based on name or difficulty for demo purposes
-          // In a real app, this would be a proper field in the database
           let type = 'default';
           const name = cls.name.toLowerCase();
           
           if (name.includes('yoga') || name.includes('pilates')) {
             type = 'yoga';
-          } else if (name.includes('boxing') || name.includes('mma')) {
+          } else if (name.includes('boxing') || name.includes('mma') || name.includes('martial')) {
             type = 'combat';
           } else if (name.includes('zumba') || name.includes('dance')) {
             type = 'dance';
-          } else if (name.includes('workout') || name.includes('training') || name.includes('hiit')) {
+          } else if (name.includes('workout') || name.includes('training') || name.includes('hiit') || 
+                    name.includes('cardio') || name.includes('strength')) {
             type = 'workout';
           }
           
@@ -199,7 +236,8 @@ const ClassCalendar = () => {
         const { data, error } = await supabase
           .from('bookings')
           .select('class_id')
-          .eq('user_id', user.id);
+          .eq('user_id', user.id)
+          .eq('status', 'confirmed');
         
         if (error) {
           console.error("Error fetching bookings:", error);
@@ -279,7 +317,7 @@ const ClassCalendar = () => {
     });
   };
 
-  const handleBookMultipleClasses = () => {
+  const handleBookMultipleClasses = async (values: BookingFormValues) => {
     if (userData.remainingSessions < selectedClasses.length) {
       toast({
         title: "Not enough sessions",
@@ -289,7 +327,7 @@ const ClassCalendar = () => {
       return;
     }
 
-    // Open confirmation dialog instead of directly booking
+    // Open confirmation dialog
     setConfirmDialogOpen(true);
   };
   
@@ -303,12 +341,15 @@ const ClassCalendar = () => {
       return;
     }
     
+    setIsBookingInProgress(true);
+    
     try {
       // Prepare bookings data
       const bookings = selectedClasses.map(classId => ({
         user_id: user.id,
         class_id: classId,
-        status: 'confirmed'
+        status: 'confirmed',
+        booking_date: new Date().toISOString()
       }));
       
       // Insert bookings into Supabase
@@ -321,6 +362,21 @@ const ClassCalendar = () => {
         throw error;
       }
       
+      // Update enrolled count for each class
+      await Promise.all(selectedClasses.map(async (classId) => {
+        const classToUpdate = classes.find(c => c.id === classId);
+        if (classToUpdate) {
+          const { error } = await supabase
+            .from('classes')
+            .update({ enrolled: (classToUpdate.enrolled || 0) + 1 })
+            .eq('id', classId);
+          
+          if (error) {
+            console.error(`Error updating enrolled count for class ${classId}:`, error);
+          }
+        }
+      }));
+      
       // Update local state
       setBookedClasses([...bookedClasses, ...selectedClasses]);
       
@@ -328,16 +384,18 @@ const ClassCalendar = () => {
       setClasses(prevClasses => 
         prevClasses.map(cls => ({
           ...cls,
-          isBooked: bookedClasses.includes(cls.id) || selectedClasses.includes(cls.id)
+          isBooked: bookedClasses.includes(cls.id) || selectedClasses.includes(cls.id),
+          enrolled: selectedClasses.includes(cls.id) ? (cls.enrolled || 0) + 1 : cls.enrolled
         }))
       );
       
       // Update user sessions
       if (user) {
+        const newRemainingSession = userData.remainingSessions - selectedClasses.length;
         const { error: profileError } = await supabase
           .from('profiles')
           .update({ 
-            sessions_remaining: userData.remainingSessions - selectedClasses.length 
+            sessions_remaining: newRemainingSession
           })
           .eq('id', user.id);
         
@@ -348,7 +406,7 @@ const ClassCalendar = () => {
           // Update local state for user data
           setUserData({
             ...userData,
-            remainingSessions: userData.remainingSessions - selectedClasses.length
+            remainingSessions: newRemainingSession
           });
         }
       }
@@ -360,6 +418,7 @@ const ClassCalendar = () => {
       
       setSelectedClasses([]);
       setConfirmDialogOpen(false);
+      form.reset();
     } catch (err) {
       console.error("Error in confirmBooking:", err);
       toast({
@@ -367,6 +426,8 @@ const ClassCalendar = () => {
         description: "Please try again later",
         variant: "destructive"
       });
+    } finally {
+      setIsBookingInProgress(false);
     }
   };
   
@@ -407,23 +468,38 @@ const ClassCalendar = () => {
         throw error;
       }
       
+      // Update class enrolled count
+      const classToUpdate = classes.find(c => c.id === classId);
+      if (classToUpdate && classToUpdate.enrolled && classToUpdate.enrolled > 0) {
+        const { error: updateError } = await supabase
+          .from('classes')
+          .update({ enrolled: classToUpdate.enrolled - 1 })
+          .eq('id', classId);
+        
+        if (updateError) {
+          console.error(`Error updating enrolled count for class ${classId}:`, updateError);
+        }
+      }
+      
       // Update local state
       setBookedClasses(bookedClasses.filter(id => id !== classId));
       
-      // Update classes to remove booked status
+      // Update classes to remove booked status and decrease enrolled count
       setClasses(prevClasses => 
         prevClasses.map(cls => ({
           ...cls,
-          isBooked: cls.id === classId ? false : cls.isBooked
+          isBooked: cls.id === classId ? false : cls.isBooked,
+          enrolled: cls.id === classId && cls.enrolled ? cls.enrolled - 1 : cls.enrolled
         }))
       );
       
       // Update user sessions
       if (user) {
+        const newRemainingSession = userData.remainingSessions + 1;
         const { error: profileError } = await supabase
           .from('profiles')
           .update({ 
-            sessions_remaining: userData.remainingSessions + 1
+            sessions_remaining: newRemainingSession
           })
           .eq('id', user.id);
         
@@ -434,7 +510,7 @@ const ClassCalendar = () => {
           // Update local state for user data
           setUserData({
             ...userData,
-            remainingSessions: userData.remainingSessions + 1
+            remainingSessions: newRemainingSession
           });
         }
       }
@@ -466,7 +542,23 @@ const ClassCalendar = () => {
 
   const selectedClassesData = selectedClasses.map(id => 
     classes.find(cls => cls.id === id)
-  ).filter(Boolean);
+  ).filter(Boolean) as ClassWithBooking[];
+
+  // Check if a class is in the past
+  const isClassInPast = (classDate: Date, classTime?: string) => {
+    if (!classTime) return false;
+    
+    const now = new Date();
+    const [hours, minutes] = classTime.split(':').map(Number);
+    
+    const classDateTime = new Date(classDate);
+    classDateTime.setHours(hours, minutes);
+    
+    return classDateTime < now;
+  };
+
+  // Calculate how many sessions will remain after booking
+  const remainingAfterBooking = userData.remainingSessions - selectedClasses.length;
 
   return (
     <DashboardLayout title="Book a Class">
@@ -474,7 +566,10 @@ const ClassCalendar = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
             <div>
-              <h2 className="text-xl font-bold">Class Schedule</h2>
+              <h2 className="text-xl font-bold flex items-center">
+                <BookOpen className="mr-2 h-5 w-5 text-gym-blue" />
+                Class Bookings
+              </h2>
               <p className="text-gray-500">Select a date to view available classes</p>
             </div>
             <div className="mt-3 md:mt-0">
@@ -482,7 +577,7 @@ const ClassCalendar = () => {
                 <Skeleton className="h-10 w-48" />
               ) : (
                 <div className="flex items-center">
-                  <CalendarDays className="mr-2 h-5 w-5 text-gym-blue" />
+                  <Users className="mr-2 h-5 w-5 text-gym-blue" />
                   <span>
                     Sessions remaining: <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-gym-blue")}>
                       {userData.remainingSessions}
@@ -507,6 +602,10 @@ const ClassCalendar = () => {
             <div className="md:col-span-1">
               <div className="flex flex-col space-y-4">
                 <div className="bg-white border rounded-lg p-4 shadow-sm">
+                  <h3 className="text-base font-semibold mb-2 flex items-center">
+                    <CalendarDays className="mr-2 h-4 w-4 text-gym-blue" />
+                    Select Date
+                  </h3>
                   <Calendar 
                     mode="single"
                     selected={selectedDate}
@@ -526,7 +625,10 @@ const ClassCalendar = () => {
                 
                 {/* Class type legend */}
                 <div className="bg-white border rounded-lg p-4 shadow-sm">
-                  <h3 className="text-sm font-medium mb-2">Class Types</h3>
+                  <h3 className="text-base font-semibold mb-2 flex items-center">
+                    <Info className="mr-2 h-4 w-4 text-gym-blue" />
+                    Class Types
+                  </h3>
                   <div className="space-y-2">
                     {Object.entries(classTypeColors).map(([type, colors]) => (
                       type !== 'default' && (
@@ -538,6 +640,56 @@ const ClassCalendar = () => {
                     ))}
                   </div>
                 </div>
+                
+                {/* Selected classes summary */}
+                {selectedClasses.length > 0 && (
+                  <div className="bg-white border rounded-lg p-4 shadow-sm">
+                    <h3 className="text-base font-semibold mb-2 flex items-center">
+                      <Check className="mr-2 h-4 w-4 text-green-500" />
+                      Selected Classes
+                    </h3>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {selectedClassesData.map(cls => (
+                        <div key={cls.id} className="flex justify-between items-center text-sm border-b pb-1">
+                          <div>
+                            <p className="font-medium">{cls.name}</p>
+                            <p className="text-xs text-gray-500">
+                              {cls.start_time} - {cls.end_time}
+                            </p>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                            onClick={() => toggleClassSelection(cls.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-2 border-t flex justify-between items-center">
+                      <span className="text-sm">Sessions to use:</span>
+                      <Badge variant="outline" className="bg-gym-light text-gym-blue">
+                        {selectedClasses.length}
+                      </Badge>
+                    </div>
+                    <div className="mt-1 flex justify-between items-center">
+                      <span className="text-sm">Remaining after booking:</span>
+                      <Badge variant={remainingAfterBooking < 0 ? "destructive" : "outline"} 
+                             className={remainingAfterBooking < 0 ? "" : "bg-green-50 text-green-800"}>
+                        {remainingAfterBooking}
+                      </Badge>
+                    </div>
+                    <Button 
+                      onClick={form.handleSubmit(handleBookMultipleClasses)}
+                      className="w-full mt-3 bg-gym-blue hover:bg-gym-dark-blue"
+                      disabled={selectedClasses.length === 0 || remainingAfterBooking < 0}
+                    >
+                      Book Selected Classes
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -545,18 +697,10 @@ const ClassCalendar = () => {
               {selectedDate && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-medium">
+                    <h3 className="text-lg font-medium flex items-center">
+                      <Clock className="mr-2 h-5 w-5 text-gym-blue" />
                       Classes for {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'Selected date'}
                     </h3>
-                    
-                    {selectedClasses.length > 0 && (
-                      <Button 
-                        onClick={handleBookMultipleClasses}
-                        className="bg-gym-blue hover:bg-gym-dark-blue"
-                      >
-                        Book Selected ({selectedClasses.length})
-                      </Button>
-                    )}
                   </div>
                   
                   {isLoading ? (
@@ -573,6 +717,8 @@ const ClassCalendar = () => {
                           const isSelected = selectedClasses.includes(cls.id);
                           const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
                           const typeColor = classTypeColors[typeKey] || classTypeColors.default;
+                          const classDate = new Date(cls.schedule);
+                          const isPast = isClassInPast(classDate, cls.start_time);
                           
                           const isPastCancellationWindow = () => {
                             if (!cls.start_time) return false;
@@ -582,6 +728,9 @@ const ClassCalendar = () => {
                             classDate.setHours(classHour);
                             return (classDate.getTime() - now.getTime()) / (1000 * 60 * 60) < systemSettings.cancellationTimeLimit;
                           };
+                          
+                          // Skip past classes - only show future classes and classes for today
+                          if (isPast) return null;
                           
                           return (
                             <Card key={cls.id} className={cn(
@@ -628,6 +777,9 @@ const ClassCalendar = () => {
                                     {cls.type || "General"}
                                   </Badge>
                                 </div>
+                                {cls.location && (
+                                  <p className="text-sm text-gray-600 mt-1">Location: {cls.location}</p>
+                                )}
                                 {cls.description && (
                                   <p className="text-sm text-gray-600 mt-2">{cls.description}</p>
                                 )}
@@ -724,6 +876,44 @@ const ClassCalendar = () => {
                   {userData.remainingSessions}
                 </span>
               </div>
+              <div className="flex justify-between font-medium mt-1 pt-1 border-t">
+                <span>Sessions after booking:</span>
+                <span className={cn(
+                  "font-bold", 
+                  remainingAfterBooking <= 0 ? "text-red-500" : 
+                  remainingAfterBooking <= 5 ? "text-amber-500" : 
+                  "text-green-600"
+                )}>
+                  {remainingAfterBooking}
+                </span>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <Form {...form}>
+                <form className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="acceptTerms"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            I agree to the booking terms and conditions
+                          </FormLabel>
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </form>
+              </Form>
             </div>
           </div>
           
@@ -732,9 +922,19 @@ const ClassCalendar = () => {
               <X className="mr-2 h-4 w-4" />
               Cancel
             </Button>
-            <Button onClick={confirmBooking} className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue">
-              <Check className="mr-2 h-4 w-4" />
-              Confirm Booking
+            <Button 
+              onClick={confirmBooking} 
+              className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue"
+              disabled={!form.getValues().acceptTerms || isBookingInProgress}
+            >
+              {isBookingInProgress ? (
+                <>Processing...</>
+              ) : (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  Confirm Booking
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
