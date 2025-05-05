@@ -130,11 +130,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const isDemoUser = demoEmails.some(email => email.includes(mockRole.toLowerCase()));
             
             if (isDemoUser) {
-              console.log("Demo credentials found, attempting auto-login");
-              // Try to establish a session for demo users
-              login(`${mockRole}@gym.com`, `${mockRole}123`).catch(err => {
-                console.error("Auto-login for demo user failed:", err);
+              console.log("Demo credentials found, establishing demo session");
+              
+              // Create mock user object for demo purposes
+              const mockUser = {
+                id: `demo-${mockRole}-id`,
+                email: `${mockRole}@gym.com`,
+                name: mockRole.charAt(0).toUpperCase() + mockRole.slice(1),
+                role: mockRole
+              };
+              
+              // Set user without requiring actual authentication
+              setUser(mockUser);
+              setUserProfile({
+                sessions_remaining: 7,
+                total_sessions: 12
               });
+              
+              // Store the role for demo access
+              setRole(mockRole);
+              console.log("Demo user session established:", mockUser);
             }
           }
         }

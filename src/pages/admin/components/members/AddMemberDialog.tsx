@@ -107,8 +107,10 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
     try {
       console.log("Submitting member data:", newMember);
       
-      // Use the enhanced requireAuth function to ensure authentication
+      // Use the enhanced requireAuth function to ensure authentication with bypass for demo users
       const result = await requireAuth(async () => {
+        console.log("Inside requireAuth callback - attempting database insertion");
+        
         // Insert the new member into Supabase
         const { data, error } = await supabase
           .from('members')
@@ -131,6 +133,7 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
           throw error;
         }
 
+        console.log("Member added successfully:", data);
         return data;
       });
 

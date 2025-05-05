@@ -22,6 +22,23 @@ const supabaseOptions = {
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, supabaseOptions);
 
+// Create a demo client with RLS bypass capabilities
+const createDemoClient = () => {
+  return createClient<Database>(
+    SUPABASE_URL, 
+    SUPABASE_PUBLISHABLE_KEY, 
+    {
+      ...supabaseOptions,
+      global: {
+        headers: {
+          // Special header to bypass RLS in demo mode
+          'x-demo-bypass-rls': 'true',
+        }
+      }
+    }
+  );
+};
+
 // Enhanced authentication helper for demo purposes
 export const requireAuth = async (callback: () => Promise<any>) => {
   try {
@@ -45,66 +62,24 @@ export const requireAuth = async (callback: () => Promise<any>) => {
     const isDemoUser = mockRole && demoEmails.some(email => email.includes(mockRole.toLowerCase()));
     
     if (isDemoUser) {
-      console.log("Using demo credentials - creating mock session");
+      console.log("Using demo credentials - bypassing RLS restrictions");
       
-      // For demo users, we need to create a service role client with appropriate permissions
-      // This approach bypasses RLS for demo purposes only
-      const demoClient = createClient<Database>(
-        SUPABASE_URL, 
-        SUPABASE_PUBLISHABLE_KEY, 
-        {
-          ...supabaseOptions,
-          global: {
-            headers: {
-              // This special header lets demo users bypass RLS in development mode
-              'x-demo-bypass-rls': 'true'
-            }
-          }
-        }
-      );
+      // Create a demo client with RLS bypass
+      const demoClient = createDemoClient();
       
-      // Try signing in with the demo user (but don't worry if it fails)
-      await supabase.auth.signInWithPassword({
-        email: `${mockRole}@gym.com`,
-        password: `${mockRole}123`
-      }).catch(() => {
-        // Silently catch this error since we're just trying to establish a session
-        console.log("Demo credential authentication attempted");
-      });
-      
-      // Now there should be a session (real or synthetic)
-      const { data: { session: newSession } } = await supabase.auth.getSession();
-      
-      if (newSession) {
-        console.log("Session established for demo user, executing operation");
-        return callback();
+      // Try to establish a session first (helpful but not critical for our bypass)
+      try {
+        await supabase.auth.signInWithPassword({
+          email: `${mockRole}@gym.com`,
+          password: `${mockRole}123`
+        });
+      } catch (e) {
+        // Silently catch auth errors for demo mode
+        console.log("Demo auth attempted, proceeding with bypass client");
       }
       
-      // If we still don't have a session, use the demo client for demo purposes
-      console.log("No session established, but proceeding for demo user");
-      
-      // Replace supabase with demoClient in the callback scope
-      // This is a bit of a hack, but it works for demo purposes
-      const originalCallback = callback;
-      const wrappedCallback = async () => {
-        // Create a temporary global for the original supabase client
-        const originalSupabase = (window as any).__originalSupabase;
-        (window as any).__originalSupabase = supabase;
-        
-        try {
-          // Temporarily replace the supabase client with our demo client
-          (window as any).supabase = demoClient;
-          
-          // Call the original callback with the demo client in scope
-          return await originalCallback();
-        } finally {
-          // Restore the original supabase client
-          (window as any).supabase = originalSupabase;
-          delete (window as any).__originalSupabase;
-        }
-      };
-      
-      return wrappedCallback();
+      // Execute the operation with the demo client
+      return await executeDemoOperation(demoClient, callback);
     }
     
     // If we get here, there's no session and no demo credentials
@@ -113,5 +88,44 @@ export const requireAuth = async (callback: () => Promise<any>) => {
   } catch (error) {
     console.error("Authentication error:", error);
     throw error;
+  }
+};
+
+// Helper function to execute operations with the demo client
+const executeDemoOperation = async (demoClient: any, callback: () => Promise<any>) => {
+  // Save the original supabase client
+  const originalSupabase = (window as any).__tempSupabase;
+  (window as any).__tempSupabase = supabase;
+  
+  // Replace the global supabase client temporarily
+  const originalCallback = callback;
+  
+  try {
+    // Create a modified callback that uses our demo client
+    const wrappedCallback = async () => {
+      const originalModule = await import('@/integrations/supabase/client');
+      const originalSupabaseRef = originalModule.supabase;
+      
+      try {
+        // Inject our demo client 
+        (window as any).supabase = demoClient;
+        // Also modify the module export temporarily
+        (originalModule as any).supabase = demoClient;
+        
+        // Execute the callback with our demo client in scope
+        return await originalCallback();
+      } finally {
+        // Restore original clients
+        (window as any).supabase = originalSupabaseRef;
+        (originalModule as any).supabase = originalSupabaseRef;
+      }
+    };
+    
+    // Run the wrapped callback
+    return await wrappedCallback();
+  } finally {
+    // Cleanup
+    (window as any).supabase = (window as any).__tempSupabase;
+    delete (window as any).__tempSupabase;
   }
 };

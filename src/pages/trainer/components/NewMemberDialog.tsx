@@ -124,10 +124,12 @@ const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialo
       const additionalSessions = parseInt(newMember.additionalSessions) || 0;
       const totalSessions = sessions + additionalSessions;
       
-      console.log("Attempting to insert new member into database...");
+      console.log("Attempting to insert new member into database with RLS bypass for demo users...");
       
-      // Use enhanced requireAuth for authentication
+      // Use enhanced requireAuth for authentication with bypass for demo users
       const result = await requireAuth(async () => {
+        console.log("In requireAuth callback - attempting database insertion");
+        
         // Insert into Supabase
         const { data, error } = await supabase
           .from('members')
