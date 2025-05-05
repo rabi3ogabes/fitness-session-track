@@ -102,7 +102,12 @@ export const useTrainerCreation = () => {
         const demoId = Math.floor(Math.random() * 1000) + 10; // Random ID between 10 and 1010
         const createdTrainer = {
           id: demoId,
-          ...trainerData,
+          name: trainerData.name,
+          email: trainerData.email,
+          phone: trainerData.phone || null,
+          specialization: trainerData.specialization || null,
+          status: trainerData.status,
+          gender: trainerData.gender || null,
           created_at: new Date().toISOString()
         };
         
@@ -124,7 +129,7 @@ export const useTrainerCreation = () => {
             phone: trainerData.phone || null,
             specialization: trainerData.specialization || null,
             status: trainerData.status,
-            gender: trainerData.gender,
+            gender: trainerData.gender || null,
           },
         ])
         .select();

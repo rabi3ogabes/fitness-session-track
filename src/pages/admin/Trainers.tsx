@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -143,7 +144,20 @@ const Trainers = () => {
       const result = await createTrainer(trainerData);
       
       if (result.success && result.data && result.data.length > 0) {
-        setTrainers([...trainers, result.data[0]]);
+        // Create a properly typed trainer object from the result
+        const newTrainer: Trainer = {
+          id: result.data[0].id,
+          name: result.data[0].name,
+          email: result.data[0].email,
+          phone: result.data[0].phone || undefined,
+          specialization: result.data[0].specialization || undefined,
+          status: result.data[0].status,
+          gender: result.data[0].gender || undefined,
+          created_at: result.data[0].created_at
+        };
+        
+        // Update state with the new trainer
+        setTrainers(prevTrainers => [...prevTrainers, newTrainer]);
         setIsAddDialogOpen(false);
         
         toast({
