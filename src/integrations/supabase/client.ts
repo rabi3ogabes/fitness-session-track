@@ -9,7 +9,7 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Configure auth persistence options with properly typed flowType
 const supabaseOptions = {
   auth: {
-    storage: localStorage,
+    storage: typeof window !== 'undefined' ? localStorage : undefined,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
@@ -53,7 +53,7 @@ export const requireAuth = async (callback: () => Promise<any>) => {
     // If we have a real session, proceed with the callback
     if (session) {
       console.log("Real authentication confirmed, executing protected operation");
-      return callback();
+      return await callback();
     }
     
     // If no real session, check for demo credentials
@@ -67,18 +67,8 @@ export const requireAuth = async (callback: () => Promise<any>) => {
       // Create a demo client with RLS bypass
       const demoClient = createDemoClient();
       
-      // Try to establish a session first (helpful but not critical for our bypass)
-      try {
-        await supabase.auth.signInWithPassword({
-          email: `${mockRole}@gym.com`,
-          password: `${mockRole}123`
-        });
-      } catch (e) {
-        // Silently catch auth errors for demo mode
-        console.log("Demo auth attempted, proceeding with bypass client");
-      }
-      
-      // Execute the operation with the demo client
+      // Since we're in demo mode, skip the real auth attempt
+      // and proceed directly with the demo client
       return await executeDemoOperation(demoClient, callback);
     }
     
@@ -93,39 +83,33 @@ export const requireAuth = async (callback: () => Promise<any>) => {
 
 // Helper function to execute operations with the demo client
 const executeDemoOperation = async (demoClient: any, callback: () => Promise<any>) => {
-  // Save the original supabase client
-  const originalSupabase = (window as any).__tempSupabase;
-  (window as any).__tempSupabase = supabase;
-  
-  // Replace the global supabase client temporarily
-  const originalCallback = callback;
+  // Store the original supabase reference
+  const originalSupabase = supabase;
   
   try {
-    // Create a modified callback that uses our demo client
+    // Create a custom dynamic import wrapper to handle the module reference swap
     const wrappedCallback = async () => {
-      const originalModule = await import('@/integrations/supabase/client');
-      const originalSupabaseRef = originalModule.supabase;
+      // Create a temporary proxy to intercept any supabase calls
+      const supabaseProxy = new Proxy(originalSupabase, {
+        get: function(target, prop) {
+          // Forward any property access to the demo client
+          return demoClient[prop];
+        }
+      });
       
-      try {
-        // Inject our demo client 
-        (window as any).supabase = demoClient;
-        // Also modify the module export temporarily
-        (originalModule as any).supabase = demoClient;
-        
-        // Execute the callback with our demo client in scope
-        return await originalCallback();
-      } finally {
-        // Restore original clients
-        (window as any).supabase = originalSupabaseRef;
-        (originalModule as any).supabase = originalSupabaseRef;
-      }
+      // Temporarily replace the global supabase object
+      (window as any).supabase = supabaseProxy;
+      
+      // Execute the callback with our proxy in place
+      const result = await callback();
+      
+      return result;
     };
     
     // Run the wrapped callback
     return await wrappedCallback();
   } finally {
-    // Cleanup
-    (window as any).supabase = (window as any).__tempSupabase;
-    delete (window as any).__tempSupabase;
+    // Always restore the original supabase client
+    (window as any).supabase = originalSupabase;
   }
 };
