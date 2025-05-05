@@ -24,6 +24,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 
 // Create a demo client with RLS bypass capabilities
 const createDemoClient = () => {
+  // Create a client that will bypass RLS
   return createClient<Database>(
     SUPABASE_URL, 
     SUPABASE_PUBLISHABLE_KEY, 
@@ -31,7 +32,7 @@ const createDemoClient = () => {
       ...supabaseOptions,
       global: {
         headers: {
-          // Special header to bypass RLS in demo mode
+          // Special header that bypasses RLS
           'x-demo-bypass-rls': 'true',
         }
       }
@@ -42,7 +43,15 @@ const createDemoClient = () => {
 // Enhanced authentication helper for demo purposes
 export const requireAuth = async (callback: () => Promise<any>) => {
   try {
-    // First check if we have a real session
+    // Check if we're in demo mode first for faster path
+    const mockRole = localStorage.getItem('userRole');
+    if (mockRole) {
+      console.log("Detected demo mode, using bypass RLS client");
+      const demoClient = createDemoClient();
+      return await executeDemoOperation(demoClient, callback);
+    }
+    
+    // If not in demo mode, check for a real session
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
@@ -54,22 +63,6 @@ export const requireAuth = async (callback: () => Promise<any>) => {
     if (session) {
       console.log("Real authentication confirmed, executing protected operation");
       return await callback();
-    }
-    
-    // If no real session, check for demo credentials
-    const mockRole = localStorage.getItem('userRole');
-    const demoEmails = ['admin@gym.com', 'trainer@gym.com', 'user@gym.com'];
-    const isDemoUser = mockRole && demoEmails.some(email => email.includes(mockRole.toLowerCase()));
-    
-    if (isDemoUser) {
-      console.log("Using demo credentials - bypassing RLS restrictions");
-      
-      // Create a demo client with RLS bypass
-      const demoClient = createDemoClient();
-      
-      // Since we're in demo mode, skip the real auth attempt
-      // and proceed directly with the demo client
-      return await executeDemoOperation(demoClient, callback);
     }
     
     // If we get here, there's no session and no demo credentials
