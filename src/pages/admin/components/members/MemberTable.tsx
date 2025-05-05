@@ -1,7 +1,6 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, PowerIcon, UserMinusIcon, LockReset } from "lucide-react";
+import { PencilIcon, PowerIcon, UserMinusIcon, Lock } from "lucide-react";
 import { Member } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -140,7 +139,7 @@ const MemberTable = ({
                                 onClick={() => resetPassword(member.id)}
                                 className="text-purple-600 hover:text-purple-800 hover:bg-purple-50"
                               >
-                                <LockReset className="h-4 w-4" />
+                                <Lock className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>

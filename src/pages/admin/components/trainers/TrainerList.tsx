@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, PowerIcon, LockReset, Loader2 } from "lucide-react";
+import { PencilIcon, PowerIcon, Lock, Loader2 } from "lucide-react";
 import { Trainer } from "./types";
 
 interface TrainerListProps {
@@ -134,7 +134,7 @@ const TrainerList = ({
                             size="icon" 
                             className="text-purple-600 hover:text-purple-800 hover:bg-purple-50"
                           >
-                            <LockReset className="h-4 w-4" />
+                            <Lock className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
