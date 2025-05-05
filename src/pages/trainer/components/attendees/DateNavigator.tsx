@@ -43,7 +43,7 @@ export const DateNavigator = ({ selectedDate, onDateChange }: DateNavigatorProps
             </span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0">
+        <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             mode="single"
             selected={selectedDate}
