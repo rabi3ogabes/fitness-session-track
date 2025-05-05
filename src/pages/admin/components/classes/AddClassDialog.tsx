@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -80,6 +79,13 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const today = new Date();
+  
+  // Added console logs to debug trainers data
+  useEffect(() => {
+    if (isOpen) {
+      console.log("AddClassDialog opened with trainers:", trainers);
+    }
+  }, [isOpen, trainers]);
   
   const initialFormState: ClassFormState = {
     name: "",
@@ -489,16 +495,22 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                 <div className="grid grid-cols-4 items-start gap-4">
                   <Label className="text-right pt-2">Trainers*</Label>
                   <div className="col-span-3 grid grid-cols-2 gap-2">
-                    {trainers.map((trainer) => (
-                      <div key={trainer} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={`trainer-${trainer}`} 
-                          checked={formState.trainers.includes(trainer)}
-                          onCheckedChange={(checked) => handleTrainerSelection(trainer, checked === true)}
-                        />
-                        <Label htmlFor={`trainer-${trainer}`} className="text-sm">{trainer}</Label>
+                    {trainers && trainers.length > 0 ? (
+                      trainers.map((trainer) => (
+                        <div key={trainer} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`trainer-${trainer}`} 
+                            checked={formState.trainers.includes(trainer)}
+                            onCheckedChange={(checked) => handleTrainerSelection(trainer, checked === true)}
+                          />
+                          <Label htmlFor={`trainer-${trainer}`} className="text-sm">{trainer}</Label>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-2 text-muted-foreground italic">
+                        No trainers available. Please add trainers first.
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
                 

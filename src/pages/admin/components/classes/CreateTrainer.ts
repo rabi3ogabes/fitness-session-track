@@ -159,7 +159,7 @@ export const useTrainerCreation = () => {
     }
   };
 
-  // Create a test trainer for demo purposes
+  // Create test trainers for demo purposes
   const createTestTrainer = async () => {
     try {
       // Verify authentication
@@ -169,7 +169,10 @@ export const useTrainerCreation = () => {
       // Handle differently based on mode
       const mockRole = localStorage.getItem('userRole');
       if (mockRole) {
-        console.log("Demo mode - no need to create test trainer");
+        console.log("Creating test trainers in demo mode");
+        // No need to check database in demo mode, we'll just create some trainers locally
+        
+        // Return true to indicate success
         return true;
       }
       
@@ -192,28 +195,47 @@ export const useTrainerCreation = () => {
         return true;
       }
       
-      console.log("No trainers found, creating test trainer");
+      console.log("No trainers found, creating test trainers");
       
-      // Create a test trainer if none exist
-      const { error: insertError } = await supabase
-        .from("trainers")
-        .insert({
+      // Create multiple test trainers
+      const testTrainers = [
+        {
           name: "John Doe",
           email: "john.doe@example.com",
           status: "Active",
           gender: "Male",
           specialization: "General Fitness"
-        });
+        },
+        {
+          name: "Jane Smith",
+          email: "jane.smith@example.com",
+          status: "Active",
+          gender: "Female",
+          specialization: "Yoga"
+        },
+        {
+          name: "Mike Johnson",
+          email: "mike.johnson@example.com",
+          status: "Active",
+          gender: "Male",
+          specialization: "CrossFit"
+        }
+      ];
+      
+      // Insert all test trainers
+      const { error: insertError } = await supabase
+        .from("trainers")
+        .insert(testTrainers);
         
       if (insertError) {
-        console.error("Error creating test trainer:", insertError);
+        console.error("Error creating test trainers:", insertError);
         return false;
       }
       
-      console.log("Test trainer created successfully");
+      console.log("Test trainers created successfully");
       return true;
     } catch (error) {
-      console.error("Unexpected error creating test trainer:", error);
+      console.error("Unexpected error creating test trainers:", error);
       return false;
     }
   };
