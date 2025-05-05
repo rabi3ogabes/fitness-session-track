@@ -66,7 +66,7 @@ const formSchema = z.object({
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
   isRecurring: z.boolean().default(false),
-  recurringFrequency: z.enum(["Daily", "Weekly", "Monthly"]).optional(),
+  recurringFrequency: z.enum(["Weekly", "Monthly"]).optional(),
   selectedDays: z.array(z.string()).min(1, "Select at least one day").optional(),
   description: z.string().optional(),
   location: z.string().optional(),
@@ -239,7 +239,7 @@ const ClassSchedulePage = () => {
   const generateRecurringDates = (
     startDate: Date, 
     endDate: Date, 
-    frequency: "Daily" | "Weekly" | "Monthly", 
+    frequency: "Weekly" | "Monthly", 
     days: string[]
   ) => {
     const dates: Date[] = [];
@@ -253,14 +253,7 @@ const ClassSchedulePage = () => {
       "Saturday": 6
     };
     
-    if (frequency === "Daily") {
-      let currentDay = new Date(startDate);
-      
-      while (currentDay <= endDate) {
-        dates.push(new Date(currentDay));
-        currentDay = addDays(currentDay, 1);
-      }
-    } else if (frequency === "Weekly") {
+    if (frequency === "Weekly") {
       let currentWeek = new Date(startDate);
       
       while (currentWeek <= endDate) {
