@@ -200,15 +200,15 @@ export const useTrainerCreation = () => {
       // Create multiple test trainers
       const testTrainers = [
         {
-          name: "John Doe",
-          email: "john.doe@example.com",
+          name: "John Smith",
+          email: "john.smith@example.com",
           status: "Active",
           gender: "Male",
           specialization: "General Fitness"
         },
         {
-          name: "Jane Smith",
-          email: "jane.smith@example.com",
+          name: "Sarah Wilson",
+          email: "sarah.wilson@example.com",
           status: "Active",
           gender: "Female",
           specialization: "Yoga"
