@@ -3,13 +3,25 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Clock } from "lucide-react";
+import { Plus, Pencil, Clock, CalendarIcon, Filter, Users, ArrowUpDown } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, parse, isBefore } from "date-fns";
 import AddClassDialog from "./components/classes/AddClassDialog";
 import EditClassDialog from "./components/classes/EditClassDialog";
 import { ClassModel, RecurringPattern } from "./components/classes/ClassTypes";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const Classes = () => {
   const [classes, setClasses] = useState<ClassModel[]>([]);
@@ -19,6 +31,9 @@ const Classes = () => {
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [trainersList, setTrainersList] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const { toast } = useToast();
 
   // Fetch classes from Supabase
@@ -26,6 +41,7 @@ const Classes = () => {
     const fetchClasses = async () => {
       setIsLoading(true);
       try {
+        console.log("Fetching classes from Supabase...");
         const { data, error } = await supabase
           .from('classes')
           .select('*');
@@ -41,6 +57,7 @@ const Classes = () => {
         }
 
         if (data) {
+          console.log("Classes data retrieved:", data);
           const formattedClasses: ClassModel[] = data.map(cls => ({
             id: cls.id,
             name: cls.name,
@@ -53,6 +70,10 @@ const Classes = () => {
             gender: cls.gender || "All",
             startTime: cls.start_time || "",
             endTime: cls.end_time || "",
+            description: cls.description || "",
+            location: cls.location || "",
+            difficulty: cls.difficulty || "",
+            color: cls.color || ""
           }));
           
           setClasses(formattedClasses);
@@ -90,8 +111,10 @@ const Classes = () => {
 
         if (data && data.length > 0) {
           const trainerNames = data.map(trainer => trainer.name);
+          console.log("Trainers loaded from database:", trainerNames);
           setTrainersList(trainerNames);
         } else {
+          console.log("No trainers found in database, using fallback");
           // Fallback to localStorage trainers
           loadTrainersFromLocalStorage();
         }
@@ -113,12 +136,13 @@ const Classes = () => {
             .map((trainer: any) => trainer.name);
           
           if (activeTrainerNames.length > 0) {
+            console.log("Trainers loaded from localStorage:", activeTrainerNames);
             setTrainersList(activeTrainerNames);
             return;
           }
         }
         // Use fallback trainers if nothing else works
-        setTrainersList([
+        const fallbackTrainers = [
           "Jane Smith",
           "Mike Johnson",
           "Sarah Davis",
@@ -126,7 +150,9 @@ const Classes = () => {
           "Robert Brown",
           "David Miller",
           "Lisa Garcia",
-        ]);
+        ];
+        console.log("Using fallback trainers:", fallbackTrainers);
+        setTrainersList(fallbackTrainers);
       } catch (error) {
         console.error("Error loading trainers from localStorage:", error);
         // Keep the fallback trainers if there's an error
@@ -145,12 +171,59 @@ const Classes = () => {
     fetchTrainers();
   }, []);
 
-  const filteredClasses = classes.filter(
-    (cls) =>
-      cls.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (cls.trainer && cls.trainer.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (cls.trainers && cls.trainers.some(t => t.toLowerCase().includes(searchTerm.toLowerCase())))
-  );
+  // Filter and sort classes
+  const getFilteredAndSortedClasses = () => {
+    let filtered = classes.filter(
+      (cls) =>
+        (cls.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (cls.trainer && cls.trainer.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (cls.trainers && cls.trainers.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))) ||
+        (cls.location && cls.location.toLowerCase().includes(searchTerm.toLowerCase())))
+        && 
+        (filterStatus === null || cls.status === filterStatus)
+    );
+
+    // Sort the filtered classes
+    filtered.sort((a, b) => {
+      let valueA, valueB;
+
+      switch (sortBy) {
+        case "name":
+          valueA = a.name.toLowerCase();
+          valueB = b.name.toLowerCase();
+          break;
+        case "capacity":
+          valueA = a.capacity;
+          valueB = b.capacity;
+          break;
+        case "enrolled":
+          valueA = a.enrolled || 0;
+          valueB = b.enrolled || 0;
+          break;
+        case "schedule":
+          try {
+            const dateA = parse(a.schedule, "MM/dd/yyyy", new Date());
+            const dateB = parse(b.schedule, "MM/dd/yyyy", new Date());
+            valueA = dateA.getTime();
+            valueB = dateB.getTime();
+          } catch {
+            valueA = a.schedule;
+            valueB = b.schedule;
+          }
+          break;
+        default:
+          valueA = a.name.toLowerCase();
+          valueB = b.name.toLowerCase();
+      }
+
+      const compareResult = valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
+      return sortDirection === "asc" ? compareResult : -compareResult;
+    });
+
+    return filtered;
+  };
+
+  const filteredClasses = getFilteredAndSortedClasses();
 
   const currentClass = selectedClassId ? classes.find(c => c.id === selectedClassId) || null : null;
 
@@ -289,12 +362,19 @@ const Classes = () => {
         status: newClass.status || "Active",
         gender: newClass.gender || "All",
         start_time: newClass.startTime,
-        end_time: newClass.endTime
+        end_time: newClass.endTime,
+        description: newClass.description,
+        location: newClass.location,
+        difficulty: newClass.difficulty,
+        color: newClass.color
       };
+      
+      console.log("Adding class with data:", classToAdd);
       
       if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
         // Generate recurring classes
         const generatedClasses = generateRecurringClasses(newClass, recurringPattern);
+        console.log(`Generated ${generatedClasses.length} recurring classes`);
         
         // Insert all classes
         const classesToInsert = generatedClasses.map(cls => ({
@@ -307,7 +387,11 @@ const Classes = () => {
           status: cls.status || "Active",
           gender: cls.gender || "All",
           start_time: cls.startTime,
-          end_time: cls.endTime
+          end_time: cls.endTime,
+          description: cls.description,
+          location: cls.location,
+          difficulty: cls.difficulty,
+          color: cls.color
         }));
         
         const { data, error } = await supabase
@@ -326,6 +410,7 @@ const Classes = () => {
         }
         
         if (data) {
+          console.log("Inserted recurring classes:", data);
           const formattedClasses: ClassModel[] = data.map(cls => ({
             id: cls.id,
             name: cls.name,
@@ -338,6 +423,10 @@ const Classes = () => {
             gender: cls.gender || "All",
             startTime: cls.start_time || "",
             endTime: cls.end_time || "",
+            description: cls.description,
+            location: cls.location,
+            difficulty: cls.difficulty,
+            color: cls.color
           }));
           
           setClasses(prevClasses => [...prevClasses, ...formattedClasses]);
@@ -365,6 +454,7 @@ const Classes = () => {
         }
         
         if (data && data[0]) {
+          console.log("Inserted class:", data[0]);
           const formattedClass: ClassModel = {
             id: data[0].id,
             name: data[0].name,
@@ -377,6 +467,10 @@ const Classes = () => {
             gender: data[0].gender || "All",
             startTime: data[0].start_time || "",
             endTime: data[0].end_time || "",
+            description: data[0].description,
+            location: data[0].location,
+            difficulty: data[0].difficulty,
+            color: data[0].color
           };
           
           setClasses(prevClasses => [...prevClasses, formattedClass]);
@@ -417,8 +511,14 @@ const Classes = () => {
         status: updatedClass.status,
         gender: updatedClass.gender,
         start_time: updatedClass.startTime,
-        end_time: updatedClass.endTime
+        end_time: updatedClass.endTime,
+        description: updatedClass.description,
+        location: updatedClass.location,
+        difficulty: updatedClass.difficulty,
+        color: updatedClass.color
       };
+      
+      console.log("Updating class with data:", classData);
       
       const { error } = await supabase
         .from('classes')
@@ -459,23 +559,63 @@ const Classes = () => {
     }
   };
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(column);
+      setSortDirection("asc");
+    }
+  };
+
   return (
     <DashboardLayout title="Class Management">
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="w-full sm:w-auto">
+        <div className="w-full sm:w-auto flex items-center gap-2">
           <Input
-            placeholder="Search classes..."
+            placeholder="Search classes, trainers, locations..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="sm:w-80"
           />
+          
+          <DropdownMenu>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon">
+                      <Filter className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Filter by status</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setFilterStatus(null)} className={!filterStatus ? "bg-gray-100" : ""}>
+                All Statuses
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilterStatus("Active")} className={filterStatus === "Active" ? "bg-gray-100" : ""}>
+                Active Only
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilterStatus("Inactive")} className={filterStatus === "Inactive" ? "bg-gray-100" : ""}>
+                Inactive Only
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilterStatus("Full")} className={filterStatus === "Full" ? "bg-gray-100" : ""}>
+                Full Classes Only
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <Button 
           className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue"
           onClick={() => setIsAddDialogOpen(true)}
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add New Class
+          Create New Class
         </Button>
       </div>
 
@@ -502,23 +642,52 @@ const Classes = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Class Name
+                  <th 
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort("name")}
+                  >
+                    <div className="flex items-center">
+                      Class Name
+                      {sortBy === "name" && (
+                        <ArrowUpDown className="ml-1 h-3 w-3" />
+                      )}
+                    </div>
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Trainer(s)
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                    Schedule
+                  <th 
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell cursor-pointer"
+                    onClick={() => handleSort("schedule")}
+                  >
+                    <div className="flex items-center">
+                      <CalendarIcon className="mr-1 h-3 w-3" />
+                      Schedule
+                      {sortBy === "schedule" && (
+                        <ArrowUpDown className="ml-1 h-3 w-3" />
+                      )}
+                    </div>
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                    Time
+                    <div className="flex items-center">
+                      <Clock className="mr-1 h-3 w-3" />
+                      Time
+                    </div>
                   </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                    Capacity
+                  <th 
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell cursor-pointer"
+                    onClick={() => handleSort("capacity")}
+                  >
+                    <div className="flex items-center">
+                      <Users className="mr-1 h-3 w-3" />
+                      Capacity
+                      {sortBy === "capacity" && (
+                        <ArrowUpDown className="ml-1 h-3 w-3" />
+                      )}
+                    </div>
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                    Gender
+                    Level
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -539,11 +708,21 @@ const Classes = () => {
                   filteredClasses.map((cls) => (
                     <tr key={cls.id} className="hover:bg-gray-50">
                       <td className="px-3 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">{cls.name}</div>
+                        <div className="flex items-center">
+                          {cls.color && (
+                            <div 
+                              className="w-3 h-3 rounded-full mr-2 flex-shrink-0" 
+                              style={{ backgroundColor: cls.color }}
+                            />
+                          )}
+                          <div className="font-medium text-gray-900">{cls.name}</div>
+                        </div>
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap">
                         <div className="text-gray-500">
-                          {cls.trainers ? cls.trainers.join(", ") : cls.trainer}
+                          {cls.trainers && cls.trainers.length > 0
+                            ? cls.trainers.join(", ")
+                            : cls.trainer || "No trainer assigned"}
                         </div>
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap hidden md:table-cell">
@@ -566,14 +745,16 @@ const Classes = () => {
                       <td className="px-3 py-4 whitespace-nowrap hidden md:table-cell">
                         <span
                           className={`px-2 py-1 text-xs rounded-full ${
-                            cls.gender === "Male"
-                              ? "bg-blue-100 text-blue-800"
-                              : cls.gender === "Female"
-                              ? "bg-pink-100 text-pink-800"
+                            cls.difficulty === "Beginner"
+                              ? "bg-green-100 text-green-800"
+                              : cls.difficulty === "Intermediate"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : cls.difficulty === "Advanced"
+                              ? "bg-red-100 text-red-800"
                               : "bg-gray-100 text-gray-800"
                           }`}
                         >
-                          {cls.gender || "All"}
+                          {cls.difficulty || "All Levels"}
                         </span>
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap">
