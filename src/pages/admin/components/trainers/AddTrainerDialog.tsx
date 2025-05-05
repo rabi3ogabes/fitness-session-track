@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ interface AddTrainerDialogProps {
 }
 
 const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDialogProps) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const { toast } = useToast();
   const [formData, setFormData] = useState<TrainerFormData>({
     name: "",
@@ -34,30 +35,37 @@ const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDial
 
   const handleSubmit = async () => {
     try {
-      // Verify authentication directly with Supabase
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // Check if we're in demo mode first (using the pattern established in other components)
+      const mockRole = localStorage.getItem('userRole');
+      const isDemoMode = !!mockRole;
       
-      if (sessionError) {
-        console.error("Session error in AddTrainerDialog:", sessionError);
-        toast({
-          title: "Authentication error",
-          description: "There was a problem verifying your authentication status.",
-          variant: "destructive",
-        });
-        return;
+      // Verify authentication - different paths for demo vs. real auth
+      if (!isDemoMode) {
+        // For real authentication, verify with Supabase
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          console.error("Session error or no session found:", sessionError);
+          toast({
+            title: "Authentication required",
+            description: "You need to be logged in to add trainers.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        // For demo mode, check the auth context
+        if (!isAuthenticated || !isAdmin) {
+          console.error("Not authenticated or not admin in demo mode");
+          toast({
+            title: "Authentication required",
+            description: "You need to be logged in as an admin to add trainers.",
+            variant: "destructive",
+          });
+          return;
+        }
+        console.log("Demo mode authentication confirmed for trainer creation");
       }
-      
-      if (!session) {
-        console.error("No session found in AddTrainerDialog");
-        toast({
-          title: "Authentication required",
-          description: "You need to be logged in to add trainers.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      console.log("Session confirmed in AddTrainerDialog, proceeding with trainer creation");
       
       // Validate required fields
       if (!formData.name || !formData.email) {

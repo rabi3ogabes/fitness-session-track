@@ -16,7 +16,7 @@ interface TrainerData {
 
 export const useTrainerCreation = () => {
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [isCreating, setIsCreating] = useState(false);
 
@@ -24,7 +24,37 @@ export const useTrainerCreation = () => {
   const checkAuthenticationStatus = async () => {
     console.log("Checking authentication status, isAuthenticated:", isAuthenticated);
     
-    // Double-check with Supabase to confirm session is active
+    // Check if we're in demo mode first
+    const mockRole = localStorage.getItem('userRole');
+    if (mockRole) {
+      console.log("Using demo mode with role:", mockRole);
+      // If in demo mode, check if user is authenticated and admin in the context
+      if (!isAuthenticated) {
+        console.error("Not authenticated in demo mode");
+        toast({
+          title: "Authentication required",
+          description: "You need to be logged in to manage trainers.",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return false;
+      }
+      
+      if (!isAdmin) {
+        console.error("Not admin in demo mode");
+        toast({
+          title: "Admin access required",
+          description: "You need admin access to manage trainers.",
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      console.log("Demo mode authentication confirmed for trainer operations");
+      return true;
+    }
+    
+    // If not in demo mode, check with Supabase
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
@@ -38,7 +68,7 @@ export const useTrainerCreation = () => {
     }
     
     if (!session) {
-      console.error("Not authenticated in useTrainerCreation hook");
+      console.error("Not authenticated with Supabase");
       toast({
         title: "Authentication required",
         description: "You need to be logged in to manage trainers.",
@@ -57,12 +87,34 @@ export const useTrainerCreation = () => {
     console.log("Creating trainer with data:", trainerData);
     
     try {
-      // Verify authentication with Supabase directly
+      // Verify authentication
       const isAuth = await checkAuthenticationStatus();
       if (!isAuth) return { success: false };
       
       console.log("Authentication confirmed, proceeding with trainer creation");
       
+      // Check if we're in demo mode to handle the creation properly
+      const mockRole = localStorage.getItem('userRole');
+      if (mockRole) {
+        console.log("Creating trainer in demo mode");
+        
+        // For demo mode, simulate a successful creation by generating an ID
+        const demoId = Math.floor(Math.random() * 1000) + 10; // Random ID between 10 and 1010
+        const createdTrainer = {
+          id: demoId,
+          ...trainerData,
+          created_at: new Date().toISOString()
+        };
+        
+        toast({
+          title: "Trainer created",
+          description: `${trainerData.name} has been added as a trainer (demo mode)`,
+        });
+        
+        return { success: true, data: [createdTrainer] };
+      }
+      
+      // For actual Supabase mode, proceed with the real database operation
       const { data, error } = await supabase
         .from("trainers")
         .insert([
@@ -105,9 +157,16 @@ export const useTrainerCreation = () => {
   // Create a test trainer for demo purposes
   const createTestTrainer = async () => {
     try {
-      // Verify authentication with Supabase directly
+      // Verify authentication
       const isAuth = await checkAuthenticationStatus();
       if (!isAuth) return false;
+      
+      // Handle differently based on mode
+      const mockRole = localStorage.getItem('userRole');
+      if (mockRole) {
+        console.log("Demo mode - no need to create test trainer");
+        return true;
+      }
       
       console.log("Authentication confirmed, proceeding with test trainer check/creation");
       
