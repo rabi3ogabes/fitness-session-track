@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -905,9 +904,9 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                 {dbInsertResult && (
                   <div className="grid grid-cols-4 items-center gap-4">
                     <div className="col-span-4 p-3 rounded-md border text-sm" 
-                      className={dbInsertResult.startsWith("Success") ? 
+                      className={`${dbInsertResult.startsWith("Success") ? 
                         "bg-green-50 border-green-200 text-green-800" : 
-                        "bg-red-50 border-red-200 text-red-800"}>
+                        "bg-red-50 border-red-200 text-red-800"}`}>
                       {dbInsertResult}
                     </div>
                   </div>

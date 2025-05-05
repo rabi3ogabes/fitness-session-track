@@ -388,10 +388,10 @@ const Classes = () => {
           gender: cls.gender || "All",
           start_time: cls.startTime,
           end_time: cls.endTime,
-          description: cls.description,
-          location: cls.location,
-          difficulty: cls.difficulty,
-          color: cls.color
+          description: cls.description || null,
+          location: cls.location || null, 
+          difficulty: cls.difficulty || null,
+          color: cls.color || null
         }));
         
         const { data, error } = await supabase

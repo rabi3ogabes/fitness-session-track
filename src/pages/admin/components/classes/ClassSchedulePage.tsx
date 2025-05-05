@@ -239,7 +239,7 @@ const ClassSchedulePage = () => {
   const generateRecurringDates = (
     startDate: Date, 
     endDate: Date, 
-    frequency: "Weekly" | "Monthly", 
+    frequency: "Daily" | "Weekly" | "Monthly", 
     days: string[]
   ) => {
     const dates: Date[] = [];
@@ -253,7 +253,15 @@ const ClassSchedulePage = () => {
       "Saturday": 6
     };
     
-    if (frequency === "Weekly") {
+    if (frequency === "Daily") {
+      // Generate daily classes
+      let currentDay = new Date(startDate);
+      
+      while (currentDay <= endDate) {
+        dates.push(new Date(currentDay));
+        currentDay = addDays(currentDay, 1);
+      }
+    } else if (frequency === "Weekly") {
       let currentWeek = new Date(startDate);
       
       while (currentWeek <= endDate) {
