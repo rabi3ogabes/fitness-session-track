@@ -107,8 +107,8 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
     try {
       console.log("Submitting member data:", newMember);
       
-      // Use the requireAuth function to ensure authentication
-      const data = await requireAuth(async () => {
+      // Use the enhanced requireAuth function to ensure authentication
+      const result = await requireAuth(async () => {
         // Insert the new member into Supabase
         const { data, error } = await supabase
           .from('members')
@@ -134,20 +134,20 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
         return data;
       });
 
-      if (data && data[0]) {
+      if (result && result[0]) {
         // Map the Supabase response back to our application's format
         const addedMember = {
-          id: data[0].id,
-          name: data[0].name,
-          email: data[0].email,
-          phone: data[0].phone || "",
-          membership: data[0].membership || "Basic",
-          sessions: data[0].sessions || 0,
-          remainingSessions: data[0].remaining_sessions || 0,
-          status: data[0].status || "Active",
-          birthday: data[0].birthday || "",
-          canBeEditedByTrainers: data[0].can_be_edited_by_trainers || false,
-          gender: data[0].gender || "Male"
+          id: result[0].id,
+          name: result[0].name,
+          email: result[0].email,
+          phone: result[0].phone || "",
+          membership: result[0].membership || "Basic",
+          sessions: result[0].sessions || 0,
+          remainingSessions: result[0].remaining_sessions || 0,
+          status: result[0].status || "Active",
+          birthday: result[0].birthday || "",
+          canBeEditedByTrainers: result[0].can_be_edited_by_trainers || false,
+          gender: result[0].gender || "Male"
         };
         
         // Submit to parent component to update UI

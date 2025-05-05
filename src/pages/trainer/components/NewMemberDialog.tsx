@@ -126,8 +126,8 @@ const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialo
       
       console.log("Attempting to insert new member into database...");
       
-      // Use requireAuth to ensure authentication
-      const data = await requireAuth(async () => {
+      // Use enhanced requireAuth for authentication
+      const result = await requireAuth(async () => {
         // Insert into Supabase
         const { data, error } = await supabase
           .from('members')
@@ -155,7 +155,7 @@ const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialo
         return data;
       });
       
-      console.log("Member registration successful, received data:", data);
+      console.log("Member registration successful, received data:", result);
 
       toast({
         title: "New member registered",

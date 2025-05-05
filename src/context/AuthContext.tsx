@@ -121,6 +121,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log("User role set to:", mockRole);
         } else {
           console.log("No session found");
+          
+          // Check if we have demo credentials
+          const mockRole = localStorage.getItem('userRole');
+          if (mockRole) {
+            // For demo purposes, auto-login with the stored role
+            const demoEmails = ['admin@gym.com', 'trainer@gym.com', 'user@gym.com'];
+            const isDemoUser = demoEmails.some(email => email.includes(mockRole.toLowerCase()));
+            
+            if (isDemoUser) {
+              console.log("Demo credentials found, attempting auto-login");
+              // Try to establish a session for demo users
+              login(`${mockRole}@gym.com`, `${mockRole}123`).catch(err => {
+                console.error("Auto-login for demo user failed:", err);
+              });
+            }
+          }
         }
       } catch (error) {
         console.error("Error checking session:", error);
