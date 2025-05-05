@@ -32,7 +32,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { ClassModel } from "./ClassTypes";
+import { ClassModel, RecurringPattern } from "./ClassTypes";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
