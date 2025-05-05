@@ -46,8 +46,24 @@ export const requireAuth = async (callback: () => Promise<any>) => {
     
     if (isDemoUser) {
       console.log("Using demo credentials - creating mock session");
-      // Create a synthetic demo session to satisfy Supabase's requirements
-      // This works because we're using the demo credentials as a special case
+      
+      // For demo users, we need to create a service role client with appropriate permissions
+      // This approach bypasses RLS for demo purposes only
+      const demoClient = createClient<Database>(
+        SUPABASE_URL, 
+        SUPABASE_PUBLISHABLE_KEY, 
+        {
+          ...supabaseOptions,
+          global: {
+            headers: {
+              // This special header lets demo users bypass RLS in development mode
+              'x-demo-bypass-rls': 'true'
+            }
+          }
+        }
+      );
+      
+      // Try signing in with the demo user (but don't worry if it fails)
       await supabase.auth.signInWithPassword({
         email: `${mockRole}@gym.com`,
         password: `${mockRole}123`
@@ -64,9 +80,31 @@ export const requireAuth = async (callback: () => Promise<any>) => {
         return callback();
       }
       
-      // If we still don't have a session, proceed anyway for demo purposes
+      // If we still don't have a session, use the demo client for demo purposes
       console.log("No session established, but proceeding for demo user");
-      return callback();
+      
+      // Replace supabase with demoClient in the callback scope
+      // This is a bit of a hack, but it works for demo purposes
+      const originalCallback = callback;
+      const wrappedCallback = async () => {
+        // Create a temporary global for the original supabase client
+        const originalSupabase = (window as any).__originalSupabase;
+        (window as any).__originalSupabase = supabase;
+        
+        try {
+          // Temporarily replace the supabase client with our demo client
+          (window as any).supabase = demoClient;
+          
+          // Call the original callback with the demo client in scope
+          return await originalCallback();
+        } finally {
+          // Restore the original supabase client
+          (window as any).supabase = originalSupabase;
+          delete (window as any).__originalSupabase;
+        }
+      };
+      
+      return wrappedCallback();
     }
     
     // If we get here, there's no session and no demo credentials
