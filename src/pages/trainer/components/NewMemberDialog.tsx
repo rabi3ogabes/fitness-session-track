@@ -127,7 +127,7 @@ const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialo
       console.log("Attempting to insert new member into database...");
       
       // Use requireAuth to ensure authentication
-      await requireAuth(async () => {
+      const data = await requireAuth(async () => {
         // Insert into Supabase
         const { data, error } = await supabase
           .from('members')
@@ -152,36 +152,38 @@ const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialo
           throw error;
         }
         
-        console.log("Member registration successful, received data:", data);
-
-        toast({
-          title: "New member registered",
-          description: `${newMember.name} has been successfully registered`,
-        });
-
-        // Reset form
-        setNewMember({
-          name: "",
-          email: "",
-          phone: "",
-          birthday: "",
-          membership: membershipPlans[0].name,
-          sessions: membershipPlans[0].sessions,
-          additionalSessions: "0",
-          gender: "Male"
-        });
-        
-        setSelectedPlan(membershipPlans[0]);
-        
-        // Notify parent component
-        onMemberAdded();
-        
-        setFormErrors({});
-        setPhoneError(null);
-        
-        // Close dialog
-        onOpenChange(false);
+        return data;
       });
+      
+      console.log("Member registration successful, received data:", data);
+
+      toast({
+        title: "New member registered",
+        description: `${newMember.name} has been successfully registered`,
+      });
+
+      // Reset form
+      setNewMember({
+        name: "",
+        email: "",
+        phone: "",
+        birthday: "",
+        membership: membershipPlans[0].name,
+        sessions: membershipPlans[0].sessions,
+        additionalSessions: "0",
+        gender: "Male"
+      });
+      
+      setSelectedPlan(membershipPlans[0]);
+      
+      // Notify parent component
+      onMemberAdded();
+      
+      setFormErrors({});
+      setPhoneError(null);
+      
+      // Close dialog
+      onOpenChange(false);
     } catch (err: any) {
       console.error("Error registering member:", err);
       toast({

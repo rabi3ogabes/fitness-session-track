@@ -34,7 +34,6 @@ const Members = () => {
         setIsLoading(true);
         console.log("Fetching members data...");
         
-        // Use requireAuth to ensure authentication
         await requireAuth(async () => {
           const { data, error } = await supabase
             .from('members')
@@ -164,7 +163,6 @@ const Members = () => {
     }
 
     try {
-      // Use requireAuth for authentication
       await requireAuth(async () => {
         // Prepare the data for Supabase (column names differ)
         const memberData = {
@@ -229,7 +227,6 @@ const Members = () => {
       
       console.log("Toggling status for member:", id, "to", newStatus);
       
-      // Use requireAuth for authentication
       await requireAuth(async () => {
         // Update in Supabase
         const { error } = await supabase

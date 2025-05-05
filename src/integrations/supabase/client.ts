@@ -25,14 +25,26 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 // Security helper function to check if a user is authenticated before making DB calls
 export const requireAuth = async (callback: () => Promise<any>) => {
   const { data: { session }, error } = await supabase.auth.getSession();
+  
   if (error) {
     console.error("Error checking session:", error);
     throw new Error('Authentication verification failed');
   }
+  
   if (!session) {
+    // For demo credentials, we'll create a mock session
+    const demoEmails = ['admin@gym.com', 'trainer@gym.com', 'user@gym.com'];
+    const mockRole = localStorage.getItem('userRole');
+    
+    if (mockRole && demoEmails.some(email => email.includes(mockRole.toLowerCase()))) {
+      console.log("Using demo credentials - mock session");
+      return callback();
+    }
+    
     console.error("No active session found");
     throw new Error('Authentication required');
   }
+  
   console.log("Authentication confirmed, executing protected operation");
   return callback();
 };

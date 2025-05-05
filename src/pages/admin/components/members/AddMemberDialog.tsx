@@ -108,7 +108,7 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
       console.log("Submitting member data:", newMember);
       
       // Use the requireAuth function to ensure authentication
-      await requireAuth(async () => {
+      const data = await requireAuth(async () => {
         // Insert the new member into Supabase
         const { data, error } = await supabase
           .from('members')
@@ -131,49 +131,51 @@ const AddMemberDialog = ({ isOpen, onOpenChange, onAddMember }: AddMemberDialogP
           throw error;
         }
 
-        if (data && data[0]) {
-          // Map the Supabase response back to our application's format
-          const addedMember = {
-            id: data[0].id,
-            name: data[0].name,
-            email: data[0].email,
-            phone: data[0].phone || "",
-            membership: data[0].membership || "Basic",
-            sessions: data[0].sessions || 0,
-            remainingSessions: data[0].remaining_sessions || 0,
-            status: data[0].status || "Active",
-            birthday: data[0].birthday || "",
-            canBeEditedByTrainers: data[0].can_be_edited_by_trainers || false,
-            gender: data[0].gender || "Male"
-          };
-          
-          // Submit to parent component to update UI
-          onAddMember(addedMember);
-          
-          toast({
-            title: "Member added successfully",
-            description: `${newMember.name} has been added as a member`,
-          });
-          
-          // Reset form
-          setNewMember({
-            name: "",
-            email: "",
-            phone: "",
-            birthday: "",
-            membership: "Basic",
-            sessions: 4,
-            remainingSessions: 4,
-            status: "Active",
-            canBeEditedByTrainers: true,
-            gender: "Male"
-          });
-          setFormErrors({});
-          
-          // Close dialog
-          onOpenChange(false);
-        }
+        return data;
       });
+
+      if (data && data[0]) {
+        // Map the Supabase response back to our application's format
+        const addedMember = {
+          id: data[0].id,
+          name: data[0].name,
+          email: data[0].email,
+          phone: data[0].phone || "",
+          membership: data[0].membership || "Basic",
+          sessions: data[0].sessions || 0,
+          remainingSessions: data[0].remaining_sessions || 0,
+          status: data[0].status || "Active",
+          birthday: data[0].birthday || "",
+          canBeEditedByTrainers: data[0].can_be_edited_by_trainers || false,
+          gender: data[0].gender || "Male"
+        };
+        
+        // Submit to parent component to update UI
+        onAddMember(addedMember);
+        
+        toast({
+          title: "Member added successfully",
+          description: `${newMember.name} has been added as a member`,
+        });
+        
+        // Reset form
+        setNewMember({
+          name: "",
+          email: "",
+          phone: "",
+          birthday: "",
+          membership: "Basic",
+          sessions: 4,
+          remainingSessions: 4,
+          status: "Active",
+          canBeEditedByTrainers: true,
+          gender: "Male"
+        });
+        setFormErrors({});
+        
+        // Close dialog
+        onOpenChange(false);
+      }
     } catch (error: any) {
       console.error("Error adding member:", error);
       toast({
