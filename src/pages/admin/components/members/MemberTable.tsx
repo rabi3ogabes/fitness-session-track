@@ -1,9 +1,10 @@
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PencilIcon } from "lucide-react";
+import { PencilIcon, PowerIcon, UserMinusIcon, LockReset } from "lucide-react";
 import { Member } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface MemberTableProps {
   members: Member[];
@@ -79,53 +80,75 @@ const MemberTable = ({
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(member)}
-                          className="hidden sm:flex items-center text-gym-blue hover:text-gym-dark-blue hover:bg-blue-50"
-                        >
-                          <PencilIcon className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(member)}
-                          className="flex sm:hidden items-center text-gym-blue hover:text-gym-dark-blue hover:bg-blue-50 p-2"
-                        >
-                          <PencilIcon className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleMemberStatus(member.id)}
-                          className="text-gym-blue hover:text-gym-dark-blue hover:bg-blue-50"
-                        >
-                          {member.status === "Active" ? "Deactivate" : "Activate"}
-                        </Button>
-                        <div className="hidden sm:flex flex-col gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleTrainerEditAccess(member.id)}
-                            className="text-gym-blue hover:text-gym-dark-blue hover:bg-blue-50"
-                          >
-                            {member.canBeEditedByTrainers
-                              ? "Remove Trainer Access"
-                              : "Allow Trainer Access"}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => resetPassword(member.id)}
-                            className="text-gym-blue hover:text-gym-dark-blue hover:bg-blue-50"
-                          >
-                            Reset Password
-                          </Button>
+                      <TooltipProvider>
+                        <div className="flex justify-end gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditDialog(member)}
+                                className="text-gym-blue hover:text-gym-dark-blue hover:bg-blue-50"
+                              >
+                                <PencilIcon className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Edit</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => toggleMemberStatus(member.id)}
+                                className={member.status === "Active" 
+                                  ? "text-red-600 hover:text-red-800 hover:bg-red-50" 
+                                  : "text-green-600 hover:text-green-800 hover:bg-green-50"}
+                              >
+                                <PowerIcon className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{member.status === "Active" ? "Deactivate" : "Activate"}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => toggleTrainerEditAccess(member.id)}
+                                className="text-orange-600 hover:text-orange-800 hover:bg-orange-50"
+                              >
+                                <UserMinusIcon className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{member.canBeEditedByTrainers ? "Remove Trainer Access" : "Allow Trainer Access"}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => resetPassword(member.id)}
+                                className="text-purple-600 hover:text-purple-800 hover:bg-purple-50"
+                              >
+                                <LockReset className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Reset Password</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
-                      </div>
+                      </TooltipProvider>
                     </TableCell>
                   </TableRow>
                 ))

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { Edit, X, RotateCw, Loader2 } from "lucide-react";
+import { PencilIcon, PowerIcon, LockReset, Loader2 } from "lucide-react";
 import { Trainer } from "./types";
 
 interface TrainerListProps {
@@ -100,7 +100,7 @@ const TrainerList = ({
                             size="icon"
                             className="text-gym-blue hover:text-gym-dark-blue hover:bg-gray-100"
                           >
-                            <Edit className="h-4 w-4" />
+                            <PencilIcon className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -118,7 +118,7 @@ const TrainerList = ({
                               ? "text-red-600 hover:text-red-800 hover:bg-red-50" 
                               : "text-green-600 hover:text-green-800 hover:bg-green-50"}
                           >
-                            <X className="h-4 w-4" />
+                            <PowerIcon className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
@@ -132,9 +132,9 @@ const TrainerList = ({
                             onClick={() => onResetPassword(trainer)} 
                             variant="ghost" 
                             size="icon" 
-                            className="text-orange-600 hover:text-orange-800 hover:bg-orange-50"
+                            className="text-purple-600 hover:text-purple-800 hover:bg-purple-50"
                           >
-                            <RotateCw className="h-4 w-4" />
+                            <LockReset className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
