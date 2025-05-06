@@ -111,6 +111,16 @@ export const useTrainerCreation = () => {
           created_at: new Date().toISOString()
         };
         
+        // In demo mode, store trainers in localStorage to simulate persistence
+        try {
+          const existingTrainers = JSON.parse(localStorage.getItem('demoTrainers') || '[]');
+          existingTrainers.push(createdTrainer);
+          localStorage.setItem('demoTrainers', JSON.stringify(existingTrainers));
+          console.log("Trainer saved to localStorage in demo mode:", createdTrainer);
+        } catch (err) {
+          console.error("Error saving trainer to localStorage:", err);
+        }
+        
         toast({
           title: "Trainer created",
           description: `${trainerData.name} has been added as a trainer (demo mode)`,
@@ -134,10 +144,13 @@ export const useTrainerCreation = () => {
       
       console.log("Formatted data for insertion:", formattedData);
       
+      // Attempt direct insertion with detailed logging
+      console.log("Calling supabase.from('trainers').insert()...");
       const { data, error } = await supabase
         .from("trainers")
         .insert([formattedData])
         .select();
+      console.log("Supabase insert operation completed");
 
       if (error) {
         console.error("Error creating trainer in Supabase:", error);
@@ -153,6 +166,12 @@ export const useTrainerCreation = () => {
       return { success: true, data };
     } catch (error: any) {
       console.error("Error in createTrainer function:", error);
+      
+      // Additional error logging to help diagnose issues
+      if (error.message?.includes('permission denied')) {
+        console.error("This appears to be a permissions issue. Check RLS policies for the trainers table.");
+      }
+      
       toast({
         title: "Failed to create trainer",
         description: error.message || "There was an error creating the trainer",
@@ -175,9 +194,48 @@ export const useTrainerCreation = () => {
       const mockRole = localStorage.getItem('userRole');
       if (mockRole) {
         console.log("Creating test trainers in demo mode");
-        // No need to check database in demo mode, we'll just create some trainers locally
         
-        // Return true to indicate success
+        // For demo mode, check if we already have trainers in localStorage
+        const existingTrainers = JSON.parse(localStorage.getItem('demoTrainers') || '[]');
+        if (existingTrainers.length > 0) {
+          console.log("Demo trainers already exist in localStorage, not creating test trainers");
+          return true;
+        }
+        
+        // Create test trainers in localStorage
+        const testTrainers = [
+          {
+            id: 1,
+            name: "John Doe",
+            email: "john.doe@example.com",
+            status: "Active",
+            gender: "Male",
+            specialization: "General Fitness",
+            created_at: new Date().toISOString()
+          },
+          {
+            id: 2,
+            name: "Jane Smith",
+            email: "jane.smith@example.com",
+            status: "Active",
+            gender: "Female",
+            specialization: "Yoga",
+            created_at: new Date().toISOString()
+          },
+          {
+            id: 3,
+            name: "Mike Johnson",
+            email: "mike.johnson@example.com",
+            status: "Active",
+            gender: "Male",
+            specialization: "CrossFit",
+            created_at: new Date().toISOString()
+          }
+        ];
+        
+        localStorage.setItem('demoTrainers', JSON.stringify(testTrainers));
+        console.log("Test trainers created and saved to localStorage");
+        
         return true;
       }
       

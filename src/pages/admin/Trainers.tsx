@@ -28,18 +28,33 @@ const Trainers = () => {
   const navigate = useNavigate();
   const { createTrainer, createTestTrainer, isCreating } = useTrainerCreation();
 
-  // Fetch trainers from Supabase
+  // Fetch trainers from Supabase or demo storage
   const fetchTrainers = async () => {
     setIsLoading(true);
     
     try {
-      // First try to get trainers from Supabase
+      // Check if we're in demo mode
+      const mockRole = localStorage.getItem('userRole');
+      if (mockRole) {
+        // Get trainers from localStorage in demo mode
+        const demoTrainers = JSON.parse(localStorage.getItem('demoTrainers') || '[]');
+        if (demoTrainers.length > 0) {
+          console.log("Fetched trainers from demo storage:", demoTrainers);
+          setTrainers(demoTrainers);
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // If not in demo mode or no demo trainers, try Supabase
+      console.log("Fetching trainers from Supabase...");
       const { data, error } = await supabase
         .from("trainers")
         .select("*")
         .order("name");
 
       if (error) {
+        console.error("Supabase error fetching trainers:", error);
         throw error;
       }
 
@@ -89,6 +104,9 @@ const Trainers = () => {
         ];
         
         setTrainers(mockTrainers);
+        
+        // Also try to create test trainers in the database for future use
+        createTestTrainer();
       }
     } catch (error: any) {
       console.error("Error fetching trainers:", error);
@@ -127,9 +145,6 @@ const Trainers = () => {
     // If authenticated, fetch trainers
     console.log("User is authenticated, fetching trainers");
     fetchTrainers();
-    
-    // Also create test trainers if needed (helpful for demo mode)
-    createTestTrainer();
   }, [isAuthenticated, loading, navigate]);
 
   // Add trainer handler
@@ -148,24 +163,30 @@ const Trainers = () => {
       
       // Use the createTrainer function from our hook instead of direct Supabase calls
       const result = await createTrainer(trainerData);
+      console.log("Create trainer result:", result);
       
-      if (result.success && result.data && result.data.length > 0) {
-        console.log("Trainer created successfully:", result.data[0]);
+      if (result.success) {
+        console.log("Trainer creation reported success");
         
-        // Create a properly typed trainer object from the result
-        const newTrainer: Trainer = {
-          id: result.data[0].id,
-          name: result.data[0].name,
-          email: result.data[0].email,
-          phone: result.data[0].phone || undefined,
-          specialization: result.data[0].specialization || undefined,
-          status: result.data[0].status,
-          gender: result.data[0].gender || undefined,
-          created_at: result.data[0].created_at
-        };
+        if (result.data && result.data.length > 0) {
+          console.log("Trainer created successfully with data:", result.data[0]);
+          
+          // Create a properly typed trainer object from the result
+          const newTrainer: Trainer = {
+            id: result.data[0].id,
+            name: result.data[0].name,
+            email: result.data[0].email,
+            phone: result.data[0].phone || undefined,
+            specialization: result.data[0].specialization || undefined,
+            status: result.data[0].status,
+            gender: result.data[0].gender || undefined,
+            created_at: result.data[0].created_at
+          };
+          
+          // Update state with the new trainer
+          setTrainers(prevTrainers => [...prevTrainers, newTrainer]);
+        }
         
-        // Update state with the new trainer
-        setTrainers(prevTrainers => [...prevTrainers, newTrainer]);
         setIsAddDialogOpen(false);
         
         toast({
@@ -174,13 +195,16 @@ const Trainers = () => {
         });
         
         // Refresh trainers list to ensure we have the latest data
-        fetchTrainers();
+        // Short timeout to allow the database operation to complete
+        setTimeout(() => {
+          fetchTrainers();
+        }, 500);
       } else {
-        // Handle the case where success is true but no data is returned
-        console.error("No data returned from createTrainer:", result);
+        // Handle the case where success is false
+        console.error("Failed to create trainer:", result.error);
         toast({
           title: "Something went wrong",
-          description: "Trainer may not have been created properly",
+          description: result.error?.message || "Trainer may not have been created properly",
           variant: "destructive",
         });
       }
