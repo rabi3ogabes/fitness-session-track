@@ -338,11 +338,11 @@ const Login = () => {
         setIdentifier(email);
         setPassword(signupPassword);
         
-        // Also register in members table for admin/trainer view
+        // Also register in members table for admin/trainer view - Fix: Use a single object instead of an array
         try {
           const { error: memberError } = await supabase
             .from('members')
-            .insert([{
+            .insert({
               name: name,
               email: email,
               phone: phone,
@@ -352,7 +352,7 @@ const Login = () => {
               remaining_sessions: 4,
               status: "Active",
               gender: "Male" // Default gender
-            }]);
+            });
           
           if (memberError) {
             console.error("Error registering in members table:", memberError);

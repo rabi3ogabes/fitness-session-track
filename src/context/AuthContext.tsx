@@ -102,7 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { data: existingUsers, error: checkError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('email', demoUser.email)
+          .eq('email', demoUser.email as string)
           .limit(1);
           
         if (checkError) {
@@ -134,15 +134,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (authData.user) {
             console.log(`Successfully created auth user: ${demoUser.email} with ID: ${authData.user.id}`);
             
-            // Create profile entry
+            // Create profile entry - Fix: Use a single object instead of an array
             const { error: profileError } = await supabase
               .from('profiles')
-              .insert([{
+              .insert({
                 id: authData.user.id,
                 email: demoUser.email,
                 name: demoUser.name,
                 phone_number: '12345678'
-              }]);
+              });
               
             if (profileError) {
               console.error(`Error creating profile for ${demoUser.email}:`, profileError);
@@ -150,11 +150,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               console.log(`Successfully created profile for: ${demoUser.email}`);
             }
             
-            // Create entry in members table for admin view
+            // Create entry in members table for admin view - Fix: Use a single object instead of an array
             if (demoUser.role === 'user') {
               const { error: memberError } = await supabase
                 .from('members')
-                .insert([{
+                .insert({
                   name: demoUser.name,
                   email: demoUser.email,
                   phone: '12345678',
@@ -162,7 +162,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   sessions: 4,
                   remaining_sessions: 4,
                   status: 'Active'
-                }]);
+                });
                 
               if (memberError) {
                 console.error(`Error adding to members table for ${demoUser.email}:`, memberError);
@@ -171,18 +171,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               }
             }
             
-            // Create entry in trainers table if trainer role
+            // Create entry in trainers table if trainer role - Fix: Use a single object instead of an array
             if (demoUser.role === 'trainer') {
               const { error: trainerError } = await supabase
                 .from('trainers')
-                .insert([{
+                .insert({
                   name: demoUser.name,
                   email: demoUser.email,
                   phone: '12345678',
                   specialization: 'General Fitness',
                   status: 'Active',
                   gender: 'Male'
-                }]);
+                });
                 
               if (trainerError) {
                 console.error(`Error adding to trainers table for ${demoUser.email}:`, trainerError);

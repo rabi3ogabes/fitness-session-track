@@ -130,23 +130,21 @@ const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialo
       const result = await requireAuth(async () => {
         console.log("In requireAuth callback - attempting database insertion");
         
-        // Insert into Supabase
+        // Insert into Supabase - Fix: Use a single object instead of an array
         const { data, error } = await supabase
           .from('members')
-          .insert([
-            {
-              name: newMember.name,
-              email: newMember.email,
-              phone: newMember.phone,
-              birthday: newMember.birthday,
-              membership: newMember.membership,
-              sessions: totalSessions,
-              remaining_sessions: totalSessions,
-              status: "Active",
-              can_be_edited_by_trainers: true,
-              gender: newMember.gender
-            }
-          ])
+          .insert({
+            name: newMember.name,
+            email: newMember.email,
+            phone: newMember.phone,
+            birthday: newMember.birthday,
+            membership: newMember.membership,
+            sessions: totalSessions,
+            remaining_sessions: totalSessions,
+            status: "Active",
+            can_be_edited_by_trainers: true,
+            gender: newMember.gender
+          })
           .select();
 
         if (error) {
