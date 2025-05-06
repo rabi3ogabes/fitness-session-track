@@ -92,7 +92,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     gender: "All",
     trainers: [],
     capacity: 10,
-    schedule: format(today, "MM/dd/yyyy"),
+    schedule: format(today, "yyyy-MM-dd"),
     isRecurring: false,
     recurringFrequency: "Weekly",
     selectedDays: [format(today, "EEEE")],
@@ -122,7 +122,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     if (selectedDate) {
       setFormState(prev => ({
         ...prev,
-        schedule: format(selectedDate, "MM/dd/yyyy")
+        schedule: format(selectedDate, "yyyy-MM-dd")
       }));
     }
   }, [selectedDate]);
@@ -324,7 +324,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
       
       // Add trainers to the class
       const classToAdd: ClassModel = {
-        id: 0,
+        id: 0, // This will be assigned by the database
         name: formState.name,
         trainer: formState.trainers[0] || "",
         trainers: formState.trainers,
@@ -337,8 +337,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
         endTime: formState.endTime,
         difficulty: formState.difficulty,
         location: formState.location,
-        description: formState.description,
-        color: formState.color
+        description: formState.description
       };
       
       let recurringPattern: RecurringPattern | undefined;

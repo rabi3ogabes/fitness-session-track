@@ -8,7 +8,7 @@ import { format, addDays, addWeeks, addMonths, parse, isBefore } from "date-fns"
 import AddClassDialog from "./components/classes/AddClassDialog";
 import EditClassDialog from "./components/classes/EditClassDialog";
 import { ClassModel, RecurringPattern } from "./components/classes/ClassTypes";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, requireAuth } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Classes = () => {
@@ -23,21 +23,20 @@ const Classes = () => {
 
   // Fetch classes from Supabase
   useEffect(() => {
-    const fetchClasses = async () => {
-      setIsLoading(true);
-      try {
+    fetchClasses();
+  }, [toast]);
+
+  const fetchClasses = async () => {
+    setIsLoading(true);
+    try {
+      await requireAuth(async () => {
         const { data, error } = await supabase
           .from('classes')
-          .select('*');
+          .select('*')
+          .order('created_at', { ascending: false });
 
         if (error) {
-          console.error("Error fetching classes:", error);
-          toast({
-            title: "Failed to load classes",
-            description: error.message,
-            variant: "destructive",
-          });
-          return;
+          throw error;
         }
 
         if (data) {
@@ -53,48 +52,50 @@ const Classes = () => {
             gender: cls.gender || "All",
             startTime: cls.start_time || "",
             endTime: cls.end_time || "",
+            description: cls.description,
+            location: cls.location,
+            difficulty: cls.difficulty,
           }));
           
           setClasses(formattedClasses);
         }
-      } catch (err) {
-        console.error("Error fetching classes:", err);
-        toast({
-          title: "Failed to load classes",
-          description: "An unexpected error occurred",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchClasses();
-  }, [toast]);
+      });
+    } catch (err) {
+      console.error("Error fetching classes:", err);
+      toast({
+        title: "Failed to load classes",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+      // Fallback to empty array if database call fails
+      setClasses([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Load trainers from database
   useEffect(() => {
     const fetchTrainers = async () => {
       try {
-        const { data, error } = await supabase
-          .from('trainers')
-          .select('name')
-          .eq('status', 'Active');
+        await requireAuth(async () => {
+          const { data, error } = await supabase
+            .from('trainers')
+            .select('name')
+            .eq('status', 'Active');
 
-        if (error) {
-          console.error("Error loading trainers:", error);
-          // Fallback to localStorage trainers
-          loadTrainersFromLocalStorage();
-          return;
-        }
+          if (error) {
+            throw error;
+          }
 
-        if (data && data.length > 0) {
-          const trainerNames = data.map(trainer => trainer.name);
-          setTrainersList(trainerNames);
-        } else {
-          // Fallback to localStorage trainers
-          loadTrainersFromLocalStorage();
-        }
+          if (data && data.length > 0) {
+            const trainerNames = data.map(trainer => trainer.name);
+            setTrainersList(trainerNames);
+          } else {
+            // Fallback to localStorage trainers
+            loadTrainersFromLocalStorage();
+          }
+        });
       } catch (err) {
         console.error("Error loading trainers:", err);
         // Fallback to localStorage trainers
@@ -156,41 +157,37 @@ const Classes = () => {
 
   const toggleClassStatus = async (id: number) => {
     try {
-      const classToUpdate = classes.find(c => c.id === id);
-      if (!classToUpdate) return;
+      await requireAuth(async () => {
+        const classToUpdate = classes.find(c => c.id === id);
+        if (!classToUpdate) return;
 
-      const newStatus = classToUpdate.status === "Active" ? "Inactive" : "Active";
-      
-      const { error } = await supabase
-        .from('classes')
-        .update({ status: newStatus })
-        .eq('id', id);
+        const newStatus = classToUpdate.status === "Active" ? "Inactive" : "Active";
+        
+        const { error } = await supabase
+          .from('classes')
+          .update({ status: newStatus })
+          .eq('id', id);
 
-      if (error) {
-        console.error("Error updating class status:", error);
+        if (error) {
+          throw error;
+        }
+
+        // Update local state
+        setClasses(
+          classes.map((cls) =>
+            cls.id === id
+              ? {
+                  ...cls,
+                  status: newStatus,
+                }
+              : cls
+          )
+        );
+
         toast({
-          title: "Failed to update class status",
-          description: error.message,
-          variant: "destructive",
+          title: "Class status updated",
+          description: "The class status has been updated successfully",
         });
-        return;
-      }
-
-      // Update local state
-      setClasses(
-        classes.map((cls) =>
-          cls.id === id
-            ? {
-                ...cls,
-                status: newStatus,
-              }
-            : cls
-        )
-      );
-
-      toast({
-        title: "Class status updated",
-        description: "The class status has been updated successfully",
       });
     } catch (err) {
       console.error("Error updating class status:", err);
@@ -205,12 +202,12 @@ const Classes = () => {
   // Generate classes based on recurring pattern
   const generateRecurringClasses = (baseClass: ClassModel, pattern: RecurringPattern): ClassModel[] => {
     const generatedClasses: ClassModel[] = [];
-    let currentId = Math.max(...classes.map(c => c.id)) + 1;
+    let currentId = Math.max(...classes.map(c => c.id), 0) + 1;
     
     // Parse the base date from the schedule
     const baseDate = pattern.frequency === "Daily" ? 
       new Date() : 
-      parse(baseClass.schedule, "MM/dd/yyyy", new Date());
+      parse(baseClass.schedule, "yyyy-MM-dd", new Date());
     
     const endDate = new Date(pattern.repeatUntil);
     
@@ -222,7 +219,7 @@ const Classes = () => {
         generatedClasses.push({
           ...baseClass,
           id: currentId++,
-          schedule: format(currentDate, "MM/dd/yyyy"),
+          schedule: format(currentDate, "yyyy-MM-dd"),
         });
         
         currentDate = addDays(currentDate, 1);
@@ -251,7 +248,7 @@ const Classes = () => {
             generatedClasses.push({
               ...baseClass,
               id: currentId++,
-              schedule: `${format(classDate, "MM/dd/yyyy")} (${day})`,
+              schedule: format(classDate, "yyyy-MM-dd"),
             });
           }
         }
@@ -261,13 +258,12 @@ const Classes = () => {
     } else if (pattern.frequency === "Monthly") {
       // Generate monthly classes
       let currentMonth = new Date(baseDate);
-      const dayOfMonth = currentMonth.getDate();
       
       while (isBefore(currentMonth, endDate)) {
         generatedClasses.push({
           ...baseClass,
           id: currentId++,
-          schedule: format(currentMonth, "MM/dd/yyyy"),
+          schedule: format(currentMonth, "yyyy-MM-dd"),
         });
         
         currentMonth = addMonths(currentMonth, 1);
@@ -279,114 +275,116 @@ const Classes = () => {
 
   const handleAddClass = async (newClass: ClassModel, recurringPattern?: RecurringPattern) => {
     try {
-      const classToAdd = {
-        name: newClass.name,
-        trainer: newClass.trainer,
-        trainers: newClass.trainers || [],
-        schedule: newClass.schedule,
-        capacity: parseInt(newClass.capacity?.toString() || "0"),
-        enrolled: parseInt(newClass.enrolled?.toString() || "0"),
-        status: newClass.status || "Active",
-        gender: newClass.gender || "All",
-        start_time: newClass.startTime,
-        end_time: newClass.endTime
-      };
-      
-      if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
-        // Generate recurring classes
-        const generatedClasses = generateRecurringClasses(newClass, recurringPattern);
+      await requireAuth(async () => {
+        const classToAdd = {
+          name: newClass.name,
+          trainer: newClass.trainer,
+          trainers: newClass.trainers || [],
+          schedule: newClass.schedule,
+          capacity: parseInt(newClass.capacity?.toString() || "0"),
+          enrolled: parseInt(newClass.enrolled?.toString() || "0"),
+          status: newClass.status || "Active",
+          gender: newClass.gender || "All",
+          start_time: newClass.startTime,
+          end_time: newClass.endTime,
+          description: newClass.description,
+          location: newClass.location,
+          difficulty: newClass.difficulty
+        };
         
-        // Insert all classes
-        const classesToInsert = generatedClasses.map(cls => ({
-          name: cls.name,
-          trainer: cls.trainer,
-          trainers: cls.trainers || [],
-          schedule: cls.schedule,
-          capacity: parseInt(cls.capacity?.toString() || "0"),
-          enrolled: parseInt(cls.enrolled?.toString() || "0"),
-          status: cls.status || "Active",
-          gender: cls.gender || "All",
-          start_time: cls.startTime,
-          end_time: cls.endTime
-        }));
-        
-        const { data, error } = await supabase
-          .from('classes')
-          .insert(classesToInsert)
-          .select();
+        if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
+          // Generate recurring classes
+          const generatedClasses = generateRecurringClasses(newClass, recurringPattern);
           
-        if (error) {
-          console.error("Error adding recurring classes:", error);
-          toast({
-            title: "Failed to add recurring classes",
-            description: error.message,
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        if (data) {
-          const formattedClasses: ClassModel[] = data.map(cls => ({
-            id: cls.id,
+          // Insert all classes
+          const classesToInsert = generatedClasses.map(cls => ({
             name: cls.name,
-            trainer: cls.trainer || "",
+            trainer: cls.trainer,
             trainers: cls.trainers || [],
             schedule: cls.schedule,
-            capacity: cls.capacity,
-            enrolled: cls.enrolled || 0,
+            capacity: parseInt(cls.capacity?.toString() || "0"),
+            enrolled: parseInt(cls.enrolled?.toString() || "0"),
             status: cls.status || "Active",
             gender: cls.gender || "All",
-            startTime: cls.start_time || "",
-            endTime: cls.end_time || "",
+            start_time: cls.startTime,
+            end_time: cls.endTime,
+            description: cls.description,
+            location: cls.location,
+            difficulty: cls.difficulty
           }));
           
-          setClasses(prevClasses => [...prevClasses, ...formattedClasses]);
-        }
-        
-        toast({
-          title: "Classes added",
-          description: `${generatedClasses.length} recurring classes have been added successfully.`,
-        });
-      } else {
-        // Add a single class
-        const { data, error } = await supabase
-          .from('classes')
-          .insert([classToAdd])
-          .select();
+          const { data, error } = await supabase
+            .from('classes')
+            .insert(classesToInsert)
+            .select();
+            
+          if (error) {
+            throw error;
+          }
           
-        if (error) {
-          console.error("Error adding class:", error);
+          if (data) {
+            const formattedClasses: ClassModel[] = data.map(cls => ({
+              id: cls.id,
+              name: cls.name,
+              trainer: cls.trainer || "",
+              trainers: cls.trainers || [],
+              schedule: cls.schedule,
+              capacity: cls.capacity,
+              enrolled: cls.enrolled || 0,
+              status: cls.status || "Active",
+              gender: cls.gender || "All",
+              startTime: cls.start_time || "",
+              endTime: cls.end_time || "",
+              description: cls.description,
+              location: cls.location,
+              difficulty: cls.difficulty
+            }));
+            
+            setClasses(prevClasses => [...prevClasses, ...formattedClasses]);
+          }
+          
           toast({
-            title: "Failed to add class",
-            description: error.message,
-            variant: "destructive",
+            title: "Classes added",
+            description: `${generatedClasses.length} recurring classes have been added successfully.`,
           });
-          return;
-        }
-        
-        if (data && data[0]) {
-          const formattedClass: ClassModel = {
-            id: data[0].id,
-            name: data[0].name,
-            trainer: data[0].trainer || "",
-            trainers: data[0].trainers || [],
-            schedule: data[0].schedule,
-            capacity: data[0].capacity,
-            enrolled: data[0].enrolled || 0,
-            status: data[0].status || "Active",
-            gender: data[0].gender || "All",
-            startTime: data[0].start_time || "",
-            endTime: data[0].end_time || "",
-          };
+        } else {
+          // Add a single class
+          const { data, error } = await supabase
+            .from('classes')
+            .insert([classToAdd])
+            .select();
+            
+          if (error) {
+            throw error;
+          }
           
-          setClasses(prevClasses => [...prevClasses, formattedClass]);
+          if (data && data[0]) {
+            const formattedClass: ClassModel = {
+              id: data[0].id,
+              name: data[0].name,
+              trainer: data[0].trainer || "",
+              trainers: data[0].trainers || [],
+              schedule: data[0].schedule,
+              capacity: data[0].capacity,
+              enrolled: data[0].enrolled || 0,
+              status: data[0].status || "Active",
+              gender: data[0].gender || "All",
+              startTime: data[0].start_time || "",
+              endTime: data[0].end_time || "",
+              description: data[0].description,
+              location: data[0].location,
+              difficulty: data[0].difficulty
+            };
+            
+            setClasses(prevClasses => [...prevClasses, formattedClass]);
+          }
+          
+          toast({
+            title: "Class added",
+            description: "The new class has been successfully added.",
+          });
         }
-        
-        toast({
-          title: "Class added",
-          description: "The new class has been successfully added.",
-        });
-      }
+      });
     } catch (err) {
       console.error("Error adding class:", err);
       toast({
@@ -406,48 +404,44 @@ const Classes = () => {
 
   const handleUpdateClass = async (updatedClass: ClassModel) => {
     try {
-      // Prepare data for Supabase (column names differ)
-      const classData = {
-        name: updatedClass.name,
-        trainer: updatedClass.trainer,
-        trainers: updatedClass.trainers,
-        schedule: updatedClass.schedule,
-        capacity: updatedClass.capacity,
-        enrolled: updatedClass.enrolled,
-        status: updatedClass.status,
-        gender: updatedClass.gender,
-        start_time: updatedClass.startTime,
-        end_time: updatedClass.endTime
-      };
-      
-      const { error } = await supabase
-        .from('classes')
-        .update(classData)
-        .eq('id', updatedClass.id);
+      await requireAuth(async () => {
+        // Prepare data for Supabase (column names differ)
+        const classData = {
+          name: updatedClass.name,
+          trainer: updatedClass.trainer,
+          trainers: updatedClass.trainers,
+          schedule: updatedClass.schedule,
+          capacity: updatedClass.capacity,
+          enrolled: updatedClass.enrolled,
+          status: updatedClass.status,
+          gender: updatedClass.gender,
+          start_time: updatedClass.startTime,
+          end_time: updatedClass.endTime,
+          description: updatedClass.description,
+          location: updatedClass.location,
+          difficulty: updatedClass.difficulty
+        };
         
-      if (error) {
-        console.error("Error updating class:", error);
+        const { error } = await supabase
+          .from('classes')
+          .update(classData)
+          .eq('id', updatedClass.id);
+          
+        if (error) {
+          throw error;
+        }
+        
+        // Update local state
+        setClasses(
+          classes.map((cls) =>
+            cls.id === updatedClass.id ? updatedClass : cls
+          )
+        );
+        
         toast({
-          title: "Failed to update class",
-          description: error.message,
-          variant: "destructive",
+          title: "Class updated",
+          description: "The class has been successfully updated.",
         });
-        return;
-      }
-      
-      // Update local state
-      setClasses(
-        classes.map((cls) =>
-          cls.id === updatedClass.id ? updatedClass : cls
-        )
-      );
-      
-      setIsEditDialogOpen(false);
-      setSelectedClassId(null);
-      
-      toast({
-        title: "Class updated",
-        description: "The class has been successfully updated.",
       });
     } catch (err) {
       console.error("Error updating class:", err);
@@ -456,6 +450,9 @@ const Classes = () => {
         description: "An unexpected error occurred",
         variant: "destructive",
       });
+    } finally {
+      setIsEditDialogOpen(false);
+      setSelectedClassId(null);
     }
   };
 
@@ -543,7 +540,7 @@ const Classes = () => {
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap">
                         <div className="text-gray-500">
-                          {cls.trainers ? cls.trainers.join(", ") : cls.trainer}
+                          {cls.trainers && cls.trainers.length > 0 ? cls.trainers.join(", ") : cls.trainer}
                         </div>
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap hidden md:table-cell">

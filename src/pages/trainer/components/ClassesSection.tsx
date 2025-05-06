@@ -72,7 +72,7 @@ export const ClassesSection = ({
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div className="mx-4 font-medium">
-              {format(selectedDate, "MMMM d, yyyy")}
+              {format(selectedDate, "yyyy-MM-dd")}
             </div>
             <Button variant="outline" size="icon" onClick={() => setSelectedDate(prev => addDays(prev, 1))}>
               <ChevronRight className="h-4 w-4" />

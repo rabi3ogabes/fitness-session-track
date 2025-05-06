@@ -36,7 +36,7 @@ export const DateNavigator = ({ selectedDate, onDateChange }: DateNavigatorProps
           <Button variant="outline" className="flex items-center gap-2 bg-white">
             <CalendarIcon className="h-4 w-4 text-gym-blue" />
             <span className="font-medium hidden sm:inline">
-              {format(selectedDate, "MMMM d, yyyy")}
+              {format(selectedDate, "yyyy-MM-dd")}
             </span>
             <span className="font-medium sm:hidden">
               {format(selectedDate, "MMM d")}
