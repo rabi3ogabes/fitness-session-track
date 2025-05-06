@@ -133,21 +133,18 @@ const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialo
         // Insert into Supabase
         const { data, error } = await supabase
           .from('members')
-          .insert([
-            {
-              name: newMember.name,
-              email: newMember.email,
-              phone: newMember.phone,
-              birthday: newMember.birthday,
-              membership: newMember.membership,
-              sessions: totalSessions,
-              remaining_sessions: totalSessions,
-              status: "Active",
-              can_be_edited_by_trainers: true,
-              gender: newMember.gender
-            }
-          ])
-          .select();
+          .insert({
+            name: newMember.name,
+            email: newMember.email,
+            phone: newMember.phone,
+            birthday: newMember.birthday,
+            membership: newMember.membership,
+            sessions: totalSessions,
+            remaining_sessions: totalSessions,
+            status: "Active", 
+            can_be_edited_by_trainers: true,
+            gender: newMember.gender
+          });
 
         if (error) {
           console.error("Error adding member:", error);

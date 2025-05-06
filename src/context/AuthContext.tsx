@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, checkSupabaseConnection, isOffline, isDemoMode, enableDemoMode } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -66,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { data: existingUsers, error: checkError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('email', demoUser.email)
+          .eq('email', demoUser.email as string)
           .limit(1);
           
         if (checkError) {
@@ -102,7 +103,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const { error: profileError } = await supabase
               .from('profiles')
               .insert({
-                id: authData.user.id,
                 email: demoUser.email,
                 name: demoUser.name,
                 phone_number: '12345678'
@@ -125,7 +125,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   membership: 'Basic',
                   sessions: 4,
                   remaining_sessions: 4,
-                  status: 'Active'
+                  status: 'Active',
+                  gender: 'Male'
                 });
                 
               if (memberError) {

@@ -319,13 +319,15 @@ const Login = () => {
         
         // Also register in members table for admin/trainer view
         try {
+          const formattedBirthday = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
+          
           const { error: memberError } = await supabase
             .from('members')
             .insert({
-              name: name,
-              email: email,
-              phone: phone,
-              birthday: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null,
+              name,
+              email,
+              phone,
+              birthday: formattedBirthday,
               membership: "Basic",
               sessions: 4,
               remaining_sessions: 4,

@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -18,8 +19,8 @@ const supabaseOptions = {
     headers: {
       'x-application-name': 'gym-management-system'
     },
-    // Improved fetch function with better error handling
-    fetch: (url: RequestInfo | URL, options?: RequestInit) => {
+    // Properly typed fetch function
+    fetch: (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
       return new Promise((resolve, reject) => {
         // Add a timeout to prevent hanging fetch requests
         const timeoutId = setTimeout(() => {
