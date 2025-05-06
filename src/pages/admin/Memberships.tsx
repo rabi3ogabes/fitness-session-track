@@ -1,22 +1,25 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
-// Mock membership types data
+// Mock data
 const initialMembershipTypes = [
   { id: 1, name: "Basic", sessions: 1, price: 80, active: true, description: "Perfect for trying out our gym facilities and classes" },
   { id: 2, name: "Standard", sessions: 4, price: 95, active: true, description: "Ideal for occasional gym-goers" },
   { id: 3, name: "Premium", sessions: 12, price: 120, active: true, description: "Best value for regular attendees" },
 ];
 
+const initialMembershipRequests = [
+  { id: 1, member: "Sarah Johnson", email: "sarah@example.com", type: "Premium", date: "2025-04-28", status: "Pending" },
+  { id: 2, member: "Michael Brown", email: "michael@example.com", type: "Basic", date: "2025-04-27", status: "Pending" },
+];
+
 const Memberships = () => {
-  const [membershipTypes, setMembershipTypes] = useState(initialMembershipTypes);
-  const [membershipRequests, setMembershipRequests] = useState([]);
+  const [membershipTypes, setMembershipTypes] = useState<typeof initialMembershipTypes>([]);
+  const [membershipRequests, setMembershipRequests] = useState<typeof initialMembershipRequests>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [newMembership, setNewMembership] = useState({
@@ -26,95 +29,98 @@ const Memberships = () => {
     active: true,
     description: "",
   });
-  const [editMembership, setEditMembership] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [editMembership, setEditMembership] = useState<typeof membershipTypes[0] | null>(null);
   const { toast } = useToast();
 
-  // Fetch membership types and requests from Supabase
-  const fetchMembershipData = async () => {
-    setIsLoading(true);
-    
-    try {
-      // Fetch membership types (currently using mock data)
-      const storedTypes = localStorage.getItem("membershipTypes");
-      if (storedTypes) {
-        setMembershipTypes(JSON.parse(storedTypes));
-      } else {
-        setMembershipTypes(initialMembershipTypes);
-        localStorage.setItem("membershipTypes", JSON.stringify(initialMembershipTypes));
-      }
-      
-      // Fetch membership requests from Supabase
-      const { data: requestsData, error: requestsError } = await supabase
-        .from('membership_requests')
-        .select('*')
-        .order('date', { ascending: false });
-      
-      if (requestsError) {
-        throw requestsError;
-      }
-      
-      if (requestsData) {
-        console.log("Fetched membership requests:", requestsData);
-        setMembershipRequests(requestsData);
-      }
-    } catch (error) {
-      console.error("Error fetching membership data:", error);
-      toast({
-        title: "Error loading data",
-        description: "Failed to load membership data. Please try refreshing the page.",
-        variant: "destructive",
-      });
-      
-      // Fall back to any localStorage data if available
-      const storedRequests = localStorage.getItem("membershipRequests");
-      if (storedRequests) {
-        setMembershipRequests(JSON.parse(storedRequests));
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch data on component mount
+  // Load membership types from localStorage on component mount
   useEffect(() => {
-    fetchMembershipData();
-    
-    // Set up real-time subscription for new membership requests
-    const channel = supabase
-      .channel('membership-requests-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'membership_requests' },
-        (payload) => {
-          console.log('Membership request change received:', payload);
-          // Refresh membership requests when changes occur
-          fetchMembershipData();
-          
-          // Show notification for new requests
-          if (payload.eventType === 'INSERT') {
-            const newRequest = payload.new;
-            toast({
-              title: "New membership request",
-              description: `${newRequest.member} has requested the ${newRequest.type} plan.`,
-            });
-          }
-        }
-      )
-      .subscribe();
-    
-    // Cleanup subscription
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const storedTypes = localStorage.getItem("membershipTypes");
+    if (storedTypes) {
+      setMembershipTypes(JSON.parse(storedTypes));
+    } else {
+      setMembershipTypes(initialMembershipTypes);
+      // Initialize localStorage with mock data if empty
+      localStorage.setItem("membershipTypes", JSON.stringify(initialMembershipTypes));
+    }
+
+    // Load membership requests
+    const storedRequests = localStorage.getItem("membershipRequests");
+    if (storedRequests) {
+      try {
+        setMembershipRequests(JSON.parse(storedRequests));
+      } catch (error) {
+        console.error("Error parsing membership requests:", error);
+        setMembershipRequests(initialMembershipRequests);
+        localStorage.setItem("membershipRequests", JSON.stringify(initialMembershipRequests));
+      }
+    } else {
+      setMembershipRequests(initialMembershipRequests);
+      localStorage.setItem("membershipRequests", JSON.stringify(initialMembershipRequests));
+    }
   }, []);
 
-  // Update localStorage when membership types change
+  // Check for new membership requests in localStorage whenever the component renders
+  useEffect(() => {
+    const storedRequests = localStorage.getItem("pendingMembershipRequests");
+    if (storedRequests) {
+      try {
+        const parsedRequests = JSON.parse(storedRequests);
+        // Add any new requests to the existing ones
+        const updatedRequests = [...membershipRequests];
+        let hasNewRequests = false;
+        
+        parsedRequests.forEach((newRequest) => {
+          const existingRequestIndex = updatedRequests.findIndex(r => 
+            r.member === newRequest.member && 
+            r.email === newRequest.email &&
+            r.type === newRequest.type &&
+            r.date === newRequest.date
+          );
+          
+          if (existingRequestIndex === -1) {
+            // Generate a new ID for the request
+            const newId = updatedRequests.length > 0 
+              ? Math.max(...updatedRequests.map(r => r.id)) + 1 
+              : 1;
+            
+            updatedRequests.push({
+              ...newRequest,
+              id: newId,
+              status: "Pending"
+            });
+            hasNewRequests = true;
+          }
+        });
+        
+        if (hasNewRequests) {
+          setMembershipRequests(updatedRequests);
+          localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
+          // Clear the pending requests
+          localStorage.removeItem("pendingMembershipRequests");
+          
+          toast({
+            title: "New membership requests",
+            description: "You have new membership requests to review",
+          });
+        }
+      } catch (error) {
+        console.error("Error parsing pending membership requests:", error);
+      }
+    }
+  }, [membershipRequests, toast]);
+
+  // Update localStorage whenever membership types or requests change
   useEffect(() => {
     if (membershipTypes.length > 0) {
       localStorage.setItem("membershipTypes", JSON.stringify(membershipTypes));
     }
   }, [membershipTypes]);
+
+  useEffect(() => {
+    if (membershipRequests.length > 0) {
+      localStorage.setItem("membershipRequests", JSON.stringify(membershipRequests));
+    }
+  }, [membershipRequests]);
 
   const handleAddMembership = () => {
     if (!newMembership.name || newMembership.sessions <= 0 || newMembership.price <= 0) {
@@ -166,7 +172,7 @@ const Memberships = () => {
     });
   };
 
-  const toggleMembershipStatus = (id) => {
+  const toggleMembershipStatus = (id: number) => {
     const updatedTypes = membershipTypes.map((m) =>
       m.id === id ? { ...m, active: !m.active } : m
     );
@@ -180,75 +186,35 @@ const Memberships = () => {
     });
   };
 
-  const handleApproveRequest = async (id) => {
-    try {
-      // Update the request status in Supabase
-      const { data, error } = await supabase
-        .from('membership_requests')
-        .update({ status: 'Approved' })
-        .eq('id', id)
-        .select();
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Update local state with the updated request
-      const updatedRequests = membershipRequests.map((r) =>
-        r.id === id ? { ...r, status: "Approved" } : r
-      );
-      
-      setMembershipRequests(updatedRequests);
-      
-      toast({
-        title: "Request approved",
-        description: "The membership request has been approved successfully",
-      });
-      
-      // In a real app, this would update the user's membership in the database
-      // For demonstration purposes, we're just updating the status in the membership_requests table
-    } catch (error) {
-      console.error("Error approving membership request:", error);
-      toast({
-        title: "Error",
-        description: "Failed to approve membership request. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const handleApproveRequest = (id: number) => {
+    const updatedRequests = membershipRequests.map((r) =>
+      r.id === id ? { ...r, status: "Approved" } : r
+    );
+    
+    setMembershipRequests(updatedRequests);
+    localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
+
+    toast({
+      title: "Request approved",
+      description: "The membership request has been approved successfully",
+    });
+    
+    // In a real app, this would update the user's membership in the database
+    // For demonstration purposes, we're just updating the local state
   };
 
-  const handleRejectRequest = async (id) => {
-    try {
-      // Update the request status in Supabase
-      const { data, error } = await supabase
-        .from('membership_requests')
-        .update({ status: 'Rejected' })
-        .eq('id', id)
-        .select();
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Update local state with the updated request
-      const updatedRequests = membershipRequests.map((r) =>
-        r.id === id ? { ...r, status: "Rejected" } : r
-      );
-      
-      setMembershipRequests(updatedRequests);
-      
-      toast({
-        title: "Request rejected",
-        description: "The membership request has been rejected",
-      });
-    } catch (error) {
-      console.error("Error rejecting membership request:", error);
-      toast({
-        title: "Error",
-        description: "Failed to reject membership request. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const handleRejectRequest = (id: number) => {
+    const updatedRequests = membershipRequests.map((r) =>
+      r.id === id ? { ...r, status: "Rejected" } : r
+    );
+    
+    setMembershipRequests(updatedRequests);
+    localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
+
+    toast({
+      title: "Request rejected",
+      description: "The membership request has been rejected",
+    });
   };
 
   return (
@@ -369,70 +335,62 @@ const Memberships = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-4 text-center">
-                        <div className="flex justify-center">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gym-blue"></div>
-                        </div>
+                  {membershipRequests.map((request) => (
+                    <tr key={request.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-medium text-gray-900">{request.member}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                        {request.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                          {request.type}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                        {request.date}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            request.status === "Approved"
+                              ? "bg-green-100 text-green-800"
+                              : request.status === "Rejected"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {request.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        {request.status === "Pending" && (
+                          <>
+                            <button
+                              onClick={() => handleApproveRequest(request.id)}
+                              className="text-green-600 hover:text-green-800 mr-4"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleRejectRequest(request.id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
-                  ) : membershipRequests.length === 0 ? (
+                  ))}
+
+                  {membershipRequests.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                         No membership requests pending.
                       </td>
                     </tr>
-                  ) : (
-                    membershipRequests.map((request) => (
-                      <tr key={request.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="font-medium text-gray-900">{request.member}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                          {request.email}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                            {request.type}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                          {request.date}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-1 text-xs rounded-full ${
-                              request.status === "Approved"
-                                ? "bg-green-100 text-green-800"
-                                : request.status === "Rejected"
-                                ? "bg-red-100 text-red-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
-                          >
-                            {request.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {request.status === "Pending" && (
-                            <>
-                              <button
-                                onClick={() => handleApproveRequest(request.id)}
-                                className="text-green-600 hover:text-green-800 mr-4"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleRejectRequest(request.id)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    ))
                   )}
                 </tbody>
               </table>

@@ -12,9 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Check } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
 
 // Mock membership data
 const membershipData = {
@@ -104,88 +101,31 @@ const availablePlans = [
 
 const UserMembership = () => {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [userEmail, setUserEmail] = useState("user@example.com");
-  const [userName, setUserName] = useState("Current User");
-  const { user } = useAuth();
   
-  // Fetch user data
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (user && user.email) {
-        try {
-          setUserEmail(user.email);
-          
-          // Try to get user's name from profiles
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('name')
-            .eq('email', user.email)
-            .single();
-            
-          if (data && data.name) {
-            setUserName(data.name);
-          } else {
-            // Fallback to getting name from members table
-            const { data: memberData, error: memberError } = await supabase
-              .from('members')
-              .select('name')
-              .eq('email', user.email)
-              .single();
-              
-            if (memberData && memberData.name) {
-              setUserName(memberData.name);
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-        }
-      }
+  const handleBookPlan = (planName: string) => {
+    // Create a membership request
+    toast({
+      title: "Membership request sent",
+      description: `Your request for the ${planName} plan has been submitted. A staff member will review it shortly.`,
+    });
+    
+    // In a real app, this would make an API call to create the membership request
+    // For demonstration, we'll store the request in localStorage so the admin page can see it
+    const existingRequests = localStorage.getItem("membershipRequests");
+    const newRequest = {
+      id: Date.now(), // Use timestamp as unique ID
+      member: "Current User", // In a real app, this would be the logged-in user's name
+      email: "user@example.com", // In a real app, this would be the logged-in user's email
+      type: planName,
+      date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+      status: "Pending"
     };
     
-    fetchUserData();
-  }, [user]);
-  
-  const handleBookPlan = async (planName: string) => {
-    setIsSubmitting(true);
-    
-    try {
-      console.log(`Booking ${planName} plan for user: ${userEmail}`);
-      
-      // Create a membership request in the database
-      const newRequest = {
-        member: userName,
-        email: userEmail,
-        type: planName,
-        date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
-        status: "Pending"
-      };
-      
-      const { data, error } = await supabase
-        .from('membership_requests')
-        .insert([newRequest])
-        .select();
-        
-      if (error) {
-        console.error("Error submitting membership request:", error);
-        throw error;
-      }
-      
-      console.log("Membership request created successfully:", data);
-      
-      toast({
-        title: "Membership request sent",
-        description: `Your request for the ${planName} plan has been submitted. A staff member will review it shortly.`,
-      });
-    } catch (error: any) {
-      console.error("Error creating membership request:", error);
-      toast({
-        title: "Submission failed",
-        description: `There was an error submitting your request. Please try again. ${error.message || ''}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
+    if (existingRequests) {
+      const parsedRequests = JSON.parse(existingRequests);
+      localStorage.setItem("membershipRequests", JSON.stringify([...parsedRequests, newRequest]));
+    } else {
+      localStorage.setItem("membershipRequests", JSON.stringify([newRequest]));
     }
   };
   
@@ -280,9 +220,8 @@ const UserMembership = () => {
                     <Button 
                       onClick={() => handleBookPlan(plan.name)} 
                       className="w-full bg-gym-blue hover:bg-gym-dark-blue"
-                      disabled={isSubmitting}
                     >
-                      {isSubmitting ? "Processing..." : "Book Now"}
+                      Book Now
                     </Button>
                   )}
                 </CardFooter>
