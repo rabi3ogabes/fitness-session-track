@@ -101,12 +101,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Create profile entry
             const { error: profileError } = await supabase
               .from('profiles')
-              .insert([{
+              .insert({
                 id: authData.user.id,
                 email: demoUser.email,
                 name: demoUser.name,
                 phone_number: '12345678'
-              }]);
+              });
               
             if (profileError) {
               console.error(`Error creating profile for ${demoUser.email}:`, profileError);
@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (demoUser.role === 'user') {
               const { error: memberError } = await supabase
                 .from('members')
-                .insert([{
+                .insert({
                   name: demoUser.name,
                   email: demoUser.email,
                   phone: '12345678',
@@ -126,7 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   sessions: 4,
                   remaining_sessions: 4,
                   status: 'Active'
-                }]);
+                });
                 
               if (memberError) {
                 console.error(`Error adding to members table for ${demoUser.email}:`, memberError);
@@ -139,14 +139,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (demoUser.role === 'trainer') {
               const { error: trainerError } = await supabase
                 .from('trainers')
-                .insert([{
+                .insert({
                   name: demoUser.name,
                   email: demoUser.email,
                   phone: '12345678',
                   specialization: 'General Fitness',
                   status: 'Active',
                   gender: 'Male'
-                }]);
+                });
                 
               if (trainerError) {
                 console.error(`Error adding to trainers table for ${demoUser.email}:`, trainerError);
@@ -250,7 +250,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkSession();
     
     // Try to create demo users if they don't exist
-    createDemoUsers();
+    createDemoUsers().catch(err => {
+      console.error("Error creating demo users:", err);
+      // Don't fail the app if demo users can't be created
+      // This allows login to still work with existing accounts
+    });
 
     return () => {
       subscription?.unsubscribe();
@@ -270,11 +274,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Invalid email format");
       }
       
-      // For non-demo accounts, use Supabase auth
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // First check if there's an actual network connection to Supabase
+      const connectionCheck = await checkSupabaseConnection();
+      if (!connectionCheck.connected) {
+        // If we're offline but have navigator.onLine = true, it's likely Supabase that's unreachable
+        if (navigator.onLine) {
+          throw new Error("Cannot connect to authentication server. Please try again later.");
+        } else {
+          throw new Error("You appear to be offline. Please check your internet connection.");
+        }
+      }
+      
+      // For non-demo accounts, use Supabase auth with timeout
+      const loginPromise = supabase.auth.signInWithPassword({
         email,
         password,
       });
+      
+      // Add a timeout to the login promise to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Login timed out. Please try again.")), 10000);
+      });
+      
+      // Race the login promise against the timeout
+      const { data, error } = await Promise.race([
+        loginPromise, 
+        timeoutPromise
+      ]) as typeof loginPromise;
 
       if (error) {
         console.error("Supabase auth error:", error);
@@ -321,6 +347,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         errorMessage = "The email or password you entered is incorrect.";
       } else if (!navigator.onLine || error.message?.includes("NetworkError") || error.message?.includes("network")) {
         errorMessage = "Unable to connect to the authentication service. Please check your internet connection.";
+      } else if (error.message?.includes("timeout")) {
+        errorMessage = "Login request timed out. The server might be temporarily unavailable.";
       } else {
         errorMessage = error.message || "An unexpected error occurred. Please try again.";
       }
@@ -338,6 +366,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signup = async (email: string, password: string, name: string, phone?: string, dob?: string) => {
     try {
       console.log("Signup attempt for:", email);
+      
+      // First check if there's an actual network connection to Supabase
+      const connectionCheck = await checkSupabaseConnection();
+      if (!connectionCheck.connected) {
+        if (navigator.onLine) {
+          throw new Error("Cannot connect to authentication server. Please try again later.");
+        } else {
+          throw new Error("You appear to be offline. Please check your internet connection.");
+        }
+      }
+      
       // Register new user
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -369,6 +408,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (!navigator.onLine || error.message?.includes("NetworkError")) {
         errorMessage = "Unable to connect to the authentication service. Please check your internet connection.";
+      } else if (error.message?.includes("already registered")) {
+        errorMessage = "This email is already registered. Please use a different email or try logging in.";
       } else {
         errorMessage = error.message || "An unexpected error occurred. Please try again.";
       }
@@ -386,45 +427,64 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       console.log("Logout attempt");
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
       
-      setUser(null);
-      setUserProfile(null);
-      setRole(null);
-
-      console.log("Logout successful");
+      // First attempt to clear local state regardless of network
+      const clearLocalState = () => {
+        setUser(null);
+        setUserProfile(null);
+        setRole(null);
+        console.log("Local state cleared");
+        
+        toast({
+          title: "Logout successful",
+          description: "You have been logged out successfully."
+        });
+      };
       
-      toast({
-        title: "Logout successful",
-        description: "You have been logged out successfully."
+      // Set a timeout for the Supabase logout operation
+      const timeoutPromise = new Promise<void>((_, reject) => {
+        setTimeout(() => {
+          // If it times out, we'll still clear local state
+          clearLocalState();
+          reject(new Error("Logout request timed out, but you've been logged out locally."));
+        }, 3000);
       });
+      
+      // Attempt Supabase logout
+      const logoutPromise = supabase.auth.signOut().then(({ error }) => {
+        if (error) throw error;
+        clearLocalState();
+        return;
+      });
+      
+      // Race the logout promise against the timeout
+      await Promise.race([logoutPromise, timeoutPromise]);
+      
     } catch (error: any) {
       console.error("Logout error:", error);
       
+      // Always clear local state on error for better UX
+      setUser(null);
+      setUserProfile(null);
+      setRole(null);
+      
       // Check if it's a network error
-      if (!navigator.onLine || error.message?.includes("NetworkError")) {
+      if (!navigator.onLine || error.message?.includes("NetworkError") || error.message?.includes("timeout")) {
         toast({
           title: "Network Error",
           description: "Unable to connect to the authentication service, but you've been logged out locally.",
           variant: "destructive",
         });
-        
-        // Still clear local user state even if network request fails
-        setUser(null);
-        setUserProfile(null);
-        setRole(null);
       } else {
         // Provide better error messages
         const errorMessage = error.message || "An unexpected error occurred. Please try again.";
         
         toast({
-          title: "Logout failed",
-          description: errorMessage,
+          title: "Logout issue",
+          description: errorMessage + " However, you've been logged out locally.",
           variant: "destructive",
         });
       }
-      throw error;
     }
   };
 
