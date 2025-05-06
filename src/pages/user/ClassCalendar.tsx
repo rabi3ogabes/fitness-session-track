@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Calendar } from "@/components/ui/calendar";
@@ -5,7 +6,7 @@ import { format, isSameDay, parseISO, isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Bell, AlertCircle, Check, X, Clock, BookOpen, Info, Users } from "lucide-react";
+import { CalendarDays, Bell, AlertCircle, Check, X, Clock, BookOpen, Info, Users, RefreshCw, WifiOff } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -39,6 +40,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Class type colors mapping
 const classTypeColors = {
@@ -103,6 +105,59 @@ const bookingSchema = z.object({
   })
 });
 
+// Demo user data for testing
+const DEMO_USER_DATA: UserData = {
+  name: "Demo User",
+  remainingSessions: 8,
+  totalSessions: 20
+};
+
+// Demo classes for testing
+const DEMO_CLASSES: ClassWithBooking[] = [
+  {
+    id: 1,
+    name: "Yoga Basics",
+    status: "Active",
+    schedule: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(),
+    start_time: "09:00",
+    end_time: "10:00",
+    capacity: 20,
+    enrolled: 8,
+    trainer: "Jane Smith",
+    location: "Studio 1",
+    type: "yoga",
+    isBooked: false
+  },
+  {
+    id: 2,
+    name: "HIIT Workout",
+    status: "Active",
+    schedule: new Date(new Date().setDate(new Date().getDate() + 1)).toISOString(),
+    start_time: "11:00",
+    end_time: "12:00",
+    capacity: 15,
+    enrolled: 12,
+    trainer: "John Doe",
+    location: "Gym Floor",
+    type: "workout",
+    isBooked: false
+  },
+  {
+    id: 3,
+    name: "Boxing Fundamentals",
+    status: "Active",
+    schedule: new Date().toISOString(),
+    start_time: "14:00",
+    end_time: "15:30",
+    capacity: 10,
+    enrolled: 5,
+    trainer: "Mike Tyson",
+    location: "Boxing Ring",
+    type: "combat",
+    isBooked: false
+  }
+];
+
 type BookingFormValues = z.infer<typeof bookingSchema>;
 
 const ClassCalendar = () => {
@@ -118,6 +173,9 @@ const ClassCalendar = () => {
     remainingSessions: 0,
     totalSessions: 0,
   });
+  const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [isNetworkConnected, setIsNetworkConnected] = useState(true);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -130,6 +188,32 @@ const ClassCalendar = () => {
       acceptTerms: false
     }
   });
+
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsNetworkConnected(true);
+      // Auto-retry fetching data when back online
+      if (error) {
+        handleRetry();
+      }
+    };
+    
+    const handleOffline = () => {
+      setIsNetworkConnected(false);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Set initial network status
+    setIsNetworkConnected(navigator.onLine);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [error]);
   
   // Calculate if sessions are low (25% or less)
   const sessionsLow = userData.remainingSessions <= (userData.totalSessions * 0.25);
@@ -145,6 +229,21 @@ const ClassCalendar = () => {
       if (!user) return;
       
       try {
+        // Check if this is demo user
+        if (user.id === "demo-user-id") {
+          // For demo mode, use hardcoded data
+          setUserData(DEMO_USER_DATA);
+          return;
+        }
+        
+        if (!isNetworkConnected) {
+          setError("You are currently offline. Reconnect to load your profile data.");
+          return;
+        }
+        
+        // Clear any previous errors
+        setError(null);
+        
         const { data, error } = await supabase
           .from('profiles')
           .select('name, sessions_remaining, total_sessions')
@@ -163,16 +262,12 @@ const ClassCalendar = () => {
         });
       } catch (err) {
         console.error("Error in fetchUserData:", err);
-        toast({
-          title: "Failed to load user data",
-          description: "Please refresh the page and try again",
-          variant: "destructive",
-        });
+        setError("Failed to load user data. Please refresh the page and try again");
       }
     };
     
     fetchUserData();
-  }, [user, toast]);
+  }, [user, isNetworkConnected]);
   
   // Fetch classes from Supabase
   useEffect(() => {
@@ -180,6 +275,16 @@ const ClassCalendar = () => {
       setIsLoading(true);
       
       try {
+        if (!isNetworkConnected) {
+          // If offline, use demo data or cached data
+          setClasses(DEMO_CLASSES);
+          setIsLoading(false);
+          return;
+        }
+
+        // Clear any previous errors
+        setError(null);
+        
         const { data, error } = await supabase
           .from('classes')
           .select('*')
@@ -192,7 +297,7 @@ const ClassCalendar = () => {
         }
         
         // Transform and add type property based on class name or difficulty
-        const classesWithType = data.map((cls: ClassModel) => {
+        const classesWithType = data.length > 0 ? data.map((cls: ClassModel) => {
           let type = 'default';
           const name = cls.name.toLowerCase();
           
@@ -208,23 +313,21 @@ const ClassCalendar = () => {
           }
           
           return { ...cls, type };
-        });
+        }) : DEMO_CLASSES; // Use demo classes if no data returned
         
         setClasses(classesWithType);
       } catch (err) {
         console.error("Error in fetchClasses:", err);
-        toast({
-          title: "Failed to load classes",
-          description: "Please refresh the page and try again",
-          variant: "destructive",
-        });
+        // Load demo classes as a fallback
+        setClasses(DEMO_CLASSES);
+        setError("Failed to load classes from the server. Using demo data instead.");
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchClasses();
-  }, [toast]);
+  }, [isNetworkConnected]);
   
   // Fetch user bookings from Supabase
   useEffect(() => {
@@ -232,6 +335,24 @@ const ClassCalendar = () => {
       if (!user) return;
       
       try {
+        if (user.id === "demo-user-id") {
+          // For demo mode, use hardcoded bookings
+          setBookedClasses([3]); // Mark class ID 3 as booked in demo mode
+          
+          // Update classes to mark as booked
+          setClasses(prevClasses => 
+            prevClasses.map(cls => ({
+              ...cls,
+              isBooked: cls.id === 3
+            }))
+          );
+          return;
+        }
+        
+        if (!isNetworkConnected) {
+          return; // Don't attempt to fetch if offline
+        }
+        
         const { data, error } = await supabase
           .from('bookings')
           .select('class_id')
@@ -255,11 +376,12 @@ const ClassCalendar = () => {
         );
       } catch (err) {
         console.error("Error in fetchBookings:", err);
+        // Don't set an error here to avoid having multiple error messages
       }
     };
     
     fetchBookings();
-  }, [user]);
+  }, [user, isNetworkConnected]);
   
   // Get classes for the selected date
   const classesForSelectedDate = selectedDate 
@@ -330,6 +452,16 @@ const ClassCalendar = () => {
     setConfirmDialogOpen(true);
   };
   
+  const handleRetry = () => {
+    setRetrying(true);
+    setTimeout(() => {
+      setRetrying(false);
+      setError(null);
+      // This will trigger the useEffects to re-fetch data
+      setIsNetworkConnected(navigator.onLine);
+    }, 1000);
+  };
+  
   const confirmBooking = async () => {
     if (!user) {
       toast({
@@ -343,6 +475,49 @@ const ClassCalendar = () => {
     setIsBookingInProgress(true);
     
     try {
+      // Special handling for demo user
+      if (user.id === "demo-user-id") {
+        // Simulate successful booking for demo user
+        setBookedClasses([...bookedClasses, ...selectedClasses]);
+        
+        // Update classes to mark as booked
+        setClasses(prevClasses => 
+          prevClasses.map(cls => ({
+            ...cls,
+            isBooked: bookedClasses.includes(cls.id) || selectedClasses.includes(cls.id),
+            enrolled: selectedClasses.includes(cls.id) ? (cls.enrolled || 0) + 1 : cls.enrolled
+          }))
+        );
+        
+        // Update user sessions for demo
+        const newRemainingSession = userData.remainingSessions - selectedClasses.length;
+        setUserData({
+          ...userData,
+          remainingSessions: newRemainingSession
+        });
+        
+        toast({
+          title: "Classes booked successfully! (Demo)",
+          description: `You've booked ${selectedClasses.length} classes in demo mode.`,
+        });
+        
+        setSelectedClasses([]);
+        setConfirmDialogOpen(false);
+        form.reset();
+        setIsBookingInProgress(false);
+        return;
+      }
+      
+      if (!isNetworkConnected) {
+        toast({
+          title: "You're offline",
+          description: "Bookings cannot be processed while offline. Please reconnect.",
+          variant: "destructive"
+        });
+        setIsBookingInProgress(false);
+        return;
+      }
+      
       // Prepare bookings data
       const bookings = selectedClasses.map(classId => ({
         user_id: user.id,
@@ -455,6 +630,43 @@ const ClassCalendar = () => {
     }
     
     try {
+      // Demo user handling
+      if (user.id === "demo-user-id") {
+        // Simulate successful cancellation for demo user
+        setBookedClasses(bookedClasses.filter(id => id !== classId));
+        
+        // Update classes to remove booked status and decrease enrolled count
+        setClasses(prevClasses => 
+          prevClasses.map(cls => ({
+            ...cls,
+            isBooked: cls.id === classId ? false : cls.isBooked,
+            enrolled: cls.id === classId && cls.enrolled ? cls.enrolled - 1 : cls.enrolled
+          }))
+        );
+        
+        // Update user sessions for demo
+        const newRemainingSession = userData.remainingSessions + 1;
+        setUserData({
+          ...userData,
+          remainingSessions: newRemainingSession
+        });
+        
+        toast({
+          title: "Class cancelled (Demo)",
+          description: `You've successfully cancelled your ${className} class in demo mode.`,
+        });
+        return;
+      }
+      
+      if (!isNetworkConnected) {
+        toast({
+          title: "You're offline",
+          description: "Cancellations cannot be processed while offline. Please reconnect.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Delete booking from Supabase
       const { error } = await supabase
         .from('bookings')
@@ -596,6 +808,30 @@ const ClassCalendar = () => {
               </div>
             </div>
           </div>
+          
+          {error && (
+            <Alert variant={!isNetworkConnected ? "default" : "destructive"} className={cn("mb-4", !isNetworkConnected ? "bg-yellow-50 border-yellow-200" : "")}>
+              {!isNetworkConnected ? (
+                <WifiOff className="h-4 w-4" />
+              ) : (
+                <AlertCircle className="h-4 w-4" />
+              )}
+              <AlertTitle>{!isNetworkConnected ? "You're offline" : "Error"}</AlertTitle>
+              <AlertDescription className="flex justify-between items-center">
+                <span>{error}</span>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRetry}
+                  className="ml-4"
+                  disabled={retrying || (!isNetworkConnected && error.includes("offline"))}
+                >
+                  <RefreshCw className={cn("h-3 w-3 mr-1", retrying && "animate-spin")} />
+                  Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-1">
