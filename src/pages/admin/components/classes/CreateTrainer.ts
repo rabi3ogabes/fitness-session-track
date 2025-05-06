@@ -65,13 +65,16 @@ export const useTrainerCreation = () => {
 
   // Create a new trainer
   const createTrainer = async (trainerData: TrainerData) => {
-    setIsCreating(true);
-    console.log("Creating trainer with data:", trainerData);
-    
     try {
+      setIsCreating(true);
+      console.log("Creating trainer with data:", trainerData);
+      
       // Verify authentication
       const isAuth = await checkAuthenticationStatus();
-      if (!isAuth) return { success: false };
+      if (!isAuth) {
+        setIsCreating(false);
+        return { success: false };
+      }
       
       console.log("Authentication confirmed, proceeding with trainer creation");
       
@@ -87,12 +90,13 @@ export const useTrainerCreation = () => {
       
       console.log("Formatted data for insertion:", formattedData);
       
-      // Attempt direct insertion with detailed logging
+      // Attempt insertion with detailed logging
       console.log("Calling supabase.from('trainers').insert()...");
       const { data, error } = await supabase
         .from("trainers")
         .insert([formattedData])
         .select();
+        
       console.log("Supabase insert operation completed");
 
       if (error) {
@@ -128,9 +132,15 @@ export const useTrainerCreation = () => {
 
   // Create test trainers with improved error handling and feedback
   const createTestTrainer = async () => {
+    setIsCreating(true);
     try {
+      console.log("Starting test trainer creation");
       const isAuth = await checkAuthenticationStatus();
-      if (!isAuth) return false;
+      if (!isAuth) {
+        console.error("Authentication check failed for test trainer creation");
+        setIsCreating(false);
+        return false;
+      }
       
       const testTrainers = [
         {
@@ -192,6 +202,8 @@ export const useTrainerCreation = () => {
         variant: "destructive",
       });
       return false;
+    } finally {
+      setIsCreating(false);
     }
   };
 
