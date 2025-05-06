@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -297,10 +297,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       // Race the login promise against the timeout
-      const { data, error } = await Promise.race([
+      const result = await Promise.race([
         loginPromise, 
         timeoutPromise
       ]) as typeof loginPromise;
+      
+      const { data, error } = result;
 
       if (error) {
         console.error("Supabase auth error:", error);

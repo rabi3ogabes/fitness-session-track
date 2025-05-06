@@ -19,14 +19,15 @@ const supabaseOptions = {
     headers: {
       'x-application-name': 'gym-management-system'
     },
-    fetch: (url: RequestInfo, options?: RequestInit): Promise<Response> => {
+    // Fixed the fetch function type issue
+    fetch: (url: RequestInfo | URL, options?: RequestInit) => {
       // Modified fetch to properly type the response
       return fetch(url, options)
         .catch(err => {
           console.error("Network error when connecting to Supabase:", err);
-          // Create a Response object to maintain the expected return type
+          // Create a properly typed Response object to maintain the expected return type
           throw new Error(`Network error: ${err.message}. Please check your connection and try again.`);
-        }) as Promise<Response>;
+        });
     }
   }
 };
@@ -50,7 +51,9 @@ const createDemoClient = () => {
           ...supabaseOptions.global.headers,
           // Special header that bypasses RLS
           'x-demo-bypass-rls': 'true',
-        }
+        },
+        // Fixed the fetch function type here too
+        fetch: supabaseOptions.global.fetch
       }
     }
   );
