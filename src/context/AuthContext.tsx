@@ -99,10 +99,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (authData.user) {
             console.log(`Successfully created auth user: ${demoUser.email} with ID: ${authData.user.id}`);
             
-            // Create profile entry
+            // Create profile entry - FIX: Added id field which is required
             const { error: profileError } = await supabase
               .from('profiles')
               .insert({
+                id: authData.user.id,  // This is the required id field that was missing
                 email: demoUser.email,
                 name: demoUser.name,
                 phone_number: '12345678'
