@@ -28,25 +28,11 @@ const Trainers = () => {
   const navigate = useNavigate();
   const { createTrainer, createTestTrainer, isCreating } = useTrainerCreation();
 
-  // Fetch trainers from Supabase or demo storage
+  // Fetch trainers from Supabase
   const fetchTrainers = async () => {
     setIsLoading(true);
     
     try {
-      // Check if we're in demo mode
-      const mockRole = localStorage.getItem('userRole');
-      if (mockRole) {
-        // Get trainers from localStorage in demo mode
-        const demoTrainers = JSON.parse(localStorage.getItem('demoTrainers') || '[]');
-        if (demoTrainers.length > 0) {
-          console.log("Fetched trainers from demo storage:", demoTrainers);
-          setTrainers(demoTrainers);
-          setIsLoading(false);
-          return;
-        }
-      }
-      
-      // If not in demo mode or no demo trainers, try Supabase
       console.log("Fetching trainers from Supabase...");
       const { data, error } = await supabase
         .from("trainers")
@@ -62,51 +48,24 @@ const Trainers = () => {
         console.log(`Fetched ${data.length} trainers from Supabase:`, data);
         setTrainers(data);
       } else {
-        // Fallback to mock data if no trainers in database
-        console.log("No trainers found in database, using mock data");
-        const mockTrainers: Trainer[] = [
-          {
-            id: 1,
-            name: "John Smith",
-            email: "john@example.com",
-            phone: "555-1234",
-            specialization: "Strength Training",
-            status: "Active",
-            gender: "Male"
-          },
-          {
-            id: 2,
-            name: "Sarah Johnson",
-            email: "sarah@example.com",
-            phone: "555-5678",
-            specialization: "Yoga",
-            status: "Active",
-            gender: "Female"
-          },
-          {
-            id: 3,
-            name: "Mike Wilson",
-            email: "mike@example.com",
-            phone: "555-9012",
-            specialization: "CrossFit",
-            status: "Inactive",
-            gender: "Male"
-          },
-          {
-            id: 4,
-            name: "Lisa Brown",
-            email: "lisa@example.com",
-            phone: "555-3456",
-            specialization: "Pilates",
-            status: "Active",
-            gender: "Female"
-          },
-        ];
+        // No trainers in database, create test ones
+        console.log("No trainers found in database, creating test trainers");
+        const success = await createTestTrainer();
         
-        setTrainers(mockTrainers);
-        
-        // Also try to create test trainers in the database for future use
-        createTestTrainer();
+        if (success) {
+          // Fetch again after creating test trainers
+          const { data: newData, error: newError } = await supabase
+            .from("trainers")
+            .select("*")
+            .order("name");
+            
+          if (newError) {
+            console.error("Error fetching trainers after creation:", newError);
+          } else if (newData) {
+            console.log("Successfully created and fetched test trainers:", newData);
+            setTrainers(newData);
+          }
+        }
       }
     } catch (error: any) {
       console.error("Error fetching trainers:", error);

@@ -24,37 +24,30 @@ export const useTrainerCreation = () => {
   const checkAuthenticationStatus = async () => {
     console.log("Checking authentication status, isAuthenticated:", isAuthenticated);
     
-    // Check if we're in demo mode first
-    const mockRole = localStorage.getItem('userRole');
-    if (mockRole) {
-      console.log("Using demo mode with role:", mockRole);
-      // If in demo mode, check if user is authenticated and admin in the context
-      if (!isAuthenticated) {
-        console.error("Not authenticated in demo mode");
-        toast({
-          title: "Authentication required",
-          description: "You need to be logged in to manage trainers.",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return false;
-      }
-      
-      if (!isAdmin) {
-        console.error("Not admin in demo mode");
-        toast({
-          title: "Admin access required",
-          description: "You need admin access to manage trainers.",
-          variant: "destructive",
-        });
-        return false;
-      }
-      
-      console.log("Demo mode authentication confirmed for trainer operations");
-      return true;
+    if (!isAuthenticated) {
+      console.error("Not authenticated");
+      toast({
+        title: "Authentication required",
+        description: "You need to be logged in to manage trainers.",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return false;
     }
     
-    // If not in demo mode, check with Supabase
+    if (!isAdmin) {
+      console.error("Not admin");
+      toast({
+        title: "Admin access required",
+        description: "You need admin access to manage trainers.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
+    console.log("Authentication confirmed for trainer operations");
+    
+    // Check with Supabase for active session
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
@@ -64,17 +57,6 @@ export const useTrainerCreation = () => {
         description: "There was a problem verifying your authentication status.",
         variant: "destructive",
       });
-      return false;
-    }
-    
-    if (!session) {
-      console.error("Not authenticated with Supabase");
-      toast({
-        title: "Authentication required",
-        description: "You need to be logged in to manage trainers.",
-        variant: "destructive",
-      });
-      navigate("/login");
       return false;
     }
     
@@ -92,45 +74,6 @@ export const useTrainerCreation = () => {
       if (!isAuth) return { success: false };
       
       console.log("Authentication confirmed, proceeding with trainer creation");
-      
-      // Check if we're in demo mode to handle the creation properly
-      const mockRole = localStorage.getItem('userRole');
-      if (mockRole) {
-        console.log("Creating trainer in demo mode");
-        
-        // For demo mode, simulate a successful creation by generating an ID
-        const demoId = Math.floor(Math.random() * 1000) + 10; // Random ID between 10 and 1010
-        const createdTrainer = {
-          id: demoId,
-          name: trainerData.name,
-          email: trainerData.email,
-          phone: trainerData.phone || null,
-          specialization: trainerData.specialization || null,
-          status: trainerData.status,
-          gender: trainerData.gender || null,
-          created_at: new Date().toISOString()
-        };
-        
-        // In demo mode, store trainers in localStorage to simulate persistence
-        try {
-          const existingTrainers = JSON.parse(localStorage.getItem('demoTrainers') || '[]');
-          existingTrainers.push(createdTrainer);
-          localStorage.setItem('demoTrainers', JSON.stringify(existingTrainers));
-          console.log("Trainer saved to localStorage in demo mode:", createdTrainer);
-        } catch (err) {
-          console.error("Error saving trainer to localStorage:", err);
-        }
-        
-        toast({
-          title: "Trainer created",
-          description: `${trainerData.name} has been added as a trainer (demo mode)`,
-        });
-        
-        return { success: true, data: [createdTrainer] };
-      }
-      
-      // For actual Supabase mode, proceed with the real database operation
-      console.log("Inserting trainer into Supabase:", trainerData);
       
       // Ensure all data is properly formatted before insertion
       const formattedData = {
@@ -183,61 +126,12 @@ export const useTrainerCreation = () => {
     }
   };
 
-  // Create test trainers for demo purposes
+  // Create test trainers directly in Supabase
   const createTestTrainer = async () => {
     try {
       // Verify authentication
       const isAuth = await checkAuthenticationStatus();
       if (!isAuth) return false;
-      
-      // Handle differently based on mode
-      const mockRole = localStorage.getItem('userRole');
-      if (mockRole) {
-        console.log("Creating test trainers in demo mode");
-        
-        // For demo mode, check if we already have trainers in localStorage
-        const existingTrainers = JSON.parse(localStorage.getItem('demoTrainers') || '[]');
-        if (existingTrainers.length > 0) {
-          console.log("Demo trainers already exist in localStorage, not creating test trainers");
-          return true;
-        }
-        
-        // Create test trainers in localStorage
-        const testTrainers = [
-          {
-            id: 1,
-            name: "John Doe",
-            email: "john.doe@example.com",
-            status: "Active",
-            gender: "Male",
-            specialization: "General Fitness",
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 2,
-            name: "Jane Smith",
-            email: "jane.smith@example.com",
-            status: "Active",
-            gender: "Female",
-            specialization: "Yoga",
-            created_at: new Date().toISOString()
-          },
-          {
-            id: 3,
-            name: "Mike Johnson",
-            email: "mike.johnson@example.com",
-            status: "Active",
-            gender: "Male",
-            specialization: "CrossFit",
-            created_at: new Date().toISOString()
-          }
-        ];
-        
-        localStorage.setItem('demoTrainers', JSON.stringify(testTrainers));
-        console.log("Test trainers created and saved to localStorage");
-        
-        return true;
-      }
       
       console.log("Authentication confirmed, proceeding with test trainer check/creation");
       

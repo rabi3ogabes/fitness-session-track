@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // For mock purposes, let's define roles
+  // For roles
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
@@ -71,9 +71,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUserProfile(mockUserProfile);
 
           // For mock purposes
-          const mockRole = localStorage.getItem('userRole') || 'user';
-          setRole(mockRole);
-          console.log("User role set to:", mockRole);
+          // Determine role based on email
+          let userRole = 'user';
+          if (session.user.email?.includes('admin')) userRole = 'admin';
+          if (session.user.email?.includes('trainer')) userRole = 'trainer';
+          setRole(userRole);
+          console.log("User role set to:", userRole);
         } else {
           setUser(null);
           setUserProfile(null);
@@ -114,44 +117,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           setUserProfile(mockUserProfile);
           
-          // For mock purposes, set role
-          // In a real app, you would fetch this from your database
-          const mockRole = localStorage.getItem('userRole') || 'user';
-          setRole(mockRole);
-          console.log("User role set to:", mockRole);
+          // Determine role based on email
+          let userRole = 'user';
+          if (session.user.email?.includes('admin')) userRole = 'admin';
+          if (session.user.email?.includes('trainer')) userRole = 'trainer';
+          setRole(userRole);
+          console.log("User role set to:", userRole);
         } else {
           console.log("No session found");
-          
-          // Check if we have demo credentials
-          const mockRole = localStorage.getItem('userRole');
-          if (mockRole) {
-            // For demo purposes, auto-login with the stored role
-            const demoEmails = ['admin@gym.com', 'trainer@gym.com', 'user@gym.com'];
-            const isDemoUser = demoEmails.some(email => email.includes(mockRole.toLowerCase()));
-            
-            if (isDemoUser) {
-              console.log("Demo credentials found, establishing demo session");
-              
-              // Create mock user object for demo purposes
-              const mockUser = {
-                id: `demo-${mockRole}-id`,
-                email: `${mockRole}@gym.com`,
-                name: mockRole.charAt(0).toUpperCase() + mockRole.slice(1),
-                role: mockRole
-              };
-              
-              // Set user without requiring actual authentication
-              setUser(mockUser);
-              setUserProfile({
-                sessions_remaining: 7,
-                total_sessions: 12
-              });
-              
-              // Store the role for demo access
-              setRole(mockRole);
-              console.log("Demo user session established:", mockUser);
-            }
-          }
         }
       } catch (error) {
         console.error("Error checking session:", error);
@@ -178,46 +151,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Check if email is in the correct format
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         throw new Error("Invalid email format");
-      }
-      
-      // Check if demo credentials are being used
-      const isDemoCredential = 
-        (email === "admin@gym.com" && password === "admin123") ||
-        (email === "user@gym.com" && password === "user123") ||
-        (email === "trainer@gym.com" && password === "trainer123");
-      
-      if (isDemoCredential) {
-        console.log("Using demo credentials - bypassing Supabase auth");
-        
-        // Determine the role from the email
-        let mockRole = 'user';
-        if (email.includes('admin')) mockRole = 'admin';
-        if (email.includes('trainer')) mockRole = 'trainer';
-        
-        // Store the role in localStorage
-        localStorage.setItem('userRole', mockRole);
-        setRole(mockRole);
-        
-        // Create mock user object
-        const mockUser = {
-          id: `demo-${mockRole}-id`,
-          email: email,
-          name: mockRole.charAt(0).toUpperCase() + mockRole.slice(1),
-          role: mockRole
-        };
-        
-        setUser(mockUser);
-        setUserProfile({
-          sessions_remaining: 7,
-          total_sessions: 12
-        });
-        
-        toast({
-          title: "Demo login successful",
-          description: `You've been logged in as a ${mockRole}`
-        });
-        
-        return;
       }
       
       // For non-demo accounts, use Supabase auth
@@ -249,15 +182,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       console.log("Login successful for:", email);
       
-      // For mock purposes, based on email determine role
-      let mockRole = 'user';
-      if (email.includes('admin')) mockRole = 'admin';
-      if (email.includes('trainer')) mockRole = 'trainer';
+      // Determine role based on email
+      let userRole = 'user';
+      if (email.includes('admin')) userRole = 'admin';
+      if (email.includes('trainer')) userRole = 'trainer';
       
-      // Store the role in localStorage for mock purposes
-      localStorage.setItem('userRole', mockRole);
-      setRole(mockRole);
-      console.log("Role set to:", mockRole);
+      setRole(userRole);
+      console.log("Role set to:", userRole);
 
       toast({
         title: "Login successful",
@@ -341,7 +272,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      localStorage.removeItem('userRole');
       setUser(null);
       setUserProfile(null);
       setRole(null);
@@ -364,7 +294,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
         
         // Still clear local user state even if network request fails
-        localStorage.removeItem('userRole');
         setUser(null);
         setUserProfile(null);
         setRole(null);
