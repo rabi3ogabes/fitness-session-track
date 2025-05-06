@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -149,13 +148,16 @@ const Classes = () => {
           // Also cache trainers in localStorage for offline use
           try {
             localStorage.setItem("cached_trainers", JSON.stringify(trainerNames));
+            console.log("Cached trainers in localStorage");
           } catch (e) {
             console.warn("Failed to cache trainers in localStorage:", e);
           }
         } else {
           console.log("No trainers found in database, creating test trainers");
           // If no trainers exist, create some test trainers
-          await createTestTrainer();
+          const created = await createTestTrainer();
+          console.log("Test trainers creation result:", created ? "success" : "failed");
+          
           // Then try to fetch them again
           const { data: refreshedData, error: refreshError } = await supabase
             .from('trainers')
@@ -180,6 +182,7 @@ const Classes = () => {
               console.warn("Failed to cache trainers in localStorage:", e);
             }
           } else {
+            console.log("No trainers found after creation attempt, using fallback");
             // Fallback to localStorage if still no trainers
             loadTrainersFromLocalStorage();
           }
@@ -417,6 +420,8 @@ const Classes = () => {
           difficulty: newClass.difficulty
         };
         
+        console.log("Class data to be added:", classToAdd);
+        
         if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
           // Generate recurring classes
           const generatedClasses = generateRecurringClasses(newClass, recurringPattern);
@@ -446,8 +451,11 @@ const Classes = () => {
             .select();
             
           if (error) {
+            console.error("Error inserting recurring classes:", error);
             throw error;
           }
+          
+          console.log("Classes inserted successfully:", data);
           
           if (data) {
             const formattedClasses: ClassModel[] = data.map(cls => ({
@@ -487,6 +495,8 @@ const Classes = () => {
             console.error("Supabase error:", error);
             throw error;
           }
+          
+          console.log("Class inserted successfully:", data);
           
           if (data && data[0]) {
             console.log("Created class:", data[0]);

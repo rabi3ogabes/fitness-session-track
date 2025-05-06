@@ -60,6 +60,16 @@ export const useTrainerCreation = () => {
       return false;
     }
     
+    if (!session) {
+      console.error("No active session found");
+      toast({
+        title: "Session expired",
+        description: "Your session has expired. Please log in again.",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
     return true;
   };
 

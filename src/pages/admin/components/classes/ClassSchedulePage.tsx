@@ -86,6 +86,7 @@ const ClassSchedulePage = () => {
   const [isNetworkConnected, setIsNetworkConnected] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [classToDelete, setClassToDelete] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -169,6 +170,27 @@ const ClassSchedulePage = () => {
           throw error;
         }
         
+        console.log("Trainers fetched from database:", data);
+        
+        // If no trainers found, create some test trainers
+        if (!data || data.length === 0) {
+          console.log("No trainers found, creating test trainers");
+          await createTestTrainers();
+          
+          // Fetch trainers again after creating test trainers
+          const { data: refreshedData, error: refreshError } = await supabase
+            .from("trainers")
+            .select("id, name")
+            .eq("status", "Active");
+            
+          if (refreshError) {
+            console.error("Error fetching trainers after creation:", refreshError);
+            return defaultTrainers;
+          }
+          
+          return refreshedData || defaultTrainers;
+        }
+        
         // Cache successful data for offline use
         if (data && data.length > 0) {
           cacheDataForOffline("trainers", data);
@@ -194,6 +216,56 @@ const ClassSchedulePage = () => {
       loadTrainersFromLocalStorage();
     }
   }, [toast, isNetworkConnected]);
+
+  // Create test trainers function
+  const createTestTrainers = async () => {
+    try {
+      console.log("Creating test trainers...");
+      
+      const testTrainers = [
+        {
+          name: "John Fitness",
+          email: "john@example.com",
+          phone: "123-456-7890",
+          specialization: "Weight Training",
+          status: "Active",
+          gender: "Male"
+        },
+        {
+          name: "Sarah Yoga",
+          email: "sarah@example.com",
+          phone: "987-654-3210",
+          specialization: "Yoga",
+          status: "Active",
+          gender: "Female"
+        },
+        {
+          name: "Mike Running",
+          email: "mike@example.com",
+          phone: "555-123-4567",
+          specialization: "Cardio",
+          status: "Active",
+          gender: "Male"
+        }
+      ];
+      
+      const { data, error } = await supabase
+        .from("trainers")
+        .insert(testTrainers)
+        .select();
+        
+      if (error) {
+        console.error("Error creating test trainers:", error);
+        return false;
+      }
+      
+      console.log("Test trainers created successfully:", data);
+      return true;
+    } catch (err) {
+      console.error("Error in createTestTrainers:", err);
+      return false;
+    }
+  };
 
   const loadTrainersFromLocalStorage = () => {
     try {
@@ -374,6 +446,7 @@ const ClassSchedulePage = () => {
     }
     
     try {
+      setIsSubmitting(true);
       console.log("Form values:", values);
       // Validate times
       if (values.startTime >= values.endTime) {
@@ -382,6 +455,7 @@ const ClassSchedulePage = () => {
           description: "End time must be after start time",
           variant: "destructive",
         });
+        setIsSubmitting(false);
         return;
       }
       
@@ -401,6 +475,7 @@ const ClassSchedulePage = () => {
             description: "Please check your recurring settings",
             variant: "destructive",
           });
+          setIsSubmitting(false);
           return;
         }
         
@@ -413,7 +488,7 @@ const ClassSchedulePage = () => {
           gender: values.gender,
           start_time: values.startTime,
           end_time: values.endTime,
-          schedule: format(date, "MM/dd/yyyy"),
+          schedule: format(date, "yyyy-MM-dd"),
           status: "Active",
           enrolled: 0,
           description: values.description || null,
@@ -421,49 +496,72 @@ const ClassSchedulePage = () => {
           difficulty: values.difficulty || "Beginner",
         }));
         
-        const { error } = await supabase
+        console.log("Creating multiple classes:", classesToCreate);
+        
+        const { data, error } = await supabase
           .from("classes")
-          .insert(classesToCreate);
+          .insert(classesToCreate)
+          .select();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error creating classes:", error);
+          throw error;
+        }
+        
+        console.log("Classes created successfully:", data);
         
         toast({
           title: "Classes created",
           description: `Created ${dates.length} recurring classes`,
         });
+        
+        // Refresh classes
+        fetchClasses();
       } else {
         // Create a single class
-        await requireAuth(async () => {
-          const { error } = await supabase
-            .from("classes")
-            .insert({
-              name: values.name,
-              trainer: values.trainer,
-              trainers: [values.trainer],
-              capacity: values.capacity,
-              gender: values.gender,
-              start_time: values.startTime,
-              end_time: values.endTime,
-              schedule: format(new Date(), "yyyy-MM-dd"),
-              status: "Active",
-              enrolled: 0,
-              description: values.description || null,
-              location: values.location || null,
-              difficulty: values.difficulty || "Beginner",
-            });
-            
-          if (error) throw error;
-        });
+        console.log("Creating a single class with trainer:", values.trainer);
+        
+        const classData = {
+          name: values.name,
+          trainer: values.trainer,
+          trainers: [values.trainer],
+          capacity: values.capacity,
+          gender: values.gender,
+          start_time: values.startTime,
+          end_time: values.endTime,
+          schedule: format(new Date(), "yyyy-MM-dd"),
+          status: "Active",
+          enrolled: 0,
+          description: values.description || null,
+          location: values.location || null,
+          difficulty: values.difficulty || "Beginner",
+        };
+        
+        console.log("Class data to insert:", classData);
+        
+        const { data, error } = await supabase
+          .from("classes")
+          .insert(classData)
+          .select();
+          
+        if (error) {
+          console.error("Error creating class:", error);
+          throw error;
+        }
+        
+        console.log("Class created successfully:", data);
         
         toast({
           title: "Class created",
           description: "New class has been created successfully",
         });
+        
+        // Refresh classes
+        fetchClasses();
       }
       
-      // Refresh classes
-      fetchClasses();
       setIsOpen(false); // Close form early for better UX
+      form.reset(); // Reset form after successful submission
     } catch (error: any) {
       console.error("Error creating class:", error);
       toast({
@@ -471,6 +569,8 @@ const ClassSchedulePage = () => {
         description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -601,7 +701,11 @@ const ClassSchedulePage = () => {
       )}
 
       {/* Class Creation Form Dialog */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!isSubmitting) {
+          setIsOpen(open);
+        }
+      }}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Create New Class</DialogTitle>
@@ -643,14 +747,15 @@ const ClassSchedulePage = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {trainers.length === 0 && (
+                          {trainers.length === 0 ? (
                             <SelectItem value="no-trainers" disabled>No trainers available</SelectItem>
+                          ) : (
+                            trainers.map((trainer) => (
+                              <SelectItem key={trainer.id} value={trainer.name}>
+                                {trainer.name}
+                              </SelectItem>
+                            ))
                           )}
-                          {trainers.map((trainer) => (
-                            <SelectItem key={trainer.id} value={trainer.name}>
-                              {trainer.name}
-                            </SelectItem>
-                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -944,8 +1049,19 @@ const ClassSchedulePage = () => {
               />
               
               <DialogFooter>
-                <Button type="submit" className="bg-gym-blue hover:bg-gym-dark-blue">
-                  Create Class
+                <Button 
+                  type="submit" 
+                  className="bg-gym-blue hover:bg-gym-dark-blue"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Class"
+                  )}
                 </Button>
               </DialogFooter>
             </form>
