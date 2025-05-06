@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -300,45 +299,53 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const result = await Promise.race([
         loginPromise, 
         timeoutPromise
-      ]) as typeof loginPromise;
+      ]);
       
-      const { data, error } = result;
+      // We need to explicitly type check if result is from loginPromise
+      // This is a TypeScript safety check to ensure we're handling the right object
+      if ('error' in result) {
+        // This is the Supabase auth response
+        const { data, error } = result;
 
-      if (error) {
-        console.error("Supabase auth error:", error);
-        
-        // Provide better error messages based on error type
-        let errorMessage = "An unexpected error occurred. Please try again.";
-        
-        if (error.message.includes("Invalid login credentials")) {
-          errorMessage = "The email or password you entered is incorrect.";
-        } else if (error.message.includes("Email not confirmed")) {
-          errorMessage = "Please verify your email before logging in.";
+        if (error) {
+          console.error("Supabase auth error:", error);
+          
+          // Provide better error messages based on error type
+          let errorMessage = "An unexpected error occurred. Please try again.";
+          
+          if (error.message.includes("Invalid login credentials")) {
+            errorMessage = "The email or password you entered is incorrect.";
+          } else if (error.message.includes("Email not confirmed")) {
+            errorMessage = "Please verify your email before logging in.";
+          }
+          
+          toast({
+            title: "Login failed",
+            description: errorMessage,
+            variant: "destructive",
+          });
+          
+          throw new Error(errorMessage);
         }
         
-        toast({
-          title: "Login failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
+        console.log("Login successful for:", email);
         
-        throw new Error(errorMessage);
-      }
-      
-      console.log("Login successful for:", email);
-      
-      // Determine role based on email
-      let userRole = 'user';
-      if (email.includes('admin')) userRole = 'admin';
-      if (email.includes('trainer')) userRole = 'trainer';
-      
-      setRole(userRole);
-      console.log("Role set to:", userRole);
+        // Determine role based on email
+        let userRole = 'user';
+        if (email.includes('admin')) userRole = 'admin';
+        if (email.includes('trainer')) userRole = 'trainer';
+        
+        setRole(userRole);
+        console.log("Role set to:", userRole);
 
-      toast({
-        title: "Login successful",
-        description: "You have been logged in successfully."
-      });
+        toast({
+          title: "Login successful",
+          description: "You have been logged in successfully."
+        });
+      } else {
+        // This would be the timeout error
+        throw new Error("Login timed out. Please try again.");
+      }
     } catch (error: any) {
       console.error("Login error:", error);
       
