@@ -404,8 +404,6 @@ const Classes = () => {
   const handleAddClass = async (newClass: ClassModel, recurringPattern?: RecurringPattern) => {
     try {
       await requireAuth(async () => {
-        console.log("=== Starting class creation process ===");
-        
         const classToAdd = {
           name: newClass.name,
           trainer: newClass.trainer || "", // Allow empty trainer field
@@ -422,13 +420,11 @@ const Classes = () => {
           difficulty: newClass.difficulty
         };
         
-        console.log("Class data to be added:", JSON.stringify(classToAdd));
+        console.log("Class data to be added:", classToAdd);
         
         if (recurringPattern && recurringPattern.daysOfWeek.length > 0) {
           // Generate recurring classes
-          console.log("Creating recurring classes with pattern:", JSON.stringify(recurringPattern));
           const generatedClasses = generateRecurringClasses(newClass, recurringPattern);
-          console.log(`Generated ${generatedClasses.length} recurring classes`);
           
           // Insert all classes
           const classesToInsert = generatedClasses.map(cls => ({
@@ -447,134 +443,95 @@ const Classes = () => {
             difficulty: cls.difficulty
           }));
           
-          console.log("Inserting recurring classes:", JSON.stringify(classesToInsert));
+          console.log("Inserting recurring classes:", classesToInsert);
           
-          try {
-            const { data, error } = await supabase
-              .from('classes')
-              .insert(classesToInsert)
-              .select();
+          const { data, error } = await supabase
+            .from('classes')
+            .insert(classesToInsert)
+            .select();
             
-            console.log("Supabase response received");
-            
-            if (error) {
-              console.error("Error inserting recurring classes:", error);
-              throw error;
-            }
-            
-            console.log("Classes inserted successfully:", data);
-            
-            if (data) {
-              const formattedClasses: ClassModel[] = data.map(cls => ({
-                id: cls.id,
-                name: cls.name,
-                trainer: cls.trainer || "",
-                trainers: cls.trainers || [],
-                schedule: cls.schedule,
-                capacity: cls.capacity,
-                enrolled: cls.enrolled || 0,
-                status: cls.status || "Active",
-                gender: cls.gender || "All",
-                startTime: cls.start_time || "",
-                endTime: cls.end_time || "",
-                description: cls.description,
-                location: cls.location,
-                difficulty: cls.difficulty
-              }));
-              
-              setClasses(prevClasses => [...prevClasses, ...formattedClasses]);
-            }
-            
-            toast({
-              title: "Classes added",
-              description: `${generatedClasses.length} recurring classes have been added successfully.`,
-            });
-          } catch (insertError) {
-            console.error("Error during insert operation:", insertError);
-            throw insertError;
+          if (error) {
+            console.error("Error inserting recurring classes:", error);
+            throw error;
           }
+          
+          console.log("Classes inserted successfully:", data);
+          
+          if (data) {
+            const formattedClasses: ClassModel[] = data.map(cls => ({
+              id: cls.id,
+              name: cls.name,
+              trainer: cls.trainer || "",
+              trainers: cls.trainers || [],
+              schedule: cls.schedule,
+              capacity: cls.capacity,
+              enrolled: cls.enrolled || 0,
+              status: cls.status || "Active",
+              gender: cls.gender || "All",
+              startTime: cls.start_time || "",
+              endTime: cls.end_time || "",
+              description: cls.description,
+              location: cls.location,
+              difficulty: cls.difficulty
+            }));
+            
+            setClasses(prevClasses => [...prevClasses, ...formattedClasses]);
+          }
+          
+          toast({
+            title: "Classes added",
+            description: `${generatedClasses.length} recurring classes have been added successfully.`,
+          });
         } else {
           // Add a single class
-          console.log("Inserting single class:", JSON.stringify(classToAdd));
+          console.log("Inserting single class:", classToAdd);
           
-          try {
-            const { data, error } = await supabase
-              .from('classes')
-              .insert([classToAdd])
-              .select();
+          const { data, error } = await supabase
+            .from('classes')
+            .insert([classToAdd])
+            .select();
             
-            console.log("Supabase response received for single class insert");
-              
-            if (error) {
-              console.error("Supabase error:", error);
-              throw error;
-            }
-            
-            console.log("Class inserted successfully:", data);
-            
-            if (data && data[0]) {
-              console.log("Created class:", data[0]);
-              
-              const formattedClass: ClassModel = {
-                id: data[0].id,
-                name: data[0].name,
-                trainer: data[0].trainer || "",
-                trainers: data[0].trainers || [],
-                schedule: data[0].schedule,
-                capacity: data[0].capacity,
-                enrolled: data[0].enrolled || 0,
-                status: data[0].status || "Active",
-                gender: data[0].gender || "All",
-                startTime: data[0].start_time || "",
-                endTime: data[0].end_time || "",
-                description: data[0].description,
-                location: data[0].location,
-                difficulty: data[0].difficulty
-              };
-              
-              setClasses(prevClasses => [...prevClasses, formattedClass]);
-              
-              toast({
-                title: "Class added",
-                description: "The new class has been successfully added.",
-              });
-              
-              // Refresh class list after adding
-              fetchClasses();
-            } else {
-              console.warn("No data returned after insertion");
-              toast({
-                title: "Class might not be added",
-                description: "No confirmation received from the server. Please check if the class was added.",
-                variant: "destructive",
-              });
-            }
-          } catch (insertError) {
-            console.error("Error during single class insert operation:", insertError);
-            throw insertError;
+          if (error) {
+            console.error("Supabase error:", error);
+            throw error;
           }
+          
+          console.log("Class inserted successfully:", data);
+          
+          if (data && data[0]) {
+            console.log("Created class:", data[0]);
+            
+            const formattedClass: ClassModel = {
+              id: data[0].id,
+              name: data[0].name,
+              trainer: data[0].trainer || "",
+              trainers: data[0].trainers || [],
+              schedule: data[0].schedule,
+              capacity: data[0].capacity,
+              enrolled: data[0].enrolled || 0,
+              status: data[0].status || "Active",
+              gender: data[0].gender || "All",
+              startTime: data[0].start_time || "",
+              endTime: data[0].end_time || "",
+              description: data[0].description,
+              location: data[0].location,
+              difficulty: data[0].difficulty
+            };
+            
+            setClasses(prevClasses => [...prevClasses, formattedClass]);
+          }
+          
+          toast({
+            title: "Class added",
+            description: "The new class has been successfully added.",
+          });
         }
-        
-        console.log("=== Class creation process completed ===");
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error adding class:", err);
-      console.error("Error details:", err.message, err.stack);
-      
-      // More detailed error message
-      let errorMsg = "An unexpected error occurred";
-      if (err.message) {
-        errorMsg = err.message;
-        if (err.message.includes('permission denied')) {
-          errorMsg = "Permission denied. Please check if you have the right access to create classes.";
-        } else if (err.message.includes('violates foreign key constraint')) {
-          errorMsg = "Invalid trainer reference. Please select valid trainers.";
-        }
-      }
-      
       toast({
         title: "Failed to add class",
-        description: errorMsg,
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {

@@ -270,17 +270,13 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
   };
 
   const handleAddClass = async () => {
-    console.log("Submit button clicked. Validating form...");
-    
     if (!validateTimes(formState.startTime, formState.endTime)) {
-      console.error("Time validation failed:", timeError);
       return;
     }
     
     // Remove trainer validation check - trainer field is now optional
     // Keeping other validations
     if (!formState.name) {
-      console.error("Validation failed: Missing class name");
       toast({
         title: "Class name required",
         description: "Please enter a name for the class",
@@ -290,7 +286,6 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     }
     
     if (!selectedDate) {
-      console.error("Validation failed: Missing date");
       toast({
         title: "Date required",
         description: "Please select a date for the class",
@@ -300,7 +295,6 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     }
     
     if (formState.isRecurring && !formState.endDate) {
-      console.error("Validation failed: Missing end date for recurring class");
       toast({
         title: "End date required",
         description: "Please select an end date for recurring classes",
@@ -310,7 +304,6 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     }
     
     if (formState.isRecurring && formState.recurringFrequency === "Weekly" && formState.selectedDays.length === 0) {
-      console.error("Validation failed: No days selected for weekly recurring class");
       toast({
         title: "Days required",
         description: "Please select at least one day of the week",
@@ -318,8 +311,6 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
       });
       return;
     }
-    
-    console.log("Form validation passed. Preparing class data...");
     
     try {
       setIsSubmitting(true);
@@ -342,8 +333,6 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
         description: formState.description
       };
       
-      console.log("Class data prepared:", classToAdd);
-      
       let recurringPattern: RecurringPattern | undefined;
       
       if (formState.isRecurring && formState.endDate) {
@@ -352,17 +341,14 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
           daysOfWeek: formState.selectedDays,
           repeatUntil: format(formState.endDate, "yyyy-MM-dd")
         };
-        console.log("Created recurring pattern:", recurringPattern);
       }
       
-      console.log("Submitting class data to parent component");
       // Submit to parent component
       await onAddClass(classToAdd, recurringPattern);
       
       // Clear form
       setFormState(initialFormState);
       
-      console.log("Class submission completed successfully");
       toast({
         title: "Class created successfully",
         description: formState.isRecurring 
@@ -370,7 +356,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
           : "The class has been added to the schedule",
       });
     } catch (error) {
-      console.error("Error in handleAddClass:", error);
+      console.error("Error adding class:", error);
       toast({
         title: "Error adding class",
         description: "An unexpected error occurred",
@@ -378,8 +364,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
       });
     } finally {
       setIsSubmitting(false);
-      // We'll leave the dialog open/close to be handled by the onAddClass function
-      // to ensure the dialog only closes after successful submission
+      onOpenChange(false);
     }
   };
 
