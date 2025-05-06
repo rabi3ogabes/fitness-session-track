@@ -47,8 +47,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
 
 // Add the requireAuth function that was missing
 // This function wraps database operations to ensure authentication and proper error handling
+// Updated to handle optional fallback data parameter
 export const requireAuth = async <T>(
-  callback: () => Promise<T>
+  callback: () => Promise<T>,
+  fallbackData?: T
 ): Promise<T> => {
   try {
     // Check if we have an active session
@@ -64,6 +66,13 @@ export const requireAuth = async <T>(
     return await callback();
   } catch (error: any) {
     console.error("Error during authenticated operation:", error);
+    
+    // If fallback data is provided, return it in case of error
+    if (fallbackData !== undefined) {
+      console.log("Using fallback data due to error:", error.message);
+      return fallbackData;
+    }
+    
     throw error;
   }
 };
