@@ -126,10 +126,73 @@ export const useTrainerCreation = () => {
     }
   };
 
-  // Create test trainers directly in Supabase
+  // Create test trainers with improved error handling and feedback
   const createTestTrainer = async () => {
-    // This function is no longer used - we now rely on the AuthContext to create demo accounts
-    return true;
+    try {
+      const isAuth = await checkAuthenticationStatus();
+      if (!isAuth) return false;
+      
+      const testTrainers = [
+        {
+          name: "John Fitness",
+          email: "john@example.com",
+          phone: "123-456-7890",
+          specialization: "Weight Training",
+          status: "Active",
+          gender: "Male"
+        },
+        {
+          name: "Sarah Yoga",
+          email: "sarah@example.com",
+          phone: "987-654-3210",
+          specialization: "Yoga",
+          status: "Active",
+          gender: "Female"
+        },
+        {
+          name: "Mike Running",
+          email: "mike@example.com",
+          phone: "555-123-4567",
+          specialization: "Cardio",
+          status: "Active",
+          gender: "Male"
+        }
+      ];
+      
+      console.log("Creating test trainers:", testTrainers);
+      
+      // Insert multiple trainers
+      const { data, error } = await supabase
+        .from("trainers")
+        .insert(testTrainers)
+        .select();
+        
+      if (error) {
+        console.error("Error creating test trainers:", error);
+        toast({
+          title: "Failed to create test trainers",
+          description: error.message,
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      console.log("Test trainers created successfully:", data);
+      toast({
+        title: "Test trainers created",
+        description: `${testTrainers.length} test trainers have been added`,
+      });
+      
+      return true;
+    } catch (error: any) {
+      console.error("Error in createTestTrainer function:", error);
+      toast({
+        title: "Failed to create test trainers",
+        description: error.message || "There was an error creating test trainers",
+        variant: "destructive",
+      });
+      return false;
+    }
   };
 
   return {

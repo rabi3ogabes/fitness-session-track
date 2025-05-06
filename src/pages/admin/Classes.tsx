@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { supabase, requireAuth, isOffline } from "@/integrations/supabase/client
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { useTrainerCreation } from "./components/classes/CreateTrainer";
 
 const Classes = () => {
   const [classes, setClasses] = useState<ClassModel[]>([]);
@@ -26,6 +28,7 @@ const Classes = () => {
   const [isRetrying, setIsRetrying] = useState(false);
   const [isNetworkConnected, setIsNetworkConnected] = useState(true);
   const { toast } = useToast();
+  const { createTestTrainer } = useTrainerCreation();
 
   // Network status event listeners
   useEffect(() => {
@@ -117,7 +120,7 @@ const Classes = () => {
     fetchClasses();
   }, [fetchClasses, retryCount]);
 
-  // Load trainers from database with better error handling
+  // Load trainers from database with improved error handling
   const fetchTrainers = useCallback(async () => {
     try {
       if (!isNetworkConnected) {
@@ -150,9 +153,36 @@ const Classes = () => {
             console.warn("Failed to cache trainers in localStorage:", e);
           }
         } else {
-          // Fallback to localStorage trainers
-          console.log("No trainers found in database, loading from localStorage");
-          loadTrainersFromLocalStorage();
+          console.log("No trainers found in database, creating test trainers");
+          // If no trainers exist, create some test trainers
+          await createTestTrainer();
+          // Then try to fetch them again
+          const { data: refreshedData, error: refreshError } = await supabase
+            .from('trainers')
+            .select('name')
+            .eq('status', 'Active');
+            
+          if (refreshError) {
+            console.error("Error fetching trainers after creation:", refreshError);
+            loadTrainersFromLocalStorage();
+            return;
+          }
+          
+          if (refreshedData && refreshedData.length > 0) {
+            const trainerNames = refreshedData.map(trainer => trainer.name);
+            setTrainersList(trainerNames);
+            console.log("Successfully loaded newly created trainers:", trainerNames);
+            
+            // Cache in localStorage
+            try {
+              localStorage.setItem("cached_trainers", JSON.stringify(trainerNames));
+            } catch (e) {
+              console.warn("Failed to cache trainers in localStorage:", e);
+            }
+          } else {
+            // Fallback to localStorage if still no trainers
+            loadTrainersFromLocalStorage();
+          }
         }
       });
     } catch (err) {
@@ -160,7 +190,7 @@ const Classes = () => {
       // Fallback to localStorage trainers
       loadTrainersFromLocalStorage();
     }
-  }, [isNetworkConnected]);
+  }, [isNetworkConnected, createTestTrainer]);
 
   useEffect(() => {
     fetchTrainers();
