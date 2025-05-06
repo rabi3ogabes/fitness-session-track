@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, AlertCircle, User, Lock } from "lucide-react";
+import { CalendarIcon, AlertCircle, User, Lock, Wifi, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,8 +46,17 @@ const Login = () => {
 
   // Check online status
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => {
+      setIsOnline(true);
+      setError(null); // Clear error when coming back online
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      // Only set offline error if we're not already showing one
+      if (!error) {
+        setError("You appear to be offline. Please check your internet connection.");
+      }
+    };
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -55,7 +65,7 @@ const Login = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [error]);
 
   // Check if user is already logged in and redirect accordingly
   useEffect(() => {
@@ -83,6 +93,9 @@ const Login = () => {
   }, []);
 
   const fillDemoCredentials = (type: 'admin' | 'user' | 'trainer') => {
+    // Reset any previous errors
+    setError(null);
+    
     switch(type) {
       case 'admin':
         setIdentifier('admin@gym.com');
@@ -97,7 +110,6 @@ const Login = () => {
         setPassword('trainer123');
         break;
     }
-    setError(null);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -106,6 +118,11 @@ const Login = () => {
     setError(null);
 
     try {
+      // Check if we're offline
+      if (!navigator.onLine) {
+        throw new Error("You're currently offline. Please check your internet connection and try again.");
+      }
+      
       // Add more debugging
       console.log(`Starting login with: ${identifier}, password length: ${password.length}`);
       
@@ -117,8 +134,22 @@ const Login = () => {
       // Increment login attempts counter
       setLoginAttempts(prev => prev + 1);
       
-      // Use email as identifier for login
-      const emailId = identifier.includes('@') ? identifier : `${identifier}@gym.com`;
+      // Determine if we need to append @gym.com for convenience
+      let emailId = identifier;
+      
+      // If identifier doesn't include @ and is one of our demo account usernames,
+      // automatically append @gym.com for convenience
+      if (!identifier.includes('@') && 
+          (identifier === 'admin' || identifier === 'user' || identifier === 'trainer')) {
+        emailId = `${identifier}@gym.com`;
+        console.log("Auto-appending @gym.com to demo account:", emailId);
+        
+        toast({
+          title: "Using demo account format",
+          description: `Logging in with ${emailId}`,
+        });
+      }
+      
       console.log("Using email for login:", emailId);
       
       await login(emailId, password);
@@ -143,6 +174,7 @@ const Login = () => {
         // Try again with corrected format
         try {
           await login(correctedEmail, password);
+          setIsLoading(false);
           return; // Success case handled by useEffect
         } catch (retryError) {
           // Continue to show error below
@@ -151,10 +183,12 @@ const Login = () => {
       }
       
       // Provide clear error messages based on common issues
-      if (error.message?.includes("Invalid login credentials")) {
-        setError("The email or password you entered is incorrect. Please check your credentials and try again.");
-      } else if (!navigator.onLine) {
+      if (!navigator.onLine) {
         setError("You appear to be offline. Please check your internet connection and try again.");
+      } else if (error.message?.includes("Invalid login credentials")) {
+        setError("The email or password you entered is incorrect. Please check your credentials and try again.");
+      } else if (error.message?.includes("NetworkError") || error.message?.includes("network") || error.message?.includes("fetch") || error.message?.includes("connect")) {
+        setError("Unable to connect to the authentication service. Please check your internet connection.");
       } else {
         setError(error?.message || "Failed to login. Please check your credentials and try again.");
       }
@@ -169,6 +203,11 @@ const Login = () => {
     setError(null);
 
     try {
+      // Check if we're offline
+      if (!navigator.onLine) {
+        throw new Error("You're currently offline. Please check your internet connection and try again.");
+      }
+      
       // Validate phone number format
       if (!/^\d{8}$/.test(phone)) {
         toast({
@@ -266,7 +305,16 @@ const Login = () => {
     } catch (error: any) {
       // Display error message
       console.error("Signup error caught in component:", error);
-      setError(error?.message || "Failed to sign up. Please try again.");
+      
+      if (!navigator.onLine) {
+        setError("You appear to be offline. Please check your internet connection and try again.");
+      } else if (error.message?.includes("already registered")) {
+        setError("This email is already registered. Please try logging in instead.");
+      } else if (error.message?.includes("NetworkError") || error.message?.includes("network") || error.message?.includes("fetch") || error.message?.includes("connect")) {
+        setError("Unable to connect to the authentication service. Please check your internet connection.");
+      } else {
+        setError(error?.message || "Failed to sign up. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -295,7 +343,7 @@ const Login = () => {
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
           <div className="flex">
             <div className="flex-shrink-0">
-              <AlertCircle className="h-5 w-5 text-yellow-400" />
+              <WifiOff className="h-5 w-5 text-yellow-400" />
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
@@ -333,6 +381,18 @@ const Login = () => {
         <div className="text-center">
           <h2 className="mt-6 text-2xl font-bold text-gray-900">Welcome to FitTrack Pro</h2>
           <div className="mt-2 text-sm text-gray-600">
+            <div className="flex items-center justify-center mb-2">
+              <span className="mr-2">Connection status:</span>
+              {isOnline ? (
+                <span className="flex items-center text-green-600">
+                  <Wifi className="h-4 w-4 mr-1" /> Online
+                </span>
+              ) : (
+                <span className="flex items-center text-red-600">
+                  <WifiOff className="h-4 w-4 mr-1" /> Offline
+                </span>
+              )}
+            </div>
             <p className="mb-2">
               Demo accounts: admin@gym.com, user@gym.com, trainer@gym.com (password: admin123, user123, trainer123)
             </p>
@@ -422,7 +482,7 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
-                  disabled={isLoading}
+                  disabled={isLoading || !isOnline}
                 >
                   {isLoading ? "Signing in..." : "Sign in"}
                 </Button>
@@ -434,6 +494,7 @@ const Login = () => {
                       <li>For demo accounts, use full email (e.g., admin@gym.com)</li>
                       <li>Passwords are case sensitive</li>
                       <li>Try one of the demo account buttons above</li>
+                      <li>Check your internet connection</li>
                     </ul>
                   </div>
                 )}
@@ -568,7 +629,7 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
-                  disabled={isLoading}
+                  disabled={isLoading || !isOnline}
                 >
                   {isLoading ? "Creating account..." : "Create account"}
                 </Button>

@@ -3,8 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
+import { useState, useEffect } from "react";
 
 // Pages
 import Index from "./pages/Index";
@@ -32,20 +33,62 @@ import AttendeesPage from "./pages/trainer/AttendeesPage";
 // Context
 import { AuthProvider } from "./context/AuthContext";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 30000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+// LoadingSpinner component for better UX during loading states
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center h-screen">
+    <div className="flex flex-col items-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue mb-4"></div>
+      <p className="text-gray-600">Loading...</p>
+    </div>
+  </div>
+);
 
 // Protected route component to handle redirections based on role
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isTrainer, loading } = useAuth();
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
-    </div>;
+    return <LoadingSpinner />;
+  }
+  
+  // If we're offline, allow access to certain routes for better UX
+  if (!isAuthenticated && !isOnline) {
+    // Store the current location so we can redirect after login
+    const location = useLocation();
+    localStorage.setItem('redirectAfterLogin', location.pathname);
+    return <Navigate to="/login" state={{ from: location, offlineMode: true }} />;
   }
   
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    // Store the current location so we can redirect after login
+    const location = useLocation();
+    localStorage.setItem('redirectAfterLogin', location.pathname);
+    return <Navigate to="/login" state={{ from: location }} />;
   }
   
   return children;
@@ -54,11 +97,30 @@ const ProtectedRoute = ({ children }) => {
 // Admin protected route
 const AdminProtectedRoute = ({ children }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
-    </div>;
+    return <LoadingSpinner />;
+  }
+  
+  // If we're offline and trying to access admin routes with a stored admin role,
+  // allow access for better offline UX
+  const storedRole = localStorage.getItem('userRole');
+  if (!isAuthenticated && !isOnline && storedRole === 'admin') {
+    return children;
   }
   
   if (!isAuthenticated || !isAdmin) {
@@ -73,9 +135,7 @@ const TrainerHomeRedirect = () => {
   const { isAuthenticated, isTrainer, loading } = useAuth();
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
-    </div>;
+    return <LoadingSpinner />;
   }
   
   if (isAuthenticated && isTrainer) {
@@ -88,11 +148,37 @@ const TrainerHomeRedirect = () => {
 // User dashboard component with role-based redirection
 const UserDashboardRedirect = () => {
   const { isAuthenticated, isAdmin, isTrainer, loading } = useAuth();
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
-    </div>;
+    return <LoadingSpinner />;
+  }
+  
+  // If offline, use stored role for routing
+  if (!isAuthenticated && !isOnline) {
+    const storedRole = localStorage.getItem('userRole');
+    if (storedRole === 'admin') {
+      return <Navigate to="/admin" />;
+    } else if (storedRole === 'trainer') {
+      return <Navigate to="/trainer" />;
+    } else if (storedRole === 'user') {
+      return <Dashboard />;
+    } else {
+      return <Navigate to="/login" />;
+    }
   }
   
   if (!isAuthenticated) {
