@@ -18,15 +18,25 @@ const supabaseOptions = {
     headers: {
       'x-application-name': 'gym-management-system'
     },
-    // Fixed the fetch function type issue
+    // Improved fetch function with better error handling
     fetch: (url: RequestInfo | URL, options?: RequestInit) => {
-      // Modified fetch to properly type the response
-      return fetch(url, options)
-        .catch(err => {
-          console.error("Network error when connecting to Supabase:", err);
-          // Create a properly typed Response object to maintain the expected return type
-          throw new Error(`Network error: ${err.message}. Please check your connection and try again.`);
-        });
+      return new Promise((resolve, reject) => {
+        // Add a timeout to prevent hanging fetch requests
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Network request timed out. Please try again later.'));
+        }, 10000); // 10 second timeout
+        
+        fetch(url, options)
+          .then(response => {
+            clearTimeout(timeoutId);
+            resolve(response);
+          })
+          .catch(err => {
+            clearTimeout(timeoutId);
+            console.error("Network error when connecting to Supabase:", err);
+            reject(new Error(`Network error: ${err.message}. Please check your connection and try again.`));
+          });
+      });
     }
   }
 };
@@ -51,7 +61,7 @@ const createDemoClient = () => {
           // Special header that bypasses RLS
           'x-demo-bypass-rls': 'true',
         },
-        // Fixed the fetch function type here too
+        // Use the same improved fetch function here
         fetch: supabaseOptions.global.fetch
       }
     }
@@ -194,14 +204,31 @@ export const checkSupabaseConnection = async (maxRetries = 2, retryDelay = 500) 
     return { connected: false, latency: null, error: new Error("Device is offline") };
   }
   
+  // Try to use demo credentials if available
+  const mockRole = localStorage.getItem('userRole');
+  if (mockRole) {
+    // We're in demo mode, so let's pretend we're connected
+    return { connected: true, latency: 0 };
+  }
+  
   let retries = 0;
   let lastError: Error | null = null;
   
   while (retries <= maxRetries) {
     try {
       const start = Date.now();
+      
       // Make a lightweight query to check connection
-      const { data, error } = await supabase.from('classes').select('id').limit(1).maybeSingle();
+      // Use a timeout to prevent hanging
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error("Connection check timed out")), 5000);
+      });
+      
+      const queryPromise = supabase.from('classes').select('id').limit(1).maybeSingle();
+      
+      // Race the query against the timeout
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+      
       const latency = Date.now() - start;
       
       if (error) {
@@ -247,4 +274,15 @@ export const checkSupabaseConnection = async (maxRetries = 2, retryDelay = 500) 
     latency: null,
     error: lastError || new Error("Unknown connection error")
   };
+};
+
+// Add a function to enable demo mode with mock auth
+export const enableDemoMode = (role: 'user' | 'admin' | 'trainer') => {
+  localStorage.setItem('userRole', role);
+  return true;
+};
+
+// Check if demo mode is enabled
+export const isDemoMode = () => {
+  return !!localStorage.getItem('userRole');
 };

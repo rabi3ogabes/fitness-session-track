@@ -1,8 +1,7 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
+import { supabase, checkSupabaseConnection, isOffline, isDemoMode, enableDemoMode } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AuthTokenResponsePassword } from '@supabase/supabase-js';
+import { AuthTokenResponse } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -202,60 +201,87 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // Then check for an existing session
-    const checkSession = async () => {
-      try {
-        console.log("Checking for existing session...");
-        // Get session from Supabase
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Also check if demo mode is enabled
+    if (isDemoMode()) {
+      const demoRole = localStorage.getItem('userRole') || 'user';
+      setUser({
+        id: 'demo-user-id',
+        email: `${demoRole}@gym.com`,
+        name: `Demo ${demoRole.charAt(0).toUpperCase() + demoRole.slice(1)} User`
+      });
+      setRole(demoRole);
+      
+      // Mock user profile
+      setUserProfile({
+        sessions_remaining: 5,
+        total_sessions: 10
+      });
+      
+      setLoading(false);
+      
+      console.log("Demo mode enabled with role:", demoRole);
+      
+      toast({
+        title: "Demo Mode Active",
+        description: `You are using the app in demo mode as a ${demoRole}`,
+        variant: "default",
+      });
+    } else {
+      // Then check for an existing session
+      const checkSession = async () => {
+        try {
+          console.log("Checking for existing session...");
+          // Get session from Supabase
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          throw sessionError;
+          if (sessionError) {
+            console.error("Session error:", sessionError);
+            throw sessionError;
+          }
+
+          if (session) {
+            console.log("Session found:", session.user.id);
+            // Set user info
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || '',
+            });
+            
+            // In a real implementation, fetch user profile from profiles table
+            // For now, we'll use mock data
+            const mockUserProfile = {
+              sessions_remaining: 7,
+              total_sessions: 12
+            };
+            
+            setUserProfile(mockUserProfile);
+            
+            // Determine role based on email
+            let userRole = 'user';
+            if (session.user.email?.includes('admin')) userRole = 'admin';
+            if (session.user.email?.includes('trainer')) userRole = 'trainer';
+            setRole(userRole);
+            console.log("User role set to:", userRole);
+          } else {
+            console.log("No session found");
+          }
+        } catch (error) {
+          console.error("Error checking session:", error);
+        } finally {
+          setLoading(false);
         }
+      };
 
-        if (session) {
-          console.log("Session found:", session.user.id);
-          // Set user info
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || '',
-          });
-          
-          // In a real implementation, fetch user profile from profiles table
-          // For now, we'll use mock data
-          const mockUserProfile = {
-            sessions_remaining: 7,
-            total_sessions: 12
-          };
-          
-          setUserProfile(mockUserProfile);
-          
-          // Determine role based on email
-          let userRole = 'user';
-          if (session.user.email?.includes('admin')) userRole = 'admin';
-          if (session.user.email?.includes('trainer')) userRole = 'trainer';
-          setRole(userRole);
-          console.log("User role set to:", userRole);
-        } else {
-          console.log("No session found");
-        }
-      } catch (error) {
-        console.error("Error checking session:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkSession();
-    
-    // Try to create demo users if they don't exist
-    createDemoUsers().catch(err => {
-      console.error("Error creating demo users:", err);
-      // Don't fail the app if demo users can't be created
-      // This allows login to still work with existing accounts
-    });
+      checkSession();
+      
+      // Try to create demo users if they don't exist
+      createDemoUsers().catch(err => {
+        console.error("Error creating demo users:", err);
+        // Don't fail the app if demo users can't be created
+        // This allows login to still work with existing accounts
+      });
+    }
 
     return () => {
       subscription?.unsubscribe();
@@ -275,6 +301,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Invalid email format");
       }
       
+      // Check for demo login pattern first
+      const isDemoLogin = email.includes('@gym.com') && 
+        (password === 'admin123' || password === 'user123' || password === 'trainer123');
+      
+      // If using demo credentials, enable demo mode
+      if (isDemoLogin) {
+        let role: 'admin' | 'user' | 'trainer' = 'user';
+        
+        if (email.includes('admin')) {
+          role = 'admin';
+        } else if (email.includes('trainer')) {
+          role = 'trainer';
+        }
+        
+        console.log("Using demo mode with role:", role);
+        
+        // Enable demo mode
+        enableDemoMode(role);
+        
+        // Set role and user immediately for faster UX
+        setRole(role);
+        setUser({
+          id: 'demo-user-id',
+          email: email,
+          name: `Demo ${role.charAt(0).toUpperCase() + role.slice(1)} User`
+        });
+        
+        toast({
+          title: "Demo Mode Activated",
+          description: `You are now using the app as a ${role}`,
+        });
+        
+        return;
+      }
+      
       // First check if there's an actual network connection to Supabase
       try {
         const connectionCheck = await checkSupabaseConnection();
@@ -292,7 +353,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // For non-demo accounts, use Supabase auth with timeout
-      let loginPromise = supabase.auth.signInWithPassword({
+      const loginPromise = supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -303,52 +364,65 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       // Race the login promise against the timeout
-      let result: AuthTokenResponsePassword;
-      
       try {
-        result = await Promise.race([loginPromise, timeoutPromise]) as AuthTokenResponsePassword;
-      } catch (error: any) {
-        console.error("Login race error:", error);
-        // Handle timeout or other race errors
-        throw new Error(error?.message || "Login attempt failed due to network issues. Please try again.");
-      }
-      
-      // Handle Supabase auth response
-      if (result.error) {
-        console.error("Supabase auth error:", result.error);
+        const result = await Promise.race([loginPromise, timeoutPromise]) as AuthTokenResponse;
         
-        // Provide better error messages based on error type
-        let errorMessage = "An unexpected error occurred. Please try again.";
-        
-        if (result.error.message && result.error.message.includes("Invalid login credentials")) {
-          errorMessage = "The email or password you entered is incorrect.";
-        } else if (result.error.message && result.error.message.includes("Email not confirmed")) {
-          errorMessage = "Please verify your email before logging in.";
+        if (result.error) {
+          console.error("Supabase auth error:", result.error);
+          
+          // Provide better error messages based on error type
+          let errorMessage = "An unexpected error occurred. Please try again.";
+          
+          if (result.error.message) {
+            if (result.error.message.includes("Invalid login credentials")) {
+              errorMessage = "The email or password you entered is incorrect.";
+            } else if (result.error.message.includes("Email not confirmed")) {
+              errorMessage = "Please verify your email before logging in.";
+            } else {
+              errorMessage = result.error.message;
+            }
+          }
+          
+          toast({
+            title: "Login failed",
+            description: errorMessage,
+            variant: "destructive",
+          });
+          
+          throw new Error(errorMessage);
         }
         
-        toast({
-          title: "Login failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
+        console.log("Login successful for:", email);
         
-        throw new Error(errorMessage);
-      }
-      
-      console.log("Login successful for:", email);
-      
-      // Determine role based on email
-      let userRole = 'user';
-      if (email.includes('admin')) userRole = 'admin';
-      if (email.includes('trainer')) userRole = 'trainer';
-      
-      setRole(userRole);
-      console.log("Role set to:", userRole);
+        // Determine role based on email
+        let userRole = 'user';
+        if (email.includes('admin')) userRole = 'admin';
+        if (email.includes('trainer')) userRole = 'trainer';
+        
+        setRole(userRole);
+        console.log("Role set to:", userRole);
 
-      toast({
-        title: "Login successful",
-        description: "You have been logged in successfully."
-      });
+        toast({
+          title: "Login successful",
+          description: "You have been logged in successfully."
+        });
+      } catch (error: any) {
+        console.error("Login race error:", error);
+        
+        // Check if it's our timeout error
+        if (error.message?.includes("timed out")) {
+          toast({
+            title: "Login timed out",
+            description: "The server is taking too long to respond. You can try using demo mode instead.",
+            variant: "destructive",
+          });
+          
+          throw new Error("Login attempt failed due to timeout. The server might be temporarily unavailable.");
+        }
+        
+        // Rethrow other errors
+        throw error;
+      }
       
     } catch (error: any) {
       console.error("Login error:", error);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -13,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, AlertCircle, User, Lock, Wifi, WifiOff, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { supabase, checkSupabaseConnection } from "@/integrations/supabase/client";
+import { supabase, checkSupabaseConnection, isDemoMode, enableDemoMode } from "@/integrations/supabase/client";
 
 const Login = () => {
   // Login state
@@ -144,30 +143,40 @@ const Login = () => {
       if (!isOnline) {
         throw new Error("You appear to be offline. Please check your internet connection.");
       }
+
+      // Check if we're using a demo shorthand pattern (just admin, user, or trainer without @gym.com)
+      const emailId = identifier.includes('@') ? identifier : `${identifier}@gym.com`;
       
-      // Quick connection check before attempting login
-      if (!supabaseConnected) {
-        const connection = await checkSupabaseConnection();
-        if (!connection.connected) {
-          throw new Error("Cannot connect to authentication server. Please try again later.");
-        }
-        // Update state since we can connect now
-        setSupabaseConnected(true);
+      // Special case for demo accounts for better UX
+      if ((emailId === 'admin@gym.com' && password === 'admin123') || 
+          (emailId === 'user@gym.com' && password === 'user123') || 
+          (emailId === 'trainer@gym.com' && password === 'trainer123')) {
+        
+        // Enable demo mode directly
+        const role = emailId.split('@')[0] as 'admin' | 'user' | 'trainer';
+        enableDemoMode(role);
+        
+        // Show success message
+        toast({
+          title: "Demo mode activated",
+          description: `You are now using the app in demo mode as ${role}`,
+        });
+        
+        // Login will be handled by the useEffect that watches isAuthenticated
+        return;
       }
       
-      // Add more debugging
-      console.log(`Starting login with: ${identifier}, password length: ${password.length}`);
+      // Regular login flow
+      console.log(`Starting login with: ${emailId}, password length: ${password.length}`);
       
       // Check for proper email format if it looks like an email
-      if (identifier.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+      if (emailId.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailId)) {
         throw new Error("Please enter a valid email address");
       }
       
       // Increment login attempts counter
       setLoginAttempts(prev => prev + 1);
       
-      // Use email as identifier for login
-      const emailId = identifier.includes('@') ? identifier : `${identifier}@gym.com`;
       console.log("Using email for login:", emailId);
       
       await login(emailId, password);
