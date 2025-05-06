@@ -33,7 +33,6 @@ const Login = () => {
   const [logo, setLogo] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("login");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [showDemoHelp, setShowDemoHelp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loginAttempts, setLoginAttempts] = useState(0);
   
@@ -99,7 +98,6 @@ const Login = () => {
         break;
     }
     setError(null);
-    setShowDemoHelp(false);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -302,8 +300,6 @@ const Login = () => {
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
                 You appear to be offline. Please check your internet connection.
-                <br />
-                <span className="font-medium">Note:</span> Demo accounts will still work in offline mode.
               </p>
             </div>
           </div>
@@ -366,22 +362,7 @@ const Login = () => {
           </div>
         </div>
         
-        {!isOnline && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <AlertCircle className="h-5 w-5 text-yellow-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-yellow-700">
-                  You appear to be offline. Please check your internet connection.
-                  <br />
-                  <span className="font-medium">Note:</span> Demo accounts will still work in offline mode.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        {!isOnline && <OfflineWarning />}
 
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -570,9 +551,6 @@ const Login = () => {
                     onChange={(e) => setSignupPassword(e.target.value)}
                     required
                   />
-                  <p className="text-xs text-gray-500">
-                    By default, your phone number will be your password
-                  </p>
                 </div>
                 
                 <div className="space-y-2">

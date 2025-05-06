@@ -50,6 +50,120 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // For roles
   const [role, setRole] = useState<string | null>(null);
 
+  // Create demo users in Supabase if they don't exist
+  const createDemoUsers = async () => {
+    console.log("Checking if demo users need to be created...");
+    
+    const demoUsers = [
+      { email: 'admin@gym.com', password: 'admin123', role: 'admin', name: 'Admin User' },
+      { email: 'user@gym.com', password: 'user123', role: 'user', name: 'Regular User' },
+      { email: 'trainer@gym.com', password: 'trainer123', role: 'trainer', name: 'Trainer User' }
+    ];
+    
+    for (const demoUser of demoUsers) {
+      try {
+        // Check if user exists
+        const { data: existingUsers, error: checkError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', demoUser.email)
+          .limit(1);
+          
+        if (checkError) {
+          console.error(`Error checking if user ${demoUser.email} exists:`, checkError);
+          continue;
+        }
+        
+        // If user doesn't exist, create them
+        if (!existingUsers || existingUsers.length === 0) {
+          console.log(`Creating demo user: ${demoUser.email}`);
+          
+          // Sign up the user
+          const { data: authData, error: signupError } = await supabase.auth.signUp({
+            email: demoUser.email,
+            password: demoUser.password,
+            options: {
+              data: {
+                name: demoUser.name,
+                role: demoUser.role
+              }
+            }
+          });
+          
+          if (signupError) {
+            console.error(`Error creating auth user ${demoUser.email}:`, signupError);
+            continue;
+          }
+          
+          if (authData.user) {
+            console.log(`Successfully created auth user: ${demoUser.email} with ID: ${authData.user.id}`);
+            
+            // Create profile entry
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .insert([{
+                id: authData.user.id,
+                email: demoUser.email,
+                name: demoUser.name,
+                phone_number: '12345678'
+              }]);
+              
+            if (profileError) {
+              console.error(`Error creating profile for ${demoUser.email}:`, profileError);
+            } else {
+              console.log(`Successfully created profile for: ${demoUser.email}`);
+            }
+            
+            // Create entry in members table for admin view
+            if (demoUser.role === 'user') {
+              const { error: memberError } = await supabase
+                .from('members')
+                .insert([{
+                  name: demoUser.name,
+                  email: demoUser.email,
+                  phone: '12345678',
+                  membership: 'Basic',
+                  sessions: 4,
+                  remaining_sessions: 4,
+                  status: 'Active'
+                }]);
+                
+              if (memberError) {
+                console.error(`Error adding to members table for ${demoUser.email}:`, memberError);
+              } else {
+                console.log(`Successfully added to members table: ${demoUser.email}`);
+              }
+            }
+            
+            // Create entry in trainers table if trainer role
+            if (demoUser.role === 'trainer') {
+              const { error: trainerError } = await supabase
+                .from('trainers')
+                .insert([{
+                  name: demoUser.name,
+                  email: demoUser.email,
+                  phone: '12345678',
+                  specialization: 'General Fitness',
+                  status: 'Active',
+                  gender: 'Male'
+                }]);
+                
+              if (trainerError) {
+                console.error(`Error adding to trainers table for ${demoUser.email}:`, trainerError);
+              } else {
+                console.log(`Successfully added to trainers table: ${demoUser.email}`);
+              }
+            }
+          }
+        } else {
+          console.log(`Demo user ${demoUser.email} already exists, skipping creation`);
+        }
+      } catch (err) {
+        console.error(`Unexpected error creating demo user ${demoUser.email}:`, err);
+      }
+    }
+  };
+
   useEffect(() => {
     // Set up auth state change listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -134,6 +248,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     checkSession();
+    
+    // Try to create demo users if they don't exist
+    createDemoUsers();
 
     return () => {
       subscription?.unsubscribe();

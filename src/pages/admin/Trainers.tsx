@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -44,28 +43,12 @@ const Trainers = () => {
         throw error;
       }
 
-      if (data && data.length > 0) {
+      if (data) {
         console.log(`Fetched ${data.length} trainers from Supabase:`, data);
         setTrainers(data);
       } else {
-        // No trainers in database, create test ones
-        console.log("No trainers found in database, creating test trainers");
-        const success = await createTestTrainer();
-        
-        if (success) {
-          // Fetch again after creating test trainers
-          const { data: newData, error: newError } = await supabase
-            .from("trainers")
-            .select("*")
-            .order("name");
-            
-          if (newError) {
-            console.error("Error fetching trainers after creation:", newError);
-          } else if (newData) {
-            console.log("Successfully created and fetched test trainers:", newData);
-            setTrainers(newData);
-          }
-        }
+        console.log("No trainers found in database");
+        setTrainers([]);
       }
     } catch (error: any) {
       console.error("Error fetching trainers:", error);
@@ -126,26 +109,6 @@ const Trainers = () => {
       
       if (result.success) {
         console.log("Trainer creation reported success");
-        
-        if (result.data && result.data.length > 0) {
-          console.log("Trainer created successfully with data:", result.data[0]);
-          
-          // Create a properly typed trainer object from the result
-          const newTrainer: Trainer = {
-            id: result.data[0].id,
-            name: result.data[0].name,
-            email: result.data[0].email,
-            phone: result.data[0].phone || undefined,
-            specialization: result.data[0].specialization || undefined,
-            status: result.data[0].status,
-            gender: result.data[0].gender || undefined,
-            created_at: result.data[0].created_at
-          };
-          
-          // Update state with the new trainer
-          setTrainers(prevTrainers => [...prevTrainers, newTrainer]);
-        }
-        
         setIsAddDialogOpen(false);
         
         toast({
@@ -154,10 +117,7 @@ const Trainers = () => {
         });
         
         // Refresh trainers list to ensure we have the latest data
-        // Short timeout to allow the database operation to complete
-        setTimeout(() => {
-          fetchTrainers();
-        }, 500);
+        fetchTrainers();
       } else {
         // Handle the case where success is false
         console.error("Failed to create trainer:", result.error);

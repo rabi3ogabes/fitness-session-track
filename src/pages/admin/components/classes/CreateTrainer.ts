@@ -128,73 +128,8 @@ export const useTrainerCreation = () => {
 
   // Create test trainers directly in Supabase
   const createTestTrainer = async () => {
-    try {
-      // Verify authentication
-      const isAuth = await checkAuthenticationStatus();
-      if (!isAuth) return false;
-      
-      console.log("Authentication confirmed, proceeding with test trainer check/creation");
-      
-      // Check if we already have trainers
-      const { data: existingTrainers, error: checkError } = await supabase
-        .from("trainers")
-        .select("id")
-        .limit(1);
-        
-      if (checkError) {
-        console.error("Error checking trainers:", checkError);
-        return false;
-      }
-      
-      // If we already have trainers, no need to create test ones
-      if (existingTrainers && existingTrainers.length > 0) {
-        console.log("Trainers already exist, not creating test trainer");
-        return true;
-      }
-      
-      console.log("No trainers found, creating test trainers");
-      
-      // Create multiple test trainers
-      const testTrainers = [
-        {
-          name: "John Doe",
-          email: "john.doe@example.com",
-          status: "Active",
-          gender: "Male",
-          specialization: "General Fitness"
-        },
-        {
-          name: "Jane Smith",
-          email: "jane.smith@example.com",
-          status: "Active",
-          gender: "Female",
-          specialization: "Yoga"
-        },
-        {
-          name: "Mike Johnson",
-          email: "mike.johnson@example.com",
-          status: "Active",
-          gender: "Male",
-          specialization: "CrossFit"
-        }
-      ];
-      
-      // Insert all test trainers
-      const { error: insertError } = await supabase
-        .from("trainers")
-        .insert(testTrainers);
-        
-      if (insertError) {
-        console.error("Error creating test trainers:", insertError);
-        return false;
-      }
-      
-      console.log("Test trainers created successfully");
-      return true;
-    } catch (error) {
-      console.error("Unexpected error creating test trainers:", error);
-      return false;
-    }
+    // This function is no longer used - we now rely on the AuthContext to create demo accounts
+    return true;
   };
 
   return {
