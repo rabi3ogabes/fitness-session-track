@@ -274,15 +274,8 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
       return;
     }
     
-    if (formState.trainers.length === 0) {
-      toast({
-        title: "Trainer required",
-        description: "Please select at least one trainer for the class",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+    // Remove trainer validation check - trainer field is now optional
+    // Keeping other validations
     if (!formState.name) {
       toast({
         title: "Class name required",
@@ -326,7 +319,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
       const classToAdd: ClassModel = {
         id: 0, // This will be assigned by the database
         name: formState.name,
-        trainer: formState.trainers[0] || "",
+        trainer: formState.trainers[0] || "", // Might be empty now
         trainers: formState.trainers,
         schedule: formState.schedule,
         capacity: formState.capacity,
@@ -492,7 +485,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                 </div>
                 
                 <div className="grid grid-cols-4 items-start gap-4">
-                  <Label className="text-right pt-2">Trainers*</Label>
+                  <Label className="text-right pt-2">Trainers</Label>
                   <div className="col-span-3 grid grid-cols-2 gap-2">
                     {trainers && trainers.length > 0 ? (
                       trainers.map((trainer) => (
@@ -716,7 +709,6 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
             disabled={
               isSubmitting ||
               !formState.name || 
-              formState.trainers.length === 0 || 
               !selectedDate || 
               !formState.startTime ||
               !formState.endTime ||

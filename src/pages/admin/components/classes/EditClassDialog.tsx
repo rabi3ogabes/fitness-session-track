@@ -238,8 +238,8 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
     const updatedClass = {
       ...editClass,
       trainers: selectedTrainers,
-      // For backward compatibility, keep the first trainer in the trainer field
-      trainer: mainTrainer || selectedTrainers[0] || editClass.trainer
+      // For backward compatibility, set trainer to mainTrainer if available or first selected trainer or empty string
+      trainer: mainTrainer || (selectedTrainers.length > 0 ? selectedTrainers[0] : "")
     };
     
     onUpdateClass(updatedClass);
@@ -271,9 +271,9 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
               />
             </div>
             
-            {/* Main Trainer Selection */}
+            {/* Main Trainer Selection - Change label to not have asterisk */}
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="main-trainer" className="text-right">Main Trainer*</Label>
+              <Label htmlFor="main-trainer" className="text-right">Main Trainer</Label>
               <div className="col-span-3">
                 <Select
                   value={mainTrainer}
@@ -392,8 +392,7 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
             className="bg-gym-blue hover:bg-gym-dark-blue"
             disabled={
               !editClass.name || 
-              !mainTrainer ||
-              selectedTrainers.length === 0 || 
+              // Removed requirement for mainTrainer and selectedTrainers
               editClass.capacity <= 0 ||
               !editClass.startTime ||
               !editClass.endTime ||

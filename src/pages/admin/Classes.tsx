@@ -373,7 +373,7 @@ const Classes = () => {
       await requireAuth(async () => {
         const classToAdd = {
           name: newClass.name,
-          trainer: newClass.trainer,
+          trainer: newClass.trainer || "", // Allow empty trainer field
           trainers: newClass.trainers || [],
           schedule: newClass.schedule,
           capacity: parseInt(newClass.capacity?.toString() || "0"),
@@ -510,8 +510,8 @@ const Classes = () => {
         // Prepare data for Supabase (column names differ)
         const classData = {
           name: updatedClass.name,
-          trainer: updatedClass.trainer,
-          trainers: updatedClass.trainers,
+          trainer: updatedClass.trainer || "", // Allow empty trainer field
+          trainers: updatedClass.trainers || [],
           schedule: updatedClass.schedule,
           capacity: updatedClass.capacity,
           enrolled: updatedClass.enrolled,
