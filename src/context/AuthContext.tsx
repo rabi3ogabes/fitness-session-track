@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, getConnectionStatus } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -52,12 +52,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Check if we're offline
   const [isOffline, setIsOffline] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<{
+    deviceOnline: boolean;
+    supabaseConnected: boolean;
+    message?: string;
+  }>({
+    deviceOnline: navigator.onLine,
+    supabaseConnected: false
+  });
+
+  // Periodically check connection status to Supabase
+  useEffect(() => {
+    const checkConnection = async () => {
+      const status = await getConnectionStatus();
+      setConnectionStatus(status);
+      setIsOffline(!status.deviceOnline || !status.supabaseConnected);
+    };
+
+    // Initial check
+    checkConnection();
+
+    // Set up periodic checks
+    const intervalId = setInterval(checkConnection, 30000); // Check every 30 seconds
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
 
   // Create demo users in Supabase if they don't exist
   const createDemoUsers = async () => {
     // Don't try to create users if we're offline
-    if (!navigator.onLine) {
-      console.log("Device is offline. Skipping demo user creation.");
+    if (!connectionStatus.deviceOnline || !connectionStatus.supabaseConnected) {
+      console.log("Cannot reach Supabase. Skipping demo user creation.");
       return;
     }
 
@@ -175,13 +202,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Set up online/offline listeners
   useEffect(() => {
-    const handleOnline = () => {
+    const handleOnline = async () => {
       console.log("Device is online");
-      setIsOffline(false);
+      const status = await getConnectionStatus();
+      setConnectionStatus(status);
+      setIsOffline(!status.supabaseConnected);
     };
     
     const handleOffline = () => {
       console.log("Device is offline");
+      setConnectionStatus({
+        deviceOnline: false,
+        supabaseConnected: false,
+        message: "Your device appears to be offline."
+      });
       setIsOffline(true);
     };
     
@@ -189,7 +223,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     window.addEventListener('offline', handleOffline);
     
     // Set initial state
-    setIsOffline(!navigator.onLine);
+    handleOnline();
     
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -284,7 +318,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkSession();
     
     // Try to create demo users if they don't exist
-    if (navigator.onLine) {
+    if (connectionStatus.deviceOnline && connectionStatus.supabaseConnected) {
       createDemoUsers();
     }
 
@@ -297,9 +331,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log("Login attempt for:", email);
       
-      // Check if we're offline
-      if (!navigator.onLine) {
+      // Check connection to Supabase before attempting login
+      const status = await getConnectionStatus();
+      setConnectionStatus(status);
+      
+      if (!status.deviceOnline) {
         throw new Error("You're currently offline. Please check your internet connection and try again.");
+      }
+      
+      if (!status.supabaseConnected) {
+        throw new Error(status.message || "Unable to connect to the authentication service. The server might be down or unreachable.");
       }
       
       if (!email || !password) {
@@ -357,13 +398,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Login error:", error);
       
+      // Re-check connection status after failure
+      const status = await getConnectionStatus();
+      setConnectionStatus(status);
+      
       // Improved error handling
       let errorMessage = "Login failed. Please check your credentials and try again.";
       
       if (error.message?.includes("Invalid login credentials")) {
         errorMessage = "The email or password you entered is incorrect.";
-      } else if (!navigator.onLine || error.message?.includes("offline")) {
+      } else if (!status.deviceOnline) {
         errorMessage = "You're currently offline. Please check your internet connection and try again.";
+      } else if (!status.supabaseConnected) {
+        errorMessage = status.message || "Unable to connect to the authentication service. The server might be down or unreachable.";
       } else if (error.message?.includes("NetworkError") || error.message?.includes("network") || error.message?.includes("fetch")) {
         errorMessage = "Unable to connect to the authentication service. Please check your internet connection.";
       } else {
