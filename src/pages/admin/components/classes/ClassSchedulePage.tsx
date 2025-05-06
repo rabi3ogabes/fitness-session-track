@@ -562,7 +562,7 @@ const ClassSchedulePage = () => {
       </div>
 
       {error && (
-        <Alert variant={!isNetworkConnected ? "warning" : "destructive"} className="mb-4">
+        <Alert variant={!isNetworkConnected ? "default" : "destructive"} className="mb-4">
           {!isNetworkConnected ? (
             <WifiOff className="h-4 w-4" />
           ) : (
@@ -591,7 +591,7 @@ const ClassSchedulePage = () => {
 
       {/* Show an offline banner if we're offline but there's no other error */}
       {!isNetworkConnected && !error && (
-        <Alert variant="warning" className="mb-4">
+        <Alert variant="default" className="mb-4 bg-yellow-50 border-yellow-200">
           <WifiOff className="h-4 w-4" />
           <AlertTitle>You're offline</AlertTitle>
           <AlertDescription>
