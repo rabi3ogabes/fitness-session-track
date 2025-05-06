@@ -3,8 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { format, isToday } from "date-fns";
-import { Users } from "lucide-react";
+import { Users, AlertCircle, RefreshCw } from "lucide-react";
 import { getBookingsForClass } from "../../mockData";
+import { useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 interface UpcomingClass {
   id: number;
@@ -34,6 +37,9 @@ export const UpcomingClassesList = ({
   selectedDateForAttendees,
   onClassSelect
 }: UpcomingClassesListProps) => {
+  const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+
   // Function to determine if a date is today
   const isDateToday = (date: Date) => {
     return isToday(date);
@@ -50,12 +56,54 @@ export const UpcomingClassesList = ({
   
   // Get actual enrollment numbers for a class
   const getActualEnrollment = (classId: number) => {
-    const bookings = getBookingsForClass(classId);
-    return bookings.length;
+    try {
+      const bookings = getBookingsForClass(classId);
+      return bookings.length;
+    } catch (err) {
+      console.error("Error fetching bookings for class", classId, err);
+      setError("Failed to load some class enrollment data.");
+      return 0;
+    }
   };
+
+  const handleRetry = () => {
+    setRetrying(true);
+    setError(null);
+    setTimeout(() => {
+      setRetrying(false);
+    }, 1000);
+  };
+  
+  if (upcomingClasses.length === 0) {
+    return (
+      <div className="text-center py-8 border rounded-md">
+        <p className="text-gray-500">No upcoming classes scheduled</p>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription className="flex justify-between items-center">
+            <span>{error}</span>
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              className="ml-4"
+              disabled={retrying}
+            >
+              <RefreshCw className={cn("h-3 w-3 mr-1", retrying && "animate-spin")} />
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+    
       {upcomingClasses.map((dayClasses) => (
         <div key={format(dayClasses.date, 'yyyy-MM-dd')} className="space-y-3">
           <h4 className={cn(
@@ -127,12 +175,6 @@ export const UpcomingClassesList = ({
           </div>
         </div>
       ))}
-      
-      {upcomingClasses.length === 0 && (
-        <div className="text-center py-8 border rounded-md">
-          <p className="text-gray-500">No upcoming classes scheduled</p>
-        </div>
-      )}
     </div>
   );
 };

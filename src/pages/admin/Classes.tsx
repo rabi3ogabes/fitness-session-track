@@ -1,15 +1,17 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Clock } from "lucide-react";
+import { Plus, Pencil, Clock, AlertCircle, RefreshCw } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, parse, isBefore } from "date-fns";
 import AddClassDialog from "./components/classes/AddClassDialog";
 import EditClassDialog from "./components/classes/EditClassDialog";
 import { ClassModel, RecurringPattern } from "./components/classes/ClassTypes";
 import { supabase, requireAuth } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Classes = () => {
   const [classes, setClasses] = useState<ClassModel[]>([]);
@@ -19,15 +21,18 @@ const Classes = () => {
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [trainersList, setTrainersList] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
 
   // Fetch classes from Supabase
   useEffect(() => {
     fetchClasses();
-  }, [toast]);
+  }, [retryCount, toast]);
 
   const fetchClasses = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       await requireAuth(async () => {
         const { data, error } = await supabase
@@ -58,15 +63,12 @@ const Classes = () => {
           }));
           
           setClasses(formattedClasses);
+          console.log("Successfully loaded", formattedClasses.length, "classes from database");
         }
       });
     } catch (err) {
       console.error("Error fetching classes:", err);
-      toast({
-        title: "Failed to load classes",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
+      setError("Failed to load classes from database. Please check your connection and try again.");
       // Fallback to empty array if database call fails
       setClasses([]);
     } finally {
@@ -91,8 +93,10 @@ const Classes = () => {
           if (data && data.length > 0) {
             const trainerNames = data.map(trainer => trainer.name);
             setTrainersList(trainerNames);
+            console.log("Successfully loaded trainers from database:", trainerNames);
           } else {
             // Fallback to localStorage trainers
+            console.log("No trainers found in database, loading from localStorage");
             loadTrainersFromLocalStorage();
           }
         });
@@ -119,7 +123,7 @@ const Classes = () => {
           }
         }
         // Use fallback trainers if nothing else works
-        setTrainersList([
+        const fallbackTrainers = [
           "Jane Smith",
           "Mike Johnson",
           "Sarah Davis",
@@ -127,7 +131,9 @@ const Classes = () => {
           "Robert Brown",
           "David Miller",
           "Lisa Garcia",
-        ]);
+        ];
+        console.log("Using fallback trainer names:", fallbackTrainers);
+        setTrainersList(fallbackTrainers);
       } catch (error) {
         console.error("Error loading trainers from localStorage:", error);
         // Keep the fallback trainers if there's an error
@@ -145,6 +151,10 @@ const Classes = () => {
 
     fetchTrainers();
   }, []);
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+  };
 
   const filteredClasses = classes.filter(
     (cls) =>
@@ -313,6 +323,8 @@ const Classes = () => {
             difficulty: cls.difficulty
           }));
           
+          console.log("Inserting recurring classes:", classesToInsert);
+          
           const { data, error } = await supabase
             .from('classes')
             .insert(classesToInsert)
@@ -349,16 +361,21 @@ const Classes = () => {
           });
         } else {
           // Add a single class
+          console.log("Inserting single class:", classToAdd);
+          
           const { data, error } = await supabase
             .from('classes')
             .insert([classToAdd])
             .select();
             
           if (error) {
+            console.error("Supabase error:", error);
             throw error;
           }
           
           if (data && data[0]) {
+            console.log("Created class:", data[0]);
+            
             const formattedClass: ClassModel = {
               id: data[0].id,
               name: data[0].name,
@@ -422,12 +439,15 @@ const Classes = () => {
           difficulty: updatedClass.difficulty
         };
         
+        console.log("Updating class:", classData);
+        
         const { error } = await supabase
           .from('classes')
           .update(classData)
           .eq('id', updatedClass.id);
           
         if (error) {
+          console.error("Supabase update error:", error);
           throw error;
         }
         
@@ -493,47 +513,76 @@ const Classes = () => {
         existingClasses={classes}
       />
 
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription className="flex justify-between items-center">
+            <span>{error}</span>
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              className="ml-4"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <ScrollArea className="h-[calc(100vh-250px)]">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Class Name
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Trainer(s)
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                    Schedule
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                    Time
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                    Capacity
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                    Gender
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {isLoading ? (
+          {isLoading ? (
+            <div className="flex justify-center items-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gym-blue"></div>
+              <span className="ml-2 text-gray-500">Loading classes...</span>
+            </div>
+          ) : classes.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-gray-500 mb-4">No classes found. Create your first class to get started.</p>
+              <Button 
+                onClick={() => setIsAddDialogOpen(true)}
+                className="bg-gym-blue hover:bg-gym-dark-blue"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create New Class
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
                   <tr>
-                    <td colSpan={8} className="px-3 py-4 text-center text-gray-500">
-                      Loading classes...
-                    </td>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Class Name
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Trainer(s)
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                      Schedule
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                      Time
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                      Capacity
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                      Gender
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ) : filteredClasses.length > 0 ? (
-                  filteredClasses.map((cls) => (
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredClasses.map((cls) => (
                     <tr key={cls.id} className="hover:bg-gray-50">
                       <td className="px-3 py-4 whitespace-nowrap">
                         <div className="font-medium text-gray-900">{cls.name}</div>
@@ -604,17 +653,11 @@ const Classes = () => {
                         </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={8} className="px-3 py-4 text-center text-gray-500">
-                      No classes found matching your search criteria.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </ScrollArea>
       </div>
     </DashboardLayout>
