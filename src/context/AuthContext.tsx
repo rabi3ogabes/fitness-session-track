@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { AuthTokenResponsePassword } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -291,7 +292,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       // Add a timeout to the login promise to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => {
+      const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error("Login timed out. Please try again.")), 10000);
       });
       
@@ -301,11 +302,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         timeoutPromise
       ]);
       
-      // We need to explicitly type check if result is from loginPromise
-      // This is a TypeScript safety check to ensure we're handling the right object
-      if ('error' in result) {
+      // Type check to determine if we received a Supabase auth response
+      if ('data' in result && 'error' in result) {
         // This is the Supabase auth response
-        const { data, error } = result;
+        const { data, error } = result as AuthTokenResponsePassword;
 
         if (error) {
           console.error("Supabase auth error:", error);
@@ -313,9 +313,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Provide better error messages based on error type
           let errorMessage = "An unexpected error occurred. Please try again.";
           
-          if (error.message.includes("Invalid login credentials")) {
+          if (error.message && error.message.includes("Invalid login credentials")) {
             errorMessage = "The email or password you entered is incorrect.";
-          } else if (error.message.includes("Email not confirmed")) {
+          } else if (error.message && error.message.includes("Email not confirmed")) {
             errorMessage = "Please verify your email before logging in.";
           }
           
