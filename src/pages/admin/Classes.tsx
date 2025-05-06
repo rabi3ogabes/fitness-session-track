@@ -11,6 +11,7 @@ import { ClassModel, RecurringPattern } from "./components/classes/ClassTypes";
 import { supabase, requireAuth, isOffline } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 
 const Classes = () => {
   const [classes, setClasses] = useState<ClassModel[]>([]);

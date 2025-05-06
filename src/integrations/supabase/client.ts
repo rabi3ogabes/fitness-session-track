@@ -19,9 +19,9 @@ const supabaseOptions = {
     headers: {
       'x-application-name': 'gym-management-system'
     },
-    fetch: (...args) => {
+    fetch: (url: string, options: RequestInit) => {
       // Custom fetch to handle network errors more gracefully
-      return fetch(...args).catch(err => {
+      return fetch(url, options).catch(err => {
         console.error("Network error when connecting to Supabase:", err);
         // Rethrow with more context
         throw new Error(`Network error: ${err.message}. Please check your connection and try again.`);
