@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -189,30 +188,63 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
   }
 };
 
-// Utility to check connection to Supabase
-export const checkSupabaseConnection = async () => {
+// Improved Utility to check connection to Supabase with better error handling and retry mechanism
+export const checkSupabaseConnection = async (maxRetries = 2, retryDelay = 500) => {
   if (isOffline()) {
     return { connected: false, latency: null, error: new Error("Device is offline") };
   }
   
-  try {
-    const start = Date.now();
-    // Make a lightweight query to check connection
-    const { data, error } = await supabase.from('classes').select('id').limit(1).maybeSingle();
-    const latency = Date.now() - start;
-    
-    if (error) throw error;
-    
-    return {
-      connected: true,
-      latency
-    };
-  } catch (error) {
-    console.error("Failed to connect to Supabase:", error);
-    return {
-      connected: false,
-      latency: null,
-      error
-    };
+  let retries = 0;
+  let lastError: Error | null = null;
+  
+  while (retries <= maxRetries) {
+    try {
+      const start = Date.now();
+      // Make a lightweight query to check connection
+      const { data, error } = await supabase.from('classes').select('id').limit(1).maybeSingle();
+      const latency = Date.now() - start;
+      
+      if (error) {
+        console.warn(`Supabase connection check error (attempt ${retries + 1}/${maxRetries + 1}):`, error);
+        lastError = error;
+        retries++;
+        
+        if (retries <= maxRetries) {
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, retryDelay * retries));
+          continue;
+        } else {
+          throw error;
+        }
+      }
+      
+      console.log(`Supabase connection successful, latency: ${latency}ms`);
+      return {
+        connected: true,
+        latency
+      };
+    } catch (error) {
+      console.error(`Failed to connect to Supabase (attempt ${retries + 1}/${maxRetries + 1}):`, error);
+      lastError = error instanceof Error ? error : new Error(String(error));
+      retries++;
+      
+      if (retries <= maxRetries) {
+        // Wait before retrying with exponential backoff
+        await new Promise(resolve => setTimeout(resolve, retryDelay * retries));
+      } else {
+        return {
+          connected: false,
+          latency: null,
+          error: lastError
+        };
+      }
+    }
   }
+  
+  // This should never happen as we either return inside the loop or after max retries
+  return {
+    connected: false,
+    latency: null,
+    error: lastError || new Error("Unknown connection error")
+  };
 };

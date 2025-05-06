@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -275,77 +276,80 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       // First check if there's an actual network connection to Supabase
-      const connectionCheck = await checkSupabaseConnection();
-      if (!connectionCheck.connected) {
-        // If we're offline but have navigator.onLine = true, it's likely Supabase that's unreachable
-        if (navigator.onLine) {
-          throw new Error("Cannot connect to authentication server. Please try again later.");
-        } else {
-          throw new Error("You appear to be offline. Please check your internet connection.");
+      try {
+        const connectionCheck = await checkSupabaseConnection();
+        if (!connectionCheck.connected) {
+          // If we're offline but have navigator.onLine = true, it's likely Supabase that's unreachable
+          if (navigator.onLine) {
+            throw new Error("Cannot connect to authentication server. Please try again later.");
+          } else {
+            throw new Error("You appear to be offline. Please check your internet connection.");
+          }
         }
+      } catch (connectionError) {
+        console.error("Connection check failed:", connectionError);
+        throw new Error("Cannot establish connection to the authentication server. Please try again later.");
       }
       
       // For non-demo accounts, use Supabase auth with timeout
-      const loginPromise = supabase.auth.signInWithPassword({
+      let loginPromise = supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       // Add a timeout to the login promise to prevent hanging
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Login timed out. Please try again.")), 10000);
+        setTimeout(() => reject(new Error("Login timed out. Please try again.")), 15000);
       });
       
       // Race the login promise against the timeout
-      const result = await Promise.race([
-        loginPromise, 
-        timeoutPromise
-      ]);
+      let result: AuthTokenResponsePassword;
       
-      // Type check to determine if we received a Supabase auth response
-      if ('data' in result && 'error' in result) {
-        // This is the Supabase auth response
-        const { data, error } = result as AuthTokenResponsePassword;
-
-        if (error) {
-          console.error("Supabase auth error:", error);
-          
-          // Provide better error messages based on error type
-          let errorMessage = "An unexpected error occurred. Please try again.";
-          
-          if (error.message && error.message.includes("Invalid login credentials")) {
-            errorMessage = "The email or password you entered is incorrect.";
-          } else if (error.message && error.message.includes("Email not confirmed")) {
-            errorMessage = "Please verify your email before logging in.";
-          }
-          
-          toast({
-            title: "Login failed",
-            description: errorMessage,
-            variant: "destructive",
-          });
-          
-          throw new Error(errorMessage);
+      try {
+        result = await Promise.race([loginPromise, timeoutPromise]) as AuthTokenResponsePassword;
+      } catch (error: any) {
+        console.error("Login race error:", error);
+        // Handle timeout or other race errors
+        throw new Error(error?.message || "Login attempt failed due to network issues. Please try again.");
+      }
+      
+      // Handle Supabase auth response
+      if (result.error) {
+        console.error("Supabase auth error:", result.error);
+        
+        // Provide better error messages based on error type
+        let errorMessage = "An unexpected error occurred. Please try again.";
+        
+        if (result.error.message && result.error.message.includes("Invalid login credentials")) {
+          errorMessage = "The email or password you entered is incorrect.";
+        } else if (result.error.message && result.error.message.includes("Email not confirmed")) {
+          errorMessage = "Please verify your email before logging in.";
         }
         
-        console.log("Login successful for:", email);
-        
-        // Determine role based on email
-        let userRole = 'user';
-        if (email.includes('admin')) userRole = 'admin';
-        if (email.includes('trainer')) userRole = 'trainer';
-        
-        setRole(userRole);
-        console.log("Role set to:", userRole);
-
         toast({
-          title: "Login successful",
-          description: "You have been logged in successfully."
+          title: "Login failed",
+          description: errorMessage,
+          variant: "destructive",
         });
-      } else {
-        // This would be the timeout error
-        throw new Error("Login timed out. Please try again.");
+        
+        throw new Error(errorMessage);
       }
+      
+      console.log("Login successful for:", email);
+      
+      // Determine role based on email
+      let userRole = 'user';
+      if (email.includes('admin')) userRole = 'admin';
+      if (email.includes('trainer')) userRole = 'trainer';
+      
+      setRole(userRole);
+      console.log("Role set to:", userRole);
+
+      toast({
+        title: "Login successful",
+        description: "You have been logged in successfully."
+      });
+      
     } catch (error: any) {
       console.error("Login error:", error);
       
