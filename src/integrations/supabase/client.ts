@@ -14,6 +14,19 @@ const supabaseOptions = {
     persistSession: true,
     detectSessionInUrl: true,
     flowType: 'implicit' as const
+  },
+  global: {
+    headers: {
+      'x-application-name': 'gym-management-system'
+    },
+    fetch: (...args) => {
+      // Custom fetch to handle network errors more gracefully
+      return fetch(...args).catch(err => {
+        console.error("Network error when connecting to Supabase:", err);
+        // Rethrow with more context
+        throw new Error(`Network error: ${err.message}. Please check your connection and try again.`);
+      });
+    }
   }
 };
 
@@ -31,7 +44,9 @@ const createDemoClient = () => {
     {
       ...supabaseOptions,
       global: {
+        ...supabaseOptions.global,
         headers: {
+          ...supabaseOptions.global.headers,
           // Special header that bypasses RLS
           'x-demo-bypass-rls': 'true',
         }
@@ -41,37 +56,53 @@ const createDemoClient = () => {
 };
 
 // Enhanced authentication helper for demo purposes
-export const requireAuth = async (callback: () => Promise<any>) => {
-  try {
-    // Check if we're in demo mode first for faster path
-    const mockRole = localStorage.getItem('userRole');
-    if (mockRole) {
-      console.log("Detected demo mode, using bypass RLS client");
-      const demoClient = createDemoClient();
-      return await executeDemoOperation(demoClient, callback);
+export const requireAuth = async (callback: () => Promise<any>, fallbackData = null, maxRetries = 3) => {
+  let retryCount = 0;
+  
+  const executeWithRetry = async (): Promise<any> => {
+    try {
+      // Check if we're in demo mode first for faster path
+      const mockRole = localStorage.getItem('userRole');
+      if (mockRole) {
+        console.log("Detected demo mode, using bypass RLS client");
+        const demoClient = createDemoClient();
+        return await executeDemoOperation(demoClient, callback);
+      }
+      
+      // If not in demo mode, check for a real session
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error("Error checking session:", error);
+        throw new Error('Authentication verification failed');
+      }
+      
+      // If we have a real session, proceed with the callback
+      if (session) {
+        console.log("Real authentication confirmed, executing protected operation");
+        return await callback();
+      }
+      
+      // If we get here, there's no session and no demo credentials
+      console.error("No active session found and not using demo credentials");
+      throw new Error('Authentication required');
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Network error') && retryCount < maxRetries) {
+        console.log(`Network error, retrying... (${retryCount + 1}/${maxRetries})`);
+        retryCount++;
+        // Exponential backoff
+        const backoffTime = 1000 * Math.pow(2, retryCount - 1);
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
+        return executeWithRetry();
+      }
+      
+      console.error("Authentication error:", error);
+      // Return fallback data if provided
+      return fallbackData;
     }
-    
-    // If not in demo mode, check for a real session
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      console.error("Error checking session:", error);
-      throw new Error('Authentication verification failed');
-    }
-    
-    // If we have a real session, proceed with the callback
-    if (session) {
-      console.log("Real authentication confirmed, executing protected operation");
-      return await callback();
-    }
-    
-    // If we get here, there's no session and no demo credentials
-    console.error("No active session found and not using demo credentials");
-    throw new Error('Authentication required');
-  } catch (error) {
-    console.error("Authentication error:", error);
-    throw error;
-  }
+  };
+  
+  return executeWithRetry();
 };
 
 // Helper function to execute operations with the demo client
@@ -104,5 +135,34 @@ const executeDemoOperation = async (demoClient: any, callback: () => Promise<any
   } finally {
     // Always restore the original supabase client
     (window as any).supabase = originalSupabase;
+  }
+};
+
+// Utility to check if we're offline
+export const isOffline = () => {
+  return typeof navigator !== 'undefined' && !navigator.onLine;
+};
+
+// Utility to check connection to Supabase
+export const checkSupabaseConnection = async () => {
+  try {
+    const start = Date.now();
+    // Make a lightweight query to check connection
+    const { data, error } = await supabase.from('classes').select('id').limit(1);
+    const latency = Date.now() - start;
+    
+    if (error) throw error;
+    
+    return {
+      connected: true,
+      latency
+    };
+  } catch (error) {
+    console.error("Failed to connect to Supabase:", error);
+    return {
+      connected: false,
+      latency: null,
+      error
+    };
   }
 };

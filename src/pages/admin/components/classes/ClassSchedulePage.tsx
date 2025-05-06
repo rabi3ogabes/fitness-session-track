@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, requireAuth, isOffline } from "@/integrations/supabase/client";
 import { format, addDays, addWeeks, addMonths, parse } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -29,12 +29,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { ClassModel } from "./ClassTypes";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Clock } from "lucide-react";
+import { CalendarIcon, Clock, AlertCircle, RefreshCw, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -80,6 +81,9 @@ const ClassSchedulePage = () => {
   const [trainers, setTrainers] = useState<{ id: number; name: string }[]>([]);
   const [classes, setClasses] = useState<ClassModel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [isNetworkConnected, setIsNetworkConnected] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [classToDelete, setClassToDelete] = useState<number | null>(null);
   
@@ -101,47 +105,97 @@ const ClassSchedulePage = () => {
     },
   });
 
+  // Network status event listeners
   useEffect(() => {
-    fetchTrainers();
-    fetchClasses();
+    const handleOnline = () => {
+      setIsNetworkConnected(true);
+      // Auto retry fetch on reconnect
+      fetchClasses();
+      fetchTrainers();
+    };
+    
+    const handleOffline = () => {
+      setIsNetworkConnected(false);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Set initial network status
+    setIsNetworkConnected(navigator.onLine);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
-  const fetchTrainers = async () => {
+  const fetchTrainers = useCallback(async () => {
+    setError(null);
+    
+    if (!isNetworkConnected) {
+      console.log("Cannot fetch trainers - offline");
+      setError("You are currently offline. Reconnect to load data.");
+      return;
+    }
+    
     try {
       console.log("Fetching trainers...");
-      const { data, error } = await supabase
-        .from("trainers")
-        .select("id, name")
-        .eq("status", "Active");
+      // Use requireAuth with fallback data for better offline experience
+      const data = await requireAuth(async () => {
+        const { data, error } = await supabase
+          .from("trainers")
+          .select("id, name")
+          .eq("status", "Active");
 
-      if (error) {
-        console.error("Error fetching trainers:", error);
-        throw error;
-      }
+        if (error) {
+          console.error("Error fetching trainers:", error);
+          throw error;
+        }
+        
+        return data || [];
+      }, []);
       
       console.log("Trainers fetched:", data);
       setTrainers(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching trainers:", error);
-      toast({
-        title: "Failed to load trainers",
-        description: "Please try again later",
-        variant: "destructive",
-      });
+      // Don't show toast for network errors - we'll display in the UI
+      if (!error.message?.includes("Network error")) {
+        toast({
+          title: "Failed to load trainers",
+          description: "Please try again later",
+          variant: "destructive",
+        });
+      }
+      setError(error.message || "Failed to fetch trainers");
     }
-  };
+  }, [toast, isNetworkConnected]);
 
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
+    
+    if (!isNetworkConnected) {
+      console.log("Cannot fetch classes - offline");
+      setError("You are currently offline. Reconnect to load data.");
+      setIsLoading(false);
+      return;
+    }
+    
     try {
-      const { data, error } = await supabase
-        .from("classes")
-        .select("*")
-        .order("created_at", { ascending: false });
+      // Use requireAuth with empty array fallback data for offline scenarios
+      const data = await requireAuth(async () => {
+        const { data, error } = await supabase
+          .from("classes")
+          .select("*")
+          .order("created_at", { ascending: false });
 
-      if (error) throw error;
+        if (error) throw error;
+        return data;
+      }, []);
       
-      const formattedClasses: ClassModel[] = data.map(cls => ({
+      const formattedClasses: ClassModel[] = data.map((cls: any) => ({
         id: cls.id,
         name: cls.name,
         trainer: cls.trainer || "",
@@ -159,16 +213,30 @@ const ClassSchedulePage = () => {
       }));
       
       setClasses(formattedClasses);
-    } catch (error) {
+      console.log("Successfully loaded classes:", formattedClasses.length);
+    } catch (error: any) {
       console.error("Error fetching classes:", error);
-      toast({
-        title: "Failed to load classes",
-        description: "Please try again later",
-        variant: "destructive",
-      });
+      setError(error.message || "Failed to load classes. Please try again later.");
     } finally {
       setIsLoading(false);
     }
+  }, [isNetworkConnected]);
+
+  useEffect(() => {
+    fetchTrainers();
+    fetchClasses();
+  }, [fetchTrainers, fetchClasses]);
+
+  const handleRetry = () => {
+    setIsRetrying(true);
+    setError(null);
+    
+    Promise.all([fetchTrainers(), fetchClasses()])
+      .finally(() => {
+        setTimeout(() => {
+          setIsRetrying(false);
+        }, 1000);
+      });
   };
 
   const handleOpen = () => {
@@ -223,6 +291,15 @@ const ClassSchedulePage = () => {
   };
 
   const onSubmit = async (values: FormValues) => {
+    if (!isNetworkConnected) {
+      toast({
+        title: "You're offline",
+        description: "Please connect to the internet to create classes",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       console.log("Form values:", values);
       // Validate times
@@ -283,25 +360,27 @@ const ClassSchedulePage = () => {
         });
       } else {
         // Create a single class
-        const { error } = await supabase
-          .from("classes")
-          .insert({
-            name: values.name,
-            trainer: values.trainer,
-            trainers: [values.trainer],
-            capacity: values.capacity,
-            gender: values.gender,
-            start_time: values.startTime,
-            end_time: values.endTime,
-            schedule: format(new Date(), "MM/dd/yyyy"),
-            status: "Active",
-            enrolled: 0,
-            description: values.description || null,
-            location: values.location || null,
-            difficulty: values.difficulty || "Beginner",
-          });
-          
-        if (error) throw error;
+        await requireAuth(async () => {
+          const { error } = await supabase
+            .from("classes")
+            .insert({
+              name: values.name,
+              trainer: values.trainer,
+              trainers: [values.trainer],
+              capacity: values.capacity,
+              gender: values.gender,
+              start_time: values.startTime,
+              end_time: values.endTime,
+              schedule: format(new Date(), "yyyy-MM-dd"),
+              status: "Active",
+              enrolled: 0,
+              description: values.description || null,
+              location: values.location || null,
+              difficulty: values.difficulty || "Beginner",
+            });
+            
+          if (error) throw error;
+        });
         
         toast({
           title: "Class created",
@@ -311,12 +390,12 @@ const ClassSchedulePage = () => {
       
       // Refresh classes
       fetchClasses();
-      setIsOpen(false);
-    } catch (error) {
+      setIsOpen(false); // Close form early for better UX
+    } catch (error: any) {
       console.error("Error creating class:", error);
       toast({
         title: "Failed to create class",
-        description: "An unexpected error occurred",
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     }
@@ -403,10 +482,35 @@ const ClassSchedulePage = () => {
         <Button 
           className="bg-gym-blue hover:bg-gym-dark-blue" 
           onClick={handleOpen}
+          disabled={!isNetworkConnected}
         >
           Create New Class
         </Button>
       </div>
+
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          {!isNetworkConnected ? (
+            <WifiOff className="h-4 w-4" />
+          ) : (
+            <AlertCircle className="h-4 w-4" />
+          )}
+          <AlertTitle>{!isNetworkConnected ? "You're offline" : "Error"}</AlertTitle>
+          <AlertDescription className="flex justify-between items-center">
+            <span>{error}</span>
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              className="ml-4"
+              disabled={isRetrying || !isNetworkConnected}
+            >
+              <RefreshCw className={cn("h-3 w-3 mr-1", isRetrying && "animate-spin")} />
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Class Creation Form Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -790,10 +894,20 @@ const ClassSchedulePage = () => {
       {/* Classes List */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center">Loading classes...</div>
+          <div className="p-8 text-center flex flex-col items-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gym-blue mb-2"></div>
+            <p>Loading classes...</p>
+          </div>
         ) : classes.length === 0 ? (
           <div className="p-8 text-center">
-            No classes found. Create your first class to get started.
+            <p className="text-gray-500 mb-4">No classes found. Create your first class to get started.</p>
+            <Button 
+              onClick={handleOpen}
+              className="bg-gym-blue hover:bg-gym-dark-blue"
+              disabled={!isNetworkConnected}
+            >
+              Create New Class
+            </Button>
           </div>
         ) : (
           <div className="overflow-x-auto">

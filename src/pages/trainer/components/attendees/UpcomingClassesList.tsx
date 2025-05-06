@@ -3,9 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { format, isToday } from "date-fns";
-import { Users, AlertCircle, RefreshCw } from "lucide-react";
+import { Users, AlertCircle, RefreshCw, WifiOff } from "lucide-react";
 import { getBookingsForClass } from "../../mockData";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
@@ -39,6 +39,63 @@ export const UpcomingClassesList = ({
 }: UpcomingClassesListProps) => {
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [isNetworkConnected, setIsNetworkConnected] = useState(true);
+  const [enrollmentData, setEnrollmentData] = useState<Record<number, number>>({});
+
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsNetworkConnected(true);
+      // Auto-retry fetching enrollment data when back online
+      if (error) {
+        handleRetry();
+      }
+    };
+    
+    const handleOffline = () => {
+      setIsNetworkConnected(false);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Set initial network status
+    setIsNetworkConnected(navigator.onLine);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [error]);
+  
+  // Pre-load enrollment data for all classes
+  useEffect(() => {
+    if (!isNetworkConnected) return;
+    
+    let hasError = false;
+    const enrollData: Record<number, number> = {};
+    
+    // Process all classes in all days
+    upcomingClasses.forEach(dayClass => {
+      dayClass.classes.forEach(cls => {
+        try {
+          const bookings = getBookingsForClass(cls.id);
+          enrollData[cls.id] = bookings.length;
+        } catch (err) {
+          console.error("Error loading bookings for class", cls.id, err);
+          hasError = true;
+        }
+      });
+    });
+    
+    if (hasError) {
+      setError("Some class enrollment data could not be loaded.");
+    } else {
+      setError(null);
+    }
+    
+    setEnrollmentData(enrollData);
+  }, [upcomingClasses, isNetworkConnected]);
 
   // Function to determine if a date is today
   const isDateToday = (date: Date) => {
@@ -56,8 +113,25 @@ export const UpcomingClassesList = ({
   
   // Get actual enrollment numbers for a class
   const getActualEnrollment = (classId: number) => {
+    // First check if we have it cached
+    if (enrollmentData[classId] !== undefined) {
+      return enrollmentData[classId];
+    }
+    
+    // If not in cache, try to fetch it
     try {
+      if (!isNetworkConnected) {
+        throw new Error("Cannot fetch data while offline");
+      }
+      
       const bookings = getBookingsForClass(classId);
+      
+      // Update our cache
+      setEnrollmentData(prev => ({
+        ...prev,
+        [classId]: bookings.length
+      }));
+      
       return bookings.length;
     } catch (err) {
       console.error("Error fetching bookings for class", classId, err);
@@ -69,7 +143,11 @@ export const UpcomingClassesList = ({
   const handleRetry = () => {
     setRetrying(true);
     setError(null);
+    
+    // Add a small delay for UX purposes
     setTimeout(() => {
+      // Reset enrollment data cache to force re-fetch
+      setEnrollmentData({});
       setRetrying(false);
     }, 1000);
   };
@@ -86,8 +164,12 @@ export const UpcomingClassesList = ({
     <div className="space-y-6">
       {error && (
         <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          {!isNetworkConnected ? (
+            <WifiOff className="h-4 w-4" />
+          ) : (
+            <AlertCircle className="h-4 w-4" />
+          )}
+          <AlertTitle>{!isNetworkConnected ? "You're offline" : "Error"}</AlertTitle>
           <AlertDescription className="flex justify-between items-center">
             <span>{error}</span>
             <Button 
@@ -95,7 +177,7 @@ export const UpcomingClassesList = ({
               size="sm"
               onClick={handleRetry}
               className="ml-4"
-              disabled={retrying}
+              disabled={retrying || !isNetworkConnected}
             >
               <RefreshCw className={cn("h-3 w-3 mr-1", retrying && "animate-spin")} />
               Retry

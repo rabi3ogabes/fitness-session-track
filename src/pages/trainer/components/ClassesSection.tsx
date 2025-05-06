@@ -1,12 +1,12 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, AlertCircle, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertCircle, RefreshCw, WifiOff } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { UsersRound } from "lucide-react";
 import { getFilteredClasses } from "../mockData";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ClassesSectionProps {
@@ -27,31 +27,68 @@ export const ClassesSection = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
+  const [isNetworkConnected, setIsNetworkConnected] = useState(true);
+  const [classes, setClasses] = useState<any[]>([]);
+  
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsNetworkConnected(true);
+      // Auto-retry fetching data when back online
+      if (error) {
+        handleRetry();
+      }
+    };
+    
+    const handleOffline = () => {
+      setIsNetworkConnected(false);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Set initial network status
+    setIsNetworkConnected(navigator.onLine);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [error]);
   
   // Get classes based on view mode and selected date
-  const getClasses = () => {
+  useEffect(() => {
+    fetchClasses();
+  }, [viewMode, selectedDate, isNetworkConnected]);
+  
+  const fetchClasses = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const classes = getFilteredClasses(viewMode, selectedDate);
+      
+      if (!isNetworkConnected) {
+        setError("You are currently offline. Reconnect to load classes.");
+        setIsLoading(false);
+        return;
+      }
+      
+      const fetchedClasses = getFilteredClasses(viewMode, selectedDate);
+      setClasses(fetchedClasses);
       setIsLoading(false);
-      return classes;
     } catch (err) {
       console.error("Error loading classes:", err);
       setError("Failed to load classes. Please try again.");
       setIsLoading(false);
-      return [];
+      setClasses([]);
     }
   };
-  
-  const classesForView = getClasses();
   
   const handleRetry = () => {
     setRetrying(true);
     setTimeout(() => {
       setRetrying(false);
       // Re-fetch classes
-      getClasses();
+      fetchClasses();
     }, 1000);
   };
   
@@ -113,8 +150,12 @@ export const ClassesSection = ({
         
         {error && (
           <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
+            {!isNetworkConnected ? (
+              <WifiOff className="h-4 w-4" />
+            ) : (
+              <AlertCircle className="h-4 w-4" />
+            )}
+            <AlertTitle>{!isNetworkConnected ? "You're offline" : "Error"}</AlertTitle>
             <AlertDescription className="flex justify-between items-center">
               <span>{error}</span>
               <Button 
@@ -122,7 +163,7 @@ export const ClassesSection = ({
                 size="sm"
                 onClick={handleRetry}
                 className="ml-4"
-                disabled={retrying}
+                disabled={retrying || !isNetworkConnected}
               >
                 <RefreshCw className={cn("h-3 w-3 mr-1", retrying && "animate-spin")} />
                 Retry
@@ -138,8 +179,8 @@ export const ClassesSection = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-            {classesForView.length > 0 ? (
-              classesForView.map(cls => {
+            {classes.length > 0 ? (
+              classes.map(cls => {
                 // Calculate booking count and percentage for this class
                 const percentFull = (cls.enrolled / cls.capacity) * 100;
                 

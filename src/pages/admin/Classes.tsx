@@ -1,15 +1,14 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Clock, AlertCircle, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Clock, AlertCircle, RefreshCw, WifiOff } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, parse, isBefore } from "date-fns";
 import AddClassDialog from "./components/classes/AddClassDialog";
 import EditClassDialog from "./components/classes/EditClassDialog";
 import { ClassModel, RecurringPattern } from "./components/classes/ClassTypes";
-import { supabase, requireAuth } from "@/integrations/supabase/client";
+import { supabase, requireAuth, isOffline } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -23,137 +22,213 @@ const Classes = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [isNetworkConnected, setIsNetworkConnected] = useState(true);
   const { toast } = useToast();
 
-  // Fetch classes from Supabase
+  // Network status event listeners
   useEffect(() => {
-    fetchClasses();
-  }, [retryCount, toast]);
+    const handleOnline = () => {
+      setIsNetworkConnected(true);
+      // Auto retry fetch on reconnect
+      fetchClasses();
+    };
+    
+    const handleOffline = () => {
+      setIsNetworkConnected(false);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    // Set initial network status
+    setIsNetworkConnected(navigator.onLine);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
-  const fetchClasses = async () => {
+  // Fetch classes from Supabase
+  const fetchClasses = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    
+    if (!isNetworkConnected) {
+      console.log("Cannot fetch classes - offline");
+      setError("You are currently offline. Reconnect to load data.");
+      setIsLoading(false);
+      return;
+    }
+    
     try {
-      await requireAuth(async () => {
+      const data = await requireAuth(async () => {
+        console.log("Fetching classes from database...");
         const { data, error } = await supabase
           .from('classes')
           .select('*')
           .order('created_at', { ascending: false });
 
         if (error) {
+          console.error("Database error when fetching classes:", error);
           throw error;
         }
 
-        if (data) {
-          const formattedClasses: ClassModel[] = data.map(cls => ({
-            id: cls.id,
-            name: cls.name,
-            trainer: cls.trainer || "",
-            trainers: cls.trainers || [],
-            schedule: cls.schedule,
-            capacity: cls.capacity,
-            enrolled: cls.enrolled || 0,
-            status: cls.status || "Active",
-            gender: cls.gender || "All",
-            startTime: cls.start_time || "",
-            endTime: cls.end_time || "",
-            description: cls.description,
-            location: cls.location,
-            difficulty: cls.difficulty,
-          }));
-          
-          setClasses(formattedClasses);
-          console.log("Successfully loaded", formattedClasses.length, "classes from database");
-        }
-      });
-    } catch (err) {
+        console.log("Classes fetch successful, received:", data?.length, "records");
+        return data || [];
+      }, []);
+
+      if (Array.isArray(data)) {
+        const formattedClasses: ClassModel[] = data.map(cls => ({
+          id: cls.id,
+          name: cls.name,
+          trainer: cls.trainer || "",
+          trainers: cls.trainers || [],
+          schedule: cls.schedule,
+          capacity: cls.capacity,
+          enrolled: cls.enrolled || 0,
+          status: cls.status || "Active",
+          gender: cls.gender || "All",
+          startTime: cls.start_time || "",
+          endTime: cls.end_time || "",
+          description: cls.description,
+          location: cls.location,
+          difficulty: cls.difficulty,
+        }));
+        
+        setClasses(formattedClasses);
+        console.log("Successfully loaded", formattedClasses.length, "classes from database");
+      } else {
+        console.error("Unexpected response format:", data);
+        throw new Error("Invalid data format received from server");
+      }
+    } catch (err: any) {
       console.error("Error fetching classes:", err);
       setError("Failed to load classes from database. Please check your connection and try again.");
-      // Fallback to empty array if database call fails
-      setClasses([]);
+      // Keep any previously loaded classes to provide some functionality
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast, isNetworkConnected]);
 
-  // Load trainers from database
   useEffect(() => {
-    const fetchTrainers = async () => {
-      try {
-        await requireAuth(async () => {
-          const { data, error } = await supabase
-            .from('trainers')
-            .select('name')
-            .eq('status', 'Active');
+    fetchClasses();
+  }, [fetchClasses, retryCount]);
 
-          if (error) {
-            throw error;
-          }
-
-          if (data && data.length > 0) {
-            const trainerNames = data.map(trainer => trainer.name);
-            setTrainersList(trainerNames);
-            console.log("Successfully loaded trainers from database:", trainerNames);
-          } else {
-            // Fallback to localStorage trainers
-            console.log("No trainers found in database, loading from localStorage");
-            loadTrainersFromLocalStorage();
-          }
-        });
-      } catch (err) {
-        console.error("Error loading trainers:", err);
-        // Fallback to localStorage trainers
+  // Load trainers from database with better error handling
+  const fetchTrainers = useCallback(async () => {
+    try {
+      if (!isNetworkConnected) {
+        console.log("Cannot fetch trainers - offline");
         loadTrainersFromLocalStorage();
+        return;
       }
-    };
+      
+      await requireAuth(async () => {
+        console.log("Fetching trainers from database...");
+        const { data, error } = await supabase
+          .from('trainers')
+          .select('name')
+          .eq('status', 'Active');
 
-    const loadTrainersFromLocalStorage = () => {
-      try {
-        const storedTrainers = localStorage.getItem("trainers");
-        if (storedTrainers) {
-          const parsedTrainers = JSON.parse(storedTrainers);
-          // Extract just the trainer names from the trainer objects
-          const activeTrainerNames = parsedTrainers
-            .filter((trainer: any) => trainer.status === "Active")
-            .map((trainer: any) => trainer.name);
+        if (error) {
+          console.error("Database error when fetching trainers:", error);
+          throw error;
+        }
+
+        if (data && data.length > 0) {
+          const trainerNames = data.map(trainer => trainer.name);
+          setTrainersList(trainerNames);
+          console.log("Successfully loaded trainers from database:", trainerNames);
           
-          if (activeTrainerNames.length > 0) {
-            setTrainersList(activeTrainerNames);
+          // Also cache trainers in localStorage for offline use
+          try {
+            localStorage.setItem("cached_trainers", JSON.stringify(trainerNames));
+          } catch (e) {
+            console.warn("Failed to cache trainers in localStorage:", e);
+          }
+        } else {
+          // Fallback to localStorage trainers
+          console.log("No trainers found in database, loading from localStorage");
+          loadTrainersFromLocalStorage();
+        }
+      });
+    } catch (err) {
+      console.error("Error loading trainers:", err);
+      // Fallback to localStorage trainers
+      loadTrainersFromLocalStorage();
+    }
+  }, [isNetworkConnected]);
+
+  useEffect(() => {
+    fetchTrainers();
+  }, [fetchTrainers]);
+
+  const loadTrainersFromLocalStorage = () => {
+    try {
+      // First try to use cached trainers
+      const cachedTrainers = localStorage.getItem("cached_trainers");
+      if (cachedTrainers) {
+        try {
+          const parsedTrainers = JSON.parse(cachedTrainers);
+          if (Array.isArray(parsedTrainers) && parsedTrainers.length > 0) {
+            setTrainersList(parsedTrainers);
             return;
           }
+        } catch (e) {
+          console.warn("Error parsing cached trainers:", e);
         }
-        // Use fallback trainers if nothing else works
-        const fallbackTrainers = [
-          "Jane Smith",
-          "Mike Johnson",
-          "Sarah Davis",
-          "Emma Wilson",
-          "Robert Brown",
-          "David Miller",
-          "Lisa Garcia",
-        ];
-        console.log("Using fallback trainer names:", fallbackTrainers);
-        setTrainersList(fallbackTrainers);
-      } catch (error) {
-        console.error("Error loading trainers from localStorage:", error);
-        // Keep the fallback trainers if there's an error
-        setTrainersList([
-          "Jane Smith",
-          "Mike Johnson",
-          "Sarah Davis",
-          "Emma Wilson",
-          "Robert Brown",
-          "David Miller",
-          "Lisa Garcia",
-        ]);
       }
-    };
-
-    fetchTrainers();
-  }, []);
+      
+      // Fall back to trainers objects if cached trainers not available
+      const storedTrainers = localStorage.getItem("trainers");
+      if (storedTrainers) {
+        const parsedTrainers = JSON.parse(storedTrainers);
+        // Extract just the trainer names from the trainer objects
+        const activeTrainerNames = parsedTrainers
+          .filter((trainer: any) => trainer.status === "Active")
+          .map((trainer: any) => trainer.name);
+        
+        if (activeTrainerNames.length > 0) {
+          setTrainersList(activeTrainerNames);
+          return;
+        }
+      }
+      // Use fallback trainers if nothing else works
+      const fallbackTrainers = [
+        "Jane Smith",
+        "Mike Johnson",
+        "Sarah Davis",
+        "Emma Wilson",
+        "Robert Brown",
+        "David Miller",
+        "Lisa Garcia",
+      ];
+      console.log("Using fallback trainer names:", fallbackTrainers);
+      setTrainersList(fallbackTrainers);
+    } catch (error) {
+      console.error("Error loading trainers from localStorage:", error);
+      // Keep the fallback trainers if there's an error
+      setTrainersList([
+        "Jane Smith",
+        "Mike Johnson",
+        "Sarah Davis",
+        "Emma Wilson",
+        "Robert Brown",
+        "David Miller",
+        "Lisa Garcia",
+      ]);
+    }
+  };
 
   const handleRetry = () => {
+    setIsRetrying(true);
     setRetryCount(prev => prev + 1);
+    
+    setTimeout(() => {
+      setIsRetrying(false);
+    }, 1500);
   };
 
   const filteredClasses = classes.filter(
@@ -166,6 +241,15 @@ const Classes = () => {
   const currentClass = selectedClassId ? classes.find(c => c.id === selectedClassId) || null : null;
 
   const toggleClassStatus = async (id: number) => {
+    if (!isNetworkConnected) {
+      toast({
+        title: "You're offline",
+        description: "Please connect to the internet to update class status",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       await requireAuth(async () => {
         const classToUpdate = classes.find(c => c.id === id);
@@ -490,6 +574,7 @@ const Classes = () => {
         <Button 
           className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue"
           onClick={() => setIsAddDialogOpen(true)}
+          disabled={!isNetworkConnected}
         >
           <Plus className="w-4 h-4 mr-2" />
           Add New Class
@@ -515,8 +600,12 @@ const Classes = () => {
 
       {error && (
         <Alert variant="destructive" className="mb-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
+          {!isNetworkConnected ? (
+            <WifiOff className="h-4 w-4" />
+          ) : (
+            <AlertCircle className="h-4 w-4" />
+          )}
+          <AlertTitle>{!isNetworkConnected ? "You're offline" : "Error"}</AlertTitle>
           <AlertDescription className="flex justify-between items-center">
             <span>{error}</span>
             <Button 
@@ -524,8 +613,9 @@ const Classes = () => {
               size="sm"
               onClick={handleRetry}
               className="ml-4"
+              disabled={isRetrying || !isNetworkConnected}
             >
-              <RefreshCw className="h-3 w-3 mr-1" />
+              <RefreshCw className={cn("h-3 w-3 mr-1", isRetrying && "animate-spin")} />
               Retry
             </Button>
           </AlertDescription>
@@ -545,6 +635,7 @@ const Classes = () => {
               <Button 
                 onClick={() => setIsAddDialogOpen(true)}
                 className="bg-gym-blue hover:bg-gym-dark-blue"
+                disabled={!isNetworkConnected}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Create New Class
@@ -640,12 +731,14 @@ const Classes = () => {
                           <button
                             onClick={() => toggleClassStatus(cls.id)}
                             className="text-gym-blue hover:text-gym-dark-blue text-xs sm:text-sm"
+                            disabled={!isNetworkConnected}
                           >
                             {cls.status === "Active" ? "Deactivate" : "Activate"}
                           </button>
                           <button
                             onClick={() => handleEditClick(cls.id)}
                             className="text-gym-blue hover:text-gym-dark-blue text-xs sm:text-sm flex items-center justify-center sm:justify-start"
+                            disabled={!isNetworkConnected}
                           >
                             <Pencil className="h-3 w-3 sm:h-4 sm:w-4 inline-block" />
                             <span className="ml-1">Edit</span>
