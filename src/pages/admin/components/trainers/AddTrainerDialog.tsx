@@ -7,8 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from "lucide-react";
 import { TrainerFormData } from "../trainers/types";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 
 interface AddTrainerDialogProps {
   isOpen: boolean;
@@ -18,7 +16,6 @@ interface AddTrainerDialogProps {
 }
 
 const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDialogProps) => {
-  const { isAuthenticated, isAdmin } = useAuth();
   const { toast } = useToast();
   const [formData, setFormData] = useState<TrainerFormData>({
     name: "",
@@ -35,38 +32,6 @@ const AddTrainerDialog = ({ isOpen, onClose, onAdd, isCreating }: AddTrainerDial
 
   const handleSubmit = async () => {
     try {
-      // Check if we're in demo mode first (using the pattern established in other components)
-      const mockRole = localStorage.getItem('userRole');
-      const isDemoMode = !!mockRole;
-      
-      // Verify authentication - different paths for demo vs. real auth
-      if (!isDemoMode) {
-        // For real authentication, verify with Supabase
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError || !session) {
-          console.error("Session error or no session found:", sessionError);
-          toast({
-            title: "Authentication required",
-            description: "You need to be logged in to add trainers.",
-            variant: "destructive",
-          });
-          return;
-        }
-      } else {
-        // For demo mode, check the auth context
-        if (!isAuthenticated || !isAdmin) {
-          console.error("Not authenticated or not admin in demo mode");
-          toast({
-            title: "Authentication required",
-            description: "You need to be logged in as an admin to add trainers.",
-            variant: "destructive",
-          });
-          return;
-        }
-        console.log("Demo mode authentication confirmed for trainer creation");
-      }
-      
       // Validate required fields
       if (!formData.name || !formData.email) {
         toast({

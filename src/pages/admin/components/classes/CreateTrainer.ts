@@ -1,5 +1,5 @@
 
-import { supabase, requireAuth } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
@@ -120,6 +120,8 @@ export const useTrainerCreation = () => {
       }
       
       // For actual Supabase mode, proceed with the real database operation
+      console.log("Inserting trainer into Supabase:", trainerData);
+      
       const { data, error } = await supabase
         .from("trainers")
         .insert([

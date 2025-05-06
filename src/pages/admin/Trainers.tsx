@@ -33,6 +33,7 @@ const Trainers = () => {
     setIsLoading(true);
     
     try {
+      // First try to get trainers from Supabase
       const { data, error } = await supabase
         .from("trainers")
         .select("*")
@@ -126,6 +127,9 @@ const Trainers = () => {
     // If authenticated, fetch trainers
     console.log("User is authenticated, fetching trainers");
     fetchTrainers();
+    
+    // Also create test trainers if needed (helpful for demo mode)
+    createTestTrainer();
   }, [isAuthenticated, loading, navigate]);
 
   // Add trainer handler
@@ -140,10 +144,14 @@ const Trainers = () => {
     }
 
     try {
+      console.log("Adding new trainer with data:", trainerData);
+      
       // Use the createTrainer function from our hook instead of direct Supabase calls
       const result = await createTrainer(trainerData);
       
       if (result.success && result.data && result.data.length > 0) {
+        console.log("Trainer created successfully:", result.data[0]);
+        
         // Create a properly typed trainer object from the result
         const newTrainer: Trainer = {
           id: result.data[0].id,
@@ -163,6 +171,14 @@ const Trainers = () => {
         toast({
           title: "Trainer added successfully",
           description: `${trainerData.name} has been added as a trainer`,
+        });
+      } else {
+        // Handle the case where success is true but no data is returned
+        console.error("No data returned from createTrainer:", result);
+        toast({
+          title: "Something went wrong",
+          description: "Trainer may not have been created properly",
+          variant: "destructive",
         });
       }
     } catch (error: any) {
