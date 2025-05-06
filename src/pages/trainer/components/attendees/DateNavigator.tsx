@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, addDays, subDays } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -34,7 +34,7 @@ export const DateNavigator = ({ selectedDate, onDateChange }: DateNavigatorProps
       <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
         <PopoverTrigger asChild>
           <Button variant="outline" className="flex items-center gap-2 bg-white">
-            <CalendarIcon className="h-4 w-4 text-gym-blue" />
+            <CalendarIcon className="h-4 w-4 text-blue-500" />
             <span className="font-medium hidden sm:inline">
               {format(selectedDate, "yyyy-MM-dd")}
             </span>

@@ -6,12 +6,20 @@ import { format, isSameDay, parseISO, isAfter } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Bell, AlertCircle, Check, X, Clock, BookOpen, Info, Users, RefreshCw, WifiOff } from "lucide-react";
+import { 
+  BookOpen, 
+  Clock, 
+  AlertCircle, 
+  Check, 
+  X, 
+  Users, 
+  RefreshCw, 
+  WifiOff,
+  Info
+} from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -49,20 +57,23 @@ const classTypeColors = {
     text: "text-red-800",
     border: "border-red-200",
     dot: "bg-red-500",
+    badge: "bg-red-100 text-red-800",
     calendarDay: "bg-red-50"
   },
   workout: {
     bg: "bg-green-100",
     text: "text-green-800",
     border: "border-green-200",
-    dot: "bg-green-500", 
+    dot: "bg-green-500",
+    badge: "bg-green-100 text-green-800",
     calendarDay: "bg-green-50"
   },
   combat: {
     bg: "bg-blue-100",
     text: "text-blue-800",
     border: "border-blue-200",
-    dot: "bg-blue-500", 
+    dot: "bg-blue-500",
+    badge: "bg-blue-100 text-blue-800",
     calendarDay: "bg-blue-50"
   },
   dance: {
@@ -70,6 +81,7 @@ const classTypeColors = {
     text: "text-purple-800",
     border: "border-purple-200",
     dot: "bg-purple-500",
+    badge: "bg-purple-100 text-purple-800",
     calendarDay: "bg-purple-50"
   },
   default: {
@@ -77,6 +89,7 @@ const classTypeColors = {
     text: "text-gray-800",
     border: "border-gray-200",
     dot: "bg-gray-500",
+    badge: "bg-gray-100 text-gray-800",
     calendarDay: "bg-gray-50"
   }
 };
@@ -154,7 +167,7 @@ const DEMO_CLASSES: ClassWithBooking[] = [
     trainer: "Mike Tyson",
     location: "Boxing Ring",
     type: "combat",
-    isBooked: false
+    isBooked: true
   }
 ];
 
@@ -773,44 +786,42 @@ const ClassCalendar = () => {
 
   return (
     <DashboardLayout title="Book a Class">
-      <div className="mb-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
-            <div>
-              <h2 className="text-xl font-bold flex items-center">
-                <BookOpen className="mr-2 h-5 w-5 text-gym-blue" />
-                Class Bookings
-              </h2>
-              <p className="text-gray-500">Select a date to view available classes</p>
-            </div>
-            <div className="mt-3 md:mt-0">
+      <div className="max-w-7xl mx-auto mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          {/* Header Section */}
+          <div className="flex flex-col mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <BookOpen className="h-5 w-5 text-blue-500" />
+                <h1 className="text-xl font-semibold text-gray-800">Class Bookings</h1>
+              </div>
+              
               {isLoading ? (
-                <Skeleton className="h-10 w-48" />
+                <Skeleton className="h-8 w-36" />
               ) : (
-                <div className="flex items-center">
-                  <Users className="mr-2 h-5 w-5 text-gym-blue" />
+                <div className="flex items-center text-sm">
+                  <Users className="h-4 w-4 mr-2 text-blue-500" />
                   <span>
-                    Sessions remaining: <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-gym-blue")}>
+                    Sessions remaining: <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-blue-600")}>
                       {userData.remainingSessions}
                     </span>
                   </span>
                 </div>
               )}
-              {sessionsLow && (
-                <div className="flex items-center mt-2 text-sm text-red-500">
-                  <Bell className="mr-2 h-4 w-4" />
-                  <span>Your sessions are running low. Consider renewing your membership.</span>
-                </div>
-              )}
-              <div className="flex items-center mt-2 text-sm text-amber-600">
-                <AlertCircle className="mr-2 h-4 w-4" />
-                <span>You can cancel a class up to {systemSettings.cancellationTimeLimit} hours before it starts.</span>
-              </div>
+            </div>
+            
+            <p className="text-gray-500 text-sm">Select a date to view available classes</p>
+            
+            <div className="flex items-center mt-1 text-xs text-amber-600">
+              <AlertCircle className="h-3.5 w-3.5 mr-1" />
+              <span>You can cancel a class up to {systemSettings.cancellationTimeLimit} hours before it starts.</span>
             </div>
           </div>
           
+          {/* Error Alert */}
           {error && (
-            <Alert variant={!isNetworkConnected ? "default" : "destructive"} className={cn("mb-4", !isNetworkConnected ? "bg-yellow-50 border-yellow-200" : "")}>
+            <Alert variant={!isNetworkConnected ? "default" : "destructive"} 
+              className={cn("mb-4", !isNetworkConnected ? "bg-yellow-50 border-yellow-200" : "")}>
               {!isNetworkConnected ? (
                 <WifiOff className="h-4 w-4" />
               ) : (
@@ -833,235 +844,273 @@ const ClassCalendar = () => {
             </Alert>
           )}
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="md:col-span-1">
-              <div className="flex flex-col space-y-4">
-                <div className="bg-white border rounded-lg p-4 shadow-sm">
-                  <h3 className="text-base font-semibold mb-2 flex items-center">
-                    <CalendarDays className="mr-2 h-4 w-4 text-gym-blue" />
-                    Select Date
-                  </h3>
-                  <Calendar 
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    className="pointer-events-auto w-full"
-                    modifiers={{
-                      hasClass: isDayWithClass
-                    }}
-                    modifiersClassNames={{
-                      hasClass: "bg-gym-light text-gym-blue font-bold"
-                    }}
-                    components={{
-                      DayContent: DayContent,
-                    }}
-                  />
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Sidebar */}
+            <div className="lg:border-r lg:pr-6">
+              {/* Calendar Card */}
+              <div className="mb-6">
+                <div className="flex items-center mb-4">
+                  <div className="h-5 w-5 flex items-center justify-center text-blue-500 mr-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                  </div>
+                  <h2 className="font-medium text-gray-700">Select Date</h2>
                 </div>
                 
-                {/* Class type legend */}
-                <div className="bg-white border rounded-lg p-4 shadow-sm">
-                  <h3 className="text-base font-semibold mb-2 flex items-center">
-                    <Info className="mr-2 h-4 w-4 text-gym-blue" />
-                    Class Types
-                  </h3>
-                  <div className="space-y-2">
-                    {Object.entries(classTypeColors).map(([type, colors]) => (
-                      type !== 'default' && (
-                        <div key={type} className="flex items-center">
-                          <span className={`w-3 h-3 rounded-full ${colors.dot} mr-2`}></span>
-                          <span className="capitalize">{type}</span>
-                        </div>
-                      )
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Selected classes summary */}
-                {selectedClasses.length > 0 && (
-                  <div className="bg-white border rounded-lg p-4 shadow-sm">
-                    <h3 className="text-base font-semibold mb-2 flex items-center">
-                      <Check className="mr-2 h-4 w-4 text-green-500" />
-                      Selected Classes
-                    </h3>
-                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                      {selectedClassesData.map(cls => (
-                        <div key={cls.id} className="flex justify-between items-center text-sm border-b pb-1">
-                          <div>
-                            <p className="font-medium">{cls.name}</p>
-                            <p className="text-xs text-gray-500">
-                              {cls.start_time} - {cls.end_time}
-                            </p>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                            onClick={() => toggleClassSelection(cls.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-3 pt-2 border-t flex justify-between items-center">
-                      <span className="text-sm">Sessions to use:</span>
-                      <Badge variant="outline" className="bg-gym-light text-gym-blue">
-                        {selectedClasses.length}
-                      </Badge>
-                    </div>
-                    <div className="mt-1 flex justify-between items-center">
-                      <span className="text-sm">Remaining after booking:</span>
-                      <Badge variant={remainingAfterBooking < 0 ? "destructive" : "outline"} 
-                             className={remainingAfterBooking < 0 ? "" : "bg-green-50 text-green-800"}>
-                        {remainingAfterBooking}
-                      </Badge>
-                    </div>
-                    <Button 
-                      onClick={form.handleSubmit(handleBookMultipleClasses)}
-                      className="w-full mt-3 bg-gym-blue hover:bg-gym-dark-blue"
-                      disabled={selectedClasses.length === 0 || remainingAfterBooking < 0}
-                    >
-                      Book Selected Classes
-                    </Button>
-                  </div>
-                )}
+                <Calendar 
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  className="border rounded-md shadow-sm w-full"
+                  modifiers={{
+                    hasClass: isDayWithClass
+                  }}
+                  modifiersClassNames={{
+                    hasClass: "bg-blue-50 text-blue-700 font-medium"
+                  }}
+                  components={{
+                    DayContent: DayContent
+                  }}
+                />
               </div>
-            </div>
-            
-            <div className="md:col-span-2">
-              {selectedDate && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-medium flex items-center">
-                      <Clock className="mr-2 h-5 w-5 text-gym-blue" />
-                      Classes for {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'Selected date'}
-                    </h3>
-                  </div>
-                  
-                  {isLoading ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map(i => (
-                        <Skeleton key={i} className="h-24 w-full" />
-                      ))}
-                    </div>
-                  ) : (
-                    classesForSelectedDate.length > 0 ? (
-                      <div className="space-y-4">
-                        {classesForSelectedDate.map((cls) => {
-                          const isBooked = bookedClasses.includes(cls.id);
-                          const isSelected = selectedClasses.includes(cls.id);
-                          const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
-                          const typeColor = classTypeColors[typeKey] || classTypeColors.default;
-                          const classDate = new Date(cls.schedule);
-                          const isPast = isClassInPast(classDate, cls.start_time);
-                          
-                          const isPastCancellationWindow = () => {
-                            if (!cls.start_time) return false;
-                            const classHour = parseInt(cls.start_time.split(':')[0]);
-                            const now = new Date();
-                            const classDate = new Date(selectedDate!);
-                            classDate.setHours(classHour);
-                            return (classDate.getTime() - now.getTime()) / (1000 * 60 * 60) < systemSettings.cancellationTimeLimit;
-                          };
-                          
-                          // Skip past classes - only show future classes and classes for today
-                          if (isPast) return null;
-                          
-                          return (
-                            <Card key={cls.id} className={cn(
-                              "transition-all hover:shadow",
-                              isBooked ? "border-2 border-gym-blue" : "",
-                              isSelected ? "border-2 border-green-500" : ""
-                            )}>
-                              <CardHeader className={`pb-2 ${typeColor.bg}`}>
-                                <div className="flex justify-between items-start">
-                                  <div className="flex items-center space-x-2">
-                                    {!isBooked && (
-                                      <Checkbox 
-                                        checked={isSelected}
-                                        onCheckedChange={() => toggleClassSelection(cls.id)}
-                                        disabled={cls.enrolled >= cls.capacity || isBooked || userData.remainingSessions <= 0}
-                                        className="border-gym-blue"
-                                        id={`class-${cls.id}`}
-                                      />
-                                    )}
-                                    <div>
-                                      <CardTitle className={typeColor.text}>{cls.name}</CardTitle>
-                                      <CardDescription>
-                                        {cls.start_time && cls.end_time ? `${cls.start_time} - ${cls.end_time}` : "Time not specified"}
-                                      </CardDescription>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col items-end gap-1">
-                                    <Badge 
-                                      variant={cls.enrolled >= cls.capacity ? "destructive" : "outline"}
-                                      className={cls.enrolled >= cls.capacity ? "" : `${typeColor.border} ${typeColor.text}`}
-                                    >
-                                      {cls.enrolled >= cls.capacity ? "Full" : `${cls.enrolled}/${cls.capacity}`}
-                                    </Badge>
-                                    {isBooked && (
-                                      <Badge variant="secondary" className="bg-green-100 text-green-800">Booked</Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              </CardHeader>
-                              <CardContent className="pb-2">
-                                <div className="flex justify-between items-center">
-                                  <p className="text-sm">Trainer: {cls.trainer}</p>
-                                  <Badge variant="outline" className={`${typeColor.bg} ${typeColor.text} ${typeColor.border} capitalize`}>
-                                    {cls.type || "General"}
-                                  </Badge>
-                                </div>
-                                {cls.location && (
-                                  <p className="text-sm text-gray-600 mt-1">Location: {cls.location}</p>
-                                )}
-                                {cls.description && (
-                                  <p className="text-sm text-gray-600 mt-2">{cls.description}</p>
-                                )}
-                              </CardContent>
-                              <CardFooter>
-                                {isBooked ? (
-                                  <Button 
-                                    onClick={() => handleCancelBooking(
-                                      cls.id, 
-                                      cls.start_time || "00:00", 
-                                      cls.name
-                                    )}
-                                    className="w-full bg-red-500 hover:bg-red-600"
-                                    disabled={isPastCancellationWindow()}
-                                  >
-                                    {isPastCancellationWindow() ? 
-                                      `Can't Cancel (< ${systemSettings.cancellationTimeLimit}h)` : 
-                                      "Cancel Booking"}
-                                  </Button>
-                                ) : (
-                                  <Button 
-                                    onClick={() => toggleClassSelection(cls.id)}
-                                    className={cn(
-                                      "w-full",
-                                      isSelected ? "bg-green-500 hover:bg-green-600" : "bg-gym-blue hover:bg-gym-dark-blue"
-                                    )}
-                                    disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0}
-                                  >
-                                    {isSelected ? "Selected" : 
-                                      cls.enrolled >= cls.capacity ? "Class Full" : 
-                                      userData.remainingSessions <= 0 ? "No Sessions Left" : 
-                                      "Select Class"}
-                                  </Button>
-                                )}
-                              </CardFooter>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <CalendarDays className="mx-auto h-12 w-12 opacity-30 mb-2" />
-                        <h4 className="text-lg font-medium">No classes scheduled</h4>
-                        <p>There are no classes available on this date.</p>
+              
+              {/* Class Types Legend */}
+              <div className="mb-6">
+                <div className="flex items-center mb-3">
+                  <Info className="h-4 w-4 text-blue-500 mr-2" />
+                  <h2 className="font-medium text-gray-700 text-sm">Class Types</h2>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(classTypeColors).map(([type, colors]) => (
+                    type !== 'default' && (
+                      <div key={type} className="flex items-center text-xs">
+                        <span className={`w-3 h-3 rounded-full ${colors.dot} mr-2`}></span>
+                        <span className="capitalize">{type}</span>
                       </div>
                     )
-                  )}
+                  ))}
+                </div>
+              </div>
+              
+              {/* Selected Classes Summary */}
+              {selectedClasses.length > 0 && (
+                <div className="border rounded-md p-4 bg-gray-50">
+                  <div className="flex items-center mb-3">
+                    <Check className="h-4 w-4 text-green-500 mr-2" />
+                    <h2 className="font-medium text-gray-700 text-sm">Selected Classes ({selectedClasses.length})</h2>
+                  </div>
+                  
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1 mb-3">
+                    {selectedClassesData.map(cls => (
+                      <div key={cls.id} className="flex justify-between items-center text-sm border-b pb-1">
+                        <div>
+                          <p className="font-medium text-xs">{cls.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {cls.start_time} - {cls.end_time}
+                          </p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                          onClick={() => toggleClassSelection(cls.id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="text-xs space-y-1 mb-3">
+                    <div className="flex justify-between">
+                      <span>Sessions to use:</span>
+                      <span className="font-medium">{selectedClasses.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Remaining after booking:</span>
+                      <span className={cn(
+                        "font-medium",
+                        remainingAfterBooking < 0 ? "text-red-500" : "text-green-600"
+                      )}>
+                        {remainingAfterBooking}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={form.handleSubmit(handleBookMultipleClasses)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-sm h-9"
+                    disabled={selectedClasses.length === 0 || remainingAfterBooking < 0}
+                  >
+                    Book Selected Classes
+                  </Button>
+                </div>
+              )}
+            </div>
+            
+            {/* Right Content Area */}
+            <div className="lg:col-span-2">
+              <div className="flex items-center mb-4">
+                <Clock className="h-5 w-5 text-blue-500 mr-2" />
+                <h2 className="font-medium text-gray-800">
+                  Classes for {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'Selected date'}
+                </h2>
+              </div>
+              
+              {isLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map(i => (
+                    <Skeleton key={i} className="h-24 w-full" />
+                  ))}
+                </div>
+              ) : classesForSelectedDate.length > 0 ? (
+                <div className="space-y-4">
+                  {classesForSelectedDate.map((cls) => {
+                    const isBooked = cls.isBooked;
+                    const isSelected = selectedClasses.includes(cls.id);
+                    const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
+                    const typeColor = classTypeColors[typeKey] || classTypeColors.default;
+                    const classDate = new Date(cls.schedule);
+                    const isPast = isClassInPast(classDate, cls.start_time);
+                    
+                    // Skip past classes
+                    if (isPast) return null;
+
+                    const isPastCancellationWindow = () => {
+                      if (!cls.start_time) return false;
+                      const classHour = parseInt(cls.start_time.split(':')[0]);
+                      const now = new Date();
+                      const classDate = new Date(selectedDate!);
+                      classDate.setHours(classHour);
+                      return (classDate.getTime() - now.getTime()) / (1000 * 60 * 60) < systemSettings.cancellationTimeLimit;
+                    };
+                    
+                    return (
+                      <Card key={cls.id} className={cn(
+                        "transition-all hover:shadow-sm overflow-hidden",
+                        isBooked ? "border-2 border-blue-500" : "",
+                        isSelected ? "border-2 border-green-500" : ""
+                      )}>
+                        <div className="flex items-stretch">
+                          {/* Left colored bar based on class type */}
+                          <div className={`w-1.5 ${typeColor.bg}`}></div>
+                          
+                          <div className="flex-1 p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h3 className="font-medium text-gray-800">{cls.name}</h3>
+                                <p className="text-sm text-gray-500">
+                                  {cls.start_time} - {cls.end_time}
+                                </p>
+                              </div>
+                              
+                              <div className="flex flex-col items-end gap-1">
+                                <div className="flex items-center space-x-2">
+                                  <Badge className={`${typeColor.badge} text-xs font-normal`}>
+                                    {cls.type || "General"}
+                                  </Badge>
+                                  
+                                  <Badge 
+                                    variant={cls.enrolled >= cls.capacity ? "destructive" : "outline"}
+                                    className="text-xs font-normal"
+                                  >
+                                    {cls.enrolled}/{cls.capacity}
+                                  </Badge>
+                                </div>
+                                
+                                {isBooked && (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
+                                    Booked
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="text-sm space-y-1 mb-3">
+                              <p className="text-gray-600">
+                                <span className="font-medium">Trainer:</span> {cls.trainer}
+                              </p>
+                              {cls.location && (
+                                <p className="text-gray-600">
+                                  <span className="font-medium">Location:</span> {cls.location}
+                                </p>
+                              )}
+                            </div>
+                            
+                            {isBooked ? (
+                              <Button 
+                                onClick={() => handleCancelBooking(
+                                  cls.id, 
+                                  cls.start_time || "00:00", 
+                                  cls.name
+                                )}
+                                variant="outline"
+                                className={cn(
+                                  "w-full border-red-300 text-red-600 hover:bg-red-50 text-sm",
+                                  isPastCancellationWindow() && "opacity-50 cursor-not-allowed"
+                                )}
+                                disabled={isPastCancellationWindow()}
+                              >
+                                {isPastCancellationWindow() ? 
+                                  `Can't Cancel (< ${systemSettings.cancellationTimeLimit}h)` : 
+                                  "Cancel Booking"}
+                              </Button>
+                            ) : (
+                              <div className="flex items-center gap-3">
+                                <Checkbox 
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleClassSelection(cls.id)}
+                                  disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0}
+                                  id={`class-${cls.id}`}
+                                  className="border-blue-400 rounded-sm"
+                                />
+                                
+                                <label 
+                                  htmlFor={`class-${cls.id}`}
+                                  className={cn(
+                                    "text-sm cursor-pointer flex-1",
+                                    (cls.enrolled >= cls.capacity || userData.remainingSessions <= 0) && "opacity-50"
+                                  )}
+                                >
+                                  {isSelected ? "Selected" : 
+                                    cls.enrolled >= cls.capacity ? "Class Full" : 
+                                    userData.remainingSessions <= 0 ? "No Sessions Left" : 
+                                    "Select this class"}
+                                </label>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 border border-dashed rounded-lg bg-gray-50">
+                  <svg 
+                    className="mx-auto h-12 w-12 text-gray-300"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="1.5" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <h4 className="mt-2 text-gray-700 font-medium">No classes scheduled</h4>
+                  <p className="text-gray-500 text-sm">There are no classes available on this date.</p>
                 </div>
               )}
             </div>
@@ -1107,7 +1156,7 @@ const ClassCalendar = () => {
               </div>
               <div className="flex justify-between">
                 <span>Your remaining sessions:</span>
-                <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-gym-blue")}>
+                <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-blue-600")}>
                   {userData.remainingSessions}
                 </span>
               </div>
@@ -1159,7 +1208,7 @@ const ClassCalendar = () => {
             </Button>
             <Button 
               onClick={confirmBooking} 
-              className="w-full sm:w-auto bg-gym-blue hover:bg-gym-dark-blue"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
               disabled={!form.getValues().acceptTerms || isBookingInProgress}
             >
               {isBookingInProgress ? (

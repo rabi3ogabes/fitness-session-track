@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,11 +70,11 @@ export const CalendarSection = ({
   
   return (
     <div className="w-full">
-      <Card className="w-full">
+      <Card className="w-full shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg flex items-center justify-between">
             <div className="flex items-center">
-              <CalendarIcon className="mr-2 h-5 w-5 text-gym-blue" />
+              <CalendarIcon className="mr-2 h-5 w-5 text-blue-500" />
               Class Schedule
             </div>
             <div className="text-sm font-normal text-gray-500">
@@ -83,7 +83,7 @@ export const CalendarSection = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+          <div className="bg-white rounded-lg border p-4 mb-4">
             <div className="flex items-center justify-between mb-4">
               <Button
                 variant="outline"
@@ -108,7 +108,7 @@ export const CalendarSection = ({
             
             {/* Calendar header - days of week */}
             <div className="grid grid-cols-7 gap-1 text-center mb-2">
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, i) => (
+              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, i) => (
                 <div key={i} className="text-xs font-medium text-gray-500 h-8 flex items-center justify-center">
                   {day}
                 </div>
@@ -121,7 +121,7 @@ export const CalendarSection = ({
               {prevMonthDays.map((_, index) => (
                 <div 
                   key={`prev-${index}`} 
-                  className="h-12 p-1 text-center text-gray-300"
+                  className="h-10 p-1 text-center text-gray-300"
                 >
                   <div className="w-full h-full rounded-md flex items-center justify-center">
                     {/* Empty cell */}
@@ -141,30 +141,30 @@ export const CalendarSection = ({
                   <div
                     key={dateKey}
                     className={cn(
-                      "h-12 p-0.5 cursor-pointer",
+                      "h-10 p-0.5 cursor-pointer",
                       isToday && "font-bold",
-                      isSelected && "bg-gym-blue/10 rounded-md"
+                      isSelected && "bg-blue-50 rounded-md"
                     )}
                     onClick={() => setSelectedDate(day)}
                   >
                     <div className="flex flex-col items-center justify-start h-full">
                       <div className={cn(
                         "w-7 h-7 rounded-full flex items-center justify-center mb-1",
-                        isSelected ? "bg-gym-blue text-white" : "",
-                        isToday && !isSelected ? "border border-gym-blue" : ""
+                        isSelected ? "bg-blue-500 text-white" : "",
+                        isToday && !isSelected ? "border border-blue-500" : ""
                       )}>
                         {format(day, "d")}
                       </div>
                       
                       {/* Show dots for class indicators */}
                       {classCount > 0 && (
-                        <div className="flex gap-0.5 mt-auto pb-1">
+                        <div className="flex gap-0.5 mt-auto">
                           {Array.from({ length: Math.min(classCount, 3) }).map((_, i) => (
                             <div
                               key={i}
                               className={cn(
                                 "w-1.5 h-1.5 rounded-full", 
-                                isSelected ? "bg-gym-blue/70" : "bg-gym-blue"
+                                isSelected ? "bg-blue-400/70" : "bg-blue-500"
                               )}
                             />
                           ))}
@@ -179,7 +179,7 @@ export const CalendarSection = ({
               {nextMonthDays.map((_, index) => (
                 <div 
                   key={`next-${index}`} 
-                  className="h-12 p-1 text-center text-gray-300"
+                  className="h-10 p-1 text-center text-gray-300"
                 >
                   <div className="w-full h-full rounded-md flex items-center justify-center">
                     {/* Empty cell */}
@@ -190,7 +190,8 @@ export const CalendarSection = ({
           </div>
           
           <div className="mt-6">
-            <h3 className="font-medium mb-3">
+            <h3 className="font-medium mb-3 flex items-center">
+              <Clock className="h-4 w-4 mr-2 text-blue-500" />
               Classes on {format(selectedDate, "MMMM d, yyyy")}
             </h3>
             
@@ -199,7 +200,7 @@ export const CalendarSection = ({
                 classesForView.map(cls => (
                   <div 
                     key={cls.id} 
-                    className="bg-gray-50 p-3 rounded-md border-l-4 border-gym-blue cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="bg-gray-50 p-3 rounded-md border-l-4 border-blue-500 cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => handleViewClassDetails(cls.id)}
                   >
                     <div className="flex justify-between items-center">
