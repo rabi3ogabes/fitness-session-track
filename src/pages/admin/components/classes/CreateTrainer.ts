@@ -73,7 +73,7 @@ export const useTrainerCreation = () => {
     return true;
   };
 
-  // Create a new trainer
+  // Create a new trainer with improved error handling
   const createTrainer = async (trainerData: TrainerData) => {
     try {
       setIsCreating(true);
@@ -82,6 +82,7 @@ export const useTrainerCreation = () => {
       // Verify authentication
       const isAuth = await checkAuthenticationStatus();
       if (!isAuth) {
+        console.error("Authentication check failed for trainer creation");
         setIsCreating(false);
         return { success: false };
       }
@@ -102,25 +103,43 @@ export const useTrainerCreation = () => {
       
       // Attempt insertion with detailed logging
       console.log("Calling supabase.from('trainers').insert()...");
-      const { data, error } = await supabase
-        .from("trainers")
-        .insert([formattedData])
-        .select();
-        
-      console.log("Supabase insert operation completed");
-
-      if (error) {
-        console.error("Error creating trainer in Supabase:", error);
-        throw error;
-      }
-
-      console.log("Trainer created successfully in Supabase:", data);
-      toast({
-        title: "Trainer created",
-        description: `${trainerData.name} has been added as a trainer`,
-      });
       
-      return { success: true, data };
+      try {
+        const { data, error } = await supabase
+          .from("trainers")
+          .insert([formattedData])
+          .select();
+          
+        console.log("Supabase insert operation completed");
+  
+        if (error) {
+          console.error("Error creating trainer in Supabase:", error);
+          throw error;
+        }
+  
+        console.log("Trainer created successfully in Supabase:", data);
+        toast({
+          title: "Trainer created",
+          description: `${trainerData.name} has been added as a trainer`,
+        });
+        
+        return { success: true, data };
+      } catch (dbError: any) {
+        console.error("Database operation error:", dbError);
+        
+        // Check for specific error types
+        if (dbError.message?.includes('duplicate key')) {
+          toast({
+            title: "Trainer already exists",
+            description: "A trainer with this email already exists in the system",
+            variant: "destructive",
+          });
+        } else {
+          throw dbError; // Re-throw for general error handling
+        }
+        
+        return { success: false, error: dbError };
+      }
     } catch (error: any) {
       console.error("Error in createTrainer function:", error);
       
@@ -181,29 +200,52 @@ export const useTrainerCreation = () => {
       
       console.log("Creating test trainers:", testTrainers);
       
-      // Insert multiple trainers
-      const { data, error } = await supabase
-        .from("trainers")
-        .insert(testTrainers)
-        .select();
+      try {
+        // Insert multiple trainers
+        const { data, error } = await supabase
+          .from("trainers")
+          .insert(testTrainers)
+          .select();
+          
+        if (error) {
+          console.error("Error creating test trainers:", error);
+          
+          // Check if it's a duplicate key error, which might not be a problem
+          if (error.message?.includes('duplicate key')) {
+            console.log("Some trainers may already exist, attempting to fetch existing trainers");
+            
+            // Try to fetch trainers to see if we already have some
+            const { data: existingTrainers, error: fetchError } = await supabase
+              .from("trainers")
+              .select("*")
+              .limit(10);
+              
+            if (!fetchError && existingTrainers && existingTrainers.length > 0) {
+              console.log("Found existing trainers:", existingTrainers);
+              toast({
+                title: "Using existing trainers",
+                description: `Found ${existingTrainers.length} existing trainers in the system`,
+              });
+              return true;
+            } else {
+              throw error; // Re-throw if we couldn't find existing trainers
+            }
+          } else {
+            throw error;
+          }
+        }
         
-      if (error) {
-        console.error("Error creating test trainers:", error);
+        console.log("Test trainers created successfully:", data);
         toast({
-          title: "Failed to create test trainers",
-          description: error.message,
-          variant: "destructive",
+          title: "Test trainers created",
+          description: `${testTrainers.length} test trainers have been added`,
         });
-        return false;
+        
+        return true;
+      } catch (dbError) {
+        console.error("Database operation error for test trainers:", dbError);
+        throw dbError;
       }
-      
-      console.log("Test trainers created successfully:", data);
-      toast({
-        title: "Test trainers created",
-        description: `${testTrainers.length} test trainers have been added`,
-      });
-      
-      return true;
     } catch (error: any) {
       console.error("Error in createTestTrainer function:", error);
       toast({
