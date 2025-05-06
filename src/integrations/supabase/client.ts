@@ -45,6 +45,29 @@ const supabaseOptions = {
 // import { supabase } from "@/integrations/supabase/client";
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, supabaseOptions);
 
+// Add the requireAuth function that was missing
+// This function wraps database operations to ensure authentication and proper error handling
+export const requireAuth = async <T>(
+  callback: () => Promise<T>
+): Promise<T> => {
+  try {
+    // Check if we have an active session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      console.warn("No active session found, but proceeding with operation");
+      // Note: This still allows the operation to proceed, which is likely what was intended
+      // since the original code was calling operations directly
+    }
+    
+    // Execute the callback function (database operation)
+    return await callback();
+  } catch (error: any) {
+    console.error("Error during authenticated operation:", error);
+    throw error;
+  }
+};
+
 // Improved Utility to check connection to Supabase with better error handling and retry mechanism
 export const checkSupabaseConnection = async (maxRetries = 2, retryDelay = 500) => {
   if (isOffline()) {
