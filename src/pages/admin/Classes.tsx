@@ -62,9 +62,11 @@ import {
 import {
   Dialog,
   DialogClose,
-  DialogDescription as UIDialogDescription,
-  DialogHeader as UIDialogHeader,
-  DialogTitle as UIDialogTitle,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
@@ -635,9 +637,9 @@ const Classes = () => {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Edit Class</DialogTitle>
-            <UIDialogDescription>
+            <DialogDescription>
               Make changes to your class here. Click save when you're done.
-            </UIDialogDescription>
+            </DialogDescription>
           </DialogHeader>
           {currentClass && (
             <div className="grid gap-4 py-4">
