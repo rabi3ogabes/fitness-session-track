@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, checkSupabaseConnection, isOffline, isDemoMode, enableDemoMode } from "@/integrations/supabase/client";
+import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AuthTokenResponse } from '@supabase/supabase-js';
 
@@ -51,118 +51,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // For roles
   const [role, setRole] = useState<string | null>(null);
 
-  // Create demo users in Supabase if they don't exist
-  const createDemoUsers = async () => {
-    console.log("Checking if demo users need to be created...");
+  // Create admin user in Supabase if they don't exist
+  const createAdminUser = async () => {
+    console.log("Checking if admin user needs to be created...");
     
-    const demoUsers = [
-      { email: 'admin@gym.com', password: 'admin123', role: 'admin', name: 'Admin User' },
-      { email: 'user@gym.com', password: 'user123', role: 'user', name: 'Regular User' },
-      { email: 'trainer@gym.com', password: 'trainer123', role: 'trainer', name: 'Trainer User' }
-    ];
-    
-    for (const demoUser of demoUsers) {
-      try {
-        // Check if user exists
-        const { data: existingUsers, error: checkError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', demoUser.email as string)
-          .limit(1);
-          
-        if (checkError) {
-          console.error(`Error checking if user ${demoUser.email} exists:`, checkError);
-          continue;
+    try {
+      // Check if admin exists
+      const { data: existingAdmin, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', 'admin@gym.com')
+        .limit(1);
+        
+      if (checkError) {
+        console.error(`Error checking if admin user exists:`, checkError);
+        return;
+      }
+      
+      // If admin doesn't exist, create them
+      if (!existingAdmin || existingAdmin.length === 0) {
+        console.log(`Creating admin user`);
+        
+        // Sign up the user
+        const { data: authData, error: signupError } = await supabase.auth.signUp({
+          email: 'admin@gym.com',
+          password: 'admin123',
+          options: {
+            data: {
+              name: 'Admin User',
+              role: 'admin'
+            }
+          }
+        });
+        
+        if (signupError) {
+          console.error(`Error creating admin auth user:`, signupError);
+          return;
         }
         
-        // If user doesn't exist, create them
-        if (!existingUsers || existingUsers.length === 0) {
-          console.log(`Creating demo user: ${demoUser.email}`);
+        if (authData.user) {
+          console.log(`Successfully created admin auth user with ID: ${authData.user.id}`);
           
-          // Sign up the user
-          const { data: authData, error: signupError } = await supabase.auth.signUp({
-            email: demoUser.email,
-            password: demoUser.password,
-            options: {
-              data: {
-                name: demoUser.name,
-                role: demoUser.role
-              }
-            }
-          });
-          
-          if (signupError) {
-            console.error(`Error creating auth user ${demoUser.email}:`, signupError);
-            continue;
+          // Create profile entry 
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: authData.user.id,  
+              email: 'admin@gym.com',
+              name: 'Admin User',
+              phone_number: '12345678'
+            });
+            
+          if (profileError) {
+            console.error(`Error creating profile for admin:`, profileError);
+          } else {
+            console.log(`Successfully created profile for admin`);
           }
-          
-          if (authData.user) {
-            console.log(`Successfully created auth user: ${demoUser.email} with ID: ${authData.user.id}`);
-            
-            // Create profile entry - FIX: Added id field which is required
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .insert({
-                id: authData.user.id,  // This is the required id field that was missing
-                email: demoUser.email,
-                name: demoUser.name,
-                phone_number: '12345678'
-              });
-              
-            if (profileError) {
-              console.error(`Error creating profile for ${demoUser.email}:`, profileError);
-            } else {
-              console.log(`Successfully created profile for: ${demoUser.email}`);
-            }
-            
-            // Create entry in members table for admin view
-            if (demoUser.role === 'user') {
-              const { error: memberError } = await supabase
-                .from('members')
-                .insert({
-                  name: demoUser.name,
-                  email: demoUser.email,
-                  phone: '12345678',
-                  membership: 'Basic',
-                  sessions: 4,
-                  remaining_sessions: 4,
-                  status: 'Active',
-                  gender: 'Male'
-                });
-                
-              if (memberError) {
-                console.error(`Error adding to members table for ${demoUser.email}:`, memberError);
-              } else {
-                console.log(`Successfully added to members table: ${demoUser.email}`);
-              }
-            }
-            
-            // Create entry in trainers table if trainer role
-            if (demoUser.role === 'trainer') {
-              const { error: trainerError } = await supabase
-                .from('trainers')
-                .insert({
-                  name: demoUser.name,
-                  email: demoUser.email,
-                  phone: '12345678',
-                  specialization: 'General Fitness',
-                  status: 'Active',
-                  gender: 'Male'
-                });
-                
-              if (trainerError) {
-                console.error(`Error adding to trainers table for ${demoUser.email}:`, trainerError);
-              } else {
-                console.log(`Successfully added to trainers table: ${demoUser.email}`);
-              }
-            }
-          }
-        } else {
-          console.log(`Demo user ${demoUser.email} already exists, skipping creation`);
         }
-      } catch (err) {
-        console.error(`Unexpected error creating demo user ${demoUser.email}:`, err);
+      } else {
+        console.log(`Admin user already exists, skipping creation`);
       }
+    } catch (err) {
+      console.error(`Unexpected error creating admin user:`, err);
     }
   };
 
@@ -173,24 +123,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("Auth state change event:", event);
         if (session) {
           console.log("New session established:", session.user.id);
+          
+          // Fetch profile info
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          // Set user data
           setUser({
             id: session.user.id,
             email: session.user.email || '',
-            name: session.user.user_metadata?.name || '',
+            name: session.user.user_metadata?.name || profileData?.name || '',
+            role: session.user.user_metadata?.role || ''
           });
 
-          // In a real implementation, fetch user profile
-          const mockUserProfile = {
-            sessions_remaining: 7, 
-            total_sessions: 12
-          };
-          setUserProfile(mockUserProfile);
+          // Get user profile
+          if (profileData) {
+            setUserProfile({
+              sessions_remaining: profileData.sessions_remaining || 0, 
+              total_sessions: profileData.total_sessions || 0
+            });
+          } else {
+            // Default profile if not found
+            setUserProfile({
+              sessions_remaining: 0, 
+              total_sessions: 0
+            });
+          }
 
-          // For mock purposes
-          // Determine role based on email
+          // Determine role based on email and metadata
           let userRole = 'user';
-          if (session.user.email?.includes('admin')) userRole = 'admin';
-          if (session.user.email?.includes('trainer')) userRole = 'trainer';
+          if (session.user.user_metadata?.role === 'admin' || session.user.email?.includes('admin')) {
+            userRole = 'admin';
+          } else if (session.user.user_metadata?.role === 'trainer' || session.user.email?.includes('trainer')) {
+            userRole = 'trainer';
+          }
           setRole(userRole);
           console.log("User role set to:", userRole);
         } else {
@@ -203,87 +172,72 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // Also check if demo mode is enabled
-    if (isDemoMode()) {
-      const demoRole = localStorage.getItem('userRole') || 'user';
-      setUser({
-        id: 'demo-user-id',
-        email: `${demoRole}@gym.com`,
-        name: `Demo ${demoRole.charAt(0).toUpperCase() + demoRole.slice(1)} User`
-      });
-      setRole(demoRole);
-      
-      // Mock user profile
-      setUserProfile({
-        sessions_remaining: 5,
-        total_sessions: 10
-      });
-      
-      setLoading(false);
-      
-      console.log("Demo mode enabled with role:", demoRole);
-      
-      toast({
-        title: "Demo Mode Active",
-        description: `You are using the app in demo mode as a ${demoRole}`,
-        variant: "default",
-      });
-    } else {
-      // Then check for an existing session
-      const checkSession = async () => {
-        try {
-          console.log("Checking for existing session...");
-          // Get session from Supabase
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Check for an existing session
+    const checkSession = async () => {
+      try {
+        console.log("Checking for existing session...");
+        // Get session from Supabase
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-          if (sessionError) {
-            console.error("Session error:", sessionError);
-            throw sessionError;
-          }
-
-          if (session) {
-            console.log("Session found:", session.user.id);
-            // Set user info
-            setUser({
-              id: session.user.id,
-              email: session.user.email || '',
-              name: session.user.user_metadata?.name || '',
-            });
-            
-            // In a real implementation, fetch user profile from profiles table
-            // For now, we'll use mock data
-            const mockUserProfile = {
-              sessions_remaining: 7,
-              total_sessions: 12
-            };
-            
-            setUserProfile(mockUserProfile);
-            
-            // Determine role based on email
-            let userRole = 'user';
-            if (session.user.email?.includes('admin')) userRole = 'admin';
-            if (session.user.email?.includes('trainer')) userRole = 'trainer';
-            setRole(userRole);
-            console.log("User role set to:", userRole);
-          } else {
-            console.log("No session found");
-          }
-        } catch (error) {
-          console.error("Error checking session:", error);
-        } finally {
-          setLoading(false);
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          throw sessionError;
         }
-      };
 
-      checkSession();
-      
-      // Try to create demo users if they don't exist
-      createDemoUsers().catch(err => {
-        console.error("Error creating demo users:", err);
-        // Don't fail the app if demo users can't be created
-        // This allows login to still work with existing accounts
-      });
-    }
+        if (session) {
+          console.log("Session found:", session.user.id);
+          // Set user info
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || '',
+          });
+          
+          // Fetch user profile from profiles table
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profileData) {
+            setUserProfile({
+              sessions_remaining: profileData.sessions_remaining || 0,
+              total_sessions: profileData.total_sessions || 0
+            });
+          } else {
+            // Default profile if not found
+            setUserProfile({
+              sessions_remaining: 0, 
+              total_sessions: 0
+            });
+          }
+          
+          // Determine role based on email and metadata
+          let userRole = 'user';
+          if (session.user.user_metadata?.role === 'admin' || session.user.email?.includes('admin')) {
+            userRole = 'admin';
+          } else if (session.user.user_metadata?.role === 'trainer' || session.user.email?.includes('trainer')) {
+            userRole = 'trainer';
+          }
+          setRole(userRole);
+          console.log("User role set to:", userRole);
+        } else {
+          console.log("No session found");
+        }
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+    
+    // Create admin user if they don't exist
+    createAdminUser().catch(err => {
+      console.error("Error creating admin user:", err);
+    });
 
     return () => {
       subscription?.unsubscribe();
@@ -303,41 +257,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Invalid email format");
       }
       
-      // Check for demo login pattern first
-      const isDemoLogin = email.includes('@gym.com') && 
-        (password === 'admin123' || password === 'user123' || password === 'trainer123');
-      
-      // If using demo credentials, enable demo mode
-      if (isDemoLogin) {
-        let role: 'admin' | 'user' | 'trainer' = 'user';
-        
-        if (email.includes('admin')) {
-          role = 'admin';
-        } else if (email.includes('trainer')) {
-          role = 'trainer';
-        }
-        
-        console.log("Using demo mode with role:", role);
-        
-        // Enable demo mode
-        enableDemoMode(role);
-        
-        // Set role and user immediately for faster UX
-        setRole(role);
-        setUser({
-          id: 'demo-user-id',
-          email: email,
-          name: `Demo ${role.charAt(0).toUpperCase() + role.slice(1)} User`
-        });
-        
-        toast({
-          title: "Demo Mode Activated",
-          description: `You are now using the app as a ${role}`,
-        });
-        
-        return;
-      }
-      
       // First check if there's an actual network connection to Supabase
       try {
         const connectionCheck = await checkSupabaseConnection();
@@ -354,7 +273,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Cannot establish connection to the authentication server. Please try again later.");
       }
       
-      // For non-demo accounts, use Supabase auth with timeout
+      // For regular accounts, use Supabase auth with timeout
       const loginPromise = supabase.auth.signInWithPassword({
         email,
         password,
@@ -415,7 +334,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (error.message?.includes("timed out")) {
           toast({
             title: "Login timed out",
-            description: "The server is taking too long to respond. You can try using demo mode instead.",
+            description: "The server is taking too long to respond. Please try again later.",
             variant: "destructive",
           });
           
@@ -480,6 +399,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) throw error;
+      
+      if (data.user) {
+        // Create profile for the user
+        await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: email,
+            name: name,
+            phone_number: phone || ''
+          });
+
+        // Also add to members table for admin view
+        const formattedBirthday = dob || null;
+        
+        await supabase
+          .from('members')
+          .insert({
+            name: name,
+            email: email,
+            phone: phone || '',
+            birthday: formattedBirthday,
+            membership: "Basic",
+            sessions: 4,
+            remaining_sessions: 4,
+            status: "Active",
+            gender: "Not specified"
+          });
+      }
       
       console.log("Signup successful for:", email);
       

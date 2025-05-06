@@ -12,7 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, AlertCircle, User, Lock, Wifi, WifiOff, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { supabase, checkSupabaseConnection, isDemoMode, enableDemoMode } from "@/integrations/supabase/client";
+import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
 
 const Login = () => {
   // Login state
@@ -115,21 +115,9 @@ const Login = () => {
     }
   }, []);
 
-  const fillDemoCredentials = (type: 'admin' | 'user' | 'trainer') => {
-    switch(type) {
-      case 'admin':
-        setIdentifier('admin@gym.com');
-        setPassword('admin123');
-        break;
-      case 'user':
-        setIdentifier('user@gym.com');
-        setPassword('user123');
-        break;
-      case 'trainer':
-        setIdentifier('trainer@gym.com');
-        setPassword('trainer123');
-        break;
-    }
+  const fillTestCredentials = () => {
+    setIdentifier('admin@gym.com');
+    setPassword('admin123');
     setError(null);
   };
 
@@ -144,69 +132,22 @@ const Login = () => {
         throw new Error("You appear to be offline. Please check your internet connection.");
       }
 
-      // Check if we're using a demo shorthand pattern (just admin, user, or trainer without @gym.com)
-      const emailId = identifier.includes('@') ? identifier : `${identifier}@gym.com`;
-      
-      // Special case for demo accounts for better UX
-      if ((emailId === 'admin@gym.com' && password === 'admin123') || 
-          (emailId === 'user@gym.com' && password === 'user123') || 
-          (emailId === 'trainer@gym.com' && password === 'trainer123')) {
-        
-        // Enable demo mode directly
-        const role = emailId.split('@')[0] as 'admin' | 'user' | 'trainer';
-        enableDemoMode(role);
-        
-        // Show success message
-        toast({
-          title: "Demo mode activated",
-          description: `You are now using the app in demo mode as ${role}`,
-        });
-        
-        // Login will be handled by the useEffect that watches isAuthenticated
-        return;
-      }
-      
-      // Regular login flow
-      console.log(`Starting login with: ${emailId}, password length: ${password.length}`);
-      
-      // Check for proper email format if it looks like an email
-      if (emailId.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailId)) {
+      // Check if we're using proper email format
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
         throw new Error("Please enter a valid email address");
       }
       
       // Increment login attempts counter
       setLoginAttempts(prev => prev + 1);
       
-      console.log("Using email for login:", emailId);
+      console.log("Using email for login:", identifier);
       
-      await login(emailId, password);
+      await login(identifier, password);
       // Login success will be handled by the useEffect that watches isAuthenticated
       console.log("Login function completed successfully");
     } catch (error: any) {
       // Display error message
       console.error("Login error caught in component:", error);
-      
-      // Special handling for demo accounts
-      if ((identifier === 'admin' || identifier === 'user' || identifier === 'trainer') && 
-          (password === 'admin123' || password === 'user123' || password === 'trainer123')) {
-        // Auto-correct demo account format
-        const correctedEmail = `${identifier}@gym.com`;
-        setIdentifier(correctedEmail);
-        toast({
-          title: "Demo account format",
-          description: `Using ${correctedEmail} as the email format`,
-          variant: "default",
-        });
-        
-        // Try again with corrected format
-        try {
-          await login(correctedEmail, password);
-          return; // Success case handled by useEffect
-        } catch (retryError) {
-          // Continue to show error below
-          console.error("Retry login error:", retryError);
-        }
-      }
       
       // Provide clear error messages based on common issues
       if (error.message?.includes("Invalid login credentials")) {
@@ -316,31 +257,6 @@ const Login = () => {
         setActiveTab("login");
         setIdentifier(email);
         setPassword(signupPassword);
-        
-        // Also register in members table for admin/trainer view
-        try {
-          const formattedBirthday = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null;
-          
-          const { error: memberError } = await supabase
-            .from('members')
-            .insert({
-              name,
-              email,
-              phone,
-              birthday: formattedBirthday,
-              membership: "Basic",
-              sessions: 4,
-              remaining_sessions: 4,
-              status: "Active",
-              gender: "Male" // Default gender
-            });
-          
-          if (memberError) {
-            console.error("Error registering in members table:", memberError);
-          }
-        } catch (memberErr) {
-          console.error("Error adding to members table:", memberErr);
-        }
       }
     } catch (error: any) {
       // Display error message
@@ -498,29 +414,15 @@ const Login = () => {
           <h2 className="mt-6 text-2xl font-bold text-gray-900">Welcome to FitTrack Pro</h2>
           <div className="mt-2 text-sm text-gray-600">
             <p className="mb-2">
-              Demo accounts: admin@gym.com, user@gym.com, trainer@gym.com (password: admin123, user123, trainer123)
+              Login with your credentials or create a new account
             </p>
             <div className="flex justify-center gap-2">
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => fillDemoCredentials('admin')}
+                onClick={fillTestCredentials}
               >
-                Use Admin
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => fillDemoCredentials('user')}
-              >
-                Use User
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => fillDemoCredentials('trainer')}
-              >
-                Use Trainer
+                Use Test Admin Credentials
               </Button>
             </div>
           </div>
@@ -562,9 +464,6 @@ const Login = () => {
                       required
                     />
                   </div>
-                  <p className="text-xs text-gray-500">
-                    For example: admin@gym.com, user@gym.com, trainer@gym.com
-                  </p>
                 </div>
                 
                 <div className="space-y-2">
@@ -597,9 +496,7 @@ const Login = () => {
                   <div className="mt-3 text-sm text-gray-600">
                     <p>Having trouble logging in?</p>
                     <ul className="list-disc pl-5 mt-1">
-                      <li>For demo accounts, use full email (e.g., admin@gym.com)</li>
                       <li>Passwords are case sensitive</li>
-                      <li>Try one of the demo account buttons above</li>
                       <li>Check if you have a stable internet connection</li>
                       <li>Try refreshing the page</li>
                     </ul>
@@ -643,9 +540,6 @@ const Login = () => {
                     onChange={(e) => setPhone(e.target.value)}
                     required
                   />
-                  <p className="text-xs text-gray-500">
-                    Your phone number will be your username and default password
-                  </p>
                 </div>
                 
                 <div className="space-y-2">
