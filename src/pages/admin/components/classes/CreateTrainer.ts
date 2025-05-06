@@ -122,26 +122,29 @@ export const useTrainerCreation = () => {
       // For actual Supabase mode, proceed with the real database operation
       console.log("Inserting trainer into Supabase:", trainerData);
       
+      // Ensure all data is properly formatted before insertion
+      const formattedData = {
+        name: trainerData.name.trim(),
+        email: trainerData.email.trim(),
+        phone: trainerData.phone?.trim() || null,
+        specialization: trainerData.specialization?.trim() || null,
+        status: trainerData.status || "Active",
+        gender: trainerData.gender || null
+      };
+      
+      console.log("Formatted data for insertion:", formattedData);
+      
       const { data, error } = await supabase
         .from("trainers")
-        .insert([
-          {
-            name: trainerData.name,
-            email: trainerData.email,
-            phone: trainerData.phone || null,
-            specialization: trainerData.specialization || null,
-            status: trainerData.status,
-            gender: trainerData.gender || null,
-          },
-        ])
+        .insert([formattedData])
         .select();
 
       if (error) {
-        console.error("Error creating trainer:", error);
+        console.error("Error creating trainer in Supabase:", error);
         throw error;
       }
 
-      console.log("Trainer created successfully:", data);
+      console.log("Trainer created successfully in Supabase:", data);
       toast({
         title: "Trainer created",
         description: `${trainerData.name} has been added as a trainer`,

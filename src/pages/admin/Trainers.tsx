@@ -44,7 +44,7 @@ const Trainers = () => {
       }
 
       if (data && data.length > 0) {
-        console.log(`Fetched ${data.length} trainers from Supabase`);
+        console.log(`Fetched ${data.length} trainers from Supabase:`, data);
         setTrainers(data);
       } else {
         // Fallback to mock data if no trainers in database
@@ -172,6 +172,9 @@ const Trainers = () => {
           title: "Trainer added successfully",
           description: `${trainerData.name} has been added as a trainer`,
         });
+        
+        // Refresh trainers list to ensure we have the latest data
+        fetchTrainers();
       } else {
         // Handle the case where success is true but no data is returned
         console.error("No data returned from createTrainer:", result);
