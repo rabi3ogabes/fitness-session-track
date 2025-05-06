@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, getConnectionStatus } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -50,44 +50,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // For roles
   const [role, setRole] = useState<string | null>(null);
 
-  // Check if we're offline
-  const [isOffline, setIsOffline] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<{
-    deviceOnline: boolean;
-    supabaseConnected: boolean;
-    message?: string;
-  }>({
-    deviceOnline: navigator.onLine,
-    supabaseConnected: false
-  });
-
-  // Periodically check connection status to Supabase
-  useEffect(() => {
-    const checkConnection = async () => {
-      const status = await getConnectionStatus();
-      setConnectionStatus(status);
-      setIsOffline(!status.deviceOnline || !status.supabaseConnected);
-    };
-
-    // Initial check
-    checkConnection();
-
-    // Set up periodic checks
-    const intervalId = setInterval(checkConnection, 30000); // Check every 30 seconds
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, []);
-
   // Create demo users in Supabase if they don't exist
   const createDemoUsers = async () => {
-    // Don't try to create users if we're offline
-    if (!connectionStatus.deviceOnline || !connectionStatus.supabaseConnected) {
-      console.log("Cannot reach Supabase. Skipping demo user creation.");
-      return;
-    }
-
     console.log("Checking if demo users need to be created...");
     
     const demoUsers = [
@@ -102,7 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const { data: existingUsers, error: checkError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('email', demoUser.email as string)
+          .eq('email', demoUser.email)
           .limit(1);
           
         if (checkError) {
@@ -134,15 +98,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (authData.user) {
             console.log(`Successfully created auth user: ${demoUser.email} with ID: ${authData.user.id}`);
             
-            // Create profile entry - Fix: Use a single object instead of an array
+            // Create profile entry
             const { error: profileError } = await supabase
               .from('profiles')
-              .insert({
+              .insert([{
                 id: authData.user.id,
                 email: demoUser.email,
                 name: demoUser.name,
                 phone_number: '12345678'
-              });
+              }]);
               
             if (profileError) {
               console.error(`Error creating profile for ${demoUser.email}:`, profileError);
@@ -150,11 +114,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               console.log(`Successfully created profile for: ${demoUser.email}`);
             }
             
-            // Create entry in members table for admin view - Fix: Use a single object instead of an array
+            // Create entry in members table for admin view
             if (demoUser.role === 'user') {
               const { error: memberError } = await supabase
                 .from('members')
-                .insert({
+                .insert([{
                   name: demoUser.name,
                   email: demoUser.email,
                   phone: '12345678',
@@ -162,7 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   sessions: 4,
                   remaining_sessions: 4,
                   status: 'Active'
-                });
+                }]);
                 
               if (memberError) {
                 console.error(`Error adding to members table for ${demoUser.email}:`, memberError);
@@ -171,18 +135,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               }
             }
             
-            // Create entry in trainers table if trainer role - Fix: Use a single object instead of an array
+            // Create entry in trainers table if trainer role
             if (demoUser.role === 'trainer') {
               const { error: trainerError } = await supabase
                 .from('trainers')
-                .insert({
+                .insert([{
                   name: demoUser.name,
                   email: demoUser.email,
                   phone: '12345678',
                   specialization: 'General Fitness',
                   status: 'Active',
                   gender: 'Male'
-                });
+                }]);
                 
               if (trainerError) {
                 console.error(`Error adding to trainers table for ${demoUser.email}:`, trainerError);
@@ -199,37 +163,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
   };
-
-  // Set up online/offline listeners
-  useEffect(() => {
-    const handleOnline = async () => {
-      console.log("Device is online");
-      const status = await getConnectionStatus();
-      setConnectionStatus(status);
-      setIsOffline(!status.supabaseConnected);
-    };
-    
-    const handleOffline = () => {
-      console.log("Device is offline");
-      setConnectionStatus({
-        deviceOnline: false,
-        supabaseConnected: false,
-        message: "Your device appears to be offline."
-      });
-      setIsOffline(true);
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    // Set initial state
-    handleOnline();
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   useEffect(() => {
     // Set up auth state change listener first
@@ -277,7 +210,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (sessionError) {
           console.error("Session error:", sessionError);
-          setLoading(false);
           throw sessionError;
         }
 
@@ -318,9 +250,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkSession();
     
     // Try to create demo users if they don't exist
-    if (connectionStatus.deviceOnline && connectionStatus.supabaseConnected) {
-      createDemoUsers();
-    }
+    createDemoUsers();
 
     return () => {
       subscription?.unsubscribe();
@@ -330,18 +260,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       console.log("Login attempt for:", email);
-      
-      // Check connection to Supabase before attempting login
-      const status = await getConnectionStatus();
-      setConnectionStatus(status);
-      
-      if (!status.deviceOnline) {
-        throw new Error("You're currently offline. Please check your internet connection and try again.");
-      }
-      
-      if (!status.supabaseConnected) {
-        throw new Error(status.message || "Unable to connect to the authentication service. The server might be down or unreachable.");
-      }
       
       if (!email || !password) {
         throw new Error("Email and password are required");
@@ -368,8 +286,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           errorMessage = "The email or password you entered is incorrect.";
         } else if (error.message.includes("Email not confirmed")) {
           errorMessage = "Please verify your email before logging in.";
-        } else if (error.message.includes("Network") || error.message.includes("fetch")) {
-          errorMessage = "We're having trouble connecting to our servers. Please check your internet connection and try again.";
         }
         
         toast({
@@ -398,20 +314,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Login error:", error);
       
-      // Re-check connection status after failure
-      const status = await getConnectionStatus();
-      setConnectionStatus(status);
-      
       // Improved error handling
       let errorMessage = "Login failed. Please check your credentials and try again.";
       
       if (error.message?.includes("Invalid login credentials")) {
         errorMessage = "The email or password you entered is incorrect.";
-      } else if (!status.deviceOnline) {
-        errorMessage = "You're currently offline. Please check your internet connection and try again.";
-      } else if (!status.supabaseConnected) {
-        errorMessage = status.message || "Unable to connect to the authentication service. The server might be down or unreachable.";
-      } else if (error.message?.includes("NetworkError") || error.message?.includes("network") || error.message?.includes("fetch")) {
+      } else if (!navigator.onLine || error.message?.includes("NetworkError") || error.message?.includes("network")) {
         errorMessage = "Unable to connect to the authentication service. Please check your internet connection.";
       } else {
         errorMessage = error.message || "An unexpected error occurred. Please try again.";
@@ -430,12 +338,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signup = async (email: string, password: string, name: string, phone?: string, dob?: string) => {
     try {
       console.log("Signup attempt for:", email);
-      
-      // Check if we're offline
-      if (!navigator.onLine) {
-        throw new Error("You're currently offline. Please check your internet connection and try again.");
-      }
-      
       // Register new user
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -465,12 +367,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Check if it's a network error
       let errorMessage = "Sign up failed. Please try again later.";
       
-      if (!navigator.onLine) {
-        errorMessage = "You're currently offline. Please check your internet connection and try again.";
-      } else if (error.message?.includes("NetworkError") || error.message?.includes("fetch")) {
+      if (!navigator.onLine || error.message?.includes("NetworkError")) {
         errorMessage = "Unable to connect to the authentication service. Please check your internet connection.";
-      } else if (error.message?.includes("already registered")) {
-        errorMessage = "This email is already registered. Please try logging in instead.";
       } else {
         errorMessage = error.message || "An unexpected error occurred. Please try again.";
       }

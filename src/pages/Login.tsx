@@ -9,10 +9,10 @@ import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, AlertCircle, User, Lock, Wifi, WifiOff } from "lucide-react";
+import { CalendarIcon, AlertCircle, User, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { supabase, getConnectionStatus } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   // Login state
@@ -35,16 +35,6 @@ const Login = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [error, setError] = useState<string | null>(null);
   const [loginAttempts, setLoginAttempts] = useState(0);
-  const [connectionStatus, setConnectionStatus] = useState<{
-    deviceOnline: boolean;
-    supabaseConnected: boolean;
-    message?: string;
-    latency?: number;
-  }>({
-    deviceOnline: navigator.onLine,
-    supabaseConnected: false
-  });
-  const [checkingConnection, setCheckingConnection] = useState(false);
   
   const { login, signup, isAdmin, isTrainer, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -53,69 +43,19 @@ const Login = () => {
   // Generate years for the year selector
   const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
 
-  // Check online status and connection to Supabase
-  const checkConnectionStatus = async () => {
-    setCheckingConnection(true);
-    try {
-      const status = await getConnectionStatus();
-      setConnectionStatus(status);
-      
-      // Only update isOnline to match deviceOnline status
-      setIsOnline(status.deviceOnline);
-      
-      // If we can connect to Supabase but there was a previous error about connectivity,
-      // clear that specific error
-      if (status.supabaseConnected && error && 
-         (error.includes("Unable to connect") || 
-          error.includes("internet connection") || 
-          error.includes("network"))) {
-        setError(null);
-      }
-      
-      // If we cannot connect to Supabase despite being online, show an error
-      if (status.deviceOnline && !status.supabaseConnected && !error) {
-        setError(status.message || "Unable to connect to the authentication service. The server might be down or unreachable.");
-      }
-    } catch (e) {
-      console.error("Error checking connection status:", e);
-    } finally {
-      setCheckingConnection(false);
-    }
-  };
-
   // Check online status
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      // When coming back online, check the actual connection to Supabase
-      checkConnectionStatus();
-    };
-    
-    const handleOffline = () => {
-      setIsOnline(false);
-      setConnectionStatus({
-        deviceOnline: false,
-        supabaseConnected: false,
-        message: "Your device appears to be offline. Please check your internet connection."
-      });
-      
-      // Only set offline error if we're not already showing one
-      if (!error) {
-        setError("You appear to be offline. Please check your internet connection.");
-      }
-    };
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
-    // Initial connection check
-    checkConnectionStatus();
     
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [error]);
+  }, []);
 
   // Check if user is already logged in and redirect accordingly
   useEffect(() => {
@@ -143,9 +83,6 @@ const Login = () => {
   }, []);
 
   const fillDemoCredentials = (type: 'admin' | 'user' | 'trainer') => {
-    // Reset any previous errors
-    setError(null);
-    
     switch(type) {
       case 'admin':
         setIdentifier('admin@gym.com');
@@ -160,6 +97,7 @@ const Login = () => {
         setPassword('trainer123');
         break;
     }
+    setError(null);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -168,18 +106,6 @@ const Login = () => {
     setError(null);
 
     try {
-      // Check connection to Supabase specifically before attempting login
-      const status = await getConnectionStatus();
-      setConnectionStatus(status);
-      
-      if (!status.deviceOnline) {
-        throw new Error("You're currently offline. Please check your internet connection and try again.");
-      }
-      
-      if (!status.supabaseConnected) {
-        throw new Error(status.message || "Unable to connect to authentication service. Please check your internet connection.");
-      }
-      
       // Add more debugging
       console.log(`Starting login with: ${identifier}, password length: ${password.length}`);
       
@@ -191,22 +117,8 @@ const Login = () => {
       // Increment login attempts counter
       setLoginAttempts(prev => prev + 1);
       
-      // Determine if we need to append @gym.com for convenience
-      let emailId = identifier;
-      
-      // If identifier doesn't include @ and is one of our demo account usernames,
-      // automatically append @gym.com for convenience
-      if (!identifier.includes('@') && 
-          (identifier === 'admin' || identifier === 'user' || identifier === 'trainer')) {
-        emailId = `${identifier}@gym.com`;
-        console.log("Auto-appending @gym.com to demo account:", emailId);
-        
-        toast({
-          title: "Using demo account format",
-          description: `Logging in with ${emailId}`,
-        });
-      }
-      
+      // Use email as identifier for login
+      const emailId = identifier.includes('@') ? identifier : `${identifier}@gym.com`;
       console.log("Using email for login:", emailId);
       
       await login(emailId, password);
@@ -231,7 +143,6 @@ const Login = () => {
         // Try again with corrected format
         try {
           await login(correctedEmail, password);
-          setIsLoading(false);
           return; // Success case handled by useEffect
         } catch (retryError) {
           // Continue to show error below
@@ -240,14 +151,10 @@ const Login = () => {
       }
       
       // Provide clear error messages based on common issues
-      if (!connectionStatus.deviceOnline) {
-        setError("You appear to be offline. Please check your internet connection and try again.");
-      } else if (!connectionStatus.supabaseConnected) {
-        setError(connectionStatus.message || "Unable to connect to the authentication service. The server might be down or unreachable.");
-      } else if (error.message?.includes("Invalid login credentials")) {
+      if (error.message?.includes("Invalid login credentials")) {
         setError("The email or password you entered is incorrect. Please check your credentials and try again.");
-      } else if (error.message?.includes("NetworkError") || error.message?.includes("network") || error.message?.includes("fetch") || error.message?.includes("connect")) {
-        setError("Unable to connect to the authentication service. Please check your internet connection.");
+      } else if (!navigator.onLine) {
+        setError("You appear to be offline. Please check your internet connection and try again.");
       } else {
         setError(error?.message || "Failed to login. Please check your credentials and try again.");
       }
@@ -262,11 +169,6 @@ const Login = () => {
     setError(null);
 
     try {
-      // Check if we're offline
-      if (!navigator.onLine) {
-        throw new Error("You're currently offline. Please check your internet connection and try again.");
-      }
-      
       // Validate phone number format
       if (!/^\d{8}$/.test(phone)) {
         toast({
@@ -338,11 +240,11 @@ const Login = () => {
         setIdentifier(email);
         setPassword(signupPassword);
         
-        // Also register in members table for admin/trainer view - Fix: Use a single object instead of an array
+        // Also register in members table for admin/trainer view
         try {
           const { error: memberError } = await supabase
             .from('members')
-            .insert({
+            .insert([{
               name: name,
               email: email,
               phone: phone,
@@ -352,7 +254,7 @@ const Login = () => {
               remaining_sessions: 4,
               status: "Active",
               gender: "Male" // Default gender
-            });
+            }]);
           
           if (memberError) {
             console.error("Error registering in members table:", memberError);
@@ -364,16 +266,7 @@ const Login = () => {
     } catch (error: any) {
       // Display error message
       console.error("Signup error caught in component:", error);
-      
-      if (!navigator.onLine) {
-        setError("You appear to be offline. Please check your internet connection and try again.");
-      } else if (error.message?.includes("already registered")) {
-        setError("This email is already registered. Please try logging in instead.");
-      } else if (error.message?.includes("NetworkError") || error.message?.includes("network") || error.message?.includes("fetch") || error.message?.includes("connect")) {
-        setError("Unable to connect to the authentication service. Please check your internet connection.");
-      } else {
-        setError(error?.message || "Failed to sign up. Please try again.");
-      }
+      setError(error?.message || "Failed to sign up. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -395,60 +288,18 @@ const Login = () => {
     }
   };
 
-  // Manual connection check button handler
-  const handleCheckConnection = () => {
-    checkConnectionStatus();
-  };
-
-  // Display connection status
-  const ConnectionStatus = () => {
-    const statusColor = connectionStatus.supabaseConnected ? "text-green-600" : "text-red-600";
-    const icon = connectionStatus.deviceOnline ? 
-      (connectionStatus.supabaseConnected ? <Wifi className="h-4 w-4 mr-1" /> : <WifiOff className="h-4 w-4 mr-1" />) : 
-      <WifiOff className="h-4 w-4 mr-1" />;
-    
-    return (
-      <div className="mb-3">
-        <div className="flex items-center justify-center">
-          <span className="mr-2">Connection status:</span>
-          <span className={`flex items-center ${statusColor}`}>
-            {icon}
-            {connectionStatus.deviceOnline ? 
-              (connectionStatus.supabaseConnected ? "Connected" : "Server unreachable") : 
-              "Offline"}
-          </span>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="ml-2 h-7 px-2"
-            onClick={handleCheckConnection}
-            disabled={checkingConnection}
-          >
-            {checkingConnection ? "Checking..." : "Check"}
-          </Button>
-        </div>
-        {connectionStatus.latency && (
-          <div className="text-xs text-center mt-1">
-            Latency: {connectionStatus.latency}ms
-            {connectionStatus.latency > 1000 && " (High latency may cause delays)"}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   // Display offline warning
-  const ConnectionWarning = () => {
-    if (!connectionStatus.deviceOnline || (connectionStatus.deviceOnline && !connectionStatus.supabaseConnected)) {
+  const OfflineWarning = () => {
+    if (!isOnline) {
       return (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
           <div className="flex">
             <div className="flex-shrink-0">
-              <WifiOff className="h-5 w-5 text-yellow-400" />
+              <AlertCircle className="h-5 w-5 text-yellow-400" />
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                {connectionStatus.message || "You appear to be offline or unable to reach the server. Please check your internet connection."}
+                You appear to be offline. Please check your internet connection.
               </p>
             </div>
           </div>
@@ -481,7 +332,6 @@ const Login = () => {
       <div className="max-w-md w-full mx-auto space-y-8">
         <div className="text-center">
           <h2 className="mt-6 text-2xl font-bold text-gray-900">Welcome to FitTrack Pro</h2>
-          <ConnectionStatus />
           <div className="mt-2 text-sm text-gray-600">
             <p className="mb-2">
               Demo accounts: admin@gym.com, user@gym.com, trainer@gym.com (password: admin123, user123, trainer123)
@@ -512,7 +362,7 @@ const Login = () => {
           </div>
         </div>
         
-        <ConnectionWarning />
+        {!isOnline && <OfflineWarning />}
 
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -572,7 +422,7 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
-                  disabled={isLoading || !connectionStatus.supabaseConnected}
+                  disabled={isLoading}
                 >
                   {isLoading ? "Signing in..." : "Sign in"}
                 </Button>
@@ -584,8 +434,6 @@ const Login = () => {
                       <li>For demo accounts, use full email (e.g., admin@gym.com)</li>
                       <li>Passwords are case sensitive</li>
                       <li>Try one of the demo account buttons above</li>
-                      <li>Check your internet connection</li>
-                      <li>Click the "Check" button to verify connectivity</li>
                     </ul>
                   </div>
                 )}
@@ -720,7 +568,7 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
-                  disabled={isLoading || !connectionStatus.supabaseConnected}
+                  disabled={isLoading}
                 >
                   {isLoading ? "Creating account..." : "Create account"}
                 </Button>
