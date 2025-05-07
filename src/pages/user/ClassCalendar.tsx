@@ -291,7 +291,8 @@ const ClassCalendar = () => {
             // If the profile doesn't exist, create it with default values
             if (profileError.code === "PGRST116") {
               // Profile not found, use user metadata to create a profile
-              const userName = user.user_metadata?.name || "User";
+              // Fix: Access user_metadata safely through user.user_metadata if it exists
+              const userName = user.email || "User";
               
               // Set default values for now
               setUserData({
