@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -423,9 +422,6 @@ const Memberships = () => {
                       Email
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Sessions
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -451,11 +447,6 @@ const Memberships = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-500">
                           {request.email}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                            {request.type}
-                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-500">
                           {sessionCount}
@@ -500,7 +491,7 @@ const Memberships = () => {
 
                   {membershipRequests.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                         No membership requests pending.
                       </td>
                     </tr>

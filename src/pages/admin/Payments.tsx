@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -219,6 +218,112 @@ const Payments = () => {
     }
   };
 
+  const cancelPayment = async (id: number) => {
+    try {
+      // Find payment in local state
+      const payment = payments.find(p => p.id === id);
+      if (!payment) {
+        toast({
+          title: "Error",
+          description: "Payment not found",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Check if this is a session-based payment by looking at the membership type
+      const isSessionPayment = ['Basic', 'Standard', 'Premium', 'Ultimate'].includes(payment.membership);
+      
+      // Try to update payment status in Supabase
+      await requireAuth(async () => {
+        const { error } = await supabase
+          .from('payments')
+          .update({ status: "Cancelled" })
+          .eq('id', id);
+          
+        if (error) {
+          console.error("Error updating payment status in Supabase:", error);
+          throw error;
+        }
+        
+        // If this is a session payment, we need to deduct sessions from the member
+        if (isSessionPayment) {
+          // First, get the member by name
+          const { data: memberData, error: memberError } = await supabase
+            .from('members')
+            .select('*')
+            .eq('name', payment.member)
+            .single();
+            
+          if (memberError) {
+            console.error("Error fetching member data:", memberError);
+            throw memberError;
+          }
+          
+          if (memberData) {
+            // Determine how many sessions to deduct based on the membership type
+            let sessionsToDeduct = 0;
+            switch (payment.membership) {
+              case 'Basic':
+                sessionsToDeduct = 12;
+                break;
+              case 'Standard':
+                sessionsToDeduct = 4;
+                break;
+              case 'Premium':
+                sessionsToDeduct = 20;
+                break;
+              case 'Ultimate':
+                sessionsToDeduct = 30;
+                break;
+              default:
+                sessionsToDeduct = 0;
+            }
+            
+            if (sessionsToDeduct > 0) {
+              // Calculate new session values
+              const newRemainingSessions = Math.max(0, (memberData.remaining_sessions || 0) - sessionsToDeduct);
+              
+              // Update the member record
+              const { error: updateError } = await supabase
+                .from('members')
+                .update({
+                  remaining_sessions: newRemainingSessions
+                })
+                .eq('id', memberData.id);
+                
+              if (updateError) {
+                console.error("Error updating member sessions:", updateError);
+                throw updateError;
+              }
+              
+              console.log(`Updated sessions for ${payment.member} to ${memberData.sessions} (${newRemainingSessions} remaining after cancellation)`);
+            }
+          }
+        }
+        
+        // Update local state
+        setPayments(prevPayments => 
+          prevPayments.map(p => 
+            p.id === id ? { ...p, status: "Cancelled" } : p
+          )
+        );
+      });
+  
+      toast({
+        title: "Payment cancelled",
+        description: `The payment has been cancelled${isSessionPayment ? ' and member sessions have been adjusted' : ''}`,
+      });
+    } catch (error: any) {
+      console.error("Error cancelling payment:", error);
+      toast({
+        title: "Failed to cancel payment",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <DashboardLayout title="Payment Management">
       <SearchBar 
@@ -235,6 +340,7 @@ const Payments = () => {
         <PaymentTable 
           payments={filteredPayments} 
           updatePaymentStatus={updatePaymentStatus} 
+          cancelPayment={cancelPayment}
         />
       )}
       
@@ -242,7 +348,7 @@ const Payments = () => {
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
         onAddPayment={handleAddPayment}
-        members={members} // Pass members as fallback
+        members={members} 
       />
     </DashboardLayout>
   );

@@ -1,5 +1,5 @@
 
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 type Payment = {
   id: number;
@@ -13,9 +13,10 @@ type Payment = {
 interface PaymentTableProps {
   payments: Payment[];
   updatePaymentStatus: (id: number, newStatus: string) => void;
+  cancelPayment: (id: number) => void;
 }
 
-const PaymentTable = ({ payments, updatePaymentStatus }: PaymentTableProps) => {
+const PaymentTable = ({ payments, updatePaymentStatus, cancelPayment }: PaymentTableProps) => {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="overflow-x-auto">
@@ -64,6 +65,8 @@ const PaymentTable = ({ payments, updatePaymentStatus }: PaymentTableProps) => {
                     className={`px-2 py-1 text-xs rounded-full ${
                       payment.status === "Completed"
                         ? "bg-green-100 text-green-800"
+                        : payment.status === "Cancelled"
+                        ? "bg-red-100 text-red-800"
                         : "bg-yellow-100 text-yellow-800"
                     }`}
                   >
@@ -74,9 +77,17 @@ const PaymentTable = ({ payments, updatePaymentStatus }: PaymentTableProps) => {
                   {payment.status === "Pending" && (
                     <button
                       onClick={() => updatePaymentStatus(payment.id, "Completed")}
-                      className="text-gym-blue hover:text-gym-dark-blue"
+                      className="text-gym-blue hover:text-gym-dark-blue inline-flex items-center mr-2"
                     >
-                      Mark Completed
+                      <Check size={16} className="mr-1" /> Complete
+                    </button>
+                  )}
+                  {payment.status !== "Cancelled" && (
+                    <button
+                      onClick={() => cancelPayment(payment.id)}
+                      className="text-red-600 hover:text-red-800 inline-flex items-center"
+                    >
+                      <X size={16} className="mr-1" /> Cancel
                     </button>
                   )}
                 </td>
