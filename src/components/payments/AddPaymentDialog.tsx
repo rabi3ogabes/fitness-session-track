@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 
 // Types
 type Member = {
@@ -30,6 +31,7 @@ type PaymentData = {
   member: string;
   membership: string;
   isSessionPayment: boolean;
+  sessionCount: number;
 };
 
 // Membership pricing in QAR
@@ -56,6 +58,7 @@ const AddPaymentDialog = ({
     member: "",
     membership: "Basic",
     isSessionPayment: false,
+    sessionCount: 4
   });
   const [confirmationStep, setConfirmationStep] = useState(false);
   const { toast } = useToast();
@@ -75,6 +78,7 @@ const AddPaymentDialog = ({
       member: "",
       membership: "Basic",
       isSessionPayment: false,
+      sessionCount: 4
     });
   };
 
@@ -157,6 +161,25 @@ const AddPaymentDialog = ({
                 <label htmlFor="sessionPayment">Session Payment</label>
               </div>
             </div>
+            {newPayment.isSessionPayment && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-sm font-medium col-span-1">
+                  Session Count
+                </label>
+                <div className="col-span-3">
+                  <Input
+                    type="number"
+                    min="1"
+                    value={newPayment.sessionCount}
+                    onChange={(e) => setNewPayment({ 
+                      ...newPayment, 
+                      sessionCount: Math.max(1, parseInt(e.target.value) || 1)
+                    })}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="py-4">
@@ -173,7 +196,16 @@ const AddPaymentDialog = ({
                 <span className="font-medium">{newPayment.membership}</span>
                 
                 <span className="text-gray-500">Payment Type:</span>
-                <span className="font-medium">{newPayment.isSessionPayment ? 'Session Payment' : 'Regular Payment'}</span>
+                <span className="font-medium">
+                  {newPayment.isSessionPayment ? 'Session Payment' : 'Regular Payment'}
+                </span>
+                
+                {newPayment.isSessionPayment && (
+                  <>
+                    <span className="text-gray-500">Sessions to Add:</span>
+                    <span className="font-medium">{newPayment.sessionCount}</span>
+                  </>
+                )}
                 
                 <span className="text-gray-500">Date:</span>
                 <span className="font-medium">{new Date().toLocaleDateString()}</span>

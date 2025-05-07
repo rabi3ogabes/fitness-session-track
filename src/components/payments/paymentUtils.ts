@@ -40,4 +40,5 @@ export type PaymentFormData = {
   member: string;
   membership: string;
   isSessionPayment: boolean;
+  sessionCount?: number;
 };
