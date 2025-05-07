@@ -1393,9 +1393,9 @@ const ClassCalendar = () => {
                           <FormLabel>
                             I understand this will use 1 session from my account
                           </FormLabel>
-                          <FormDescription>
+                          <p className="text-sm text-muted-foreground">
                             You can cancel up to {systemSettings.cancellationTimeLimit} hours before the class starts.
-                          </FormDescription>
+                          </p>
                         </div>
                         <FormMessage />
                       </FormItem>
