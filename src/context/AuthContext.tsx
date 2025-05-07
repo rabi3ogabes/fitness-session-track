@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -59,54 +58,100 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Check if admin exists
       const { data: existingAdmin, error: checkError } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, email')
         .eq('email', 'admin@gym.com')
-        .limit(1);
+        .maybeSingle();
         
       if (checkError) {
         console.error(`Error checking if admin user exists:`, checkError);
         return;
       }
       
-      // If admin doesn't exist, create them
-      if (!existingAdmin || existingAdmin.length === 0) {
+      // If admin doesn't exist in profiles or auth table, create them
+      if (!existingAdmin) {
         console.log(`Creating admin user`);
-        
-        // Sign up the user
-        const { data: authData, error: signupError } = await supabase.auth.signUp({
-          email: 'admin@gym.com',
-          password: 'admin123',
-          options: {
-            data: {
-              name: 'Admin User',
-              role: 'admin'
+
+        try {
+          // Step 1: First check if admin auth user exists 
+          const { data: { users }, error: getUserError } = await supabase.auth.admin.listUsers({
+            perPage: 1,
+            page: 1,
+            filter: {
+              email: 'admin@gym.com'
             }
+          });
+
+          if (getUserError) {
+            console.error(`Error checking if admin auth user exists:`, getUserError);
           }
-        });
-        
-        if (signupError) {
-          console.error(`Error creating admin auth user:`, signupError);
-          return;
-        }
-        
-        if (authData.user) {
-          console.log(`Successfully created admin auth user with ID: ${authData.user.id}`);
-          
-          // Create profile entry 
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: authData.user.id,  
+
+          // If admin auth user doesn't exist
+          if (!users || users.length === 0) {
+            // Sign up the user
+            const { data: authData, error: signupError } = await supabase.auth.signUp({
               email: 'admin@gym.com',
-              name: 'Admin User',
-              phone_number: '12345678'
+              password: 'admin123',
+              options: {
+                data: {
+                  name: 'Admin User',
+                  role: 'admin'
+                }
+              }
             });
             
-          if (profileError) {
-            console.error(`Error creating profile for admin:`, profileError);
+            if (signupError) {
+              console.error(`Error creating admin auth user:`, signupError);
+              return;
+            }
+            
+            if (authData?.user) {
+              console.log(`Successfully created admin auth user with ID: ${authData.user.id}`);
+              
+              // Create profile entry 
+              const { error: profileError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: authData.user.id,  
+                  email: 'admin@gym.com',
+                  name: 'Admin User',
+                  phone_number: '12345678'
+                });
+                
+              if (profileError) {
+                console.error(`Error creating profile for admin:`, profileError);
+              } else {
+                console.log(`Successfully created profile for admin`);
+              }
+            }
           } else {
-            console.log(`Successfully created profile for admin`);
+            console.log("Admin auth user exists but profile might be missing, ensuring profile exists");
+            
+            // Create profile for existing auth user
+            const adminAuthId = users[0].id;
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .insert({
+                id: adminAuthId,  
+                email: 'admin@gym.com',
+                name: 'Admin User',
+                phone_number: '12345678'
+              })
+              .select()
+              .maybeSingle();
+              
+            if (profileError) {
+              // Ignore if error is related to unique constraint
+              if (!profileError.message.includes('unique constraint')) {
+                console.error(`Error creating profile for existing admin:`, profileError);
+              } else {
+                console.log("Admin profile already exists");
+              }
+            } else {
+              console.log(`Successfully created profile for existing admin auth user`);
+            }
           }
+        } catch (err) {
+          console.error(`Error in admin user creation process:`, err);
         }
       } else {
         console.log(`Admin user already exists, skipping creation`);
@@ -129,7 +174,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
-            .single();
+            .maybeSingle();
           
           // Set user data
           setUser({
@@ -198,7 +243,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
-            .single();
+            .maybeSingle();
           
           if (profileData) {
             setUserProfile({

@@ -37,6 +37,7 @@ const Login = () => {
   const [checkingConnection, setCheckingConnection] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loginAttempts, setLoginAttempts] = useState(0);
+  const [connectionCheckCount, setConnectionCheckCount] = useState(0);
   
   const { login, signup, isAdmin, isTrainer, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -48,13 +49,24 @@ const Login = () => {
   // Check online status and Supabase connection
   useEffect(() => {
     const checkSupabaseCon = async () => {
+      if (!navigator.onLine) {
+        setIsOnline(false);
+        setSupabaseConnected(false);
+        return;
+      }
+
       setCheckingConnection(true);
       try {
-        const result = await checkSupabaseConnection();
+        const result = await checkSupabaseConnection(3, 1000);
         setSupabaseConnected(result.connected);
+        setConnectionCheckCount(prev => prev + 1);
+        
         if (!result.connected && navigator.onLine) {
           console.log("Device is online but cannot connect to Supabase");
           setError("Cannot connect to the authentication service. Please try again later.");
+        } else if (result.connected) {
+          // Clear any previous connection errors when we're connected
+          setError(prev => prev === "Cannot connect to the authentication service. Please try again later." ? null : prev);
         }
       } catch (err) {
         console.error("Error checking Supabase connection:", err);
@@ -107,29 +119,39 @@ const Login = () => {
     }
   }, [isAuthenticated, isAdmin, isTrainer, navigate]);
 
+  // Load logo from local storage
   useEffect(() => {
-    // Load logo from local storage
     const savedLogo = localStorage.getItem("gymLogo");
     if (savedLogo) {
       setLogo(savedLogo);
     }
   }, []);
 
+  // Fill in admin credentials for quick testing
   const fillTestCredentials = () => {
     setIdentifier('admin@gym.com');
     setPassword('admin123');
     setError(null);
   };
 
+  // Handle login form submission
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
-      // First check if we're connected to Supabase
-      if (!isOnline) {
+      // First check if we're connected to the internet
+      if (!navigator.onLine) {
         throw new Error("You appear to be offline. Please check your internet connection.");
+      }
+
+      // Re-check connection to Supabase before continuing
+      const connectionCheck = await checkSupabaseConnection(3, 800);
+      setSupabaseConnected(connectionCheck.connected);
+
+      if (!connectionCheck.connected) {
+        throw new Error(`Cannot connect to authentication server. Please try again in a few moments. Latency: ${connectionCheck.latency}ms`);
       }
 
       // Check if we're using proper email format
@@ -349,6 +371,29 @@ const Login = () => {
     );
   };
 
+  // Display troubleshooting info when multiple connection checks fail
+  const ConnectionTroubleshooting = () => {
+    if (connectionCheckCount > 2 && !supabaseConnected) {
+      return (
+        <Alert variant="default" className="mb-4 bg-blue-50 border-blue-200">
+          <AlertTitle className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-blue-600" />
+            Connection Troubleshooting
+          </AlertTitle>
+          <AlertDescription className="text-sm">
+            <ul className="list-disc pl-5 space-y-1 mt-2">
+              <li>Ensure you have a stable internet connection</li>
+              <li>Try refreshing the page (F5 or Ctrl+R)</li>
+              <li>Try using a different network if available</li>
+              <li>Check if any firewalls or VPNs might be blocking the connection</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    return null;
+  };
+
   // Display offline warning
   const OfflineWarning = () => {
     if (!isOnline) {
@@ -429,6 +474,7 @@ const Login = () => {
         </div>
         
         <ConnectionStatus />
+        <ConnectionTroubleshooting />
         
         {(!isOnline || !supabaseConnected) && <OfflineWarning />}
 
@@ -487,7 +533,7 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
-                  disabled={isLoading || (!isOnline && !supabaseConnected)}
+                  disabled={isLoading}
                 >
                   {isLoading ? "Signing in..." : "Sign in"}
                 </Button>
@@ -630,7 +676,7 @@ const Login = () => {
                 <Button 
                   type="submit" 
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
-                  disabled={isLoading || (!isOnline && !supabaseConnected)}
+                  disabled={isLoading}
                 >
                   {isLoading ? "Creating account..." : "Create account"}
                 </Button>

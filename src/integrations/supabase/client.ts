@@ -13,7 +13,7 @@ const supabaseOptions = {
     persistSession: true,
     detectSessionInUrl: true,
     flowType: 'implicit' as const,
-    debug: false
+    debug: true // Enable debug mode to see more information about connection issues
   },
   global: {
     headers: {
@@ -24,7 +24,7 @@ const supabaseOptions = {
         // Add a timeout to prevent hanging fetch requests
         const timeoutId = setTimeout(() => {
           reject(new Error('Network request timed out. Please try again later.'));
-        }, 10000); // 10 second timeout
+        }, 15000); // Increase timeout to 15 seconds
         
         fetch(url, options)
           .then(response => {
@@ -78,7 +78,7 @@ export const requireAuth = async <T>(
 };
 
 // Improved Utility to check connection to Supabase with better error handling and retry mechanism
-export const checkSupabaseConnection = async (maxRetries = 2, retryDelay = 500) => {
+export const checkSupabaseConnection = async (maxRetries = 3, retryDelay = 500) => {
   if (isOffline()) {
     return { connected: false, latency: null, error: new Error("Device is offline") };
   }
@@ -93,7 +93,7 @@ export const checkSupabaseConnection = async (maxRetries = 2, retryDelay = 500) 
       // Make a lightweight query to check connection
       // Use a timeout to prevent hanging
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Connection check timed out")), 5000);
+        setTimeout(() => reject(new Error("Connection check timed out")), 10000);
       });
       
       const queryPromise = supabase.from('profiles').select('id').limit(1).maybeSingle();
