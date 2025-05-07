@@ -162,3 +162,46 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
     console.warn(`Failed to cache ${entityName} data:`, e);
   }
 };
+
+// Add a new helper function to directly cancel a booking
+export const cancelClassBooking = async (userId: string, classId: number): Promise<boolean> => {
+  // First delete the booking
+  const { error: deleteError } = await supabase
+    .from('bookings')
+    .delete()
+    .eq('user_id', userId)
+    .eq('class_id', classId);
+  
+  if (deleteError) {
+    console.error("Error deleting booking:", deleteError);
+    return false;
+  }
+  
+  // Then get the class details to update the enrolled count
+  const { data: classData, error: classError } = await supabase
+    .from('classes')
+    .select('enrolled')
+    .eq('id', classId)
+    .single();
+  
+  if (classError || !classData) {
+    console.error("Error getting class data:", classError);
+    return true; // Return true anyway since the booking was deleted
+  }
+  
+  // Update the enrolled count if it's greater than 0
+  if (classData.enrolled && classData.enrolled > 0) {
+    const { error: updateError } = await supabase
+      .from('classes')
+      .update({ enrolled: classData.enrolled - 1 })
+      .eq('id', classId);
+    
+    if (updateError) {
+      console.error("Error updating class enrolled count:", updateError);
+      // The booking was deleted but the enrolled count wasn't updated
+      return true;
+    }
+  }
+  
+  return true;
+};

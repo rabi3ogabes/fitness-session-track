@@ -38,7 +38,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, cancelClassBooking } from "@/integrations/supabase/client";
 import { ClassModel } from "@/pages/admin/components/classes/ClassTypes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -48,7 +48,6 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-  FormDescription
 } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -699,7 +698,7 @@ const ClassCalendar = () => {
     setSelectedClass(null);
   };
   
-  // FIX: Updated the handleCancelBooking function to correctly calculate hours difference
+  // FIX: Updated the handleCancelBooking function to properly handle cancellations
   const handleCancelBooking = async (classId: number, classTime: string, className: string) => {
     if (!user) return;
     
@@ -740,7 +739,7 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Demo user handling
+      // Special handling for demo user
       if (user.id === "demo-user-id") {
         // Simulate successful cancellation for demo user
         setBookedClasses(bookedClasses.filter(id => id !== classId));
@@ -777,29 +776,11 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Delete booking from Supabase
-      const { error } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('class_id', classId);
+      // Use the new helper function to cancel the booking
+      const cancellationSuccess = await cancelClassBooking(user.id, classId);
       
-      if (error) {
-        console.error("Error cancelling booking:", error);
-        throw error;
-      }
-      
-      // Update class enrolled count
-      const classToUpdate = classes.find(c => c.id === classId);
-      if (classToUpdate && classToUpdate.enrolled && classToUpdate.enrolled > 0) {
-        const { error: updateError } = await supabase
-          .from('classes')
-          .update({ enrolled: classToUpdate.enrolled - 1 })
-          .eq('id', classId);
-        
-        if (updateError) {
-          console.error(`Error updating enrolled count for class ${classId}:`, updateError);
-        }
+      if (!cancellationSuccess) {
+        throw new Error("Failed to cancel booking");
       }
       
       // Update local state
