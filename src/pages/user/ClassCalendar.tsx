@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Calendar } from "@/components/ui/calendar";
@@ -508,8 +507,17 @@ const ClassCalendar = () => {
 
   const handleSelectClass = (cls: ClassWithBooking) => {
     setSelectedClass(cls);
+    
+    // Check if this class is already booked
+    const isBooked = cls.isBooked || bookedClasses.includes(cls.id);
+    
+    // Set the state to control dialog display
+    setIsClassAlreadyBooked(isBooked);
     setConfirmDialogOpen(true);
   };
+
+  // Add this state to track if the selected class is already booked
+  const [isClassAlreadyBooked, setIsClassAlreadyBooked] = useState(false);
 
   const handleBooking = async () => {
     if (!selectedClass) return;
@@ -1239,7 +1247,7 @@ const ClassCalendar = () => {
                               <div className="flex-1 p-4">
                                 <div className="flex justify-between items-start mb-2">
                                   <div>
-                                    <h3 className="font-medium text-gray-800 text-lg">{cls.name}</h3>
+                                    <h3 className="font-medium text-lg">{cls.name}</h3>
                                     <p className="text-sm text-gray-500 flex items-center">
                                       <Clock className="h-3.5 w-3.5 mr-1" />
                                       {cls.start_time} - {cls.end_time}
@@ -1466,15 +1474,20 @@ const ClassCalendar = () => {
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-center text-xl">Book Class</DialogTitle>
+            <DialogTitle className="text-center text-xl">
+              {isClassAlreadyBooked ? "Cancel Booking" : "Book Class"}
+            </DialogTitle>
             <DialogDescription className="text-center">
-              {selectedClass ? `${selectedClass.name} on ${
-                selectedClass.schedule ? format(new Date(selectedClass.schedule), 'EEEE, MMMM d') : ''
-              }` : 'Select a class to book'}
+              {isClassAlreadyBooked 
+                ? "You have already booked this class. Would you like to cancel your booking?" 
+                : selectedClass 
+                  ? `${selectedClass.name} on ${selectedClass.schedule ? format(new Date(selectedClass.schedule), 'EEEE, MMMM d') : ''}`
+                  : 'Select a class to book'
+              }
             </DialogDescription>
           </DialogHeader>
           
-          {selectedClass && (
+          {selectedClass && !isClassAlreadyBooked && (
             <div className="py-4">
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center justify-between mb-3">
@@ -1581,24 +1594,51 @@ const ClassCalendar = () => {
           )}
           
           <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2">
-            <Button variant="outline" onClick={cancelBookingConfirmation} className="w-full sm:w-auto">
-              <X className="mr-2 h-4 w-4" />
-              Cancel
-            </Button>
-            <Button 
-              onClick={confirmBooking} 
-              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700"
-              disabled={!form.getValues().acceptTerms || isBookingInProgress || !selectedClass}
-            >
-              {isBookingInProgress ? (
-                <>Processing...</>
-              ) : (
-                <>
-                  <Check className="mr-2 h-4 w-4" />
-                  Confirm Booking
-                </>
-              )}
-            </Button>
+            {isClassAlreadyBooked ? (
+              <>
+                <Button variant="outline" onClick={() => setConfirmDialogOpen(false)} className="w-full sm:w-auto">
+                  Keep Booking
+                </Button>
+                <Button 
+                  onClick={() => {
+                    if (selectedClass) {
+                      handleCancelBooking(
+                        selectedClass.id, 
+                        selectedClass.start_time || "00:00", 
+                        selectedClass.name
+                      );
+                    }
+                    setConfirmDialogOpen(false);
+                  }} 
+                  variant="destructive" 
+                  className="w-full sm:w-auto"
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel Booking
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setConfirmDialogOpen(false)} className="w-full sm:w-auto">
+                  <X className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={confirmBooking} 
+                  className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700"
+                  disabled={!form.getValues().acceptTerms || isBookingInProgress || !selectedClass}
+                >
+                  {isBookingInProgress ? (
+                    <>Processing...</>
+                  ) : (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Confirm Booking
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
