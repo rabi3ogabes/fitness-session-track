@@ -426,6 +426,9 @@ const Memberships = () => {
                       Type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Sessions
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Request Date
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -437,59 +440,67 @@ const Memberships = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {membershipRequests.map((request) => (
-                    <tr key={request.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">{request.member}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                        {request.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                          {request.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                        {request.date}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            request.status === "Approved"
-                              ? "bg-green-100 text-green-800"
-                              : request.status === "Rejected"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {request.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {request.status === "Pending" && (
-                          <>
-                            <button
-                              onClick={() => handleApproveRequest(request.id)}
-                              className="text-green-600 hover:text-green-800 mr-4"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleRejectRequest(request.id)}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {membershipRequests.map((request) => {
+                    const membershipType = membershipTypes.find(m => m.name === request.type);
+                    const sessionCount = membershipType ? membershipType.sessions : 'N/A';
+                    
+                    return (
+                      <tr key={request.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="font-medium text-gray-900">{request.member}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                          {request.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                            {request.type}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                          {sessionCount}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                          {request.date}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              request.status === "Approved"
+                                ? "bg-green-100 text-green-800"
+                                : request.status === "Rejected"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-yellow-100 text-yellow-800"
+                            }`}
+                          >
+                            {request.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          {request.status === "Pending" && (
+                            <>
+                              <button
+                                onClick={() => handleApproveRequest(request.id)}
+                                className="text-green-600 hover:text-green-800 mr-4"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleRejectRequest(request.id)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
 
                   {membershipRequests.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                         No membership requests pending.
                       </td>
                     </tr>

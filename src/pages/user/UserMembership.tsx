@@ -383,7 +383,7 @@ const UserMembership = () => {
                   plan.recommended
                     ? "border-2 border-gym-blue relative"
                     : ""
-                }`}
+                } flex flex-col h-full`}
               >
                 {plan.recommended && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gym-blue text-white px-3 py-1 rounded-full text-xs font-medium">
@@ -394,7 +394,7 @@ const UserMembership = () => {
                   <CardTitle>{plan.name}</CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-grow">
                   <div className="mt-1 mb-4">
                     <p className="text-3xl font-bold">
                       QAR {plan.price}
@@ -410,7 +410,7 @@ const UserMembership = () => {
                     ))}
                   </ul>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="mt-auto">
                   <Button 
                     onClick={() => handleBookPlan(plan.name)} 
                     className="w-full bg-gym-blue hover:bg-gym-dark-blue"
