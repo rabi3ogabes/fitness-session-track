@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AuthTokenResponse } from '@supabase/supabase-js';
+import { AuthTokenResponse, User as SupabaseUser } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -74,7 +74,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         try {
           // Step 1: First check if admin auth user exists 
-          // We need to modify this part since filter is not a valid property of PageParams
+          // We need to modify this part to fix the TypeScript error
+          // Define the type for users returned from listUsers
+          interface AdminUser extends SupabaseUser {
+            email?: string;
+          }
+
           const { data: { users }, error: getUserError } = await supabase.auth.admin.listUsers({
             perPage: 100,
             page: 1
@@ -85,7 +90,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
 
           // Check if admin exists in the retrieved users
-          const adminUser = users?.find(u => u.email === 'admin@gym.com');
+          // Add proper type annotation to fix the error
+          const adminUser = users && Array.isArray(users) ? 
+            users.find((u: AdminUser) => u.email === 'admin@gym.com') : 
+            undefined;
 
           // If admin auth user doesn't exist
           if (!adminUser) {
@@ -284,6 +292,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Create admin user if they don't exist
     createAdminUser().catch(err => {
       console.error("Error creating admin user:", err);
+      // Make sure loading is set to false even if admin creation fails
+      setLoading(false);
     });
 
     return () => {
