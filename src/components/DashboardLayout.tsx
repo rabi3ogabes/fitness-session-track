@@ -1,5 +1,5 @@
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "./Sidebar";
@@ -12,22 +12,35 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
   const { isAuthenticated, logout, loading } = useAuth();
   const navigate = useNavigate();
+  const [localLoading, setLocalLoading] = useState(true);
 
   // Redirect if not authenticated after loading is complete
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      console.log("Not authenticated, redirecting to login from DashboardLayout");
-      navigate("/login");
+    if (!loading) {
+      if (!isAuthenticated) {
+        console.log("Not authenticated, redirecting to login from DashboardLayout");
+        navigate("/login");
+      } else {
+        // Once auth check is complete and user is authenticated, set local loading to false
+        setLocalLoading(false);
+      }
     }
   }, [isAuthenticated, loading, navigate]);
 
-  // Show loading or nothing while checking authentication
-  if (loading) {
+  // Explicitly log the loading states for debugging
+  useEffect(() => {
+    console.log("Auth loading state:", loading);
+    console.log("Local loading state:", localLoading);
+    console.log("Is authenticated:", isAuthenticated);
+  }, [loading, localLoading, isAuthenticated]);
+
+  // Show loading while checking authentication or in local loading state
+  if (loading || localLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
         </div>
       </div>
     );
