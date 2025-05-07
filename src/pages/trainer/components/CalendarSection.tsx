@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { mockClasses, isDayWithClass, getClassesForDate } from "../mockData";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
 interface CalendarSectionProps {
   selectedDate: Date;
@@ -29,6 +31,42 @@ export const CalendarSection = ({
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [isClassAlreadyBooked, setIsClassAlreadyBooked] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [userBookings, setUserBookings] = useState<any[]>([]);
+  const [bookedClasses, setBookedClasses] = useState<any[]>([]);
+  
+  // Fetch real user bookings from Supabase
+  useEffect(() => {
+    const fetchUserBookings = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('bookings')
+          .select('*, classes(*)')
+          .eq('user_id', user.id)
+          .eq('status', 'confirmed');
+          
+        if (error) throw error;
+        setUserBookings(data || []);
+        
+        // Process bookings to get class details
+        if (data) {
+          const classes = data.map(booking => booking.classes).filter(Boolean);
+          setBookedClasses(classes);
+        }
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load your bookings. Please try again.",
+          variant: "destructive"
+        });
+      }
+    };
+    
+    fetchUserBookings();
+  }, [user, toast]);
   
   // Calendar navigation handlers
   const handlePreviousMonth = () => {
@@ -216,11 +254,46 @@ export const CalendarSection = ({
           <div className="mt-6">
             <h3 className="font-medium mb-3 flex items-center">
               <Clock className="h-4 w-4 mr-2 text-purple-500" />
-              Classes on {format(selectedDate, "MMMM d, yyyy")}
+              {userBookings.length > 0 ? 'My Bookings' : 'Classes on ' + format(selectedDate, "MMMM d, yyyy")}
             </h3>
             
             <div className="space-y-3">
-              {classesForView.length > 0 ? (
+              {userBookings.length > 0 ? (
+                userBookings.map(booking => {
+                  const classData = booking.classes;
+                  if (!classData) return null;
+                  
+                  const classDate = classData.schedule ? new Date(classData.schedule) : new Date();
+                  
+                  return (
+                    <div 
+                      key={booking.id} 
+                      className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium">{classData.name}</p>
+                          <div className="flex flex-col xs:flex-row text-xs text-gray-500">
+                            <span className="flex items-center mr-2">
+                              <CalendarIcon className="h-3 w-3 mr-1" />
+                              {format(classDate, 'MMM d, yyyy')}
+                            </span>
+                            <span className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {classData.start_time} - {classData.end_time}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                            Booked
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : classesForView.length > 0 ? (
                 classesForView.map(cls => {
                   const isBooked = bookings.some(booking => booking.class_id === cls.id);
                   
@@ -304,4 +377,3 @@ export const CalendarSection = ({
     </div>
   );
 };
-
