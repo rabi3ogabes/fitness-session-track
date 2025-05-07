@@ -13,43 +13,14 @@ import {
 } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-
-// Mock membership data
-const membershipData = {
-  current: {
-    name: "Basic",
-    type: "Monthly",
-    startDate: "April 1, 2025",
-    endDate: "May 1, 2025",
-    sessions: 12,
-    sessionsRemaining: 7,
-    price: 250, // QAR
-    automatic: true,
-  },
-  history: [
-    {
-      id: 1,
-      type: "Basic Monthly",
-      date: "April 1, 2025",
-      amount: 250, // QAR
-      status: "Successful",
-    },
-    {
-      id: 2,
-      type: "Basic Monthly",
-      date: "March 1, 2025",
-      amount: 250, // QAR
-      status: "Successful",
-    },
-    {
-      id: 3,
-      type: "Premium Monthly",
-      date: "February 1, 2025",
-      amount: 350, // QAR
-      status: "Successful",
-    },
-  ],
-};
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Mock available plans
 const availablePlans = [
@@ -103,10 +74,23 @@ const availablePlans = [
 const UserMembership = () => {
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState({ name: "Current User", email: "user@example.com" });
+  const [currentMembership, setCurrentMembership] = useState({
+    name: "Basic",
+    type: "Monthly",
+    startDate: "April 1, 2025",
+    endDate: "May 1, 2025",
+    sessions: 12,
+    sessionsRemaining: 7,
+    price: 250, // QAR
+    automatic: true,
+  });
+  const [paymentHistory, setPaymentHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
   
-  // Fetch user information when component mounts
+  // Fetch user information and payment history when component mounts
   useEffect(() => {
     const fetchUserInfo = async () => {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
@@ -129,6 +113,141 @@ const UserMembership = () => {
             email: user.email || "user@example.com"
           });
         }
+        
+        // Try to get user's membership and sessions
+        const { data: memberData } = await supabase
+          .from('members')
+          .select('membership, sessions, remaining_sessions')
+          .eq('email', user.email)
+          .single();
+          
+        if (memberData) {
+          // If member data exists, update the current membership
+          const today = new Date();
+          const oneMonthLater = new Date();
+          oneMonthLater.setMonth(today.getMonth() + 1);
+          
+          setCurrentMembership({
+            name: memberData.membership || "Basic",
+            type: "Monthly",
+            startDate: today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+            endDate: oneMonthLater.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+            sessions: memberData.sessions || 12,
+            sessionsRemaining: memberData.remaining_sessions || 0,
+            price: availablePlans.find(plan => plan.name === memberData.membership)?.price || 250,
+            automatic: true,
+          });
+        }
+        
+        // Fetch payment history
+        const fetchPayments = async () => {
+          try {
+            // First try to get from Supabase
+            const { data: paymentsData, error } = await supabase
+              .from('payments')
+              .select('*')
+              .eq('member', profile?.name || user.email?.split('@')[0] || "Current User")
+              .order('date', { ascending: false });
+              
+            if (paymentsData && paymentsData.length > 0) {
+              console.log("Fetched payments:", paymentsData);
+              setPaymentHistory(paymentsData);
+            } else {
+              console.log("No payment data found or error:", error);
+              // Use mock data if no real data
+              setPaymentHistory([
+                {
+                  id: 1,
+                  type: "Basic Monthly",
+                  date: "April 1, 2025",
+                  amount: 250, // QAR
+                  status: "Successful",
+                },
+                {
+                  id: 2,
+                  type: "Basic Monthly",
+                  date: "March 1, 2025",
+                  amount: 250, // QAR
+                  status: "Successful",
+                },
+                {
+                  id: 3,
+                  type: "Premium Monthly",
+                  date: "February 1, 2025",
+                  amount: 350, // QAR
+                  status: "Successful",
+                },
+              ]);
+            }
+          } catch (err) {
+            console.error("Error fetching payments:", err);
+            // Use mock data as fallback
+            setPaymentHistory([
+              {
+                id: 1,
+                type: "Basic Monthly",
+                date: "April 1, 2025",
+                amount: 250, // QAR
+                status: "Successful",
+              },
+              {
+                id: 2,
+                type: "Basic Monthly",
+                date: "March 1, 2025",
+                amount: 250, // QAR
+                status: "Successful",
+              },
+              {
+                id: 3,
+                type: "Premium Monthly",
+                date: "February 1, 2025",
+                amount: 350, // QAR
+                status: "Successful",
+              },
+            ]);
+          } finally {
+            setLoading(false);
+          }
+        };
+        
+        // Also fetch membership requests to show pending payments
+        const fetchMembershipRequests = async () => {
+          try {
+            const { data: requestsData, error } = await supabase
+              .from('membership_requests')
+              .select('*')
+              .eq('email', user.email)
+              .order('date', { ascending: false });
+              
+            if (requestsData && requestsData.length > 0) {
+              console.log("Fetched membership requests:", requestsData);
+              
+              // Transform requests into payment history format
+              const pendingPayments = requestsData.map(request => {
+                const plan = availablePlans.find(p => p.name === request.type);
+                return {
+                  id: `request-${request.id}`,
+                  type: request.type,
+                  date: request.date,
+                  amount: plan?.price || 0,
+                  status: request.status, // Will be "Pending", "Approved", or "Rejected"
+                  isRequest: true
+                };
+              });
+              
+              // Combine with existing payments
+              fetchPayments();
+              setPaymentHistory(prevPayments => [...pendingPayments, ...prevPayments]);
+            } else {
+              fetchPayments();
+            }
+          } catch (err) {
+            console.error("Error fetching membership requests:", err);
+            fetchPayments();
+          }
+        };
+        
+        fetchMembershipRequests();
       }
     };
     
@@ -164,6 +283,16 @@ const UserMembership = () => {
         console.error("Error submitting to Supabase:", error);
         // Fall back to localStorage
         storeMembershipRequestLocally(planName, today);
+      } else {
+        // Add to the payment history display
+        setPaymentHistory(prev => [{
+          id: `request-${Date.now()}`,
+          type: planName,
+          date: today,
+          amount: plan.price,
+          status: "Pending",
+          isRequest: true
+        }, ...prev]);
       }
     } catch (err) {
       console.error("Exception when submitting request:", err);
@@ -190,6 +319,17 @@ const UserMembership = () => {
     } else {
       localStorage.setItem("membershipRequests", JSON.stringify([newRequest]));
     }
+    
+    // Also add to the payment history display
+    const plan = availablePlans.find(p => p.name === planName);
+    setPaymentHistory(prev => [{
+      id: `request-${newRequest.id}`,
+      type: planName,
+      date,
+      amount: plan?.price || 0,
+      status: "Pending",
+      isRequest: true
+    }, ...prev]);
   };
   
   return (
@@ -204,20 +344,20 @@ const UserMembership = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h3 className="font-medium text-lg">{membershipData.current.name} Membership ({membershipData.current.type})</h3>
+                <h3 className="font-medium text-lg">{currentMembership.name} Membership ({currentMembership.type})</h3>
                 <p className="text-gray-500 mt-1">
-                  From {membershipData.current.startDate} to {membershipData.current.endDate}
+                  From {currentMembership.startDate} to {currentMembership.endDate}
                 </p>
                 <p className="mt-4">
                   <span className="font-medium">Sessions:</span>{" "}
-                  {membershipData.current.sessionsRemaining} remaining out of{" "}
-                  {membershipData.current.sessions} total
+                  {currentMembership.sessionsRemaining} remaining out of{" "}
+                  {currentMembership.sessions} total
                 </p>
                 <div className="mt-1 bg-gray-200 h-2 rounded-full overflow-hidden">
                   <div
                     className="bg-gym-blue h-2"
                     style={{
-                      width: `${(membershipData.current.sessionsRemaining / membershipData.current.sessions) * 100}%`,
+                      width: `${(currentMembership.sessionsRemaining / currentMembership.sessions) * 100}%`,
                     }}
                   ></div>
                 </div>
@@ -271,21 +411,12 @@ const UserMembership = () => {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  {membershipData.current.name === plan.name && plan.name === "Basic" ? (
-                    <Button 
-                      onClick={() => handleBookPlan(plan.name)} 
-                      className="w-full bg-gym-blue hover:bg-gym-dark-blue"
-                    >
-                      Get This Plan
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={() => handleBookPlan(plan.name)} 
-                      className="w-full bg-gym-blue hover:bg-gym-dark-blue"
-                    >
-                      Get This Plan
-                    </Button>
-                  )}
+                  <Button 
+                    onClick={() => handleBookPlan(plan.name)} 
+                    className="w-full bg-gym-blue hover:bg-gym-dark-blue"
+                  >
+                    Get This Plan
+                  </Button>
                 </CardFooter>
               </Card>
             ))}
@@ -296,55 +427,55 @@ const UserMembership = () => {
         <Card>
           <CardHeader>
             <CardTitle>Payment History</CardTitle>
-            <CardDescription>Your recent membership payments</CardDescription>
+            <CardDescription>Your recent membership payments and requests</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {membershipData.history.map((payment) => (
-                    <tr key={payment.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {payment.date}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {payment.type}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        QAR {payment.amount}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            payment.status === "Successful"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {payment.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {loading ? (
+              <div className="text-center py-4">Loading payment history...</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paymentHistory && paymentHistory.length > 0 ? (
+                    paymentHistory.map((payment: any) => (
+                      <TableRow key={payment.id}>
+                        <TableCell>{payment.date}</TableCell>
+                        <TableCell className="font-medium">
+                          {payment.type || payment.membership}
+                        </TableCell>
+                        <TableCell>QAR {payment.amount}</TableCell>
+                        <TableCell>
+                          <span
+                            className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              payment.status === "Successful" || payment.status === "Approved"
+                                ? "bg-green-100 text-green-800"
+                                : payment.status === "Pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {payment.status}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4">
+                        No payment history available
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
