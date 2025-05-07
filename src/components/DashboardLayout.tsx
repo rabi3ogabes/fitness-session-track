@@ -20,9 +20,9 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
     let isMounted = true;
 
     const checkAuth = async () => {
-      // Only show loading briefly to improve perceived performance
+      // Optimize loading state transitions for better UX
       if (!authLoading) {
-        // Set a short timeout to reduce flickering between states
+        // Set a very short timeout to improve perceived performance
         setTimeout(() => {
           if (isMounted) {
             if (!isAuthenticated) {
@@ -31,7 +31,7 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
               setLocalLoading(false);
             }
           }
-        }, 100); // Short timeout improves perceived performance
+        }, 50); // Reduced from 100ms to 50ms
       }
     };
 

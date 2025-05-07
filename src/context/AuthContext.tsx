@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -182,43 +181,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         // Set up auth state change listener first
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
+          (event, session) => {
             console.log("Auth state change event:", event);
             if (!isMounted) return;
             
             if (session) {
               console.log("New session established:", session.user.id);
               
-              // Fetch profile info
-              const { data: profileData } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .maybeSingle();
-              
-              // Set user data
+              // Set user data immediately without waiting for profile data
               setUser({
                 id: session.user.id,
                 email: session.user.email || '',
-                name: session.user.user_metadata?.name || profileData?.name || '',
+                name: session.user.user_metadata?.name || '',
                 role: session.user.user_metadata?.role || ''
               });
 
-              // Get user profile
-              if (profileData) {
-                setUserProfile({
-                  sessions_remaining: profileData.sessions_remaining || 0, 
-                  total_sessions: profileData.total_sessions || 0
-                });
-              } else {
-                // Default profile if not found
-                setUserProfile({
-                  sessions_remaining: 0, 
-                  total_sessions: 0
-                });
-              }
-
-              // Determine role based on email and metadata
+              // Determine role based on email and metadata immediately
               let userRole = 'user';
               if (session.user.user_metadata?.role === 'admin' || session.user.email?.includes('admin')) {
                 userRole = 'admin';
@@ -226,97 +204,91 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 userRole = 'trainer';
               }
               setRole(userRole);
-              console.log("User role set to:", userRole);
+              
+              // Fetch profile info in the background
+              setTimeout(() => {
+                if (!isMounted) return;
+                
+                supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', session.user.id)
+                  .maybeSingle()
+                  .then(({ data: profileData }) => {
+                    if (!isMounted) return;
+                    
+                    if (profileData) {
+                      setUserProfile({
+                        sessions_remaining: profileData.sessions_remaining || 0, 
+                        total_sessions: profileData.total_sessions || 0
+                      });
+                    } else {
+                      // Default profile if not found
+                      setUserProfile({
+                        sessions_remaining: 0, 
+                        total_sessions: 0
+                      });
+                    }
+                  });
+              }, 0);
+              
+              // End loading state immediately after setting user data
+              setLoading(false);
+              console.log("AuthContext loading set to false after session established");
             } else {
               setUser(null);
               setUserProfile(null);
               setRole(null);
-              console.log("Session cleared");
-            }
-            
-            if (isMounted) {
-              setLoading(false); // Makes sure loading ends after auth state change
-              console.log("AuthContext loading set to false after auth state change");
+              setLoading(false);
+              console.log("Session cleared, loading set to false");
             }
           }
         );
 
-        // Check for an existing session
+        // Check for an existing session with a short timeout
         console.log("Checking for existing session...");
-        try {
-          // Get session from Supabase
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-          if (sessionError) {
-            console.error("Session error:", sessionError);
-            throw sessionError;
-          }
-
-          if (session) {
-            console.log("Session found:", session.user.id);
-            // Set user info
-            setUser({
-              id: session.user.id,
-              email: session.user.email || '',
-              name: session.user.user_metadata?.name || '',
+        const sessionPromise = supabase.auth.getSession();
+        
+        // Add a short timeout to prevent hanging on session check
+        const timeoutPromise = new Promise<{data: {session: null}, error: Error}>((resolve) => {
+          setTimeout(() => {
+            console.log("Session check timed out, proceeding without session");
+            resolve({
+              data: { session: null },
+              error: new Error("Session check timed out")
             });
-            
-            // Fetch user profile from profiles table
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .maybeSingle();
-            
-            if (profileData) {
-              setUserProfile({
-                sessions_remaining: profileData.sessions_remaining || 0,
-                total_sessions: profileData.total_sessions || 0
-              });
-            } else {
-              // Default profile if not found
-              setUserProfile({
-                sessions_remaining: 0, 
-                total_sessions: 0
-              });
-            }
-            
-            // Determine role based on email and metadata
-            let userRole = 'user';
-            if (session.user.user_metadata?.role === 'admin' || session.user.email?.includes('admin')) {
-              userRole = 'admin';
-            } else if (session.user.user_metadata?.role === 'trainer' || session.user.email?.includes('trainer')) {
-              userRole = 'trainer';
-            }
-            setRole(userRole);
-            console.log("User role set to:", userRole);
-          } else {
-            console.log("No session found");
-            if (isMounted) {
-              setLoading(false); // Set loading to false if no session is found
-              console.log("AuthContext loading set to false (no session)");
-            }
-          }
-        } catch (error) {
-          console.error("Error checking session:", error);
+          }, 3000); // Short 3s timeout for initial session check
+        });
+        
+        // Race the promises to handle potential timeouts
+        const { data: { session }, error: sessionError } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]);
+
+        if (sessionError) {
+          console.error("Session error:", sessionError);
           if (isMounted) {
-            setLoading(false); // Set loading to false on error
-            console.log("AuthContext loading set to false (error)");
+            setLoading(false);
+            console.log("AuthContext loading set to false due to session error");
+          }
+        } else if (session) {
+          console.log("Session found:", session.user.id);
+          // Session handling is done in onAuthStateChange
+        } else {
+          console.log("No session found");
+          if (isMounted) {
+            setLoading(false);
+            console.log("AuthContext loading set to false (no session)");
           }
         }
         
-        // Create admin user if they don't exist
-        try {
-          await createAdminUser();
-        } catch (err) {
-          console.error("Error creating admin user:", err);
-        }
-        
-        // Make sure loading state is false regardless of what happened above
-        if (isMounted) {
-          setLoading(false);
-          console.log("AuthContext loading set to false at the end of initialization");
-        }
+        // Create admin user in background
+        setTimeout(() => {
+          createAdminUser().catch(err => {
+            console.error("Error creating admin user:", err);
+          });
+        }, 0);
         
         return () => {
           if (subscription) subscription.unsubscribe();
@@ -346,7 +318,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.warn("Auth loading failsafe triggered - forcing loading state to false");
         setLoading(false);
       }
-    }, 10000); // 10 second failsafe
+    }, 5000); // Reduced from 10 to 5 seconds
     
     return () => clearTimeout(failsafeTimer);
   }, [loading, initializationStarted]);
@@ -369,94 +341,73 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Invalid email format");
       }
       
-      // First check if there's an actual network connection to Supabase
-      try {
-        const connectionCheck = await checkSupabaseConnection();
-        if (!connectionCheck.connected) {
-          // If we're offline but have navigator.onLine = true, it's likely Supabase that's unreachable
-          if (navigator.onLine) {
-            throw new Error("Cannot connect to authentication server. Please try again later.");
-          } else {
-            throw new Error("You appear to be offline. Please check your internet connection.");
-          }
-        }
-      } catch (connectionError) {
-        console.error("Connection check failed:", connectionError);
-        throw new Error("Cannot establish connection to the authentication server. Please try again later.");
+      // First quick check if we're online
+      if (!navigator.onLine) {
+        throw new Error("You appear to be offline. Please check your internet connection.");
       }
       
-      // For regular accounts, use Supabase auth with timeout
+      // Use a more aggressive timeout for login to prevent hanging
       const loginPromise = supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      // Add a timeout to the login promise to prevent hanging
+      // Add a shorter timeout to the login promise
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Login timed out. Please try again.")), 15000);
+        setTimeout(() => reject(new Error("Login timed out. Please try again.")), 8000); // Reduced from 15s to 8s
       });
       
       // Race the login promise against the timeout
-      try {
-        const result = await Promise.race([loginPromise, timeoutPromise]) as AuthTokenResponse;
+      const result = await Promise.race([loginPromise, timeoutPromise]) as any;
+      
+      if (result.error) {
+        console.error("Supabase auth error:", result.error);
         
-        if (result.error) {
-          console.error("Supabase auth error:", result.error);
-          
-          // Provide better error messages based on error type
-          let errorMessage = "An unexpected error occurred. Please try again.";
-          
-          if (result.error.message) {
-            if (result.error.message.includes("Invalid login credentials")) {
-              errorMessage = "The email or password you entered is incorrect.";
-            } else if (result.error.message.includes("Email not confirmed")) {
-              errorMessage = "Please verify your email before logging in.";
-            } else {
-              errorMessage = result.error.message;
-            }
+        // Provide better error messages based on error type
+        let errorMessage = "An unexpected error occurred. Please try again.";
+        
+        if (result.error.message) {
+          if (result.error.message.includes("Invalid login credentials")) {
+            errorMessage = "The email or password you entered is incorrect.";
+          } else if (result.error.message.includes("Email not confirmed")) {
+            errorMessage = "Please verify your email before logging in.";
+          } else {
+            errorMessage = result.error.message;
           }
-          
-          toast({
-            title: "Login failed",
-            description: errorMessage,
-            variant: "destructive",
-          });
-          
-          throw new Error(errorMessage);
         }
         
-        console.log("Login successful for:", email);
-        
-        // Determine role based on email
-        let userRole = 'user';
-        if (email.includes('admin')) userRole = 'admin';
-        if (email.includes('trainer')) userRole = 'trainer';
-        
-        setRole(userRole);
-        console.log("Role set to:", userRole);
-
         toast({
-          title: "Login successful",
-          description: "You have been logged in successfully."
+          title: "Login failed",
+          description: errorMessage,
+          variant: "destructive",
         });
-      } catch (error: any) {
-        console.error("Login race error:", error);
         
-        // Check if it's our timeout error
-        if (error.message?.includes("timed out")) {
-          toast({
-            title: "Login timed out",
-            description: "The server is taking too long to respond. Please try again later.",
-            variant: "destructive",
-          });
-          
-          throw new Error("Login attempt failed due to timeout. The server might be temporarily unavailable.");
-        }
-        
-        // Rethrow other errors
-        throw error;
+        throw new Error(errorMessage);
       }
       
+      console.log("Login successful for:", email);
+      
+      // Set user data immediately for faster UI response
+      if (result.data?.user) {
+        setUser({
+          id: result.data.user.id,
+          email: result.data.user.email || '',
+          name: result.data.user.user_metadata?.name || '',
+        });
+      }
+      
+      // Determine role based on email
+      let userRole = 'user';
+      if (email.includes('admin')) userRole = 'admin';
+      if (email.includes('trainer')) userRole = 'trainer';
+      
+      setRole(userRole);
+      console.log("Role set to:", userRole);
+
+      toast({
+        title: "Login successful",
+        description: "You have been logged in successfully."
+      });
     } catch (error: any) {
       console.error("Login error:", error);
       
@@ -468,7 +419,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else if (!navigator.onLine || error.message?.includes("NetworkError") || error.message?.includes("network")) {
         errorMessage = "Unable to connect to the authentication service. Please check your internet connection.";
       } else if (error.message?.includes("timeout")) {
-        errorMessage = "Login request timed out. The server might be temporarily unavailable.";
+        errorMessage = "Login request timed out. The server might be temporarily unavailable. Please try again.";
       } else {
         errorMessage = error.message || "An unexpected error occurred. Please try again.";
       }
