@@ -967,4 +967,470 @@ const ClassCalendar = () => {
       >
         <div className="flex justify-between items-center">
           <div className="font-medium truncate">{cls.name}</div>
-          {isBooked && <Check className="h-3.
+          {isBooked && <Check className="h-3.5 w-3.5 text-purple-600" />}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <DashboardLayout title="Class Calendar">
+      <div className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="weekView">
+              <CalendarDays className="h-4 w-4 mr-2" />
+              Week View
+            </TabsTrigger>
+            <TabsTrigger value="myBookings">
+              <CalendarCheck className="h-4 w-4 mr-2" />
+              My Bookings
+            </TabsTrigger>
+          </TabsList>
+          
+          {/* Week View Content */}
+          <TabsContent value="weekView" className="space-y-4">
+            {/* Week View Calendar */}
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl font-bold">Class Schedule</CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      onClick={handlePreviousWeek} 
+                      variant="outline" 
+                      size="icon"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium">
+                      {format(weekViewDate, 'MMM d')} - {format(addDays(weekViewDate, 6), 'MMM d')}
+                    </span>
+                    <Button 
+                      onClick={handleNextWeek} 
+                      variant="outline" 
+                      size="icon"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Render week days */}
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                  {weekDays.map((day, i) => (
+                    <div 
+                      key={i}
+                      className={cn(
+                        "flex flex-col items-center p-2 rounded-md text-center",
+                        isToday(day) && "bg-purple-50 font-bold"
+                      )}
+                    >
+                      <span className="text-xs text-gray-500">{format(day, 'EEE')}</span>
+                      <span className={cn(
+                        "font-semibold text-sm w-7 h-7 flex items-center justify-center rounded-full",
+                        isToday(day) && "bg-purple-600 text-white"
+                      )}>
+                        {format(day, 'd')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Render classes for each weekday */}
+                <div className="grid grid-cols-7 gap-1">
+                  {weekDays.map((day, i) => {
+                    const classesForDay = getClassesForDay(day);
+                    return (
+                      <div 
+                        key={i}
+                        className={cn(
+                          "min-h-28 p-1 rounded-md border",
+                          isToday(day) ? "bg-purple-50 border-purple-200" : "bg-white border-gray-100"
+                        )}
+                      >
+                        {isLoading ? (
+                          <div className="space-y-1">
+                            <Skeleton className="h-6 w-full" />
+                            <Skeleton className="h-6 w-full" />
+                          </div>
+                        ) : (
+                          <>
+                            {classesForDay.length === 0 ? (
+                              <div className="text-xs text-gray-400 text-center h-full flex items-center justify-center p-2">
+                                No classes
+                              </div>
+                            ) : (
+                              classesForDay.map(cls => renderWeekDayClass(cls))
+                            )}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Selected Date Classes or Calendar View */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl font-bold">Select a Date</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row gap-6">
+                  <div className="flex-1">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      className="rounded-md border"
+                      components={{
+                        DayContent: DayContent
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-2">
+                      {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'Select a date'}
+                    </h3>
+                    
+                    {classesForSelectedDate.length > 0 ? (
+                      <div className="space-y-2">
+                        {classesForSelectedDate.map(cls => {
+                          const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
+                          const typeColor = classTypeColors[typeKey] || classTypeColors.default;
+                          const isClassBooked = cls.isBooked;
+                          
+                          return (
+                            <div 
+                              key={cls.id} 
+                              className={cn(
+                                "p-3 rounded-lg border cursor-pointer hover:shadow-sm transition-all",
+                                isClassBooked ? 'bg-purple-50 border-purple-200' : `${typeColor.bg} ${typeColor.border}`
+                              )}
+                              onClick={() => handleSelectClass(cls)}
+                            >
+                              <div className="flex justify-between">
+                                <h4 className="font-medium">{cls.name}</h4>
+                                {isClassBooked && <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">Booked</Badge>}
+                              </div>
+                              <div className="mt-1 text-sm text-gray-600">
+                                <div className="flex items-center">
+                                  <Clock className="h-3.5 w-3.5 mr-1" />
+                                  <span>{cls.start_time} - {cls.end_time}</span>
+                                </div>
+                                <div className="flex items-center mt-1">
+                                  <Users className="h-3.5 w-3.5 mr-1" />
+                                  <span>{cls.enrolled}/{cls.capacity} enrolled</span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 text-center p-4 border rounded-lg">
+                        No classes scheduled for this date
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* My Bookings Tab Content */}
+          <TabsContent value="myBookings" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl font-bold">My Booked Classes</CardTitle>
+                {myBookedClasses.length > 0 && (
+                  <p className="text-sm text-gray-500">
+                    You have {myBookedClasses.length} upcoming booked {myBookedClasses.length === 1 ? 'class' : 'classes'}
+                  </p>
+                )}
+              </CardHeader>
+              <CardContent>
+                {!isNetworkConnected && (
+                  <Alert className="mb-4" variant="destructive">
+                    <WifiOff className="h-4 w-4" />
+                    <AlertTitle>You're offline</AlertTitle>
+                    <AlertDescription>
+                      Some features may be limited until you reconnect.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              
+                {isLoading ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-20 w-full" />
+                  </div>
+                ) : (
+                  <>
+                    {myBookedClasses.length > 0 ? (
+                      <div className="space-y-3">
+                        {myBookedClasses.map(cls => {
+                          const classDate = new Date(cls.schedule);
+                          const isPastCancellationLimit = isPastCancellationWindow(cls);
+                          
+                          return (
+                            <div 
+                              key={cls.id} 
+                              className="p-4 border rounded-lg bg-purple-50 border-purple-200"
+                            >
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-semibold text-lg">{cls.name}</h3>
+                                  <p className="text-gray-600">{format(classDate, 'EEEE, MMMM d')}</p>
+                                  <div className="mt-1 flex items-center text-sm">
+                                    <Clock className="h-4 w-4 mr-1 text-gray-600" />
+                                    <span>{cls.start_time} - {cls.end_time}</span>
+                                  </div>
+                                  <div className="mt-1 flex items-center text-sm">
+                                    <Users className="h-4 w-4 mr-1 text-gray-600" />
+                                    <span>
+                                      {cls.enrolled}/{cls.capacity} enrolled
+                                    </span>
+                                  </div>
+                                </div>
+                                <Button 
+                                  onClick={() => handleCancelBooking(cls.id, cls.start_time || '', cls.name)}
+                                  variant="outline" 
+                                  size="sm"
+                                  className="text-red-600 border-red-200 hover:bg-red-50"
+                                  disabled={isPastCancellationLimit}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                              {isPastCancellationLimit && (
+                                <Alert className="mt-2" variant="destructive">
+                                  <AlertCircle className="h-4 w-4" />
+                                  <AlertTitle>Cannot cancel</AlertTitle>
+                                  <AlertDescription>
+                                    Cancellations must be made at least {systemSettings.cancellationTimeLimit} hours before the class.
+                                  </AlertDescription>
+                                </Alert>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center p-6 border rounded-lg">
+                        <CalendarIcon className="h-10 w-10 text-gray-400 mx-auto mb-2" />
+                        <h3 className="text-lg font-medium text-gray-700">No Booked Classes</h3>
+                        <p className="text-gray-500 mt-1">You haven't booked any classes yet</p>
+                        <Button 
+                          onClick={() => setActiveTab('weekView')} 
+                          className="mt-4"
+                        >
+                          Browse Classes
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* User Session Stats */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl font-bold">Your Sessions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-600">Available Sessions</h4>
+                    <p className={cn(
+                      "text-2xl font-bold", 
+                      sessionsLow ? "text-amber-600" : "text-green-600"
+                    )}>
+                      {userData.remainingSessions}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <h4 className="font-medium text-gray-600">Total Package</h4>
+                    <p className="text-2xl font-bold text-gray-800">
+                      {userData.totalSessions}
+                    </p>
+                  </div>
+                </div>
+                
+                {sessionsLow && (
+                  <Alert className="mt-3" variant="warning">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Running Low</AlertTitle>
+                    <AlertDescription>
+                      You're running low on sessions. Consider purchasing more soon.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+        
+        {/* Loading and Error States */}
+        {isLoading && (
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500"></div>
+          </div>
+        )}
+        
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription className="flex flex-col space-y-2">
+              <p>{error}</p>
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={handleRetry}
+                disabled={retrying}
+                className="self-start"
+              >
+                {retrying ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Retrying...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Retry
+                  </>
+                )}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+
+      {/* Class Booking Dialog */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {isClassAlreadyBooked ? 'Class Already Booked' : 'Confirm Class Booking'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedClass?.name} - {selectedClass?.schedule && format(new Date(selectedClass.schedule), 'EEEE, MMMM d')} at {selectedClass?.start_time}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isClassAlreadyBooked ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-5 w-5" />
+                <p>You're already booked for this class!</p>
+              </div>
+              
+              <div className="text-sm text-gray-600">
+                <p>If you need to cancel this booking, please go to the "My Bookings" tab.</p>
+              </div>
+              
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={cancelBookingConfirmation}
+                  className="w-full sm:w-auto"
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(confirmBooking)} className="space-y-4">
+                <div className="grid gap-4 py-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-gray-500" />
+                    <div>
+                      <p className="font-medium">{selectedClass?.enrolled} / {selectedClass?.capacity} enrolled</p>
+                      <p className="text-sm text-gray-500">Trainer: {selectedClass?.trainer}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-lg bg-gray-50 p-3">
+                    <h4 className="font-medium mb-1">Session Information</h4>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>Available sessions: <span className="font-semibold">{userData.remainingSessions}</span></p>
+                      <p>Required for this booking: <span className="font-semibold">1</span></p>
+                    </div>
+                  </div>
+                  
+                  {userData.remainingSessions < 1 && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Not enough sessions</AlertTitle>
+                      <AlertDescription>
+                        You need at least 1 available session to book this class.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  <FormField
+                    control={form.control}
+                    name="acceptTerms"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={userData.remainingSessions < 1}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>
+                            I understand this will use 1 session from my account
+                          </FormLabel>
+                          <FormDescription>
+                            You can cancel up to {systemSettings.cancellationTimeLimit} hours before the class starts.
+                          </FormDescription>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <DialogFooter>
+                  <Button 
+                    variant="outline" 
+                    onClick={cancelBookingConfirmation}
+                    type="button"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={isBookingInProgress || userData.remainingSessions < 1}
+                  >
+                    {isBookingInProgress ? (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        Booking...
+                      </>
+                    ) : (
+                      'Book Class'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </DashboardLayout>
+  );
+};
+
+export default ClassCalendar;
