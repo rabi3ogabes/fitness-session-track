@@ -207,7 +207,7 @@ const ClassCalendar = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isBookingInProgress, setIsBookingInProgress] = useState(false);
   const [userData, setUserData] = useState<UserData>({
-    name: "",
+    name: "User",  // Default name
     remainingSessions: 0,
     totalSessions: 0,
   });
@@ -254,7 +254,7 @@ const ClassCalendar = () => {
   }, [error]);
   
   // Calculate if sessions are low (25% or less)
-  const sessionsLow = userData.remainingSessions <= (userData.totalSessions * 0.25);
+  const sessionsLow = userData.remainingSessions <= Math.max(1, (userData.totalSessions * 0.25));
   
   // Fetch user data from Supabase
   useEffect(() => {
@@ -262,10 +262,11 @@ const ClassCalendar = () => {
       if (!user) return;
       
       try {
-        // Check if this is demo user
-        if (user.id === "demo-user-id") {
+        // Check if this is demo user or if we're falling back to demo mode
+        if (user.id === "demo-user-id" || !isNetworkConnected) {
           // For demo mode, use hardcoded data
           setUserData(DEMO_USER_DATA);
+          setError(null);
           return;
         }
         
@@ -277,25 +278,49 @@ const ClassCalendar = () => {
         // Clear any previous errors
         setError(null);
         
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('name, sessions_remaining, total_sessions')
-          .eq('id', user.id)
-          .single();
-        
-        if (error) {
-          console.error("Error fetching user data:", error);
-          throw error;
+        try {
+          // First try to get the user profile
+          const { data, error: profileError } = await supabase
+            .from('profiles')
+            .select('name, sessions_remaining, total_sessions')
+            .eq('id', user.id)
+            .single();
+          
+          if (profileError) {
+            console.error("Error fetching user profile:", profileError);
+            // If the profile doesn't exist, create it with default values
+            if (profileError.code === "PGRST116") {
+              // Profile not found, use user metadata to create a profile
+              const userName = user.user_metadata?.name || "User";
+              
+              // Set default values for now
+              setUserData({
+                name: userName,
+                remainingSessions: 10, // Default value
+                totalSessions: 20,     // Default value
+              });
+              
+              return;
+            }
+            throw profileError;
+          }
+          
+          setUserData({
+            name: data.name || "User",
+            remainingSessions: data.sessions_remaining || 0,
+            totalSessions: data.total_sessions || 0,
+          });
+        } catch (err) {
+          // Fall back to demo data on error
+          console.error("Failed to get user profile, using demo data:", err);
+          setUserData(DEMO_USER_DATA);
+          setError("Failed to load user profile data. Using demo data instead.");
         }
-        
-        setUserData({
-          name: data.name || "User",
-          remainingSessions: data.sessions_remaining || 0,
-          totalSessions: data.total_sessions || 0,
-        });
       } catch (err) {
         console.error("Error in fetchUserData:", err);
-        setError("Failed to load user data. Please refresh the page and try again");
+        // Fall back to demo data
+        setUserData(DEMO_USER_DATA);
+        setError("Failed to load user data. Using demo data instead.");
       }
     };
     
@@ -309,51 +334,60 @@ const ClassCalendar = () => {
       
       try {
         if (!isNetworkConnected) {
-          // If offline, use demo data or cached data
+          // If offline, use demo data
           setClasses(DEMO_CLASSES);
           setIsLoading(false);
+          setError("You're offline. Using demo class data.");
           return;
         }
 
         // Clear any previous errors
         setError(null);
         
-        const { data, error } = await supabase
-          .from('classes')
-          .select('*')
-          .eq('status', 'Active')
-          .order('schedule', { ascending: true });
-        
-        if (error) {
-          console.error("Error fetching classes:", error);
-          throw error;
-        }
-        
-        // Transform and add type property based on class name or difficulty
-        const classesWithType = data.length > 0 ? data.map((cls: ClassModel) => {
-          let type = 'default';
-          const name = cls.name.toLowerCase();
+        try {
+          const { data, error } = await supabase
+            .from('classes')
+            .select('*')
+            .eq('status', 'Active')
+            .order('schedule', { ascending: true });
           
-          if (name.includes('yoga') || name.includes('pilates')) {
-            type = 'yoga';
-          } else if (name.includes('boxing') || name.includes('mma') || name.includes('martial')) {
-            type = 'combat';
-          } else if (name.includes('zumba') || name.includes('dance')) {
-            type = 'dance';
-          } else if (name.includes('workout') || name.includes('training') || name.includes('hiit') || 
-                    name.includes('cardio') || name.includes('strength')) {
-            type = 'workout';
+          if (error) {
+            console.error("Error fetching classes:", error);
+            throw error;
           }
           
-          return { ...cls, type };
-        }) : DEMO_CLASSES; // Use demo classes if no data returned
-        
-        setClasses(classesWithType);
-      } catch (err) {
-        console.error("Error in fetchClasses:", err);
-        // Load demo classes as a fallback
-        setClasses(DEMO_CLASSES);
-        setError("Failed to load classes from the server. Using demo data instead.");
+          if (data && data.length > 0) {
+            // Transform and add type property based on class name or difficulty
+            const classesWithType = data.map((cls: ClassModel) => {
+              let type = 'default';
+              const name = cls.name.toLowerCase();
+              
+              if (name.includes('yoga') || name.includes('pilates')) {
+                type = 'yoga';
+              } else if (name.includes('boxing') || name.includes('mma') || name.includes('martial')) {
+                type = 'combat';
+              } else if (name.includes('zumba') || name.includes('dance')) {
+                type = 'dance';
+              } else if (name.includes('workout') || name.includes('training') || name.includes('hiit') || 
+                        name.includes('cardio') || name.includes('strength')) {
+                type = 'workout';
+              }
+              
+              return { ...cls, type, isBooked: false };
+            });
+            
+            setClasses(classesWithType);
+          } else {
+            // Fallback to demo data if no classes returned
+            setClasses(DEMO_CLASSES);
+            setError("No classes found in the database. Using demo data.");
+          }
+        } catch (err) {
+          // Fallback to demo data on error
+          console.error("Error fetching classes:", err);
+          setClasses(DEMO_CLASSES);
+          setError("Failed to load classes from the server. Using demo data instead.");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -386,30 +420,48 @@ const ClassCalendar = () => {
           return; // Don't attempt to fetch if offline
         }
         
-        const { data, error } = await supabase
-          .from('bookings')
-          .select('class_id')
-          .eq('user_id', user.id)
-          .eq('status', 'confirmed');
-        
-        if (error) {
-          console.error("Error fetching bookings:", error);
-          throw error;
+        try {
+          const { data, error } = await supabase
+            .from('bookings')
+            .select('class_id')
+            .eq('user_id', user.id)
+            .eq('status', 'confirmed');
+          
+          if (error) {
+            console.error("Error fetching bookings:", error);
+            throw error;
+          }
+          
+          if (data && data.length > 0) {
+            const bookedClassIds = data.map(booking => booking.class_id);
+            setBookedClasses(bookedClassIds);
+            
+            // Mark booked classes in the classes array
+            setClasses(prevClasses => 
+              prevClasses.map(cls => ({
+                ...cls,
+                isBooked: bookedClassIds.includes(cls.id)
+              }))
+            );
+          } else {
+            // No bookings found
+            setBookedClasses([]);
+          }
+        } catch (err) {
+          console.error("Error fetching bookings:", err);
+          // Fallback for demo purposes
+          if (user.id === "demo-user-id" || !isNetworkConnected) {
+            setBookedClasses([3]);
+            setClasses(prevClasses => 
+              prevClasses.map(cls => ({
+                ...cls,
+                isBooked: cls.id === 3
+              }))
+            );
+          }
         }
-        
-        const bookedClassIds = data.map(booking => booking.class_id);
-        setBookedClasses(bookedClassIds);
-        
-        // Mark booked classes in the classes array
-        setClasses(prevClasses => 
-          prevClasses.map(cls => ({
-            ...cls,
-            isBooked: bookedClassIds.includes(cls.id)
-          }))
-        );
       } catch (err) {
         console.error("Error in fetchBookings:", err);
-        // Don't set an error here to avoid having multiple error messages
       }
     };
     
@@ -482,7 +534,7 @@ const ClassCalendar = () => {
       setError(null);
       // This will trigger the useEffects to re-fetch data
       setIsNetworkConnected(navigator.onLine);
-    }, 1000);
+    }, 500);
   };
   
   const confirmBooking = async () => {
@@ -538,6 +590,18 @@ const ClassCalendar = () => {
           variant: "destructive"
         });
         setIsBookingInProgress(false);
+        return;
+      }
+      
+      // Check if user has already booked this specific class
+      if (bookedClasses.includes(selectedClass.id)) {
+        toast({
+          title: "Already booked",
+          description: "You have already booked this class.",
+          variant: "destructive"
+        });
+        setIsBookingInProgress(false);
+        setConfirmDialogOpen(false);
         return;
       }
       

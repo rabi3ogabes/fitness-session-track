@@ -31,7 +31,7 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
               setLocalLoading(false);
             }
           }
-        }, 30); // Reduced from 50ms to 30ms for faster loading perception
+        }, 10); // Reduced from 30ms to 10ms for faster loading perception
       }
     };
 
