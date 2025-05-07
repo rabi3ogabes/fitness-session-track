@@ -50,6 +50,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // For roles
   const [role, setRole] = useState<string | null>(null);
+  
+  // Debug flag to track loading process
+  const [initializationStarted, setInitializationStarted] = useState(false);
 
   // Create admin user in Supabase if they don't exist
   const createAdminUser = async () => {
@@ -74,7 +77,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         try {
           // Step 1: First check if admin auth user exists 
-          // We need to modify this part to fix the TypeScript error
           // Define the type for users returned from listUsers
           interface AdminUser extends SupabaseUser {
             email?: string;
@@ -172,134 +174,187 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up auth state change listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state change event:", event);
-        if (session) {
-          console.log("New session established:", session.user.id);
-          
-          // Fetch profile info
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle();
-          
-          // Set user data
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || profileData?.name || '',
-            role: session.user.user_metadata?.role || ''
-          });
-
-          // Get user profile
-          if (profileData) {
-            setUserProfile({
-              sessions_remaining: profileData.sessions_remaining || 0, 
-              total_sessions: profileData.total_sessions || 0
-            });
-          } else {
-            // Default profile if not found
-            setUserProfile({
-              sessions_remaining: 0, 
-              total_sessions: 0
-            });
-          }
-
-          // Determine role based on email and metadata
-          let userRole = 'user';
-          if (session.user.user_metadata?.role === 'admin' || session.user.email?.includes('admin')) {
-            userRole = 'admin';
-          } else if (session.user.user_metadata?.role === 'trainer' || session.user.email?.includes('trainer')) {
-            userRole = 'trainer';
-          }
-          setRole(userRole);
-          console.log("User role set to:", userRole);
-        } else {
-          setUser(null);
-          setUserProfile(null);
-          setRole(null);
-          console.log("Session cleared");
-        }
-        setLoading(false);
-      }
-    );
-
-    // Check for an existing session
-    const checkSession = async () => {
+    console.log("AuthContext initialization started");
+    setInitializationStarted(true);
+    let isMounted = true;
+    
+    const initializeAuth = async () => {
       try {
+        // Set up auth state change listener first
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log("Auth state change event:", event);
+            if (!isMounted) return;
+            
+            if (session) {
+              console.log("New session established:", session.user.id);
+              
+              // Fetch profile info
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .maybeSingle();
+              
+              // Set user data
+              setUser({
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.user_metadata?.name || profileData?.name || '',
+                role: session.user.user_metadata?.role || ''
+              });
+
+              // Get user profile
+              if (profileData) {
+                setUserProfile({
+                  sessions_remaining: profileData.sessions_remaining || 0, 
+                  total_sessions: profileData.total_sessions || 0
+                });
+              } else {
+                // Default profile if not found
+                setUserProfile({
+                  sessions_remaining: 0, 
+                  total_sessions: 0
+                });
+              }
+
+              // Determine role based on email and metadata
+              let userRole = 'user';
+              if (session.user.user_metadata?.role === 'admin' || session.user.email?.includes('admin')) {
+                userRole = 'admin';
+              } else if (session.user.user_metadata?.role === 'trainer' || session.user.email?.includes('trainer')) {
+                userRole = 'trainer';
+              }
+              setRole(userRole);
+              console.log("User role set to:", userRole);
+            } else {
+              setUser(null);
+              setUserProfile(null);
+              setRole(null);
+              console.log("Session cleared");
+            }
+            
+            if (isMounted) {
+              setLoading(false); // Makes sure loading ends after auth state change
+              console.log("AuthContext loading set to false after auth state change");
+            }
+          }
+        );
+
+        // Check for an existing session
         console.log("Checking for existing session...");
-        // Get session from Supabase
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        try {
+          // Get session from Supabase
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          throw sessionError;
-        }
+          if (sessionError) {
+            console.error("Session error:", sessionError);
+            throw sessionError;
+          }
 
-        if (session) {
-          console.log("Session found:", session.user.id);
-          // Set user info
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.name || '',
-          });
-          
-          // Fetch user profile from profiles table
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle();
-          
-          if (profileData) {
-            setUserProfile({
-              sessions_remaining: profileData.sessions_remaining || 0,
-              total_sessions: profileData.total_sessions || 0
+          if (session) {
+            console.log("Session found:", session.user.id);
+            // Set user info
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.user_metadata?.name || '',
             });
+            
+            // Fetch user profile from profiles table
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            
+            if (profileData) {
+              setUserProfile({
+                sessions_remaining: profileData.sessions_remaining || 0,
+                total_sessions: profileData.total_sessions || 0
+              });
+            } else {
+              // Default profile if not found
+              setUserProfile({
+                sessions_remaining: 0, 
+                total_sessions: 0
+              });
+            }
+            
+            // Determine role based on email and metadata
+            let userRole = 'user';
+            if (session.user.user_metadata?.role === 'admin' || session.user.email?.includes('admin')) {
+              userRole = 'admin';
+            } else if (session.user.user_metadata?.role === 'trainer' || session.user.email?.includes('trainer')) {
+              userRole = 'trainer';
+            }
+            setRole(userRole);
+            console.log("User role set to:", userRole);
           } else {
-            // Default profile if not found
-            setUserProfile({
-              sessions_remaining: 0, 
-              total_sessions: 0
-            });
+            console.log("No session found");
+            if (isMounted) {
+              setLoading(false); // Set loading to false if no session is found
+              console.log("AuthContext loading set to false (no session)");
+            }
           }
-          
-          // Determine role based on email and metadata
-          let userRole = 'user';
-          if (session.user.user_metadata?.role === 'admin' || session.user.email?.includes('admin')) {
-            userRole = 'admin';
-          } else if (session.user.user_metadata?.role === 'trainer' || session.user.email?.includes('trainer')) {
-            userRole = 'trainer';
+        } catch (error) {
+          console.error("Error checking session:", error);
+          if (isMounted) {
+            setLoading(false); // Set loading to false on error
+            console.log("AuthContext loading set to false (error)");
           }
-          setRole(userRole);
-          console.log("User role set to:", userRole);
-        } else {
-          console.log("No session found");
         }
-      } catch (error) {
-        console.error("Error checking session:", error);
-      } finally {
-        setLoading(false);
+        
+        // Create admin user if they don't exist
+        try {
+          await createAdminUser();
+        } catch (err) {
+          console.error("Error creating admin user:", err);
+        }
+        
+        // Make sure loading state is false regardless of what happened above
+        if (isMounted) {
+          setLoading(false);
+          console.log("AuthContext loading set to false at the end of initialization");
+        }
+        
+        return () => {
+          if (subscription) subscription.unsubscribe();
+        };
+      } catch (e) {
+        console.error("Fatal error in auth initialization:", e);
+        if (isMounted) {
+          setLoading(false);
+          console.log("AuthContext loading set to false after fatal error");
+        }
       }
     };
-
-    checkSession();
     
-    // Create admin user if they don't exist
-    createAdminUser().catch(err => {
-      console.error("Error creating admin user:", err);
-      // Make sure loading is set to false even if admin creation fails
-      setLoading(false);
-    });
-
+    // Initialize authentication
+    initializeAuth();
+    
     return () => {
-      subscription?.unsubscribe();
+      isMounted = false;
     };
   }, []);
+
+  // Fail-safe to ensure loading state doesn't stay true forever
+  useEffect(() => {
+    // Force loading to false after a timeout
+    const failsafeTimer = setTimeout(() => {
+      if (loading && initializationStarted) {
+        console.warn("Auth loading failsafe triggered - forcing loading state to false");
+        setLoading(false);
+      }
+    }, 10000); // 10 second failsafe
+    
+    return () => clearTimeout(failsafeTimer);
+  }, [loading, initializationStarted]);
+
+  // Debug effect - log loading state changes
+  useEffect(() => {
+    console.log(`Auth loading state changed: ${loading}`);
+  }, [loading]);
 
   const login = async (email: string, password: string) => {
     try {

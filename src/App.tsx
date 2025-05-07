@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
+import LoadingIndicator from "./components/LoadingIndicator";
 
 // Pages
 import Index from "./pages/Index";
@@ -34,14 +35,12 @@ import { AuthProvider } from "./context/AuthContext";
 
 const queryClient = new QueryClient();
 
-// Protected route component to handle redirections based on role
+// Protected route component with improved loading state handling
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isTrainer, loading } = useAuth();
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
-    </div>;
+    return <LoadingIndicator message="Loading authentication..." />;
   }
   
   if (!isAuthenticated) {
@@ -51,14 +50,12 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-// Admin protected route
+// Admin protected route with improved loading state handling
 const AdminProtectedRoute = ({ children }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
-    </div>;
+    return <LoadingIndicator message="Verifying admin access..." />;
   }
   
   if (!isAuthenticated || !isAdmin) {
@@ -68,14 +65,12 @@ const AdminProtectedRoute = ({ children }) => {
   return children;
 };
 
-// Trainer home redirect component
+// Trainer home redirect component with improved loading state handling
 const TrainerHomeRedirect = () => {
   const { isAuthenticated, isTrainer, loading } = useAuth();
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
-    </div>;
+    return <LoadingIndicator message="Checking credentials..." />;
   }
   
   if (isAuthenticated && isTrainer) {
@@ -85,14 +80,12 @@ const TrainerHomeRedirect = () => {
   return <Index />;
 };
 
-// User dashboard component with role-based redirection
+// User dashboard component with role-based redirection and improved loading state handling
 const UserDashboardRedirect = () => {
   const { isAuthenticated, isAdmin, isTrainer, loading } = useAuth();
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
-    </div>;
+    return <LoadingIndicator message="Preparing dashboard..." />;
   }
   
   if (!isAuthenticated) {
@@ -110,88 +103,102 @@ const UserDashboardRedirect = () => {
   return <Dashboard />;
 };
 
+// AppContent component to separate the routes from the providers
+const AppContent = () => {
+  const { loading } = useAuth();
+  
+  // Show a global loading indicator if the auth context is still initializing
+  if (loading) {
+    return <LoadingIndicator message="Initializing application..." />;
+  }
+  
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<TrainerHomeRedirect />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/dashboard" element={<UserDashboardRedirect />} />
+
+        {/* Admin Routes */}
+        <Route path="/admin" element={
+          <AdminProtectedRoute>
+            <AdminDashboard />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/members" element={
+          <AdminProtectedRoute>
+            <Members />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/trainers" element={
+          <AdminProtectedRoute>
+            <Trainers />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/classes" element={
+          <AdminProtectedRoute>
+            <ClassSchedulePage />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/memberships" element={
+          <AdminProtectedRoute>
+            <Memberships />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/bookings" element={
+          <AdminProtectedRoute>
+            <Bookings />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/payments" element={
+          <AdminProtectedRoute>
+            <Payments />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/reports" element={
+          <AdminProtectedRoute>
+            <Reports />
+          </AdminProtectedRoute>
+        } />
+        <Route path="/admin/settings" element={
+          <AdminProtectedRoute>
+            <Settings />
+          </AdminProtectedRoute>
+        } />
+
+        {/* User Routes */}
+        <Route path="/user/profile" element={<UserProfile />} />
+        <Route path="/user/membership" element={<UserMembership />} />
+        <Route path="/user/booking" element={<UserBooking />} />
+        <Route path="/user/schedule" element={<UserSchedule />} />
+        <Route path="/user/calendar" element={<ClassCalendar />} />
+        
+        {/* Trainer Routes */}
+        <Route path="/trainer" element={
+          <ProtectedRoute>
+            <TrainerDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/trainer/attendees" element={
+          <ProtectedRoute>
+            <AttendeesPage />
+          </ProtectedRoute>
+        } />
+
+        {/* 404 Page */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<TrainerHomeRedirect />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/dashboard" element={<UserDashboardRedirect />} />
-
-            {/* Admin Routes */}
-            <Route path="/admin" element={
-              <AdminProtectedRoute>
-                <AdminDashboard />
-              </AdminProtectedRoute>
-            } />
-            <Route path="/admin/members" element={
-              <AdminProtectedRoute>
-                <Members />
-              </AdminProtectedRoute>
-            } />
-            <Route path="/admin/trainers" element={
-              <AdminProtectedRoute>
-                <Trainers />
-              </AdminProtectedRoute>
-            } />
-            <Route path="/admin/classes" element={
-              <AdminProtectedRoute>
-                <ClassSchedulePage />
-              </AdminProtectedRoute>
-            } />
-            <Route path="/admin/memberships" element={
-              <AdminProtectedRoute>
-                <Memberships />
-              </AdminProtectedRoute>
-            } />
-            <Route path="/admin/bookings" element={
-              <AdminProtectedRoute>
-                <Bookings />
-              </AdminProtectedRoute>
-            } />
-            <Route path="/admin/payments" element={
-              <AdminProtectedRoute>
-                <Payments />
-              </AdminProtectedRoute>
-            } />
-            <Route path="/admin/reports" element={
-              <AdminProtectedRoute>
-                <Reports />
-              </AdminProtectedRoute>
-            } />
-            <Route path="/admin/settings" element={
-              <AdminProtectedRoute>
-                <Settings />
-              </AdminProtectedRoute>
-            } />
-
-            {/* User Routes */}
-            <Route path="/user/profile" element={<UserProfile />} />
-            <Route path="/user/membership" element={<UserMembership />} />
-            <Route path="/user/booking" element={<UserBooking />} />
-            <Route path="/user/schedule" element={<UserSchedule />} />
-            <Route path="/user/calendar" element={<ClassCalendar />} />
-            
-            {/* Trainer Routes */}
-            <Route path="/trainer" element={
-              <ProtectedRoute>
-                <TrainerDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/trainer/attendees" element={
-              <ProtectedRoute>
-                <AttendeesPage />
-              </ProtectedRoute>
-            } />
-
-            {/* 404 Page */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+        <AppContent />
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>

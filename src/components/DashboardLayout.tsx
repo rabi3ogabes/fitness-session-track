@@ -3,6 +3,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "./Sidebar";
+import LoadingIndicator from "./LoadingIndicator";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -10,40 +11,47 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
-  const { isAuthenticated, logout, loading } = useAuth();
+  const { isAuthenticated, logout, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [localLoading, setLocalLoading] = useState(true);
 
   // Redirect if not authenticated after loading is complete
   useEffect(() => {
-    if (!loading) {
-      if (!isAuthenticated) {
-        console.log("Not authenticated, redirecting to login from DashboardLayout");
-        navigate("/login");
-      } else {
-        // Once auth check is complete and user is authenticated, set local loading to false
-        setLocalLoading(false);
+    let isMounted = true;
+
+    const checkAuth = async () => {
+      // Wait for auth loading to complete
+      if (!authLoading) {
+        console.log("Auth loading complete, checking authentication in DashboardLayout");
+        
+        if (!isAuthenticated) {
+          console.log("Not authenticated, redirecting to login from DashboardLayout");
+          navigate("/login");
+        } else if (isMounted) {
+          // Once auth check is complete and user is authenticated, set local loading to false
+          console.log("Authentication confirmed in DashboardLayout, rendering content");
+          setLocalLoading(false);
+        }
       }
-    }
-  }, [isAuthenticated, loading, navigate]);
+    };
+
+    checkAuth();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, authLoading, navigate]);
 
   // Explicitly log the loading states for debugging
   useEffect(() => {
-    console.log("Auth loading state:", loading);
+    console.log("Auth loading state:", authLoading);
     console.log("Local loading state:", localLoading);
     console.log("Is authenticated:", isAuthenticated);
-  }, [loading, localLoading, isAuthenticated]);
+  }, [authLoading, localLoading, isAuthenticated]);
 
   // Show loading while checking authentication or in local loading state
-  if (loading || localLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+  if (authLoading || localLoading) {
+    return <LoadingIndicator message={`Loading ${title.toLowerCase()}...`} />;
   }
 
   // Don't render content if not authenticated
