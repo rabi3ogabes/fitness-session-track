@@ -2,7 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AuthTokenResponse, User as SupabaseUser } from '@supabase/supabase-js';
+import { AuthTokenResponse } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -74,7 +74,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         try {
           // Step 1: First check if admin auth user exists 
-          const { data: authUsersData, error: getUserError } = await supabase.auth.admin.listUsers({
+          // We need to modify this part since filter is not a valid property of PageParams
+          const { data: { users }, error: getUserError } = await supabase.auth.admin.listUsers({
             perPage: 100,
             page: 1
           });
@@ -84,7 +85,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
 
           // Check if admin exists in the retrieved users
-          const users = authUsersData?.users as SupabaseUser[] | undefined;
           const adminUser = users?.find(u => u.email === 'admin@gym.com');
 
           // If admin auth user doesn't exist
@@ -160,84 +160,70 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err) {
       console.error(`Unexpected error creating admin user:`, err);
-    } finally {
-      // Ensure loading state is updated even if there's an error creating admin
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    let isMounted = true; // Track if component is mounted
-    let authSubscription: { unsubscribe: () => void } | null = null;
+    // Set up auth state change listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state change event:", event);
+        if (session) {
+          console.log("New session established:", session.user.id);
+          
+          // Fetch profile info
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          
+          // Set user data
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || profileData?.name || '',
+            role: session.user.user_metadata?.role || ''
+          });
 
-    const initializeAuth = async () => {
+          // Get user profile
+          if (profileData) {
+            setUserProfile({
+              sessions_remaining: profileData.sessions_remaining || 0, 
+              total_sessions: profileData.total_sessions || 0
+            });
+          } else {
+            // Default profile if not found
+            setUserProfile({
+              sessions_remaining: 0, 
+              total_sessions: 0
+            });
+          }
+
+          // Determine role based on email and metadata
+          let userRole = 'user';
+          if (session.user.user_metadata?.role === 'admin' || session.user.email?.includes('admin')) {
+            userRole = 'admin';
+          } else if (session.user.user_metadata?.role === 'trainer' || session.user.email?.includes('trainer')) {
+            userRole = 'trainer';
+          }
+          setRole(userRole);
+          console.log("User role set to:", userRole);
+        } else {
+          setUser(null);
+          setUserProfile(null);
+          setRole(null);
+          console.log("Session cleared");
+        }
+        setLoading(false);
+      }
+    );
+
+    // Check for an existing session
+    const checkSession = async () => {
       try {
         console.log("Checking for existing session...");
-        
-        // Set up auth state change listener first
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            if (!isMounted) return;
-            
-            console.log("Auth state change event:", event);
-            if (session) {
-              console.log("New session established:", session.user.id);
-              
-              // Fetch profile info
-              const { data: profileData } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .maybeSingle();
-              
-              // Set user data
-              setUser({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: session.user.user_metadata?.name || profileData?.name || '',
-                role: session.user.user_metadata?.role || ''
-              });
-
-              // Get user profile
-              if (profileData) {
-                setUserProfile({
-                  sessions_remaining: profileData.sessions_remaining || 0, 
-                  total_sessions: profileData.total_sessions || 0
-                });
-              } else {
-                // Default profile if not found
-                setUserProfile({
-                  sessions_remaining: 0, 
-                  total_sessions: 0
-                });
-              }
-
-              // Determine role based on email and metadata
-              let userRole = 'user';
-              if (session.user.user_metadata?.role === 'admin' || session.user.email?.includes('admin')) {
-                userRole = 'admin';
-              } else if (session.user.user_metadata?.role === 'trainer' || session.user.email?.includes('trainer')) {
-                userRole = 'trainer';
-              }
-              setRole(userRole);
-              console.log("User role set to:", userRole);
-            } else {
-              if (isMounted) {
-                setUser(null);
-                setUserProfile(null);
-                setRole(null);
-                console.log("Session cleared");
-              }
-            }
-            
-            // Make sure to set loading to false after handling auth state
-            if (isMounted) setLoading(false);
-          }
-        );
-        
-        authSubscription = subscription;
-
-        // Check for an existing session
+        // Get session from Supabase
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
@@ -285,33 +271,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.log("User role set to:", userRole);
         } else {
           console.log("No session found");
-          if (isMounted) setLoading(false);
         }
       } catch (error) {
         console.error("Error checking session:", error);
-        if (isMounted) setLoading(false);
+      } finally {
+        setLoading(false);
       }
-      
-      // Create admin user if they don't exist - but make sure to have a timeout
-      // to prevent blocking the UI
-      setTimeout(() => {
-        if (isMounted) {
-          createAdminUser().catch(err => {
-            console.error("Error creating admin user:", err);
-            if (isMounted) setLoading(false);
-          });
-        }
-      }, 0);
     };
 
-    initializeAuth();
+    checkSession();
+    
+    // Create admin user if they don't exist
+    createAdminUser().catch(err => {
+      console.error("Error creating admin user:", err);
+    });
 
-    // Cleanup function
     return () => {
-      isMounted = false;
-      if (authSubscription) {
-        authSubscription.unsubscribe();
-      }
+      subscription?.unsubscribe();
     };
   }, []);
 
