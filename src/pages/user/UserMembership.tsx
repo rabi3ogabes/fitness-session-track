@@ -160,11 +160,7 @@ const UserMembership = () => {
                 </div>
               </div>
               <div className="border-l-0 md:border-l border-gray-200 pl-0 md:pl-4 mt-4 md:mt-0">
-                <div className="mt-4 flex space-x-2">
-                  <Button variant="outline" size="sm">
-                    Disable Auto-Renewal
-                  </Button>
-                </div>
+                {/* Removed the "Disable Auto-Renewal" button as requested */}
               </div>
             </div>
           </CardContent>
@@ -212,16 +208,19 @@ const UserMembership = () => {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  {membershipData.current.name === plan.name ? (
-                    <p className="text-sm text-gray-500 w-full text-center">
-                      Current Plan
-                    </p>
+                  {membershipData.current.name === plan.name && plan.name === "Basic" ? (
+                    <Button 
+                      onClick={() => handleBookPlan(plan.name)} 
+                      className="w-full bg-gym-blue hover:bg-gym-dark-blue"
+                    >
+                      Get This Plan
+                    </Button>
                   ) : (
                     <Button 
                       onClick={() => handleBookPlan(plan.name)} 
                       className="w-full bg-gym-blue hover:bg-gym-dark-blue"
                     >
-                      Book Now
+                      Get This Plan
                     </Button>
                   )}
                 </CardFooter>
