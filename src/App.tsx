@@ -33,14 +33,23 @@ import AttendeesPage from "./pages/trainer/AttendeesPage";
 // Context
 import { AuthProvider } from "./context/AuthContext";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Speed up loading by showing stale data immediately while refetching in background
+      staleTime: 30000, // 30 seconds
+      cacheTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false
+    },
+  },
+});
 
 // Protected route component with improved loading state handling
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isTrainer, loading } = useAuth();
   
   if (loading) {
-    return <LoadingIndicator message="Loading authentication..." />;
+    return <LoadingIndicator message="Loading authentication..." size="small" />;
   }
   
   if (!isAuthenticated) {
@@ -55,7 +64,7 @@ const AdminProtectedRoute = ({ children }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
   
   if (loading) {
-    return <LoadingIndicator message="Verifying admin access..." />;
+    return <LoadingIndicator message="Verifying admin access..." size="small" />;
   }
   
   if (!isAuthenticated || !isAdmin) {
@@ -70,7 +79,7 @@ const TrainerHomeRedirect = () => {
   const { isAuthenticated, isTrainer, loading } = useAuth();
   
   if (loading) {
-    return <LoadingIndicator message="Checking credentials..." />;
+    return <LoadingIndicator message="Checking credentials..." size="small" />;
   }
   
   if (isAuthenticated && isTrainer) {
@@ -85,7 +94,7 @@ const UserDashboardRedirect = () => {
   const { isAuthenticated, isAdmin, isTrainer, loading } = useAuth();
   
   if (loading) {
-    return <LoadingIndicator message="Preparing dashboard..." />;
+    return <LoadingIndicator message="Preparing dashboard..." size="small" />;
   }
   
   if (!isAuthenticated) {
@@ -107,9 +116,9 @@ const UserDashboardRedirect = () => {
 const AppContent = () => {
   const { loading } = useAuth();
   
-  // Show a global loading indicator if the auth context is still initializing
+  // Show a more lightweight loading indicator
   if (loading) {
-    return <LoadingIndicator message="Initializing application..." />;
+    return <LoadingIndicator message="Loading application..." size="small" />;
   }
   
   return (

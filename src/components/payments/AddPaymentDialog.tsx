@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import LoadingIndicator from "../LoadingIndicator";
 
 // Types
 type Member = {
@@ -51,8 +52,8 @@ interface AddPaymentDialogProps {
 const AddPaymentDialog = ({ 
   isOpen, 
   onClose, 
-  onAddPayment, 
-  members 
+  onAddPayment,
+  members: initialMembers 
 }: AddPaymentDialogProps) => {
   const [newPayment, setNewPayment] = useState<PaymentData>({
     member: "",
@@ -61,7 +62,46 @@ const AddPaymentDialog = ({
     sessionCount: 4
   });
   const [confirmationStep, setConfirmationStep] = useState(false);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  // Fetch members from database when dialog opens
+  useEffect(() => {
+    const fetchMembers = async () => {
+      if (!isOpen) return;
+      
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('members')
+          .select('id, name')
+          .eq('status', 'Active')
+          .order('name');
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setMembers(data);
+        }
+      } catch (error) {
+        console.error("Error loading members:", error);
+        toast({
+          title: "Error loading members",
+          description: "Could not load members list. Using default values.",
+          variant: "destructive",
+        });
+        // Fallback to provided members if database query fails
+        setMembers(initialMembers);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchMembers();
+  }, [isOpen, initialMembers, toast]);
 
   const handleMemberSelect = (value: string) => {
     // Find selected member from registered members
@@ -109,7 +149,11 @@ const AddPaymentDialog = ({
           </DialogTitle>
         </DialogHeader>
         
-        {!confirmationStep ? (
+        {isLoading ? (
+          <div className="py-8">
+            <LoadingIndicator message="Loading members..." size="small" />
+          </div>
+        ) : !confirmationStep ? (
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <label className="text-right text-sm font-medium col-span-1">

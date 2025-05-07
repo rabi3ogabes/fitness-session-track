@@ -5,91 +5,93 @@ import { useToast } from "@/hooks/use-toast";
 import SearchBar from "@/components/payments/SearchBar";
 import PaymentTable from "@/components/payments/PaymentTable";
 import AddPaymentDialog from "@/components/payments/AddPaymentDialog";
-import { initialPayments, registeredMembers, membershipPricing, PaymentFormData } from "@/components/payments/paymentUtils";
+import { membershipPricing, PaymentFormData } from "@/components/payments/paymentUtils";
 import { supabase, requireAuth } from "@/integrations/supabase/client";
+import LoadingIndicator from "@/components/LoadingIndicator";
 
 const Payments = () => {
-  const [payments, setPayments] = useState<typeof initialPayments>([]);
+  const [payments, setPayments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [members, setMembers] = useState([]);
 
-  // Load payments from localStorage or Supabase on component mount
+  // Load payments from Supabase on component mount
   useEffect(() => {
     const fetchPayments = async () => {
       try {
+        setIsLoading(true);
         const { data, error } = await supabase
           .from('payments')
-          .select('*');
+          .select('*')
+          .order('created_at', { ascending: false });
           
         if (error) {
           console.error("Error fetching payments:", error);
-          // Use local storage as fallback
-          const storedPayments = localStorage.getItem("payments");
-          if (storedPayments) {
-            setPayments(JSON.parse(storedPayments));
-          } else {
-            setPayments(initialPayments);
-            // Initialize localStorage with mock data if empty
-            localStorage.setItem("payments", JSON.stringify(initialPayments));
-          }
+          toast({
+            title: "Failed to load payments",
+            description: error.message,
+            variant: "destructive",
+          });
           return;
         }
         
         if (data && data.length > 0) {
           setPayments(data);
-        } else {
-          setPayments(initialPayments);
         }
       } catch (err) {
         console.error("Error in fetchPayments:", err);
-        // Fallback to localStorage
-        const storedPayments = localStorage.getItem("payments");
-        if (storedPayments) {
-          setPayments(JSON.parse(storedPayments));
-        } else {
-          setPayments(initialPayments);
-          localStorage.setItem("payments", JSON.stringify(initialPayments));
+        toast({
+          title: "Failed to load payments",
+          description: "An unexpected error occurred",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Fetch members once to use as a fallback
+    const fetchMembers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('members')
+          .select('id, name')
+          .eq('status', 'Active');
+          
+        if (error) {
+          console.error("Error fetching members:", error);
+          return;
         }
+        
+        if (data) {
+          setMembers(data);
+        }
+      } catch (err) {
+        console.error("Error fetching members:", err);
       }
     };
     
     fetchPayments();
-  }, []);
-
-  // Update localStorage whenever payments change
-  useEffect(() => {
-    if (payments.length > 0) {
-      localStorage.setItem("payments", JSON.stringify(payments));
-    }
-  }, [payments]);
+    fetchMembers();
+  }, [toast]);
 
   const filteredPayments = payments.filter(
     (payment) =>
-      payment.member.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.membership.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.status.toLowerCase().includes(searchTerm.toLowerCase())
+      payment.member?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.membership?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.status?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleAddPayment = async (paymentData: PaymentFormData) => {
     try {
-      const id = payments.length > 0 ? Math.max(...payments.map((p) => p.id)) + 1 : 1;
       const today = new Date().toISOString().split("T")[0];
       const amount = membershipPricing[paymentData.membership as keyof typeof membershipPricing];
       
       // Create the payment record
-      const newPayment = { 
-        id, 
-        member: paymentData.member, 
-        amount, 
-        date: today, 
-        membership: paymentData.membership, 
-        status: "Completed" 
-      };
-      
-      // Try to save payment to Supabase
       await requireAuth(async () => {
-        const { error: paymentError } = await supabase
+        const { data, error: paymentError } = await supabase
           .from('payments')
           .insert({
             member: paymentData.member,
@@ -97,7 +99,8 @@ const Payments = () => {
             date: today,
             membership: paymentData.membership,
             status: "Completed"
-          });
+          })
+          .select();
           
         if (paymentError) {
           console.error("Error saving payment to Supabase:", paymentError);
@@ -142,12 +145,12 @@ const Payments = () => {
             console.log(`Updated sessions for ${paymentData.member} to ${newSessions} (${newRemainingSessions} remaining)`);
           }
         }
+        
+        // Add the new payment to the local state
+        if (data && data.length > 0) {
+          setPayments(prev => [data[0], ...prev]);
+        }
       });
-      
-      // Update local state
-      const updatedPayments = [...payments, newPayment];
-      setPayments(updatedPayments);
-      localStorage.setItem("payments", JSON.stringify(updatedPayments));
   
       toast({
         title: "Payment recorded successfully",
@@ -155,6 +158,17 @@ const Payments = () => {
           paymentData.isSessionPayment ? ` with ${paymentData.sessionCount} sessions added` : ''
         }`,
       });
+      
+      // Refresh payments
+      const { data } = await supabase
+        .from('payments')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (data) {
+        setPayments(data);
+      }
+      
     } catch (error: any) {
       console.error("Error in handleAddPayment:", error);
       toast({
@@ -182,20 +196,14 @@ const Payments = () => {
           console.error("Error updating payment status in Supabase:", error);
           throw error;
         }
+        
+        // Update local state
+        setPayments(prevPayments => 
+          prevPayments.map(p => 
+            p.id === id ? { ...p, status: newStatus } : p
+          )
+        );
       });
-      
-      // Update local state
-      const updatedPayments = payments.map((payment) =>
-        payment.id === id
-          ? {
-              ...payment,
-              status: newStatus,
-            }
-          : payment
-      );
-      
-      setPayments(updatedPayments);
-      localStorage.setItem("payments", JSON.stringify(updatedPayments));
   
       toast({
         title: "Payment status updated",
@@ -219,16 +227,22 @@ const Payments = () => {
         onAddClick={() => setIsAddDialogOpen(true)}
       />
       
-      <PaymentTable 
-        payments={filteredPayments} 
-        updatePaymentStatus={updatePaymentStatus} 
-      />
+      {isLoading ? (
+        <div className="mt-8">
+          <LoadingIndicator message="Loading payments..." size="small" />
+        </div>
+      ) : (
+        <PaymentTable 
+          payments={filteredPayments} 
+          updatePaymentStatus={updatePaymentStatus} 
+        />
+      )}
       
       <AddPaymentDialog
         isOpen={isAddDialogOpen}
         onClose={() => setIsAddDialogOpen(false)}
         onAddPayment={handleAddPayment}
-        members={registeredMembers}
+        members={members} // Pass members as fallback
       />
     </DashboardLayout>
   );

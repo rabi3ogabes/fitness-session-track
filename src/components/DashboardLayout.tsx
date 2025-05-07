@@ -20,18 +20,18 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
     let isMounted = true;
 
     const checkAuth = async () => {
-      // Wait for auth loading to complete
+      // Only show loading briefly to improve perceived performance
       if (!authLoading) {
-        console.log("Auth loading complete, checking authentication in DashboardLayout");
-        
-        if (!isAuthenticated) {
-          console.log("Not authenticated, redirecting to login from DashboardLayout");
-          navigate("/login");
-        } else if (isMounted) {
-          // Once auth check is complete and user is authenticated, set local loading to false
-          console.log("Authentication confirmed in DashboardLayout, rendering content");
-          setLocalLoading(false);
-        }
+        // Set a short timeout to reduce flickering between states
+        setTimeout(() => {
+          if (isMounted) {
+            if (!isAuthenticated) {
+              navigate("/login");
+            } else {
+              setLocalLoading(false);
+            }
+          }
+        }, 100); // Short timeout improves perceived performance
       }
     };
 
@@ -42,16 +42,10 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
     };
   }, [isAuthenticated, authLoading, navigate]);
 
-  // Explicitly log the loading states for debugging
-  useEffect(() => {
-    console.log("Auth loading state:", authLoading);
-    console.log("Local loading state:", localLoading);
-    console.log("Is authenticated:", isAuthenticated);
-  }, [authLoading, localLoading, isAuthenticated]);
-
   // Show loading while checking authentication or in local loading state
+  // Use a smaller loading indicator that doesn't take the full screen
   if (authLoading || localLoading) {
-    return <LoadingIndicator message={`Loading ${title.toLowerCase()}...`} />;
+    return <LoadingIndicator message={`Loading ${title.toLowerCase()}...`} size="small" />;
   }
 
   // Don't render content if not authenticated
