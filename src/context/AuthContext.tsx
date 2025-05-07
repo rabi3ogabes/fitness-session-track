@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -73,20 +74,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         try {
           // Step 1: First check if admin auth user exists 
+          // We need to modify this part since filter is not a valid property of PageParams
           const { data: { users }, error: getUserError } = await supabase.auth.admin.listUsers({
-            perPage: 1,
-            page: 1,
-            filter: {
-              email: 'admin@gym.com'
-            }
+            perPage: 100,
+            page: 1
           });
 
           if (getUserError) {
             console.error(`Error checking if admin auth user exists:`, getUserError);
           }
 
+          // Check if admin exists in the retrieved users
+          const adminUser = users?.find(u => u.email === 'admin@gym.com');
+
           // If admin auth user doesn't exist
-          if (!users || users.length === 0) {
+          if (!adminUser) {
             // Sign up the user
             const { data: authData, error: signupError } = await supabase.auth.signUp({
               email: 'admin@gym.com',
@@ -127,7 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log("Admin auth user exists but profile might be missing, ensuring profile exists");
             
             // Create profile for existing auth user
-            const adminAuthId = users[0].id;
+            const adminAuthId = adminUser.id;
             const { error: profileError } = await supabase
               .from('profiles')
               .insert({
