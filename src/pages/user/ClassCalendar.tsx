@@ -2,12 +2,14 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Calendar } from "@/components/ui/calendar";
-import { format, isSameDay, parseISO, isAfter } from "date-fns";
+import { format, isSameDay, parseISO, isAfter, addWeeks, startOfWeek, endOfWeek, eachDayOfInterval, addDays, isToday } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { 
-  CalendarDays, 
+  Calendar as CalendarIcon, 
+  ChevronLeft,
+  ChevronRight,
   Clock, 
   AlertCircle, 
   Check, 
@@ -15,8 +17,10 @@ import {
   Users, 
   RefreshCw, 
   WifiOff,
-  Info,
-  CheckCircle
+  CheckCircle,
+  ArrowRight,
+  CalendarCheck,
+  CalendarDays
 } from "lucide-react";
 import {
   Card,
@@ -57,15 +61,15 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 
-// Class type colors mapping
+// Class type colors mapping with purple as the primary color
 const classTypeColors = {
   yoga: {
-    bg: "bg-red-100",
-    text: "text-red-800",
-    border: "border-red-200",
-    dot: "bg-red-500",
-    badge: "bg-red-100 text-red-800",
-    calendarDay: "bg-red-50"
+    bg: "bg-purple-100",
+    text: "text-purple-800",
+    border: "border-purple-200",
+    dot: "bg-purple-500",
+    badge: "bg-purple-100 text-purple-800",
+    calendarDay: "bg-purple-50"
   },
   workout: {
     bg: "bg-green-100",
@@ -84,12 +88,12 @@ const classTypeColors = {
     calendarDay: "bg-blue-50"
   },
   dance: {
-    bg: "bg-purple-100",
-    text: "text-purple-800",
-    border: "border-purple-200",
-    dot: "bg-purple-500",
-    badge: "bg-purple-100 text-purple-800",
-    calendarDay: "bg-purple-50"
+    bg: "bg-pink-100",
+    text: "text-pink-800",
+    border: "border-pink-200",
+    dot: "bg-pink-500",
+    badge: "bg-pink-100 text-pink-800",
+    calendarDay: "bg-pink-50"
   },
   default: {
     bg: "bg-gray-100",
@@ -174,6 +178,20 @@ const DEMO_CLASSES: ClassWithBooking[] = [
     location: "Boxing Ring",
     type: "combat",
     isBooked: true
+  },
+  {
+    id: 4,
+    name: "Zumba Dance",
+    status: "Active",
+    schedule: new Date(new Date().setDate(new Date().getDate() + 2)).toISOString(),
+    start_time: "16:00",
+    end_time: "17:00",
+    capacity: 25,
+    enrolled: 15,
+    trainer: "Maria Lopez",
+    location: "Dance Studio",
+    type: "dance",
+    isBooked: false
   }
 ];
 
@@ -181,6 +199,7 @@ type BookingFormValues = z.infer<typeof bookingSchema>;
 
 const ClassCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [weekViewDate, setWeekViewDate] = useState<Date>(new Date());
   const [classes, setClasses] = useState<ClassWithBooking[]>([]);
   const [bookedClasses, setBookedClasses] = useState<number[]>([]);
   const [selectedClass, setSelectedClass] = useState<ClassWithBooking | null>(null);
@@ -195,7 +214,7 @@ const ClassCalendar = () => {
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   const [isNetworkConnected, setIsNetworkConnected] = useState(true);
-  const [activeTab, setActiveTab] = useState("upcoming");
+  const [activeTab, setActiveTab] = useState("weekView");
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -790,6 +809,64 @@ const ClassCalendar = () => {
         return isSameDay(classDate, selectedDate);
       })
     : [];
+
+  // Week view navigation
+  const handlePreviousWeek = () => {
+    setWeekViewDate(prevDate => addDays(prevDate, -7));
+  };
+
+  const handleNextWeek = () => {
+    setWeekViewDate(prevDate => addDays(prevDate, 7));
+  };
+
+  // Get days for week view
+  const getWeekDays = () => {
+    const start = startOfWeek(weekViewDate);
+    const end = endOfWeek(weekViewDate);
+    return eachDayOfInterval({ start, end });
+  };
+
+  const weekDays = getWeekDays();
+  
+  // Get classes for specific day in week view
+  const getClassesForDay = (day: Date) => {
+    return classes.filter(cls => {
+      const classDate = new Date(cls.schedule);
+      return isSameDay(classDate, day);
+    }).sort((a, b) => {
+      // Sort by time
+      return a.start_time && b.start_time ? 
+        a.start_time.localeCompare(b.start_time) : 0;
+    });
+  };
+
+  // Render class card for week view
+  const renderWeekDayClass = (cls: ClassWithBooking) => {
+    const isBooked = cls.isBooked;
+    const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
+    const typeColor = classTypeColors[typeKey] || classTypeColors.default;
+    
+    return (
+      <div 
+        key={cls.id}
+        className={cn(
+          "p-2 rounded-md mb-1.5 text-sm cursor-pointer transition-all hover:shadow-sm",
+          isBooked ? `${typeColor.bg} border border-purple-300` : `${typeColor.bg}`,
+        )}
+        onClick={() => handleSelectClass(cls)}
+      >
+        <div className="flex justify-between items-center">
+          <div className="font-medium truncate">{cls.name}</div>
+          {isBooked && <Check className="h-3.5 w-3.5 text-purple-600" />}
+        </div>
+        <div className="text-xs text-gray-600">{cls.start_time}</div>
+        <div className="text-xs flex justify-between mt-1">
+          <span>{cls.location}</span>
+          <span>{cls.enrolled}/{cls.capacity}</span>
+        </div>
+      </div>
+    );
+  };
   
   return (
     <DashboardLayout title="Book a Class">
@@ -804,11 +881,11 @@ const ClassCalendar = () => {
             {isLoading ? (
               <Skeleton className="h-10 w-40" />
             ) : (
-              <div className="flex items-center px-4 py-2 bg-blue-50 rounded-lg border border-blue-100">
-                <Users className="h-5 w-5 text-blue-500 mr-2" />
+              <div className="flex items-center px-4 py-2 bg-purple-50 rounded-lg border border-purple-100">
+                <Users className="h-5 w-5 text-purple-500 mr-2" />
                 <div>
-                  <p className="text-sm text-blue-800">
-                    Sessions: <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-blue-600")}>
+                  <p className="text-sm text-purple-800">
+                    Sessions: <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-purple-600")}>
                       {userData.remainingSessions}
                     </span>
                     <span className="text-gray-500">/{userData.totalSessions}</span>
@@ -845,19 +922,184 @@ const ClassCalendar = () => {
           )}
 
           {/* Tabs Navigation */}
-          <Tabs defaultValue="calendar" className="mb-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="calendar">Calendar View</TabsTrigger>
-              <TabsTrigger value="list">List View</TabsTrigger>
+          <Tabs defaultValue="weekView" className="mb-6" onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="weekView">Week View</TabsTrigger>
+              <TabsTrigger value="calendar">Month View</TabsTrigger>
+              <TabsTrigger value="myBookings">My Bookings</TabsTrigger>
             </TabsList>
             
-            {/* Calendar View Tab */}
+            {/* Week View Tab */}
+            <TabsContent value="weekView" className="mt-4">
+              <div className="space-y-4">
+                {/* Week navigation */}
+                <div className="flex items-center justify-between mb-4 bg-gray-50 p-3 rounded-md">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handlePreviousWeek}
+                    className="text-gray-600"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </Button>
+                  
+                  <h3 className="font-medium text-purple-800">
+                    Week of {format(weekDays[0], 'MMM d')} - {format(weekDays[6], 'MMM d, yyyy')}
+                  </h3>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleNextWeek}
+                    className="text-gray-600"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+
+                {/* Week days grid */}
+                <div className="grid grid-cols-7 gap-2">
+                  {weekDays.map((day, index) => {
+                    const dayClasses = getClassesForDay(day);
+                    const isCurrentDay = isToday(day);
+                    const isSelected = selectedDate && isSameDay(selectedDate, day);
+                    
+                    return (
+                      <div 
+                        key={index} 
+                        className={cn(
+                          "border rounded-md min-h-[200px] p-2",
+                          isCurrentDay ? "border-purple-300 bg-purple-50" : "border-gray-200",
+                          isSelected ? "ring-2 ring-purple-400" : ""
+                        )}
+                        onClick={() => setSelectedDate(day)}
+                      >
+                        <div className={cn(
+                          "text-center py-2 mb-2 rounded-md font-medium",
+                          isCurrentDay ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-700"
+                        )}>
+                          <div className="text-xs uppercase">{format(day, 'EEE')}</div>
+                          <div className="text-lg">{format(day, 'd')}</div>
+                        </div>
+                        
+                        <div className="space-y-1 overflow-y-auto max-h-[140px] pb-1">
+                          {dayClasses.length > 0 ? (
+                            dayClasses.map(cls => renderWeekDayClass(cls))
+                          ) : (
+                            <div className="text-xs text-gray-500 text-center py-4">
+                              No classes
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Selected day classes */}
+                {selectedDate && (
+                  <div className="mt-8">
+                    <h3 className="font-medium text-lg mb-3 flex items-center text-purple-800">
+                      <CalendarCheck className="mr-2 h-5 w-5" />
+                      Classes on {format(selectedDate, 'MMMM d, yyyy')}
+                    </h3>
+                    
+                    {isLoading ? (
+                      <div className="space-y-3">
+                        {[1, 2].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+                      </div>
+                    ) : classesForSelectedDate.length > 0 ? (
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {classesForSelectedDate.map((cls) => {
+                          const isBooked = cls.isBooked;
+                          const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
+                          const typeColor = classTypeColors[typeKey] || classTypeColors.default;
+                          
+                          return (
+                            <Card key={cls.id} className={cn(
+                              "overflow-hidden hover:shadow-md transition-all",
+                              isBooked ? "border-2 border-purple-400" : ""
+                            )}>
+                              <div className={`h-2 w-full ${typeColor.bg}`}></div>
+                              <CardHeader className="pb-2">
+                                <div className="flex justify-between">
+                                  <CardTitle className="text-lg">{cls.name}</CardTitle>
+                                  <Badge className={typeColor.badge}>
+                                    {cls.type || "General"}
+                                  </Badge>
+                                </div>
+                                <div className="text-sm text-gray-500 flex items-center">
+                                  <Clock className="h-3.5 w-3.5 mr-1" />
+                                  {cls.start_time} - {cls.end_time}
+                                </div>
+                              </CardHeader>
+                              <CardContent className="pb-2">
+                                <div className="space-y-2 text-sm">
+                                  <div><span className="font-medium">Trainer:</span> {cls.trainer}</div>
+                                  <div><span className="font-medium">Location:</span> {cls.location}</div>
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <span className="font-medium">Capacity:</span> {cls.enrolled}/{cls.capacity}
+                                    </div>
+                                    {isBooked && (
+                                      <Badge variant="outline" className="bg-green-50 text-green-700">
+                                        <Check className="h-3 w-3 mr-1" />
+                                        Booked
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </CardContent>
+                              <CardFooter>
+                                {isBooked ? (
+                                  <Button 
+                                    onClick={() => handleCancelBooking(
+                                      cls.id, 
+                                      cls.start_time || "00:00", 
+                                      cls.name
+                                    )}
+                                    variant="outline"
+                                    className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                                  >
+                                    Cancel Booking
+                                  </Button>
+                                ) : (
+                                  <Button 
+                                    onClick={() => handleSelectClass(cls)}
+                                    className="w-full bg-purple-600 hover:bg-purple-700"
+                                    disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0}
+                                  >
+                                    {cls.enrolled >= cls.capacity ? "Class Full" : 
+                                      userData.remainingSessions <= 0 ? "No Sessions Left" : 
+                                      "Book Now"}
+                                  </Button>
+                                )}
+                              </CardFooter>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-10 border border-dashed rounded-lg bg-gray-50">
+                        <CalendarDays className="mx-auto h-12 w-12 text-gray-300" />
+                        <h4 className="mt-2 text-gray-700 font-medium">No classes scheduled</h4>
+                        <p className="text-gray-500 text-sm">There are no classes available on this date.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            
+            {/* Month View Tab */}
             <TabsContent value="calendar" className="mt-4">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Calendar */}
                 <div className="lg:col-span-1 bg-white p-4 rounded-lg border">
                   <div className="flex items-center mb-4">
-                    <CalendarDays className="h-5 w-5 text-blue-500 mr-2" />
+                    <CalendarIcon className="h-5 w-5 text-purple-500 mr-2" />
                     <h2 className="font-medium text-gray-700">Select Date</h2>
                   </div>
                   
@@ -870,7 +1112,7 @@ const ClassCalendar = () => {
                       hasClass: isDayWithClass
                     }}
                     modifiersClassNames={{
-                      hasClass: "bg-blue-50 text-blue-700 font-medium"
+                      hasClass: "bg-purple-50 text-purple-700 font-medium"
                     }}
                     components={{
                       DayContent: DayContent
@@ -879,10 +1121,7 @@ const ClassCalendar = () => {
                   
                   {/* Class Types Legend */}
                   <div className="mt-4 p-3 bg-gray-50 rounded-md">
-                    <div className="flex items-center mb-2">
-                      <Info className="h-4 w-4 text-blue-500 mr-2" />
-                      <h3 className="text-sm font-medium">Class Types</h3>
-                    </div>
+                    <h3 className="text-sm font-medium mb-2">Class Types</h3>
                     <div className="grid grid-cols-2 gap-2">
                       {Object.entries(classTypeColors).map(([type, colors]) => (
                         type !== 'default' && (
@@ -894,19 +1133,12 @@ const ClassCalendar = () => {
                       ))}
                     </div>
                   </div>
-                  
-                  <div className="mt-4 p-3 bg-blue-50 rounded-md">
-                    <div className="flex items-center text-xs text-blue-800">
-                      <AlertCircle className="h-3.5 w-3.5 mr-1 text-blue-500" />
-                      <span>You can cancel a class up to {systemSettings.cancellationTimeLimit} hours before it starts.</span>
-                    </div>
-                  </div>
                 </div>
                 
                 {/* Classes for selected date */}
                 <div className="lg:col-span-2">
                   <div className="flex items-center mb-4">
-                    <Clock className="h-5 w-5 text-blue-500 mr-2" />
+                    <Clock className="h-5 w-5 text-purple-500 mr-2" />
                     <h2 className="font-medium text-gray-800">
                       Classes for {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'Selected date'}
                     </h2>
@@ -930,59 +1162,41 @@ const ClassCalendar = () => {
                         // Skip past classes
                         if (isPast) return null;
 
-                        const isPastCancellationWindow = () => {
-                          if (!cls.start_time) return false;
-                          const classHour = parseInt(cls.start_time.split(':')[0]);
-                          const now = new Date();
-                          const classDate = new Date(selectedDate!);
-                          classDate.setHours(classHour);
-                          return (classDate.getTime() - now.getTime()) / (1000 * 60 * 60) < systemSettings.cancellationTimeLimit;
-                        };
-                        
                         return (
                           <Card key={cls.id} className={cn(
-                            "transition-all hover:shadow-sm overflow-hidden",
-                            isBooked ? "border-2 border-blue-500" : ""
+                            "transition-all hover:shadow-sm",
+                            isBooked ? "border-2 border-purple-500" : ""
                           )}>
-                            <div className="flex items-stretch">
+                            <div className="flex h-full">
                               {/* Left colored bar based on class type */}
-                              <div className={`w-1.5 ${typeColor.bg}`}></div>
+                              <div className={`w-2 ${typeColor.bg}`}></div>
                               
-                              <div className="flex-1">
-                                <CardHeader className="py-3">
-                                  <div className="flex justify-between items-start">
-                                    <div>
-                                      <h3 className="font-medium text-gray-800">{cls.name}</h3>
-                                      <p className="text-sm text-gray-500">
-                                        {cls.start_time} - {cls.end_time}
-                                      </p>
-                                    </div>
-                                    
-                                    <div className="flex flex-col items-end gap-1">
-                                      <div className="flex items-center space-x-2">
-                                        <Badge className={`${typeColor.badge} text-xs font-normal`}>
-                                          {cls.type || "General"}
-                                        </Badge>
-                                        
-                                        <Badge 
-                                          variant={cls.enrolled >= cls.capacity ? "destructive" : "outline"}
-                                          className="text-xs font-normal"
-                                        >
-                                          {cls.enrolled}/{cls.capacity}
-                                        </Badge>
-                                      </div>
-                                      
-                                      {isBooked && (
-                                        <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
-                                          <CheckCircle className="h-3 w-3 mr-1" />
-                                          Booked
-                                        </Badge>
-                                      )}
-                                    </div>
+                              <div className="flex-1 p-4">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div>
+                                    <h3 className="font-medium text-gray-800 text-lg">{cls.name}</h3>
+                                    <p className="text-sm text-gray-500 flex items-center">
+                                      <Clock className="h-3.5 w-3.5 mr-1" />
+                                      {cls.start_time} - {cls.end_time}
+                                    </p>
                                   </div>
-                                </CardHeader>
-                                <CardContent className="py-0">
-                                  <div className="text-sm space-y-1 mb-3">
+                                  
+                                  <div className="flex flex-col items-end gap-1">
+                                    <Badge className={`${typeColor.badge}`}>
+                                      {cls.type || "General"}
+                                    </Badge>
+                                    
+                                    {isBooked && (
+                                      <Badge variant="outline" className="bg-green-50 text-green-700">
+                                        <CheckCircle className="h-3 w-3 mr-1" />
+                                        Booked
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+                                  <div>
                                     <p className="text-gray-600">
                                       <span className="font-medium">Trainer:</span> {cls.trainer}
                                     </p>
@@ -992,8 +1206,22 @@ const ClassCalendar = () => {
                                       </p>
                                     )}
                                   </div>
-                                </CardContent>
-                                <CardFooter className="pt-2 pb-4">
+                                  <div>
+                                    <p className="text-gray-600">
+                                      <span className="font-medium">Capacity:</span>
+                                      <span className={cls.enrolled >= cls.capacity ? "text-red-600 font-medium" : ""}>
+                                        {" "}{cls.enrolled}/{cls.capacity}
+                                      </span>
+                                    </p>
+                                    {sessionsLow && !isBooked && (
+                                      <p className="text-amber-600 text-xs">
+                                        You have low sessions remaining
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex justify-end">
                                   {isBooked ? (
                                     <Button 
                                       onClick={() => handleCancelBooking(
@@ -1002,29 +1230,24 @@ const ClassCalendar = () => {
                                         cls.name
                                       )}
                                       variant="outline"
-                                      className={cn(
-                                        "w-full border-red-300 text-red-600 hover:bg-red-50 text-sm",
-                                        isPastCancellationWindow() && "opacity-50 cursor-not-allowed"
-                                      )}
-                                      disabled={isPastCancellationWindow()}
+                                      className="border-red-300 text-red-600 hover:bg-red-50"
                                     >
-                                      {isPastCancellationWindow() ? 
-                                        `Can't Cancel (< ${systemSettings.cancellationTimeLimit}h)` : 
-                                        "Cancel Booking"}
+                                      <X className="h-4 w-4 mr-2" />
+                                      Cancel Booking
                                     </Button>
                                   ) : (
                                     <Button 
                                       onClick={() => handleSelectClass(cls)}
-                                      variant="default"
-                                      className="w-full bg-blue-600 hover:bg-blue-700"
+                                      className="bg-purple-600 hover:bg-purple-700"
                                       disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0}
                                     >
                                       {cls.enrolled >= cls.capacity ? "Class Full" : 
                                         userData.remainingSessions <= 0 ? "No Sessions Left" : 
                                         "Book This Class"}
+                                      <ArrowRight className="ml-2 h-4 w-4" />
                                     </Button>
                                   )}
-                                </CardFooter>
+                                </div>
                               </div>
                             </div>
                           </Card>
@@ -1042,193 +1265,133 @@ const ClassCalendar = () => {
               </div>
             </TabsContent>
             
-            {/* List View Tab */}
-            <TabsContent value="list" className="mt-4">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left panel - My bookings */}
-                <div className="bg-white p-4 rounded-lg border">
-                  <h3 className="font-semibold text-lg mb-4 flex items-center text-blue-700">
-                    <CheckCircle className="h-5 w-5 mr-2" />
-                    My Bookings
-                  </h3>
-                  
-                  {isLoading ? (
-                    <div className="space-y-3">
-                      {[1, 2, 3].map(i => (
-                        <Skeleton key={i} className="h-16 w-full" />
-                      ))}
-                    </div>
-                  ) : myBookedClasses.length > 0 ? (
-                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                      {myBookedClasses.map(cls => {
-                        const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
-                        const typeColor = classTypeColors[typeKey] || classTypeColors.default;
-                        const classDate = new Date(cls.schedule);
-                        
-                        return (
-                          <div key={cls.id} className={`p-3 rounded-md border ${typeColor.border} ${typeColor.bg}`}>
-                            <div className="flex justify-between">
-                              <h4 className="font-medium">{cls.name}</h4>
-                              <Badge className="bg-white">{format(classDate, 'MMM d')}</Badge>
-                            </div>
-                            <p className="text-xs text-gray-600 mt-1">{cls.start_time} - {cls.end_time}</p>
-                            <div className="flex justify-between mt-2">
-                              <span className="text-xs text-gray-600">{cls.trainer}</span>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                className="h-6 text-xs px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => handleCancelBooking(
-                                  cls.id, 
-                                  cls.start_time || "00:00", 
-                                  cls.name
-                                )}
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 border border-dashed rounded-md bg-gray-50">
-                      <p className="text-gray-500">No booked classes</p>
-                      <p className="text-xs text-gray-400 mt-1">Book a class from the right panel</p>
-                    </div>
-                  )}
-                  
-                  <div className="mt-4 p-3 bg-blue-50 rounded-md">
-                    <div className="flex items-center">
-                      <Users className="h-5 w-5 text-blue-600 mr-2" />
-                      <div>
-                        <h4 className="font-medium text-blue-800">Sessions Summary</h4>
-                        <div className="flex items-center mt-1">
-                          <div className="bg-gray-200 h-2 flex-grow rounded-full overflow-hidden">
-                            <div 
-                              className={cn(
-                                "h-full rounded-full", 
-                                sessionsLow ? "bg-red-500" : "bg-blue-500"
-                              )} 
-                              style={{
-                                width: `${Math.min(100, (userData.remainingSessions / userData.totalSessions) * 100)}%`
-                              }}
-                            ></div>
-                          </div>
-                          <span className="text-xs ml-2 font-medium">
-                            {userData.remainingSessions}/{userData.totalSessions}
-                          </span>
-                        </div>
+            {/* My Bookings Tab */}
+            <TabsContent value="myBookings" className="mt-4">
+              <div className="mb-6 bg-purple-50 rounded-lg p-4 border border-purple-100">
+                <div className="flex items-center">
+                  <Users className="h-5 w-5 text-purple-500 mr-2" />
+                  <div>
+                    <h3 className="font-medium text-purple-800">Your Sessions</h3>
+                    <div className="flex items-center mt-1">
+                      <div className="bg-gray-200 h-2 w-44 rounded-full overflow-hidden">
+                        <div 
+                          className={cn(
+                            "h-full rounded-full", 
+                            sessionsLow ? "bg-red-500" : "bg-purple-500"
+                          )} 
+                          style={{
+                            width: `${Math.min(100, (userData.remainingSessions / userData.totalSessions) * 100)}%`
+                          }}
+                        ></div>
                       </div>
+                      <span className="text-sm ml-2 font-medium">
+                        {userData.remainingSessions}/{userData.totalSessions}
+                      </span>
                     </div>
                   </div>
                 </div>
                 
-                {/* Right panel - All upcoming classes */}
-                <div className="lg:col-span-2">
-                  <h3 className="font-semibold text-lg mb-4 flex items-center">
-                    <CalendarDays className="h-5 w-5 mr-2 text-blue-600" />
-                    Upcoming Classes
-                  </h3>
-                  
-                  {isLoading ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map(i => (
-                        <Skeleton key={i} className="h-24 w-full" />
-                      ))}
-                    </div>
-                  ) : allClasses.length > 0 ? (
-                    <div className="space-y-4">
-                      {allClasses.map(cls => {
-                        const isBooked = cls.isBooked;
-                        const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
-                        const typeColor = classTypeColors[typeKey] || classTypeColors.default;
-                        const classDate = new Date(cls.schedule);
-                        
-                        return (
-                          <Card key={cls.id} className={cn(
-                            "transition-all hover:shadow-sm",
-                            isBooked ? "border-2 border-blue-500" : ""
-                          )}>
-                            <CardHeader className="pb-2">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <div className="flex items-center">
-                                    <h3 className="font-medium text-gray-800">{cls.name}</h3>
-                                    <span className={`ml-2 w-2 h-2 rounded-full ${typeColor.dot}`}></span>
-                                  </div>
-                                  <p className="text-sm text-gray-500">
-                                    {format(classDate, 'EEEE, MMMM d')} • {cls.start_time} - {cls.end_time}
-                                  </p>
-                                </div>
-                                
-                                <div className="flex items-center space-x-2">
-                                  <Badge variant="outline" className="text-xs font-normal">
-                                    {cls.enrolled}/{cls.capacity}
-                                  </Badge>
-                                  
-                                  {isBooked && (
-                                    <Badge className="bg-green-100 text-green-800 text-xs">
-                                      <Check className="h-3 w-3 mr-1" />
-                                      Booked
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="py-2">
-                              <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                  <p className="text-gray-600">
-                                    <span className="font-medium">Trainer:</span> {cls.trainer}
-                                  </p>
-                                  {cls.location && (
-                                    <p className="text-gray-600">
-                                      <span className="font-medium">Location:</span> {cls.location}
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="flex justify-end items-center">
-                                  {isBooked ? (
-                                    <Button 
-                                      onClick={() => handleCancelBooking(
-                                        cls.id, 
-                                        cls.start_time || "00:00", 
-                                        cls.name
-                                      )}
-                                      variant="outline"
-                                      size="sm"
-                                      className="border-red-300 text-red-600 hover:bg-red-50"
-                                    >
-                                      Cancel Booking
-                                    </Button>
-                                  ) : (
-                                    <Button 
-                                      onClick={() => handleSelectClass(cls)}
-                                      variant="default"
-                                      size="sm"
-                                      className="bg-blue-600 hover:bg-blue-700"
-                                      disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0}
-                                    >
-                                      Book Now
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 border border-dashed rounded-lg bg-gray-50">
-                      <CalendarDays className="mx-auto h-16 w-16 text-gray-300" />
-                      <h4 className="mt-2 text-gray-700 font-medium">No upcoming classes</h4>
-                      <p className="text-gray-500">Check back later for new classes</p>
-                    </div>
-                  )}
+                <div className="text-xs mt-2 text-purple-700">
+                  <AlertCircle className="inline h-3.5 w-3.5 mr-1" />
+                  You can cancel a class up to {systemSettings.cancellationTimeLimit} hours before it starts.
                 </div>
               </div>
+              
+              <h3 className="font-semibold text-lg mb-4 flex items-center">
+                <CalendarCheck className="h-5 w-5 mr-2 text-purple-600" />
+                Your Booked Classes
+              </h3>
+              
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
+                </div>
+              ) : myBookedClasses.length > 0 ? (
+                <div className="space-y-4">
+                  {myBookedClasses.map((cls) => {
+                    const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
+                    const typeColor = classTypeColors[typeKey] || classTypeColors.default;
+                    const classDate = new Date(cls.schedule);
+                    
+                    const isPastCancellationWindow = () => {
+                      if (!cls.start_time) return false;
+                      const classHour = parseInt(cls.start_time.split(':')[0]);
+                      const now = new Date();
+                      const classDate = new Date(cls.schedule);
+                      classDate.setHours(classHour);
+                      return (classDate.getTime() - now.getTime()) / (1000 * 60 * 60) < systemSettings.cancellationTimeLimit;
+                    };
+                    
+                    return (
+                      <Card key={cls.id} className="overflow-hidden">
+                        <div className="flex">
+                          {/* Date column */}
+                          <div className={`w-20 flex-none ${typeColor.bg} flex flex-col items-center justify-center p-3`}>
+                            <div className="text-sm font-bold text-gray-800">{format(classDate, 'EEE')}</div>
+                            <div className="text-2xl font-bold text-gray-800">{format(classDate, 'd')}</div>
+                            <div className="text-xs text-gray-600">{format(classDate, 'MMM')}</div>
+                          </div>
+                          
+                          {/* Content */}
+                          <div className="flex-1 p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h3 className="font-medium text-lg">{cls.name}</h3>
+                                <p className="text-sm text-gray-500 flex items-center">
+                                  <Clock className="h-3.5 w-3.5 mr-1" />
+                                  {cls.start_time} - {cls.end_time}
+                                </p>
+                              </div>
+                              <Badge className={typeColor.badge}>
+                                {cls.type || "General"}
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid md:grid-cols-2 gap-4 mt-3">
+                              <div className="text-sm space-y-1">
+                                <p><span className="font-medium">Trainer:</span> {cls.trainer}</p>
+                                <p><span className="font-medium">Location:</span> {cls.location}</p>
+                              </div>
+                              
+                              <div className="flex md:justify-end items-center">
+                                <Button 
+                                  onClick={() => handleCancelBooking(
+                                    cls.id, 
+                                    cls.start_time || "00:00", 
+                                    cls.name
+                                  )}
+                                  variant="outline"
+                                  className={cn(
+                                    "border-red-300 text-red-600 hover:bg-red-50",
+                                    isPastCancellationWindow() && "opacity-50 cursor-not-allowed"
+                                  )}
+                                  disabled={isPastCancellationWindow()}
+                                >
+                                  {isPastCancellationWindow() ? 
+                                    `Can't Cancel (< ${systemSettings.cancellationTimeLimit}h)` : 
+                                    "Cancel Booking"}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12 border border-dashed rounded-lg bg-gray-50">
+                  <CalendarDays className="mx-auto h-16 w-16 text-gray-300" />
+                  <h4 className="mt-4 text-gray-700 font-medium">No booked classes</h4>
+                  <p className="text-gray-500 mt-1">You haven't booked any classes yet</p>
+                  <Button 
+                    className="mt-4 bg-purple-600 hover:bg-purple-700"
+                    onClick={() => setActiveTab("weekView")}
+                  >
+                    Browse Available Classes
+                  </Button>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>
@@ -1238,57 +1401,77 @@ const ClassCalendar = () => {
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm Class Booking</DialogTitle>
-            <DialogDescription>
-              {selectedClass ? `You're about to book the ${selectedClass.name} class` : 'Confirm your booking'}
+            <DialogTitle className="text-center text-xl">Book Class</DialogTitle>
+            <DialogDescription className="text-center">
+              {selectedClass ? `${selectedClass.name} on ${
+                selectedClass.schedule ? format(new Date(selectedClass.schedule), 'EEEE, MMMM d') : ''
+              }` : 'Select a class to book'}
             </DialogDescription>
           </DialogHeader>
           
           {selectedClass && (
             <div className="py-4">
               <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-lg">{selectedClass.name}</h3>
-                  <Badge variant="outline" className={
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium text-lg text-gray-800">{selectedClass.name}</h3>
+                  <Badge className={
                     classTypeColors[(selectedClass.type || 'default') as keyof typeof classTypeColors]?.badge
                   }>
                     {selectedClass.type || 'General'}
                   </Badge>
                 </div>
                 
-                <div className="space-y-2 text-sm">
-                  <p>
-                    <span className="font-medium">Date:</span> {format(new Date(selectedClass.schedule), 'EEEE, MMMM d, yyyy')}
-                  </p>
-                  <p>
-                    <span className="font-medium">Time:</span> {selectedClass.start_time} - {selectedClass.end_time}
-                  </p>
-                  <p>
-                    <span className="font-medium">Trainer:</span> {selectedClass.trainer}
-                  </p>
-                  {selectedClass.location && (
-                    <p>
-                      <span className="font-medium">Location:</span> {selectedClass.location}
-                    </p>
-                  )}
-                  <p>
-                    <span className="font-medium">Availability:</span> {selectedClass.enrolled}/{selectedClass.capacity} spots filled
-                  </p>
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-start">
+                    <CalendarIcon className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
+                    <div>
+                      <p className="font-medium">Date & Time</p>
+                      <p className="text-gray-600">{format(new Date(selectedClass.schedule), 'EEEE, MMMM d, yyyy')}</p>
+                      <p className="text-gray-600">{selectedClass.start_time} - {selectedClass.end_time}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="font-medium">Trainer</p>
+                      <p className="text-gray-600">{selectedClass.trainer}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium">Location</p>
+                      <p className="text-gray-600">{selectedClass.location}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                    <div>
+                      <span className="font-medium">Availability:</span>
+                      <span className={cn(
+                        "ml-1",
+                        selectedClass.enrolled >= selectedClass.capacity ? "text-red-600 font-medium" : ""
+                      )}>
+                        {selectedClass.enrolled}/{selectedClass.capacity} spots filled
+                      </span>
+                    </div>
+                    <Badge variant={selectedClass.enrolled >= selectedClass.capacity ? "destructive" : "outline"}>
+                      {selectedClass.enrolled >= selectedClass.capacity ? "Full" : `${selectedClass.capacity - selectedClass.enrolled} Available`}
+                    </Badge>
+                  </div>
                 </div>
               </div>
               
-              <div className="mt-4 p-3 border rounded-md">
-                <div className="flex justify-between">
+              <div className="mt-5 p-4 border rounded-md bg-purple-50 border-purple-100">
+                <h4 className="font-medium mb-2 text-purple-800">Session Information</h4>
+                <div className="flex justify-between text-sm">
                   <span>Sessions required:</span>
                   <span className="font-bold">1</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm">
                   <span>Your remaining sessions:</span>
-                  <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-blue-600")}>
+                  <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-purple-600")}>
                     {userData.remainingSessions}
                   </span>
                 </div>
-                <div className="flex justify-between font-medium mt-1 pt-1 border-t">
+                <div className="flex justify-between font-medium mt-2 pt-2 border-t border-purple-200">
                   <span>Sessions after booking:</span>
                   <span className={cn(
                     "font-bold", 
@@ -1314,7 +1497,7 @@ const ClassCalendar = () => {
                               type="checkbox"
                               checked={field.value}
                               onChange={field.onChange}
-                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                             />
                           </FormControl>
                           <div className="space-y-1 leading-none">
@@ -1339,7 +1522,7 @@ const ClassCalendar = () => {
             </Button>
             <Button 
               onClick={confirmBooking} 
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700"
               disabled={!form.getValues().acceptTerms || isBookingInProgress || !selectedClass}
             >
               {isBookingInProgress ? (
