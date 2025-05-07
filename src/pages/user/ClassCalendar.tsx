@@ -47,7 +47,8 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
+  FormMessage,
+  FormDescription
 } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -1263,7 +1264,7 @@ const ClassCalendar = () => {
                 </div>
                 
                 {sessionsLow && (
-                  <Alert className="mt-3" variant="warning">
+                  <Alert className="mt-3" variant="default">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Running Low</AlertTitle>
                     <AlertDescription>
