@@ -7,6 +7,8 @@ import { CalendarIcon, Clock } from "lucide-react";
 import { format, isSameDay, addMonths, subMonths, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { mockClasses, isDayWithClass, getClassesForDate } from "../mockData";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface CalendarSectionProps {
   selectedDate: Date;
@@ -23,6 +25,10 @@ export const CalendarSection = ({
 }: CalendarSectionProps) => {
   const [calendarDate, setCalendarDate] = useState<Date>(new Date(selectedDate));
   const classesForView = getClassesForDate(selectedDate);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  const [isClassAlreadyBooked, setIsClassAlreadyBooked] = useState(false);
+  const { toast } = useToast();
   
   // Calendar navigation handlers
   const handlePreviousMonth = () => {
@@ -67,6 +73,39 @@ export const CalendarSection = ({
   };
   
   const { prevMonthDays, currentMonthDays, nextMonthDays } = generateCalendarDays();
+
+  const handleClassClick = (classId: number) => {
+    // Check if class is already booked
+    const isBooked = bookings.some(booking => booking.class_id === classId);
+    setSelectedClassId(classId);
+    setIsClassAlreadyBooked(isBooked);
+    setBookingDialogOpen(true);
+  };
+
+  const handleBookClass = () => {
+    if (isClassAlreadyBooked) {
+      toast({
+        title: "Already booked",
+        description: "You have already booked this class.",
+        variant: "destructive"
+      });
+      setBookingDialogOpen(false);
+      return;
+    }
+    
+    handleViewClassDetails(selectedClassId as number);
+    setBookingDialogOpen(false);
+  };
+
+  const handleCancelBooking = () => {
+    // Handle cancellation logic here
+    toast({
+      title: "Booking cancelled",
+      description: "Your booking has been cancelled successfully.",
+      variant: "default"
+    });
+    setBookingDialogOpen(false);
+  };
   
   return (
     <div className="w-full">
@@ -197,26 +236,37 @@ export const CalendarSection = ({
             
             <div className="space-y-3">
               {classesForView.length > 0 ? (
-                classesForView.map(cls => (
-                  <div 
-                    key={cls.id} 
-                    className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
-                    onClick={() => handleViewClassDetails(cls.id)}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">{cls.name}</p>
-                        <div className="text-xs text-gray-500 flex items-center">
-                          <Clock className="h-3 w-3 mr-1" />
-                          {cls.time}
+                classesForView.map(cls => {
+                  const isBooked = bookings.some(booking => booking.class_id === cls.id);
+                  
+                  return (
+                    <div 
+                      key={cls.id} 
+                      className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
+                      onClick={() => handleClassClick(cls.id)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium">{cls.name}</p>
+                          <div className="text-xs text-gray-500 flex items-center">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {cls.time}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isBooked && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                              Booked
+                            </Badge>
+                          )}
+                          <Badge variant="outline" className="bg-white">
+                            {cls.enrolled}/{cls.capacity}
+                          </Badge>
                         </div>
                       </div>
-                      <Badge variant="outline" className="bg-white">
-                        {cls.enrolled}/{cls.capacity}
-                      </Badge>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="text-gray-500 text-center py-6 bg-gray-50 rounded-md border border-dashed border-gray-300">
                   <p>No classes scheduled</p>
@@ -225,6 +275,45 @@ export const CalendarSection = ({
               )}
             </div>
           </div>
+
+          {/* Class Booking Dialog */}
+          <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>
+                  {isClassAlreadyBooked ? "Class Already Booked" : "Book Class"}
+                </DialogTitle>
+                <DialogDescription>
+                  {isClassAlreadyBooked 
+                    ? "You have already booked this class. Would you like to cancel your booking?" 
+                    : "Confirm your class booking"
+                  }
+                </DialogDescription>
+              </DialogHeader>
+              
+              <DialogFooter className="sm:justify-start">
+                {isClassAlreadyBooked ? (
+                  <>
+                    <Button type="button" variant="outline" onClick={() => setBookingDialogOpen(false)}>
+                      Keep Booking
+                    </Button>
+                    <Button type="button" variant="destructive" onClick={handleCancelBooking}>
+                      Cancel Booking
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button type="button" variant="outline" onClick={() => setBookingDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="button" variant="default" onClick={handleBookClass}>
+                      Confirm Booking
+                    </Button>
+                  </>
+                )}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
     </div>
