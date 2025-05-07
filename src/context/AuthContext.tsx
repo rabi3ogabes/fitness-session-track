@@ -1,8 +1,7 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AuthTokenResponse } from '@supabase/supabase-js';
+import { AuthTokenResponse, User as SupabaseUser } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -75,7 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
           // Step 1: First check if admin auth user exists 
           // We need to modify this part since filter is not a valid property of PageParams
-          const { data: { users }, error: getUserError } = await supabase.auth.admin.listUsers({
+          const { data: authUsersData, error: getUserError } = await supabase.auth.admin.listUsers({
             perPage: 100,
             page: 1
           });
@@ -85,6 +84,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
 
           // Check if admin exists in the retrieved users
+          // Fix the type issue by explicitly typing the users array
+          const users = authUsersData?.users as SupabaseUser[] | undefined;
           const adminUser = users?.find(u => u.email === 'admin@gym.com');
 
           // If admin auth user doesn't exist
