@@ -1066,74 +1066,6 @@ const ClassCalendar = () => {
                 </div>
               </CardContent>
             </Card>
-            
-            {/* Selected Date Classes or Calendar View */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xl font-bold">Select a Date</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col sm:flex-row gap-6">
-                  <div className="flex-1">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={setSelectedDate}
-                      className="rounded-md border"
-                      components={{
-                        DayContent: DayContent
-                      }}
-                    />
-                  </div>
-                  
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-2">
-                      {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'Select a date'}
-                    </h3>
-                    
-                    {classesForSelectedDate.length > 0 ? (
-                      <div className="space-y-2">
-                        {classesForSelectedDate.map(cls => {
-                          const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
-                          const typeColor = classTypeColors[typeKey] || classTypeColors.default;
-                          const isClassBooked = cls.isBooked;
-                          
-                          return (
-                            <div 
-                              key={cls.id} 
-                              className={cn(
-                                "p-3 rounded-lg border cursor-pointer hover:shadow-sm transition-all",
-                                isClassBooked ? 'bg-purple-50 border-purple-200' : `${typeColor.bg} ${typeColor.border}`
-                              )}
-                              onClick={() => handleSelectClass(cls)}
-                            >
-                              <div className="flex justify-between">
-                                <h4 className="font-medium">{cls.name}</h4>
-                                {isClassBooked && <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200">Booked</Badge>}
-                              </div>
-                              <div className="mt-1 text-sm text-gray-600">
-                                <div className="flex items-center">
-                                  <Clock className="h-3.5 w-3.5 mr-1" />
-                                  <span>{cls.start_time} - {cls.end_time}</span>
-                                </div>
-                                <div className="flex items-center mt-1">
-                                  <Users className="h-3.5 w-3.5 mr-1" />
-                                  <span>{cls.enrolled}/{cls.capacity} enrolled</span>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-gray-500 text-center p-4 border rounded-lg">
-                        No classes scheduled for this date
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
           
           {/* My Bookings Tab Content */}
@@ -1332,11 +1264,10 @@ const ClassCalendar = () => {
               
               <DialogFooter>
                 <Button 
-                  variant="outline" 
                   onClick={cancelBookingConfirmation}
                   className="w-full sm:w-auto"
                 >
-                  Close
+                  Cancel
                 </Button>
               </DialogFooter>
             </div>
