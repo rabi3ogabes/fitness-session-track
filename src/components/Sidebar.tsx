@@ -173,16 +173,19 @@ const Sidebar = () => {
               <span className="text-xs mt-1">Profile</span>
             </Link>
             
-            <a
-              href="/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
-              title="Main Page"
-            >
-              <ExternalLink className="h-6 w-6" />
-              <span className="text-xs mt-1">Main Page</span>
-            </a>
+            {/* Main Page link removed for regular members, only kept for admins */}
+            {isAdmin && (
+              <a
+                href="/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col items-center text-gray-700 hover:text-gym-blue transition-colors"
+                title="Main Page"
+              >
+                <ExternalLink className="h-6 w-6" />
+                <span className="text-xs mt-1">Main Page</span>
+              </a>
+            )}
             
             <button
               onClick={handleLogout}
