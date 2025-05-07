@@ -56,7 +56,9 @@ function Calendar({
       components={{
         IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
         IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
-        DayContent: props.components?.DayContent,
+        DayContent: props.components?.DayContent || (({ date, ...dayProps }) => (
+          <div {...dayProps}>{format(date, 'd')}</div>
+        )),
       }}
       formatters={{
         formatCaption: (date, options) => {
