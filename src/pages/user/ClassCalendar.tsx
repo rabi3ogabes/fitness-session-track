@@ -59,6 +59,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Class type colors mapping with purple as the primary color
 const classTypeColors = {
@@ -966,4 +967,4 @@ const ClassCalendar = () => {
       >
         <div className="flex justify-between items-center">
           <div className="font-medium truncate">{cls.name}</div>
-          {isBooked && <Check className="h-3.5 w-3.5 text-purple-6
+          {isBooked && <Check className="h-3.
