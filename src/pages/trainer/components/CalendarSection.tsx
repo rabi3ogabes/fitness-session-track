@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -185,29 +186,14 @@ export const CalendarSection = ({
                     )}
                     onClick={() => setSelectedDate(day)}
                   >
-                    <div className="flex flex-col items-center justify-start h-full">
+                    <div className="flex items-center justify-center h-full">
                       <div className={cn(
-                        "w-7 h-7 rounded-full flex items-center justify-center mb-1",
+                        "w-7 h-7 rounded-full flex items-center justify-center",
                         isSelected ? "bg-purple-500 text-white" : "",
                         isToday && !isSelected ? "border border-purple-500" : ""
                       )}>
                         {format(day, "d")}
                       </div>
-                      
-                      {/* Show dots for class indicators */}
-                      {classCount > 0 && (
-                        <div className="flex gap-0.5 mt-auto">
-                          {Array.from({ length: Math.min(classCount, 3) }).map((_, i) => (
-                            <div
-                              key={i}
-                              className={cn(
-                                "w-1.5 h-1.5 rounded-full", 
-                                isSelected ? "bg-purple-400/70" : "bg-purple-500"
-                              )}
-                            />
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
@@ -318,3 +304,4 @@ export const CalendarSection = ({
     </div>
   );
 };
+
