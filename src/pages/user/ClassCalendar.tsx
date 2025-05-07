@@ -966,4 +966,4 @@ const ClassCalendar = () => {
       >
         <div className="flex justify-between items-center">
           <div className="font-medium truncate">{cls.name}</div>
-          {isBooked && <Check className="h-3.5 w-3.5 text-purple-600"
+          {isBooked && <Check className="h-3.5 w-3.5 text-purple-6
