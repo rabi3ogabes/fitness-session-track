@@ -403,6 +403,9 @@ const ClassCalendar = () => {
       if (!user) return;
       
       try {
+        // Clear previous bookings to prevent stale data
+        setBookedClasses([]);
+        
         if (user.id === "demo-user-id") {
           // For demo mode, use hardcoded bookings
           setBookedClasses([3]); // Mark class ID 3 as booked in demo mode
@@ -422,6 +425,7 @@ const ClassCalendar = () => {
         }
         
         try {
+          // Use the latest data from the server, not cached data
           const { data, error } = await supabase
             .from('bookings')
             .select('class_id')
@@ -447,6 +451,14 @@ const ClassCalendar = () => {
           } else {
             // No bookings found
             setBookedClasses([]);
+            
+            // Remove booked flag from all classes
+            setClasses(prevClasses => 
+              prevClasses.map(cls => ({
+                ...cls,
+                isBooked: false
+              }))
+            );
           }
         } catch (err) {
           console.error("Error fetching bookings:", err);
