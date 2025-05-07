@@ -74,7 +74,7 @@ export const CalendarSection = ({
         <CardHeader>
           <CardTitle className="text-lg flex items-center justify-between">
             <div className="flex items-center">
-              <CalendarIcon className="mr-2 h-5 w-5 text-blue-500" />
+              <CalendarIcon className="mr-2 h-5 w-5 text-purple-500" />
               Class Schedule
             </div>
             <div className="text-sm font-normal text-gray-500">
@@ -143,15 +143,15 @@ export const CalendarSection = ({
                     className={cn(
                       "h-10 p-0.5 cursor-pointer",
                       isToday && "font-bold",
-                      isSelected && "bg-blue-50 rounded-md"
+                      isSelected && "bg-purple-50 rounded-md"
                     )}
                     onClick={() => setSelectedDate(day)}
                   >
                     <div className="flex flex-col items-center justify-start h-full">
                       <div className={cn(
                         "w-7 h-7 rounded-full flex items-center justify-center mb-1",
-                        isSelected ? "bg-blue-500 text-white" : "",
-                        isToday && !isSelected ? "border border-blue-500" : ""
+                        isSelected ? "bg-purple-500 text-white" : "",
+                        isToday && !isSelected ? "border border-purple-500" : ""
                       )}>
                         {format(day, "d")}
                       </div>
@@ -164,7 +164,7 @@ export const CalendarSection = ({
                               key={i}
                               className={cn(
                                 "w-1.5 h-1.5 rounded-full", 
-                                isSelected ? "bg-blue-400/70" : "bg-blue-500"
+                                isSelected ? "bg-purple-400/70" : "bg-purple-500"
                               )}
                             />
                           ))}
@@ -191,7 +191,7 @@ export const CalendarSection = ({
           
           <div className="mt-6">
             <h3 className="font-medium mb-3 flex items-center">
-              <Clock className="h-4 w-4 mr-2 text-blue-500" />
+              <Clock className="h-4 w-4 mr-2 text-purple-500" />
               Classes on {format(selectedDate, "MMMM d, yyyy")}
             </h3>
             
@@ -200,7 +200,7 @@ export const CalendarSection = ({
                 classesForView.map(cls => (
                   <div 
                     key={cls.id} 
-                    className="bg-gray-50 p-3 rounded-md border-l-4 border-blue-500 cursor-pointer hover:bg-gray-100 transition-colors"
+                    className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
                     onClick={() => handleViewClassDetails(cls.id)}
                   >
                     <div className="flex justify-between items-center">

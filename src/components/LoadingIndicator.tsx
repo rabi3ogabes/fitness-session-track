@@ -19,13 +19,13 @@ const LoadingIndicator: React.FC<LoadingIndicatorProps> = ({
   const containerClasses = {
     small: "h-auto py-1",
     medium: "h-auto py-2",
-    large: "h-auto py-4"
+    large: "h-auto py-3"
   };
   
   return (
     <div className={`flex items-center justify-center ${containerClasses[size]}`}>
       <div className="text-center">
-        <div className={`animate-spin rounded-full ${sizeClasses[size]} border-gym-blue mx-auto`}></div>
+        <div className={`animate-spin rounded-full ${sizeClasses[size]} border-purple-500 mx-auto`}></div>
         {message && <p className="mt-1 text-gray-600 text-xs">{message}</p>}
       </div>
     </div>

@@ -22,7 +22,7 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
     const checkAuth = async () => {
       // Optimize loading state transitions for better UX
       if (!authLoading) {
-        // Set a very short timeout to improve perceived performance
+        // Very short timeout for improved perceived performance
         setTimeout(() => {
           if (isMounted) {
             if (!isAuthenticated) {
@@ -31,7 +31,7 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
               setLocalLoading(false);
             }
           }
-        }, 50); // Reduced from 100ms to 50ms
+        }, 30); // Reduced from 50ms to 30ms for faster loading perception
       }
     };
 
@@ -67,7 +67,7 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
           <div className="mt-2 md:mt-0">
             <button
               onClick={handleLogout}
-              className="px-4 py-2 bg-gym-blue hover:bg-gym-dark-blue text-white rounded-md transition-colors"
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors"
             >
               Logout
             </button>
