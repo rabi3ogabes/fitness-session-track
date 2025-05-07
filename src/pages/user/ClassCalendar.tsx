@@ -967,48 +967,4 @@ const ClassCalendar = () => {
       >
         <div className="flex justify-between items-center">
           <div className="font-medium truncate">{cls.name}</div>
-          {isBooked && <Check className="h-3.5 w-3.5 text-purple-600" />}
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <DashboardLayout>
-      <Calendar
-        selectedDate={selectedDate}
-        weekViewDate={weekViewDate}
-        classes={classes}
-        bookedClasses={bookedClasses}
-        selectedClass={selectedClass}
-        confirmDialogOpen={confirmDialogOpen}
-        isLoading={isLoading}
-        isBookingInProgress={isBookingInProgress}
-        userData={userData}
-        error={error}
-        retrying={retrying}
-        isNetworkConnected={isNetworkConnected}
-        activeTab={activeTab}
-        handleSelectClass={handleSelectClass}
-        handleBooking={handleBooking}
-        handleRetry={handleRetry}
-        confirmBooking={confirmBooking}
-        cancelBookingConfirmation={cancelBookingConfirmation}
-        handleCancelBooking={handleCancelBooking}
-        isPastCancellationWindow={isPastCancellationWindow}
-        DayContent={DayContent}
-        getClassesByDate={getClassesByDate}
-        allClasses={allClasses}
-        myBookedClasses={myBookedClasses}
-        classesForSelectedDate={classesForSelectedDate}
-        handlePreviousWeek={handlePreviousWeek}
-        handleNextWeek={handleNextWeek}
-        weekDays={weekDays}
-        getClassesForDay={getClassesForDay}
-        renderWeekDayClass={renderWeekDayClass}
-      />
-    </DashboardLayout>
-  );
-};
-
-export default ClassCalendar;
+          {isBooked && <Check className="h-3.
