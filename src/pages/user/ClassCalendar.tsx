@@ -967,4 +967,19 @@ const ClassCalendar = () => {
           {isBooked && <Check className="h-3.5 w-3.5 text-purple-600" />}
         </div>
         <div className="text-xs text-gray-600">{cls.start_time}</div>
-        <div className="text-xs flex justify
+        <div className="text-xs flex justify-between">
+          <span>{cls.trainer}</span>
+          <span>{cls.enrolled}/{cls.capacity}</span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <DashboardLayout title="Class Calendar">
+      {/* ... keep existing code (rest of the component) */}
+    </DashboardLayout>
+  );
+};
+
+export default ClassCalendar;
