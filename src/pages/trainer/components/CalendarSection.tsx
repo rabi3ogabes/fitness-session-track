@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -281,7 +280,7 @@ export const CalendarSection = ({
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>
-                  {isClassAlreadyBooked ? "Class Already Booked" : "Book Class"}
+                  {isClassAlreadyBooked ? "Cancel Booking" : "Book Class"}
                 </DialogTitle>
                 <DialogDescription>
                   {isClassAlreadyBooked 
