@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Check } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 // Mock membership data
 const membershipData = {
@@ -101,23 +102,85 @@ const availablePlans = [
 
 const UserMembership = () => {
   const { toast } = useToast();
+  const [currentUser, setCurrentUser] = useState({ name: "Current User", email: "user@example.com" });
   
-  const handleBookPlan = (planName: string) => {
+  // Fetch user information when component mounts
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Try to get user's name from profiles table or user metadata
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name, email')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile && profile.name) {
+          setCurrentUser({
+            name: profile.name,
+            email: profile.email || user.email || "user@example.com"
+          });
+        } else {
+          // Fallback to the user's email
+          setCurrentUser({
+            name: user.email?.split('@')[0] || "Current User",
+            email: user.email || "user@example.com"
+          });
+        }
+      }
+    };
+    
+    fetchUserInfo();
+  }, []);
+  
+  const handleBookPlan = async (planName: string) => {
+    // Get the plan details
+    const plan = availablePlans.find(p => p.name === planName);
+    if (!plan) return;
+    
     // Create a membership request
     toast({
       title: "Membership request sent",
       description: `Your request for the ${planName} plan has been submitted. A staff member will review it shortly.`,
     });
     
-    // In a real app, this would make an API call to create the membership request
-    // For demonstration, we'll store the request in localStorage so the admin page can see it
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    try {
+      // First, try to add directly to Supabase if connected
+      const { error } = await supabase
+        .from('membership_requests')
+        .insert([{
+          member: currentUser.name,
+          email: currentUser.email,
+          type: planName,
+          date: today,
+          status: "Pending"
+        }]);
+      
+      if (error) {
+        console.error("Error submitting to Supabase:", error);
+        // Fall back to localStorage
+        storeMembershipRequestLocally(planName, today);
+      }
+    } catch (err) {
+      console.error("Exception when submitting request:", err);
+      // Fall back to localStorage
+      storeMembershipRequestLocally(planName, today);
+    }
+  };
+  
+  const storeMembershipRequestLocally = (planName: string, date: string) => {
+    // Store the request in localStorage so the admin page can see it
     const existingRequests = localStorage.getItem("membershipRequests");
     const newRequest = {
       id: Date.now(), // Use timestamp as unique ID
-      member: "Current User", // In a real app, this would be the logged-in user's name
-      email: "user@example.com", // In a real app, this would be the logged-in user's email
+      member: currentUser.name,
+      email: currentUser.email,
       type: planName,
-      date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
+      date: date,
       status: "Pending"
     };
     

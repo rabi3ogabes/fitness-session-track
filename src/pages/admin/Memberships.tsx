@@ -1,15 +1,18 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 // Mock data
 const initialMembershipTypes = [
-  { id: 1, name: "Basic", sessions: 1, price: 80, active: true, description: "Perfect for trying out our gym facilities and classes" },
+  { id: 1, name: "Basic", sessions: 12, price: 250, active: true, description: "Perfect for trying out our gym facilities and classes" },
   { id: 2, name: "Standard", sessions: 4, price: 95, active: true, description: "Ideal for occasional gym-goers" },
-  { id: 3, name: "Premium", sessions: 12, price: 120, active: true, description: "Best value for regular attendees" },
+  { id: 3, name: "Premium", sessions: 20, price: 350, active: true, description: "Best value for regular attendees" },
+  { id: 4, name: "Ultimate", sessions: 30, price: 500, active: true, description: "For dedicated gym enthusiasts" },
 ];
 
 const initialMembershipRequests = [
@@ -44,24 +47,46 @@ const Memberships = () => {
     }
 
     // Load membership requests
-    const storedRequests = localStorage.getItem("membershipRequests");
-    if (storedRequests) {
+    const loadMembershipRequests = async () => {
+      // Try to load from Supabase first
       try {
-        setMembershipRequests(JSON.parse(storedRequests));
-      } catch (error) {
-        console.error("Error parsing membership requests:", error);
+        const { data, error } = await supabase
+          .from('membership_requests')
+          .select('*');
+          
+        if (data && data.length > 0) {
+          console.log("Loaded membership requests from Supabase:", data);
+          setMembershipRequests(data);
+          return;
+        } else if (error) {
+          console.error("Error loading from Supabase:", error);
+        }
+      } catch (err) {
+        console.error("Exception when loading from Supabase:", err);
+      }
+      
+      // Fall back to localStorage
+      const storedRequests = localStorage.getItem("membershipRequests");
+      if (storedRequests) {
+        try {
+          setMembershipRequests(JSON.parse(storedRequests));
+        } catch (error) {
+          console.error("Error parsing membership requests:", error);
+          setMembershipRequests(initialMembershipRequests);
+          localStorage.setItem("membershipRequests", JSON.stringify(initialMembershipRequests));
+        }
+      } else {
         setMembershipRequests(initialMembershipRequests);
         localStorage.setItem("membershipRequests", JSON.stringify(initialMembershipRequests));
       }
-    } else {
-      setMembershipRequests(initialMembershipRequests);
-      localStorage.setItem("membershipRequests", JSON.stringify(initialMembershipRequests));
-    }
+    };
+    
+    loadMembershipRequests();
   }, []);
 
   // Check for new membership requests in localStorage whenever the component renders
   useEffect(() => {
-    const storedRequests = localStorage.getItem("pendingMembershipRequests");
+    const storedRequests = localStorage.getItem("membershipRequests");
     if (storedRequests) {
       try {
         const parsedRequests = JSON.parse(storedRequests);
@@ -95,8 +120,6 @@ const Memberships = () => {
         if (hasNewRequests) {
           setMembershipRequests(updatedRequests);
           localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
-          // Clear the pending requests
-          localStorage.removeItem("pendingMembershipRequests");
           
           toast({
             title: "New membership requests",
@@ -186,30 +209,109 @@ const Memberships = () => {
     });
   };
 
-  const handleApproveRequest = (id: number) => {
+  const handleApproveRequest = async (id: number) => {
+    // Find the request
+    const request = membershipRequests.find(r => r.id === id);
+    if (!request) return;
+    
+    // Find the membership type to get the number of sessions
+    const membershipType = membershipTypes.find(m => m.name === request.type);
+    if (!membershipType) {
+      toast({
+        title: "Error",
+        description: `Couldn't find membership type ${request.type}`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Update the request status
     const updatedRequests = membershipRequests.map((r) =>
       r.id === id ? { ...r, status: "Approved" } : r
     );
     
     setMembershipRequests(updatedRequests);
     localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
+    
+    // Try to update in Supabase if possible
+    try {
+      await supabase
+        .from('membership_requests')
+        .update({ status: "Approved" })
+        .eq('id', id);
+    } catch (err) {
+      console.error("Error updating request in Supabase:", err);
+    }
+    
+    // Add sessions to the member's account
+    try {
+      // First find the member in the members table
+      const { data: memberData, error: memberError } = await supabase
+        .from('members')
+        .select('*')
+        .eq('email', request.email)
+        .single();
+        
+      if (memberData) {
+        // Member exists, update their sessions
+        const currentSessions = memberData.remaining_sessions || 0;
+        const newSessions = currentSessions + membershipType.sessions;
+        
+        await supabase
+          .from('members')
+          .update({ 
+            remaining_sessions: newSessions,
+            membership: request.type
+          })
+          .eq('id', memberData.id);
+          
+        console.log(`Added ${membershipType.sessions} sessions to user ${request.member}`);
+      } else if (memberError) {
+        console.error("Error finding member:", memberError);
+      }
+    } catch (err) {
+      console.error("Error updating member sessions in Supabase:", err);
+    }
+    
+    // Create a payment record
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      await supabase
+        .from('payments')
+        .insert([{
+          member: request.member,
+          date: today,
+          amount: membershipType.price,
+          membership: request.type,
+          status: "Successful"
+        }]);
+    } catch (err) {
+      console.error("Error creating payment record:", err);
+    }
 
     toast({
       title: "Request approved",
-      description: "The membership request has been approved successfully",
+      description: `The membership request has been approved successfully. ${membershipType.sessions} sessions have been added to ${request.member}'s account.`,
     });
-    
-    // In a real app, this would update the user's membership in the database
-    // For demonstration purposes, we're just updating the local state
   };
 
-  const handleRejectRequest = (id: number) => {
+  const handleRejectRequest = async (id: number) => {
     const updatedRequests = membershipRequests.map((r) =>
       r.id === id ? { ...r, status: "Rejected" } : r
     );
     
     setMembershipRequests(updatedRequests);
     localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
+    
+    // Try to update in Supabase if possible
+    try {
+      await supabase
+        .from('membership_requests')
+        .update({ status: "Rejected" })
+        .eq('id', id);
+    } catch (err) {
+      console.error("Error updating request in Supabase:", err);
+    }
 
     toast({
       title: "Request rejected",
