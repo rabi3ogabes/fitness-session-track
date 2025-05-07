@@ -18,7 +18,7 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3 bg-white rounded-md shadow-sm", className)}
+      className={cn("p-3 bg-white rounded-md shadow-sm pointer-events-auto", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4 w-full",
@@ -65,6 +65,10 @@ function Calendar({
         formatDay: (date, options) => {
           return format(date, 'd', options);
         }
+      }}
+      styles={{
+        day: { color: 'inherit', fontWeight: 'normal', fontSize: '0.875rem' },
+        caption: { textAlign: 'center' }
       }}
       {...props}
     />
