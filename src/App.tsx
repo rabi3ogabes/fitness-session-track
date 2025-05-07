@@ -34,14 +34,22 @@ import { AuthProvider } from "./context/AuthContext";
 
 const queryClient = new QueryClient();
 
+// Loading indicator component
+const LoadingIndicator = () => (
+  <div className="flex items-center justify-center h-screen">
+    <div className="flex flex-col items-center gap-4">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
+      <p className="text-gray-600">Loading application...</p>
+    </div>
+  </div>
+);
+
 // Protected route component to handle redirections based on role
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isTrainer, loading } = useAuth();
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
-    </div>;
+    return <LoadingIndicator />;
   }
   
   if (!isAuthenticated) {
@@ -56,9 +64,7 @@ const AdminProtectedRoute = ({ children }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
-    </div>;
+    return <LoadingIndicator />;
   }
   
   if (!isAuthenticated || !isAdmin) {
@@ -73,9 +79,7 @@ const TrainerHomeRedirect = () => {
   const { isAuthenticated, isTrainer, loading } = useAuth();
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
-    </div>;
+    return <LoadingIndicator />;
   }
   
   if (isAuthenticated && isTrainer) {
@@ -90,9 +94,7 @@ const UserDashboardRedirect = () => {
   const { isAuthenticated, isAdmin, isTrainer, loading } = useAuth();
   
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gym-blue"></div>
-    </div>;
+    return <LoadingIndicator />;
   }
   
   if (!isAuthenticated) {
