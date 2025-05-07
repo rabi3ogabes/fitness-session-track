@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { 
-  BookOpen, 
+  CalendarDays, 
   Clock, 
   AlertCircle, 
   Check, 
@@ -15,16 +15,17 @@ import {
   Users, 
   RefreshCw, 
   WifiOff,
-  Info
+  Info,
+  CheckCircle
 } from "lucide-react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
-import { supabase, requireAuth } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { ClassModel } from "@/pages/admin/components/classes/ClassTypes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -49,6 +50,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 // Class type colors mapping
 const classTypeColors = {
@@ -112,7 +119,6 @@ const systemSettings = {
 
 // Booking validation schema
 const bookingSchema = z.object({
-  classIds: z.array(z.number()).min(1, "Please select at least one class"),
   acceptTerms: z.boolean().refine(val => val === true, {
     message: "You must accept the terms and conditions"
   })
@@ -177,7 +183,7 @@ const ClassCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [classes, setClasses] = useState<ClassWithBooking[]>([]);
   const [bookedClasses, setBookedClasses] = useState<number[]>([]);
-  const [selectedClasses, setSelectedClasses] = useState<number[]>([]);
+  const [selectedClass, setSelectedClass] = useState<ClassWithBooking | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isBookingInProgress, setIsBookingInProgress] = useState(false);
@@ -189,6 +195,7 @@ const ClassCalendar = () => {
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   const [isNetworkConnected, setIsNetworkConnected] = useState(true);
+  const [activeTab, setActiveTab] = useState("upcoming");
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -197,7 +204,6 @@ const ClassCalendar = () => {
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
-      classIds: [],
       acceptTerms: false
     }
   });
@@ -230,11 +236,6 @@ const ClassCalendar = () => {
   
   // Calculate if sessions are low (25% or less)
   const sessionsLow = userData.remainingSessions <= (userData.totalSessions * 0.25);
-  
-  // Reset form values when selection changes
-  useEffect(() => {
-    form.setValue('classIds', selectedClasses);
-  }, [selectedClasses, form]);
   
   // Fetch user data from Supabase
   useEffect(() => {
@@ -396,15 +397,7 @@ const ClassCalendar = () => {
     fetchBookings();
   }, [user, isNetworkConnected]);
   
-  // Get classes for the selected date
-  const classesForSelectedDate = selectedDate 
-    ? classes.filter(cls => {
-        const classDate = new Date(cls.schedule);
-        return isSameDay(classDate, selectedDate);
-      })
-    : [];
-  
-  // Function to highlight dates with classes and show class types
+  // Function to highlight dates with classes
   const isDayWithClass = (date: Date) => {
     return classes.some(cls => {
       const classDate = new Date(cls.schedule);
@@ -441,23 +434,21 @@ const ClassCalendar = () => {
     );
   };
 
-  const toggleClassSelection = (classId: number) => {
-    setSelectedClasses(prev => {
-      if (prev.includes(classId)) {
-        return prev.filter(id => id !== classId);
-      } else {
-        return [...prev, classId];
-      }
-    });
+  const handleSelectClass = (cls: ClassWithBooking) => {
+    setSelectedClass(cls);
+    setConfirmDialogOpen(true);
   };
 
-  const handleBookMultipleClasses = async (values: BookingFormValues) => {
-    if (userData.remainingSessions < selectedClasses.length) {
+  const handleBooking = async () => {
+    if (!selectedClass) return;
+    
+    if (userData.remainingSessions < 1) {
       toast({
         title: "Not enough sessions",
-        description: `You need ${selectedClasses.length} sessions but have only ${userData.remainingSessions} remaining.`,
+        description: "You need at least 1 session to book a class.",
         variant: "destructive"
       });
+      setConfirmDialogOpen(false);
       return;
     }
 
@@ -476,10 +467,10 @@ const ClassCalendar = () => {
   };
   
   const confirmBooking = async () => {
-    if (!user) {
+    if (!user || !selectedClass) {
       toast({
-        title: "Authentication required",
-        description: "You need to be logged in to book classes",
+        title: "Error",
+        description: "Unable to process booking. Please try again.",
         variant: "destructive"
       });
       return;
@@ -491,30 +482,30 @@ const ClassCalendar = () => {
       // Special handling for demo user
       if (user.id === "demo-user-id") {
         // Simulate successful booking for demo user
-        setBookedClasses([...bookedClasses, ...selectedClasses]);
+        setBookedClasses([...bookedClasses, selectedClass.id]);
         
         // Update classes to mark as booked
         setClasses(prevClasses => 
           prevClasses.map(cls => ({
             ...cls,
-            isBooked: bookedClasses.includes(cls.id) || selectedClasses.includes(cls.id),
-            enrolled: selectedClasses.includes(cls.id) ? (cls.enrolled || 0) + 1 : cls.enrolled
+            isBooked: bookedClasses.includes(cls.id) || cls.id === selectedClass.id,
+            enrolled: cls.id === selectedClass.id ? (cls.enrolled || 0) + 1 : cls.enrolled
           }))
         );
         
         // Update user sessions for demo
-        const newRemainingSession = userData.remainingSessions - selectedClasses.length;
+        const newRemainingSession = userData.remainingSessions - 1;
         setUserData({
           ...userData,
           remainingSessions: newRemainingSession
         });
         
         toast({
-          title: "Classes booked successfully! (Demo)",
-          description: `You've booked ${selectedClasses.length} classes in demo mode.`,
+          title: "Class booked successfully! (Demo)",
+          description: `You've booked ${selectedClass.name} in demo mode.`,
         });
         
-        setSelectedClasses([]);
+        setSelectedClass(null);
         setConfirmDialogOpen(false);
         form.reset();
         setIsBookingInProgress(false);
@@ -531,54 +522,46 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Prepare bookings data
-      const bookings = selectedClasses.map(classId => ({
-        user_id: user.id,
-        class_id: classId,
-        status: 'confirmed',
-        booking_date: new Date().toISOString()
-      }));
-      
-      // Insert bookings into Supabase
+      // Insert booking into Supabase
       const { error } = await supabase
         .from('bookings')
-        .insert(bookings);
+        .insert({
+          user_id: user.id,
+          class_id: selectedClass.id,
+          status: 'confirmed',
+          booking_date: new Date().toISOString()
+        });
       
       if (error) {
-        console.error("Error booking classes:", error);
+        console.error("Error booking class:", error);
         throw error;
       }
       
-      // Update enrolled count for each class
-      await Promise.all(selectedClasses.map(async (classId) => {
-        const classToUpdate = classes.find(c => c.id === classId);
-        if (classToUpdate) {
-          const { error } = await supabase
-            .from('classes')
-            .update({ enrolled: (classToUpdate.enrolled || 0) + 1 })
-            .eq('id', classId);
-          
-          if (error) {
-            console.error(`Error updating enrolled count for class ${classId}:`, error);
-          }
-        }
-      }));
+      // Update enrolled count for the class
+      const { error: updateError } = await supabase
+        .from('classes')
+        .update({ enrolled: (selectedClass.enrolled || 0) + 1 })
+        .eq('id', selectedClass.id);
+      
+      if (updateError) {
+        console.error(`Error updating enrolled count for class ${selectedClass.id}:`, updateError);
+      }
       
       // Update local state
-      setBookedClasses([...bookedClasses, ...selectedClasses]);
+      setBookedClasses([...bookedClasses, selectedClass.id]);
       
       // Update classes to mark as booked
       setClasses(prevClasses => 
         prevClasses.map(cls => ({
           ...cls,
-          isBooked: bookedClasses.includes(cls.id) || selectedClasses.includes(cls.id),
-          enrolled: selectedClasses.includes(cls.id) ? (cls.enrolled || 0) + 1 : cls.enrolled
+          isBooked: bookedClasses.includes(cls.id) || cls.id === selectedClass.id,
+          enrolled: cls.id === selectedClass.id ? (cls.enrolled || 0) + 1 : cls.enrolled
         }))
       );
       
       // Update user sessions
       if (user) {
-        const newRemainingSession = userData.remainingSessions - selectedClasses.length;
+        const newRemainingSession = userData.remainingSessions - 1;
         const { error: profileError } = await supabase
           .from('profiles')
           .update({ 
@@ -588,7 +571,6 @@ const ClassCalendar = () => {
         
         if (profileError) {
           console.error("Error updating user sessions:", profileError);
-          // We'll still consider the booking successful, but log the error
         } else {
           // Update local state for user data
           setUserData({
@@ -599,17 +581,17 @@ const ClassCalendar = () => {
       }
       
       toast({
-        title: "Classes booked successfully!",
-        description: `You've booked ${selectedClasses.length} classes. The trainers have been notified.`,
+        title: "Class booked successfully!",
+        description: `You've booked ${selectedClass.name}. The trainer has been notified.`,
       });
       
-      setSelectedClasses([]);
+      setSelectedClass(null);
       setConfirmDialogOpen(false);
       form.reset();
     } catch (err) {
       console.error("Error in confirmBooking:", err);
       toast({
-        title: "Failed to book classes",
+        title: "Failed to book class",
         description: "Please try again later",
         variant: "destructive"
       });
@@ -620,6 +602,7 @@ const ClassCalendar = () => {
   
   const cancelBookingConfirmation = () => {
     setConfirmDialogOpen(false);
+    setSelectedClass(null);
   };
   
   const handleCancelBooking = async (classId: number, classTime: string, className: string) => {
@@ -729,7 +712,6 @@ const ClassCalendar = () => {
         
         if (profileError) {
           console.error("Error updating user sessions:", profileError);
-          // We'll still consider the cancellation successful, but log the error
         } else {
           // Update local state for user data
           setUserData({
@@ -764,10 +746,6 @@ const ClassCalendar = () => {
     );
   };
 
-  const selectedClassesData = selectedClasses.map(id => 
-    classes.find(cls => cls.id === id)
-  ).filter(Boolean) as ClassWithBooking[];
-
   // Check if a class is in the past
   const isClassInPast = (classDate: Date, classTime?: string) => {
     if (!classTime) return false;
@@ -780,42 +758,64 @@ const ClassCalendar = () => {
     
     return classDateTime < now;
   };
-
-  // Calculate how many sessions will remain after booking
-  const remainingAfterBooking = userData.remainingSessions - selectedClasses.length;
-
+  
+  // Get upcoming and booked classes
+  const getClassesByDate = () => {
+    const now = new Date();
+    const upcomingClasses = classes.filter(cls => {
+      const classDate = new Date(cls.schedule);
+      return isAfter(classDate, now) || isSameDay(classDate, now);
+    });
+    
+    // Sort by date and time
+    return upcomingClasses.sort((a, b) => {
+      const dateA = new Date(a.schedule);
+      const dateB = new Date(b.schedule);
+      if (dateA.getTime() !== dateB.getTime()) {
+        return dateA.getTime() - dateB.getTime();
+      }
+      // If same date, sort by time
+      return a.start_time && b.start_time ? 
+        a.start_time.localeCompare(b.start_time) : 0;
+    });
+  };
+  
+  const allClasses = getClassesByDate();
+  const myBookedClasses = allClasses.filter(cls => cls.isBooked);
+  
+  // Get classes for the selected date
+  const classesForSelectedDate = selectedDate 
+    ? classes.filter(cls => {
+        const classDate = new Date(cls.schedule);
+        return isSameDay(classDate, selectedDate);
+      })
+    : [];
+  
   return (
     <DashboardLayout title="Book a Class">
       <div className="max-w-7xl mx-auto mb-6">
         <div className="bg-white rounded-lg shadow-sm p-6">
           {/* Header Section */}
-          <div className="flex flex-col mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <BookOpen className="h-5 w-5 text-blue-500" />
-                <h1 className="text-xl font-semibold text-gray-800">Class Bookings</h1>
-              </div>
-              
-              {isLoading ? (
-                <Skeleton className="h-8 w-36" />
-              ) : (
-                <div className="flex items-center text-sm">
-                  <Users className="h-4 w-4 mr-2 text-blue-500" />
-                  <span>
-                    Sessions remaining: <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-blue-600")}>
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Class Bookings</h1>
+              <p className="text-gray-500">Browse and book your fitness classes</p>
+            </div>
+            {isLoading ? (
+              <Skeleton className="h-10 w-40" />
+            ) : (
+              <div className="flex items-center px-4 py-2 bg-blue-50 rounded-lg border border-blue-100">
+                <Users className="h-5 w-5 text-blue-500 mr-2" />
+                <div>
+                  <p className="text-sm text-blue-800">
+                    Sessions: <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-blue-600")}>
                       {userData.remainingSessions}
                     </span>
-                  </span>
+                    <span className="text-gray-500">/{userData.totalSessions}</span>
+                  </p>
                 </div>
-              )}
-            </div>
-            
-            <p className="text-gray-500 text-sm">Select a date to view available classes</p>
-            
-            <div className="flex items-center mt-1 text-xs text-amber-600">
-              <AlertCircle className="h-3.5 w-3.5 mr-1" />
-              <span>You can cancel a class up to {systemSettings.cancellationTimeLimit} hours before it starts.</span>
-            </div>
+              </div>
+            )}
           </div>
           
           {/* Error Alert */}
@@ -843,278 +843,394 @@ const ClassCalendar = () => {
               </AlertDescription>
             </Alert>
           )}
-          
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left Sidebar */}
-            <div className="lg:border-r lg:pr-6">
-              {/* Calendar Card */}
-              <div className="mb-6">
-                <div className="flex items-center mb-4">
-                  <div className="h-5 w-5 flex items-center justify-center text-blue-500 mr-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                      <line x1="16" y1="2" x2="16" y2="6"></line>
-                      <line x1="8" y1="2" x2="8" y2="6"></line>
-                      <line x1="3" y1="10" x2="21" y2="10"></line>
-                    </svg>
+
+          {/* Tabs Navigation */}
+          <Tabs defaultValue="calendar" className="mb-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="calendar">Calendar View</TabsTrigger>
+              <TabsTrigger value="list">List View</TabsTrigger>
+            </TabsList>
+            
+            {/* Calendar View Tab */}
+            <TabsContent value="calendar" className="mt-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Calendar */}
+                <div className="lg:col-span-1 bg-white p-4 rounded-lg border">
+                  <div className="flex items-center mb-4">
+                    <CalendarDays className="h-5 w-5 text-blue-500 mr-2" />
+                    <h2 className="font-medium text-gray-700">Select Date</h2>
                   </div>
-                  <h2 className="font-medium text-gray-700">Select Date</h2>
+                  
+                  <Calendar 
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    className="rounded-md w-full"
+                    modifiers={{
+                      hasClass: isDayWithClass
+                    }}
+                    modifiersClassNames={{
+                      hasClass: "bg-blue-50 text-blue-700 font-medium"
+                    }}
+                    components={{
+                      DayContent: DayContent
+                    }}
+                  />
+                  
+                  {/* Class Types Legend */}
+                  <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                    <div className="flex items-center mb-2">
+                      <Info className="h-4 w-4 text-blue-500 mr-2" />
+                      <h3 className="text-sm font-medium">Class Types</h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(classTypeColors).map(([type, colors]) => (
+                        type !== 'default' && (
+                          <div key={type} className="flex items-center text-xs">
+                            <span className={`w-3 h-3 rounded-full ${colors.dot} mr-2`}></span>
+                            <span className="capitalize">{type}</span>
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 p-3 bg-blue-50 rounded-md">
+                    <div className="flex items-center text-xs text-blue-800">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1 text-blue-500" />
+                      <span>You can cancel a class up to {systemSettings.cancellationTimeLimit} hours before it starts.</span>
+                    </div>
+                  </div>
                 </div>
                 
-                <Calendar 
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  className="border rounded-md shadow-sm w-full"
-                  modifiers={{
-                    hasClass: isDayWithClass
-                  }}
-                  modifiersClassNames={{
-                    hasClass: "bg-blue-50 text-blue-700 font-medium"
-                  }}
-                  components={{
-                    DayContent: DayContent
-                  }}
-                />
-              </div>
-              
-              {/* Class Types Legend */}
-              <div className="mb-6">
-                <div className="flex items-center mb-3">
-                  <Info className="h-4 w-4 text-blue-500 mr-2" />
-                  <h2 className="font-medium text-gray-700 text-sm">Class Types</h2>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(classTypeColors).map(([type, colors]) => (
-                    type !== 'default' && (
-                      <div key={type} className="flex items-center text-xs">
-                        <span className={`w-3 h-3 rounded-full ${colors.dot} mr-2`}></span>
-                        <span className="capitalize">{type}</span>
-                      </div>
-                    )
-                  ))}
-                </div>
-              </div>
-              
-              {/* Selected Classes Summary */}
-              {selectedClasses.length > 0 && (
-                <div className="border rounded-md p-4 bg-gray-50">
-                  <div className="flex items-center mb-3">
-                    <Check className="h-4 w-4 text-green-500 mr-2" />
-                    <h2 className="font-medium text-gray-700 text-sm">Selected Classes ({selectedClasses.length})</h2>
+                {/* Classes for selected date */}
+                <div className="lg:col-span-2">
+                  <div className="flex items-center mb-4">
+                    <Clock className="h-5 w-5 text-blue-500 mr-2" />
+                    <h2 className="font-medium text-gray-800">
+                      Classes for {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'Selected date'}
+                    </h2>
                   </div>
                   
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1 mb-3">
-                    {selectedClassesData.map(cls => (
-                      <div key={cls.id} className="flex justify-between items-center text-sm border-b pb-1">
-                        <div>
-                          <p className="font-medium text-xs">{cls.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {cls.start_time} - {cls.end_time}
-                          </p>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                          onClick={() => toggleClassSelection(cls.id)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  <div className="text-xs space-y-1 mb-3">
-                    <div className="flex justify-between">
-                      <span>Sessions to use:</span>
-                      <span className="font-medium">{selectedClasses.length}</span>
+                  {isLoading ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map(i => (
+                        <Skeleton key={i} className="h-24 w-full" />
+                      ))}
                     </div>
-                    <div className="flex justify-between">
-                      <span>Remaining after booking:</span>
-                      <span className={cn(
-                        "font-medium",
-                        remainingAfterBooking < 0 ? "text-red-500" : "text-green-600"
-                      )}>
-                        {remainingAfterBooking}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    onClick={form.handleSubmit(handleBookMultipleClasses)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-sm h-9"
-                    disabled={selectedClasses.length === 0 || remainingAfterBooking < 0}
-                  >
-                    Book Selected Classes
-                  </Button>
-                </div>
-              )}
-            </div>
-            
-            {/* Right Content Area */}
-            <div className="lg:col-span-2">
-              <div className="flex items-center mb-4">
-                <Clock className="h-5 w-5 text-blue-500 mr-2" />
-                <h2 className="font-medium text-gray-800">
-                  Classes for {selectedDate ? format(selectedDate, 'MMMM d, yyyy') : 'Selected date'}
-                </h2>
-              </div>
-              
-              {isLoading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map(i => (
-                    <Skeleton key={i} className="h-24 w-full" />
-                  ))}
-                </div>
-              ) : classesForSelectedDate.length > 0 ? (
-                <div className="space-y-4">
-                  {classesForSelectedDate.map((cls) => {
-                    const isBooked = cls.isBooked;
-                    const isSelected = selectedClasses.includes(cls.id);
-                    const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
-                    const typeColor = classTypeColors[typeKey] || classTypeColors.default;
-                    const classDate = new Date(cls.schedule);
-                    const isPast = isClassInPast(classDate, cls.start_time);
-                    
-                    // Skip past classes
-                    if (isPast) return null;
+                  ) : classesForSelectedDate.length > 0 ? (
+                    <div className="space-y-4">
+                      {classesForSelectedDate.map((cls) => {
+                        const isBooked = cls.isBooked;
+                        const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
+                        const typeColor = classTypeColors[typeKey] || classTypeColors.default;
+                        const classDate = new Date(cls.schedule);
+                        const isPast = isClassInPast(classDate, cls.start_time);
+                        
+                        // Skip past classes
+                        if (isPast) return null;
 
-                    const isPastCancellationWindow = () => {
-                      if (!cls.start_time) return false;
-                      const classHour = parseInt(cls.start_time.split(':')[0]);
-                      const now = new Date();
-                      const classDate = new Date(selectedDate!);
-                      classDate.setHours(classHour);
-                      return (classDate.getTime() - now.getTime()) / (1000 * 60 * 60) < systemSettings.cancellationTimeLimit;
-                    };
-                    
-                    return (
-                      <Card key={cls.id} className={cn(
-                        "transition-all hover:shadow-sm overflow-hidden",
-                        isBooked ? "border-2 border-blue-500" : "",
-                        isSelected ? "border-2 border-green-500" : ""
-                      )}>
-                        <div className="flex items-stretch">
-                          {/* Left colored bar based on class type */}
-                          <div className={`w-1.5 ${typeColor.bg}`}></div>
-                          
-                          <div className="flex-1 p-4">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <h3 className="font-medium text-gray-800">{cls.name}</h3>
-                                <p className="text-sm text-gray-500">
-                                  {cls.start_time} - {cls.end_time}
-                                </p>
-                              </div>
+                        const isPastCancellationWindow = () => {
+                          if (!cls.start_time) return false;
+                          const classHour = parseInt(cls.start_time.split(':')[0]);
+                          const now = new Date();
+                          const classDate = new Date(selectedDate!);
+                          classDate.setHours(classHour);
+                          return (classDate.getTime() - now.getTime()) / (1000 * 60 * 60) < systemSettings.cancellationTimeLimit;
+                        };
+                        
+                        return (
+                          <Card key={cls.id} className={cn(
+                            "transition-all hover:shadow-sm overflow-hidden",
+                            isBooked ? "border-2 border-blue-500" : ""
+                          )}>
+                            <div className="flex items-stretch">
+                              {/* Left colored bar based on class type */}
+                              <div className={`w-1.5 ${typeColor.bg}`}></div>
                               
-                              <div className="flex flex-col items-end gap-1">
-                                <div className="flex items-center space-x-2">
-                                  <Badge className={`${typeColor.badge} text-xs font-normal`}>
-                                    {cls.type || "General"}
-                                  </Badge>
-                                  
-                                  <Badge 
-                                    variant={cls.enrolled >= cls.capacity ? "destructive" : "outline"}
-                                    className="text-xs font-normal"
-                                  >
-                                    {cls.enrolled}/{cls.capacity}
-                                  </Badge>
-                                </div>
-                                
-                                {isBooked && (
-                                  <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
-                                    Booked
-                                  </Badge>
-                                )}
+                              <div className="flex-1">
+                                <CardHeader className="py-3">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <h3 className="font-medium text-gray-800">{cls.name}</h3>
+                                      <p className="text-sm text-gray-500">
+                                        {cls.start_time} - {cls.end_time}
+                                      </p>
+                                    </div>
+                                    
+                                    <div className="flex flex-col items-end gap-1">
+                                      <div className="flex items-center space-x-2">
+                                        <Badge className={`${typeColor.badge} text-xs font-normal`}>
+                                          {cls.type || "General"}
+                                        </Badge>
+                                        
+                                        <Badge 
+                                          variant={cls.enrolled >= cls.capacity ? "destructive" : "outline"}
+                                          className="text-xs font-normal"
+                                        >
+                                          {cls.enrolled}/{cls.capacity}
+                                        </Badge>
+                                      </div>
+                                      
+                                      {isBooked && (
+                                        <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
+                                          <CheckCircle className="h-3 w-3 mr-1" />
+                                          Booked
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </CardHeader>
+                                <CardContent className="py-0">
+                                  <div className="text-sm space-y-1 mb-3">
+                                    <p className="text-gray-600">
+                                      <span className="font-medium">Trainer:</span> {cls.trainer}
+                                    </p>
+                                    {cls.location && (
+                                      <p className="text-gray-600">
+                                        <span className="font-medium">Location:</span> {cls.location}
+                                      </p>
+                                    )}
+                                  </div>
+                                </CardContent>
+                                <CardFooter className="pt-2 pb-4">
+                                  {isBooked ? (
+                                    <Button 
+                                      onClick={() => handleCancelBooking(
+                                        cls.id, 
+                                        cls.start_time || "00:00", 
+                                        cls.name
+                                      )}
+                                      variant="outline"
+                                      className={cn(
+                                        "w-full border-red-300 text-red-600 hover:bg-red-50 text-sm",
+                                        isPastCancellationWindow() && "opacity-50 cursor-not-allowed"
+                                      )}
+                                      disabled={isPastCancellationWindow()}
+                                    >
+                                      {isPastCancellationWindow() ? 
+                                        `Can't Cancel (< ${systemSettings.cancellationTimeLimit}h)` : 
+                                        "Cancel Booking"}
+                                    </Button>
+                                  ) : (
+                                    <Button 
+                                      onClick={() => handleSelectClass(cls)}
+                                      variant="default"
+                                      className="w-full bg-blue-600 hover:bg-blue-700"
+                                      disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0}
+                                    >
+                                      {cls.enrolled >= cls.capacity ? "Class Full" : 
+                                        userData.remainingSessions <= 0 ? "No Sessions Left" : 
+                                        "Book This Class"}
+                                    </Button>
+                                  )}
+                                </CardFooter>
                               </div>
                             </div>
-                            
-                            <div className="text-sm space-y-1 mb-3">
-                              <p className="text-gray-600">
-                                <span className="font-medium">Trainer:</span> {cls.trainer}
-                              </p>
-                              {cls.location && (
-                                <p className="text-gray-600">
-                                  <span className="font-medium">Location:</span> {cls.location}
-                                </p>
-                              )}
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 border border-dashed rounded-lg bg-gray-50">
+                      <CalendarDays className="mx-auto h-12 w-12 text-gray-300" />
+                      <h4 className="mt-2 text-gray-700 font-medium">No classes scheduled</h4>
+                      <p className="text-gray-500 text-sm">There are no classes available on this date.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+            
+            {/* List View Tab */}
+            <TabsContent value="list" className="mt-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left panel - My bookings */}
+                <div className="bg-white p-4 rounded-lg border">
+                  <h3 className="font-semibold text-lg mb-4 flex items-center text-blue-700">
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                    My Bookings
+                  </h3>
+                  
+                  {isLoading ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map(i => (
+                        <Skeleton key={i} className="h-16 w-full" />
+                      ))}
+                    </div>
+                  ) : myBookedClasses.length > 0 ? (
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                      {myBookedClasses.map(cls => {
+                        const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
+                        const typeColor = classTypeColors[typeKey] || classTypeColors.default;
+                        const classDate = new Date(cls.schedule);
+                        
+                        return (
+                          <div key={cls.id} className={`p-3 rounded-md border ${typeColor.border} ${typeColor.bg}`}>
+                            <div className="flex justify-between">
+                              <h4 className="font-medium">{cls.name}</h4>
+                              <Badge className="bg-white">{format(classDate, 'MMM d')}</Badge>
                             </div>
-                            
-                            {isBooked ? (
+                            <p className="text-xs text-gray-600 mt-1">{cls.start_time} - {cls.end_time}</p>
+                            <div className="flex justify-between mt-2">
+                              <span className="text-xs text-gray-600">{cls.trainer}</span>
                               <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="h-6 text-xs px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
                                 onClick={() => handleCancelBooking(
                                   cls.id, 
                                   cls.start_time || "00:00", 
                                   cls.name
                                 )}
-                                variant="outline"
-                                className={cn(
-                                  "w-full border-red-300 text-red-600 hover:bg-red-50 text-sm",
-                                  isPastCancellationWindow() && "opacity-50 cursor-not-allowed"
-                                )}
-                                disabled={isPastCancellationWindow()}
                               >
-                                {isPastCancellationWindow() ? 
-                                  `Can't Cancel (< ${systemSettings.cancellationTimeLimit}h)` : 
-                                  "Cancel Booking"}
+                                Cancel
                               </Button>
-                            ) : (
-                              <div className="flex items-center gap-3">
-                                <Checkbox 
-                                  checked={isSelected}
-                                  onCheckedChange={() => toggleClassSelection(cls.id)}
-                                  disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0}
-                                  id={`class-${cls.id}`}
-                                  className="border-blue-400 rounded-sm"
-                                />
-                                
-                                <label 
-                                  htmlFor={`class-${cls.id}`}
-                                  className={cn(
-                                    "text-sm cursor-pointer flex-1",
-                                    (cls.enrolled >= cls.capacity || userData.remainingSessions <= 0) && "opacity-50"
-                                  )}
-                                >
-                                  {isSelected ? "Selected" : 
-                                    cls.enrolled >= cls.capacity ? "Class Full" : 
-                                    userData.remainingSessions <= 0 ? "No Sessions Left" : 
-                                    "Select this class"}
-                                </label>
-                              </div>
-                            )}
+                            </div>
                           </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 border border-dashed rounded-md bg-gray-50">
+                      <p className="text-gray-500">No booked classes</p>
+                      <p className="text-xs text-gray-400 mt-1">Book a class from the right panel</p>
+                    </div>
+                  )}
+                  
+                  <div className="mt-4 p-3 bg-blue-50 rounded-md">
+                    <div className="flex items-center">
+                      <Users className="h-5 w-5 text-blue-600 mr-2" />
+                      <div>
+                        <h4 className="font-medium text-blue-800">Sessions Summary</h4>
+                        <div className="flex items-center mt-1">
+                          <div className="bg-gray-200 h-2 flex-grow rounded-full overflow-hidden">
+                            <div 
+                              className={cn(
+                                "h-full rounded-full", 
+                                sessionsLow ? "bg-red-500" : "bg-blue-500"
+                              )} 
+                              style={{
+                                width: `${Math.min(100, (userData.remainingSessions / userData.totalSessions) * 100)}%`
+                              }}
+                            ></div>
+                          </div>
+                          <span className="text-xs ml-2 font-medium">
+                            {userData.remainingSessions}/{userData.totalSessions}
+                          </span>
                         </div>
-                      </Card>
-                    );
-                  })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-8 border border-dashed rounded-lg bg-gray-50">
-                  <svg 
-                    className="mx-auto h-12 w-12 text-gray-300"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="1.5" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                  </svg>
-                  <h4 className="mt-2 text-gray-700 font-medium">No classes scheduled</h4>
-                  <p className="text-gray-500 text-sm">There are no classes available on this date.</p>
+                
+                {/* Right panel - All upcoming classes */}
+                <div className="lg:col-span-2">
+                  <h3 className="font-semibold text-lg mb-4 flex items-center">
+                    <CalendarDays className="h-5 w-5 mr-2 text-blue-600" />
+                    Upcoming Classes
+                  </h3>
+                  
+                  {isLoading ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map(i => (
+                        <Skeleton key={i} className="h-24 w-full" />
+                      ))}
+                    </div>
+                  ) : allClasses.length > 0 ? (
+                    <div className="space-y-4">
+                      {allClasses.map(cls => {
+                        const isBooked = cls.isBooked;
+                        const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
+                        const typeColor = classTypeColors[typeKey] || classTypeColors.default;
+                        const classDate = new Date(cls.schedule);
+                        
+                        return (
+                          <Card key={cls.id} className={cn(
+                            "transition-all hover:shadow-sm",
+                            isBooked ? "border-2 border-blue-500" : ""
+                          )}>
+                            <CardHeader className="pb-2">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <div className="flex items-center">
+                                    <h3 className="font-medium text-gray-800">{cls.name}</h3>
+                                    <span className={`ml-2 w-2 h-2 rounded-full ${typeColor.dot}`}></span>
+                                  </div>
+                                  <p className="text-sm text-gray-500">
+                                    {format(classDate, 'EEEE, MMMM d')} • {cls.start_time} - {cls.end_time}
+                                  </p>
+                                </div>
+                                
+                                <div className="flex items-center space-x-2">
+                                  <Badge variant="outline" className="text-xs font-normal">
+                                    {cls.enrolled}/{cls.capacity}
+                                  </Badge>
+                                  
+                                  {isBooked && (
+                                    <Badge className="bg-green-100 text-green-800 text-xs">
+                                      <Check className="h-3 w-3 mr-1" />
+                                      Booked
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="py-2">
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                  <p className="text-gray-600">
+                                    <span className="font-medium">Trainer:</span> {cls.trainer}
+                                  </p>
+                                  {cls.location && (
+                                    <p className="text-gray-600">
+                                      <span className="font-medium">Location:</span> {cls.location}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex justify-end items-center">
+                                  {isBooked ? (
+                                    <Button 
+                                      onClick={() => handleCancelBooking(
+                                        cls.id, 
+                                        cls.start_time || "00:00", 
+                                        cls.name
+                                      )}
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-red-300 text-red-600 hover:bg-red-50"
+                                    >
+                                      Cancel Booking
+                                    </Button>
+                                  ) : (
+                                    <Button 
+                                      onClick={() => handleSelectClass(cls)}
+                                      variant="default"
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-700"
+                                      disabled={cls.enrolled >= cls.capacity || userData.remainingSessions <= 0}
+                                    >
+                                      Book Now
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 border border-dashed rounded-lg bg-gray-50">
+                      <CalendarDays className="mx-auto h-16 w-16 text-gray-300" />
+                      <h4 className="mt-2 text-gray-700 font-medium">No upcoming classes</h4>
+                      <p className="text-gray-500">Check back later for new classes</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 
@@ -1124,82 +1240,97 @@ const ClassCalendar = () => {
           <DialogHeader>
             <DialogTitle>Confirm Class Booking</DialogTitle>
             <DialogDescription>
-              You're about to book the following classes:
+              {selectedClass ? `You're about to book the ${selectedClass.name} class` : 'Confirm your booking'}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-4">
-            <div className="max-h-[300px] overflow-y-auto space-y-2">
-              {selectedClassesData.map((cls: any) => (
-                <div key={cls.id} className="flex items-center justify-between border-b pb-2">
-                  <div>
-                    <p className="font-medium">{cls.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {format(new Date(cls.schedule), 'MMM d')} • {cls.start_time} - {cls.end_time}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className={`${
-                    classTypeColors[cls.type as keyof typeof classTypeColors]?.bg || classTypeColors.default.bg
-                  } ${
-                    classTypeColors[cls.type as keyof typeof classTypeColors]?.text || classTypeColors.default.text
-                  } capitalize`}>
-                    {cls.type || "General"}
+          {selectedClass && (
+            <div className="py-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-medium text-lg">{selectedClass.name}</h3>
+                  <Badge variant="outline" className={
+                    classTypeColors[(selectedClass.type || 'default') as keyof typeof classTypeColors]?.badge
+                  }>
+                    {selectedClass.type || 'General'}
                   </Badge>
                 </div>
-              ))}
-            </div>
-            
-            <div className="mt-4 p-3 bg-gray-50 rounded-md">
-              <div className="flex justify-between">
-                <span>Total sessions required:</span>
-                <span className="font-bold">{selectedClasses.length}</span>
+                
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <span className="font-medium">Date:</span> {format(new Date(selectedClass.schedule), 'EEEE, MMMM d, yyyy')}
+                  </p>
+                  <p>
+                    <span className="font-medium">Time:</span> {selectedClass.start_time} - {selectedClass.end_time}
+                  </p>
+                  <p>
+                    <span className="font-medium">Trainer:</span> {selectedClass.trainer}
+                  </p>
+                  {selectedClass.location && (
+                    <p>
+                      <span className="font-medium">Location:</span> {selectedClass.location}
+                    </p>
+                  )}
+                  <p>
+                    <span className="font-medium">Availability:</span> {selectedClass.enrolled}/{selectedClass.capacity} spots filled
+                  </p>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>Your remaining sessions:</span>
-                <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-blue-600")}>
-                  {userData.remainingSessions}
-                </span>
+              
+              <div className="mt-4 p-3 border rounded-md">
+                <div className="flex justify-between">
+                  <span>Sessions required:</span>
+                  <span className="font-bold">1</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Your remaining sessions:</span>
+                  <span className={cn("font-bold", sessionsLow ? "text-red-500" : "text-blue-600")}>
+                    {userData.remainingSessions}
+                  </span>
+                </div>
+                <div className="flex justify-between font-medium mt-1 pt-1 border-t">
+                  <span>Sessions after booking:</span>
+                  <span className={cn(
+                    "font-bold", 
+                    userData.remainingSessions - 1 <= 0 ? "text-red-500" : 
+                    userData.remainingSessions - 1 <= 5 ? "text-amber-500" : 
+                    "text-green-600"
+                  )}>
+                    {userData.remainingSessions - 1}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between font-medium mt-1 pt-1 border-t">
-                <span>Sessions after booking:</span>
-                <span className={cn(
-                  "font-bold", 
-                  remainingAfterBooking <= 0 ? "text-red-500" : 
-                  remainingAfterBooking <= 5 ? "text-amber-500" : 
-                  "text-green-600"
-                )}>
-                  {remainingAfterBooking}
-                </span>
+              
+              <div className="mt-4">
+                <Form {...form}>
+                  <form className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="acceptTerms"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                          <FormControl>
+                            <input
+                              type="checkbox"
+                              checked={field.value}
+                              onChange={field.onChange}
+                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>
+                              I agree to the booking terms and conditions
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                  </form>
+                </Form>
               </div>
             </div>
-            
-            <div className="mt-4">
-              <Form {...form}>
-                <form className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="acceptTerms"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>
-                            I agree to the booking terms and conditions
-                          </FormLabel>
-                          <FormMessage />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                </form>
-              </Form>
-            </div>
-          </div>
+          )}
           
           <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2">
             <Button variant="outline" onClick={cancelBookingConfirmation} className="w-full sm:w-auto">
@@ -1209,7 +1340,7 @@ const ClassCalendar = () => {
             <Button 
               onClick={confirmBooking} 
               className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
-              disabled={!form.getValues().acceptTerms || isBookingInProgress}
+              disabled={!form.getValues().acceptTerms || isBookingInProgress || !selectedClass}
             >
               {isBookingInProgress ? (
                 <>Processing...</>
