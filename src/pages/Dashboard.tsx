@@ -1,13 +1,16 @@
 
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/DashboardLayout";
 import StatsCard from "@/components/StatsCard";
 import BookingForm from "@/components/BookingForm";
-import { Calendar, Clock, BookOpen, Bell } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Calendar, Clock, Bell } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock user data
+// Mock user data - we will overlay this with real data from Supabase if available
 const userData = {
   name: "John Doe",
   email: "john@example.com",
@@ -51,20 +54,74 @@ const userData = {
 };
 
 const Dashboard = () => {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [sessionsRemaining, setSessionsRemaining] = useState(userData.membership.sessions.remaining);
+  const [loadingUserData, setLoadingUserData] = useState(true);
+  const [userMembership, setUserMembership] = useState(userData.membership.type);
   
   useEffect(() => {
     if (isAuthenticated && isAdmin) {
       navigate("/admin");
     }
-  }, [isAuthenticated, isAdmin, navigate]);
+    
+    // Fetch user's session data from Supabase if authenticated
+    const fetchUserData = async () => {
+      if (!isAuthenticated || !user?.email) return;
+      
+      try {
+        setLoadingUserData(true);
+        // Try to get user's profile from the profiles table
+        let { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('sessions_remaining, membership_type')
+          .eq('email', user.email)
+          .maybeSingle();
+          
+        if (profileError) throw profileError;
+        
+        // If we have profile data, use it
+        if (profileData) {
+          setSessionsRemaining(profileData.sessions_remaining || 0);
+          setUserMembership(profileData.membership_type || "Basic");
+        } else {
+          // Try to get data from members table as fallback
+          const { data: memberData, error: memberError } = await supabase
+            .from('members')
+            .select('remaining_sessions, membership')
+            .eq('email', user.email)
+            .maybeSingle();
+            
+          if (memberError) throw memberError;
+          
+          if (memberData) {
+            setSessionsRemaining(memberData.remaining_sessions || 0);
+            setUserMembership(memberData.membership || "Basic");
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        toast({
+          title: "Error fetching your session data",
+          description: "Please try refreshing the page.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoadingUserData(false);
+      }
+    };
+    
+    fetchUserData();
+  }, [isAuthenticated, isAdmin, navigate, user, toast]);
+
+  const isLowOnSessions = sessionsRemaining <= 2;
 
   return (
     <DashboardLayout title="User Dashboard">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <StatsCard
               title="Upcoming Classes"
               value={userData.upcomingClasses.length}
@@ -72,17 +129,27 @@ const Dashboard = () => {
             />
             <StatsCard
               title="Sessions Remaining"
-              value={userData.membership.sessions.remaining}
+              value={loadingUserData ? "..." : sessionsRemaining}
               icon={<Clock className="h-6 w-6 text-gym-blue" />}
-              change="2"
+              change={isLowOnSessions ? sessionsRemaining.toString() : undefined}
               positive={false}
             />
-            <StatsCard
-              title="Membership Status"
-              value={userData.membership.type}
-              icon={<BookOpen className="h-6 w-6 text-gym-blue" />}
-            />
           </div>
+
+          {isLowOnSessions && (
+            <Alert variant="destructive" className="bg-red-50 border-red-200">
+              <AlertTitle className="text-red-500">Low Session Count Warning</AlertTitle>
+              <AlertDescription>
+                <p>You only have {sessionsRemaining} {sessionsRemaining === 1 ? 'session' : 'sessions'} remaining!</p>
+                <Link 
+                  to="/user/membership" 
+                  className="text-red-600 font-medium underline hover:text-red-800 mt-2 inline-block"
+                >
+                  Click here to upgrade your membership
+                </Link>
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-bold mb-4">Upcoming Classes</h2>
@@ -136,7 +203,7 @@ const Dashboard = () => {
         </div>
 
         <div className="lg:col-span-1">
-          <BookingForm remainingSessions={userData.membership.sessions.remaining} />
+          <BookingForm remainingSessions={sessionsRemaining} />
         </div>
       </div>
     </DashboardLayout>
