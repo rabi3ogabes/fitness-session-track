@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Calendar } from "@/components/ui/calendar";
@@ -1125,6 +1124,7 @@ const ClassCalendar = () => {
                               const isPast = isClassInPast(selectedDate, cls.start_time);
                               const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
                               const typeColor = classTypeColors[typeKey] || classTypeColors.default;
+                              const pastCancellationWindow = isPastCancellationWindow(cls);
                               
                               return (
                                 <Card key={cls.id} className={cn(
@@ -1158,12 +1158,37 @@ const ClassCalendar = () => {
                                           </div>
                                         </div>
                                       </div>
-                                      <div className="flex justify-end items-center">
+                                      <div className="flex justify-end items-center gap-2">
+                                        {cls.isBooked && !isPast && (
+                                          <Button 
+                                            size="sm" 
+                                            variant="outline"
+                                            className={pastCancellationWindow ? "text-red-300" : "text-red-600"}
+                                            disabled={pastCancellationWindow}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleCancelBooking(cls.id, cls.start_time || "", cls.name);
+                                            }}
+                                          >
+                                            <X className="h-4 w-4 mr-1" />
+                                            Cancel
+                                          </Button>
+                                        )}
                                         <Button size="sm" variant={cls.isBooked ? "outline" : "default"} disabled={isPast}>
                                           {cls.isBooked ? "View" : "Book"} <ArrowRight className="ml-1 h-3.5 w-3.5" />
                                         </Button>
                                       </div>
                                     </div>
+                                    {cls.isBooked && pastCancellationWindow && !isPast && (
+                                      <div className="mt-2">
+                                        <Alert variant="destructive" className="py-2 px-3">
+                                          <AlertCircle className="h-4 w-4" />
+                                          <AlertDescription className="text-xs">
+                                            Cannot cancel: Less than {systemSettings.cancellationTimeLimit} hours before start
+                                          </AlertDescription>
+                                        </Alert>
+                                      </div>
+                                    )}
                                   </CardContent>
                                 </Card>
                               );
