@@ -534,9 +534,6 @@ const ClassCalendar = () => {
     setConfirmDialogOpen(true);
   };
 
-  // Add this state to track if the selected class is already booked
-  const [isClassAlreadyBooked, setIsClassAlreadyBooked] = useState(false);
-
   const handleBooking = async () => {
     if (!selectedClass) return;
     
