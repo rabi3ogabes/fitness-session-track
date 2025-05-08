@@ -218,7 +218,7 @@ const ClassCalendar = () => {
   const [isClassAlreadyBooked, setIsClassAlreadyBooked] = useState(false);
   
   // Ref to track if we need to refresh data after a cancellation
-  const needsRefresh = useRef(false);
+  const pendingRefresh = useRef(false);
 
   const { toast } = useToast();
   const { user } = useAuth();
@@ -382,7 +382,7 @@ const ClassCalendar = () => {
             });
             
             setClasses(classesWithType);
-            needsRefresh.current = false;
+            pendingRefresh.current = false;
           } else {
             // Fallback to demo data if no classes returned
             setClasses(DEMO_CLASSES);
@@ -396,13 +396,11 @@ const ClassCalendar = () => {
         }
       } finally {
         setIsLoading(false);
-        // Reset the refresh flag after data is loaded
-        needsRefresh.current = false;
       }
     };
     
     fetchClasses();
-  }, [isNetworkConnected, needsRefresh.current]);
+  }, [isNetworkConnected, pendingRefresh.current]);
   
   // Fetch user bookings from Supabase
   useEffect(() => {
@@ -489,7 +487,7 @@ const ClassCalendar = () => {
     };
     
     fetchBookings();
-  }, [user, isNetworkConnected, needsRefresh.current]);
+  }, [user, isNetworkConnected, pendingRefresh.current]);
   
   // Function to highlight dates with classes
   const isDayWithClass = (date: Date) => {
@@ -717,17 +715,11 @@ const ClassCalendar = () => {
     setSelectedClass(null);
   };
   
-  // Improved function to handle booking cancellation with better error handling
+  // Enhanced cancel booking function with better data sync
   const handleCancelBooking = async (classId: number, classTime: string, className: string) => {
     if (!user) return;
     
     try {
-      // Show loading toast
-      const loadingToast = toast({
-        title: "Cancelling booking...",
-        description: "Please wait while we process your cancellation request",
-      });
-      
       // Calculate if cancellation is within allowed time limit
       const classHour = parseInt(classTime.split(':')[0]);
       const classMinute = parseInt(classTime.split(':')[1] || '0');
@@ -751,10 +743,9 @@ const ClassCalendar = () => {
       // Calculate hours difference correctly
       const hoursDifference = (classDate.getTime() - now.getTime()) / (1000 * 60 * 60);
       
-      console.log("[handleCancelBooking] Class date:", classDate);
-      console.log("[handleCancelBooking] Current time:", now);
-      console.log("[handleCancelBooking] Hours difference:", hoursDifference);
-      console.log("[handleCancelBooking] Attempting to cancel class ID:", classId);
+      console.log("Class date:", classDate);
+      console.log("Current time:", now);
+      console.log("Hours difference:", hoursDifference);
       
       if (hoursDifference < systemSettings.cancellationTimeLimit) {
         toast({
@@ -766,37 +757,33 @@ const ClassCalendar = () => {
       }
       
       // Special handling for demo user
-      if (user.id === "demo-user-id" || !isNetworkConnected) {
-        // Demo mode logic - simulate cancellation
-        setTimeout(() => {
-          setBookedClasses(prevBookedClasses => prevBookedClasses.filter(id => id !== classId));
-          
-          // Update classes to remove booked status and decrease enrolled count
-          setClasses(prevClasses => 
-            prevClasses.map(cls => ({
-              ...cls,
-              isBooked: cls.id === classId ? false : cls.isBooked,
-              enrolled: cls.id === classId && cls.enrolled ? cls.enrolled - 1 : cls.enrolled
-            }))
-          );
-          
-          // Update user sessions
-          const newRemainingSession = userData.remainingSessions + 1;
-          setUserData({
-            ...userData,
-            remainingSessions: newRemainingSession
-          });
-          
-          toast({
-            title: "Class cancelled (Demo)",
-            description: `You've successfully cancelled your ${className} class in demo mode.`,
-          });
-        }, 1000);
+      if (user.id === "demo-user-id") {
+        // Simulate successful cancellation for demo user
+        setBookedClasses(bookedClasses.filter(id => id !== classId));
         
+        // Update classes to remove booked status and decrease enrolled count
+        setClasses(prevClasses => 
+          prevClasses.map(cls => ({
+            ...cls,
+            isBooked: cls.id === classId ? false : cls.isBooked,
+            enrolled: cls.id === classId && cls.enrolled ? cls.enrolled - 1 : cls.enrolled
+          }))
+        );
+        
+        // Update user sessions for demo
+        const newRemainingSession = userData.remainingSessions + 1;
+        setUserData({
+          ...userData,
+          remainingSessions: newRemainingSession
+        });
+        
+        toast({
+          title: "Class cancelled (Demo)",
+          description: `You've successfully cancelled your ${className} class in demo mode.`,
+        });
         return;
       }
       
-      // Check network connection
       if (!isNetworkConnected) {
         toast({
           title: "You're offline",
@@ -806,21 +793,14 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Use the improved cancelClassBooking utility function
-      console.log(`[handleCancelBooking] Calling cancelClassBooking for user ${user.id}, class ${classId}`);
+      // Use the helper function to cancel the booking
       const cancellationSuccess = await cancelClassBooking(user.id, classId);
-      console.log(`[handleCancelBooking] Cancellation result: ${cancellationSuccess}`);
       
       if (!cancellationSuccess) {
-        toast({
-          title: "Failed to cancel booking",
-          description: "Please try again later",
-          variant: "destructive"
-        });
-        return;
+        throw new Error("Failed to cancel booking");
       }
       
-      // Immediate UI update
+      // Update local state immediately to show the cancellation
       setBookedClasses(prevBookedClasses => prevBookedClasses.filter(id => id !== classId));
       
       // Update classes to remove booked status and decrease enrolled count
@@ -833,9 +813,8 @@ const ClassCalendar = () => {
       );
       
       // Update user sessions
-      const newRemainingSession = userData.remainingSessions + 1;
-      try {
-        // Update user profile in Supabase
+      if (user) {
+        const newRemainingSession = userData.remainingSessions + 1;
         const { error: profileError } = await supabase
           .from('profiles')
           .update({ 
@@ -844,7 +823,7 @@ const ClassCalendar = () => {
           .eq('id', user.id);
         
         if (profileError) {
-          console.error("[handleCancelBooking] Error updating user sessions:", profileError);
+          console.error("Error updating user sessions:", profileError);
         } else {
           // Update local state for user data
           setUserData({
@@ -852,26 +831,20 @@ const ClassCalendar = () => {
             remainingSessions: newRemainingSession
           });
         }
-      } catch (err) {
-        console.error("[handleCancelBooking] Error updating profile:", err);
       }
       
-      // Force a refresh of the data after a small delay
-      setTimeout(() => {
-        needsRefresh.current = true;
-        setRetrying(prevState => !prevState);
-        
-        toast({
-          title: "Class cancelled",
-          description: `You've successfully cancelled your ${className} class.`,
-        });
-      }, 500);
+      // Set the flag to refresh data on next render cycle
+      pendingRefresh.current = true;
       
+      toast({
+        title: "Class cancelled",
+        description: `You've successfully cancelled your ${className} class. The trainer has been notified.`,
+      });
     } catch (err) {
-      console.error("[handleCancelBooking] Error in handleCancelBooking:", err);
+      console.error("Error in handleCancelBooking:", err);
       toast({
         title: "Failed to cancel booking",
-        description: "An unexpected error occurred. Please try again later.",
+        description: "Please try again later",
         variant: "destructive"
       });
     }
@@ -938,10 +911,10 @@ const ClassCalendar = () => {
   
   const allClasses = getClassesByDate();
   
-  // Fix: Correctly identify booked classes using both indicators
-  const myBookedClasses = allClasses.filter(cls => 
-    cls.isBooked === true || bookedClasses.includes(cls.id)
-  );
+  // FIX: Combine both booking indicators to correctly identify booked classes
+  const myBookedClasses = allClasses.filter(cls => {
+    return cls.isBooked === true || bookedClasses.includes(cls.id);
+  });
   
   // Get classes for the selected date
   const classesForSelectedDate = selectedDate 

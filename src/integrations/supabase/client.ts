@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -162,151 +163,45 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
   }
 };
 
-// Completely rewritten booking cancellation function with transaction support
+// Add a new helper function to directly cancel a booking
 export const cancelClassBooking = async (userId: string, classId: number): Promise<boolean> => {
-  try {
-    console.log(`[cancelClassBooking] Starting cancellation process for user ${userId}, class ${classId}`);
-    
-    // STEP 1: Find all bookings that match the criteria
-    const { data: bookings, error: fetchError } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('class_id', classId);
-      
-    if (fetchError) {
-      console.error("[cancelClassBooking] Error fetching bookings:", fetchError);
-      return false;
-    }
-    
-    if (!bookings || bookings.length === 0) {
-      console.log("[cancelClassBooking] No bookings found to cancel");
-      return false;
-    }
-    
-    console.log(`[cancelClassBooking] Found ${bookings.length} bookings to cancel:`, bookings);
-    let successCount = 0;
-    
-    // STEP 2: Use a transaction for atomic operations
-    // Since Supabase doesn't support actual transactions in the client library,
-    // we'll manually handle each step and roll back if needed
-    
-    // STEP 2.1: Get current enrollment count
-    const { data: classData, error: classError } = await supabase
-      .from('classes')
-      .select('enrolled')
-      .eq('id', classId)
-      .single();
-      
-    if (classError) {
-      console.error("[cancelClassBooking] Error fetching class data:", classError);
-      // Continue anyway since we still need to delete the booking
-    }
-    
-    const currentEnrolled = classData?.enrolled || 0;
-    
-    // STEP 3: Delete all matching bookings one by one with retries
-    for (const booking of bookings) {
-      let deleted = false;
-      let attempts = 0;
-      
-      // Try up to 3 times for each booking
-      while (!deleted && attempts < 3) {
-        attempts++;
-        console.log(`[cancelClassBooking] Attempt ${attempts} to delete booking ${booking.id}`);
-        
-        const { error: deleteError } = await supabase
-          .from('bookings')
-          .delete()
-          .eq('id', booking.id);
-          
-        if (deleteError) {
-          console.error(`[cancelClassBooking] Error deleting booking (attempt ${attempts}):`, deleteError);
-          // Wait before retrying
-          await new Promise(r => setTimeout(r, 300));
-        } else {
-          console.log(`[cancelClassBooking] Successfully deleted booking ${booking.id}`);
-          deleted = true;
-          successCount++;
-        }
-      }
-    }
-    
-    // STEP 4: Delete with filter approach as a fallback (ensure nothing remains)
-    if (successCount < bookings.length) {
-      console.log("[cancelClassBooking] Some bookings could not be deleted individually, trying filter delete");
-      
-      const { error: filterDeleteError } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('user_id', userId)
-        .eq('class_id', classId);
-        
-      if (filterDeleteError) {
-        console.error("[cancelClassBooking] Filter delete failed:", filterDeleteError);
-      } else {
-        console.log("[cancelClassBooking] Filter delete executed successfully");
-        successCount = bookings.length; // Assume all deleted
-      }
-    }
-    
-    // STEP 5: Verify no bookings remain
-    const { data: remainingBookings, error: verifyError } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('class_id', classId);
-      
-    if (verifyError) {
-      console.error("[cancelClassBooking] Error verifying deletion:", verifyError);
-    } else if (remainingBookings && remainingBookings.length > 0) {
-      console.error("[cancelClassBooking] Failed to delete all bookings, some still remain:", remainingBookings);
-      
-      // Last attempt - direct SQL-like approach (may bypass some triggers/RLS)
-      const { error: finalDeleteError } = await supabase
-        .from('bookings')
-        .delete()
-        .filter('user_id', 'eq', userId)
-        .filter('class_id', 'eq', classId);
-        
-      if (finalDeleteError) {
-        console.error("[cancelClassBooking] Final deletion attempt failed:", finalDeleteError);
-        return false;
-      } else {
-        // Check one more time
-        const { data: finalCheck } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('class_id', classId);
-          
-        if (finalCheck && finalCheck.length > 0) {
-          console.error("[cancelClassBooking] Failed to delete bookings after all attempts");
-          return false;
-        }
-      }
-    }
-    
-    // STEP 6: Update enrolled count if we succeeded at least partially
-    if (successCount > 0 && currentEnrolled > 0) {
-      const newEnrolledCount = Math.max(0, currentEnrolled - successCount);
-      console.log(`[cancelClassBooking] Updating class ${classId} enrolled count from ${currentEnrolled} to ${newEnrolledCount}`);
-      
-      const { error: updateError } = await supabase
-        .from('classes')
-        .update({ enrolled: newEnrolledCount })
-        .eq('id', classId);
-      
-      if (updateError) {
-        console.error("[cancelClassBooking] Error updating class enrolled count:", updateError);
-        // We still consider the cancellation successful since the booking was deleted
-      }
-    }
-    
-    console.log(`[cancelClassBooking] Successfully canceled ${successCount} bookings out of ${bookings.length}`);
-    return true;
-  } catch (err) {
-    console.error("[cancelClassBooking] Unexpected error:", err);
+  // First delete the booking
+  const { error: deleteError } = await supabase
+    .from('bookings')
+    .delete()
+    .eq('user_id', userId)
+    .eq('class_id', classId);
+  
+  if (deleteError) {
+    console.error("Error deleting booking:", deleteError);
     return false;
   }
+  
+  // Then get the class details to update the enrolled count
+  const { data: classData, error: classError } = await supabase
+    .from('classes')
+    .select('enrolled')
+    .eq('id', classId)
+    .single();
+  
+  if (classError || !classData) {
+    console.error("Error getting class data:", classError);
+    return true; // Return true anyway since the booking was deleted
+  }
+  
+  // Update the enrolled count if it's greater than 0
+  if (classData.enrolled && classData.enrolled > 0) {
+    const { error: updateError } = await supabase
+      .from('classes')
+      .update({ enrolled: classData.enrolled - 1 })
+      .eq('id', classId);
+    
+    if (updateError) {
+      console.error("Error updating class enrolled count:", updateError);
+      // The booking was deleted but the enrolled count wasn't updated
+      return true;
+    }
+  }
+  
+  return true;
 };
