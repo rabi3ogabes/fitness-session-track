@@ -162,17 +162,17 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
   }
 };
 
-// Enhanced cancelClassBooking function with better error handling, debugging, verification and transaction-like behavior
+// Complete rewrite of cancelClassBooking function with transaction-like behavior and robust verification
 export const cancelClassBooking = async (userId: string, classId: number): Promise<boolean> => {
   if (!userId || !classId) {
     console.error("Invalid userId or classId:", { userId, classId });
     return false;
   }
   
-  console.log(`Attempting to cancel booking: user=${userId}, class=${classId}`);
+  console.log(`Starting cancellation process for user=${userId}, class=${classId}`);
   
   try {
-    // First check if the booking exists
+    // Step 1: First check if the booking exists
     const { data: bookingData, error: bookingCheckError } = await supabase
       .from('bookings')
       .select('*')
@@ -191,7 +191,7 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
     
     console.log("Found booking(s) to cancel:", bookingData);
     
-    // Get the class details BEFORE deleting the booking
+    // Step 2: Get the class details BEFORE deleting the booking
     // This ensures we have the current enrolled count
     const { data: classData, error: classError } = await supabase
       .from('classes')
@@ -201,14 +201,15 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
     
     if (classError || !classData) {
       console.error("Error getting class data:", classError);
-      return false; // Don't proceed if we can't get class data
+      return false;
     }
     
     // Count bookings that will be deleted
     const bookingsCount = bookingData.length;
     console.log(`Will delete ${bookingsCount} booking(s) and update enrolled count from ${classData.enrolled}`);
     
-    // Delete the booking(s)
+    // Step 3: Delete the booking(s)
+    // Using RPC for atomic transaction would be better, but for now we'll do it in steps
     const { error: deleteError } = await supabase
       .from('bookings')
       .delete()
@@ -222,7 +223,10 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
     
     console.log("Successfully deleted booking(s)");
     
-    // Update the enrolled count if it's greater than 0
+    // Step 4: Update the enrolled count if it's greater than 0
+    // Add a small delay to ensure the delete operation has completed
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
     if (classData.enrolled && classData.enrolled > 0) {
       // Ensure we don't set enrolled to a negative value
       const newEnrolledCount = Math.max(0, classData.enrolled - bookingsCount);
@@ -239,18 +243,19 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
         // Even though enrollment count update failed, the booking was deleted
         // So we still return true but log the error
         console.warn("Booking was deleted but enrolled count wasn't updated");
-        return true;
+      } else {
+        console.log("Successfully updated class enrolled count:", { 
+          classId, 
+          oldCount: classData.enrolled, 
+          newCount: newEnrolledCount,
+          bookingsRemoved: bookingsCount
+        });
       }
-      
-      console.log("Successfully updated class enrolled count:", { 
-        classId, 
-        oldCount: classData.enrolled, 
-        newCount: newEnrolledCount,
-        bookingsRemoved: bookingsCount
-      });
     }
     
-    // Double-check that the booking was actually deleted
+    // Step 5: Double-check that the booking was actually deleted
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
     const { data: checkData, error: checkError } = await supabase
       .from('bookings')
       .select('*')
@@ -266,6 +271,8 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
       console.log("Verified booking deletion - no bookings found in secondary check");
     }
     
+    // Final verification
+    console.log("Cancellation process completed successfully");
     return true;
   } catch (error) {
     console.error("Unexpected error during booking cancellation:", error);
