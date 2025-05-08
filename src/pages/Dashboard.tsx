@@ -77,7 +77,12 @@ const Dashboard = () => {
       
       // If we have profile data, use it
       if (profileData) {
-        setSessionsRemaining(profileData.sessions_remaining ?? 0);
+        console.log("Found profile data:", profileData);
+        if (profileData.sessions_remaining !== null && profileData.sessions_remaining !== undefined) {
+          setSessionsRemaining(Number(profileData.sessions_remaining));
+        } else {
+          setSessionsRemaining(0);
+        }
         setUserMembership(profileData.membership_type || "Basic");
       } else {
         // Try to get data from members table as fallback
@@ -90,8 +95,16 @@ const Dashboard = () => {
         if (memberError) throw memberError;
         
         if (memberData) {
-          setSessionsRemaining(memberData.remaining_sessions ?? 0);
+          console.log("Found member data:", memberData);
+          if (memberData.remaining_sessions !== null && memberData.remaining_sessions !== undefined) {
+            setSessionsRemaining(Number(memberData.remaining_sessions));
+          } else {
+            setSessionsRemaining(0);
+          }
           setUserMembership(memberData.membership || "Basic");
+        } else {
+          console.log("No user data found in either profiles or members tables");
+          setSessionsRemaining(0);
         }
       }
     } catch (error) {
@@ -101,6 +114,7 @@ const Dashboard = () => {
         description: "Please try refreshing the page.",
         variant: "destructive",
       });
+      setSessionsRemaining(0);
     } finally {
       setLoadingUserData(false);
     }
@@ -112,19 +126,21 @@ const Dashboard = () => {
     } else {
       fetchUserData();
     }
-  }, [isAuthenticated, isAdmin, navigate, user, toast]);
+  }, [isAuthenticated, isAdmin, navigate, user]);
 
   // Set up real-time subscription for session count changes
   useEffect(() => {
     if (!isAuthenticated || !user?.email) return;
     
+    console.log("Setting up real-time subscriptions for user:", user.email);
+    
     // Get the channel for the subscription
-    const channel = supabase
-      .channel('sessions-changes')
+    const memberChannel = supabase
+      .channel('member-sessions-changes')
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'members',
           filter: `email=eq.${user.email}`
@@ -132,14 +148,21 @@ const Dashboard = () => {
         (payload) => {
           console.log('Member data changed:', payload);
           if (payload.new && payload.new.remaining_sessions !== undefined) {
-            setSessionsRemaining(payload.new.remaining_sessions);
+            console.log("Updating sessions from member table to:", payload.new.remaining_sessions);
+            setSessionsRemaining(Number(payload.new.remaining_sessions));
           }
         }
       )
+      .subscribe((status) => {
+        console.log("Member subscription status:", status);
+      });
+    
+    const profileChannel = supabase
+      .channel('profile-sessions-changes')
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'profiles',
           filter: `email=eq.${user.email}`
@@ -147,15 +170,20 @@ const Dashboard = () => {
         (payload) => {
           console.log('Profile data changed:', payload);
           if (payload.new && payload.new.sessions_remaining !== undefined) {
-            setSessionsRemaining(payload.new.sessions_remaining);
+            console.log("Updating sessions from profile table to:", payload.new.sessions_remaining);
+            setSessionsRemaining(Number(payload.new.sessions_remaining));
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Profile subscription status:", status);
+      });
     
-    // Clean up the subscription on unmount
+    // Clean up the subscriptions on unmount
     return () => {
-      supabase.removeChannel(channel);
+      console.log("Cleaning up real-time subscriptions");
+      supabase.removeChannel(memberChannel);
+      supabase.removeChannel(profileChannel);
     };
   }, [isAuthenticated, user]);
 
