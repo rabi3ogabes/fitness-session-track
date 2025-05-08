@@ -162,7 +162,7 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
   }
 };
 
-// Enhanced cancelClassBooking function with better error handling, debugging, and transaction-like behavior
+// Enhanced cancelClassBooking function with better error handling, debugging, verification and transaction-like behavior
 export const cancelClassBooking = async (userId: string, classId: number): Promise<boolean> => {
   if (!userId || !classId) {
     console.error("Invalid userId or classId:", { userId, classId });
