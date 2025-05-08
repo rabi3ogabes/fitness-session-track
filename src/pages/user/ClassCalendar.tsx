@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useContext, useMemo } from "react";
+
+import React, { useState, useEffect, useMemo } from "react";
 import { format, parseISO, isToday, addDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AlertCircle, RefreshCw, Calendar as CalendarIcon, Clock, MapPin, Users, ArrowLeft, ArrowRight, WifiOff } from "lucide-react";
@@ -11,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { AuthContext } from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { supabase, requireAuth, isOffline, cacheDataForOffline, cancelClassBooking } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import LoadingIndicator from "@/components/LoadingIndicator";
@@ -57,16 +58,16 @@ const ClassCalendar = () => {
 
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { auth } = useContext(AuthContext);
+  const { isAuthenticated, user: authUser } = useAuth();
   
   useEffect(() => {
-    if (auth?.session) {
+    if (authUser) {
       setUser({
-        id: auth.session?.user.id,
-        email: auth.session?.user.email || "",
+        id: authUser.id,
+        email: authUser.email || "",
       });
     }
-  }, [auth?.session]);
+  }, [authUser]);
   
   // Fetch user data
   const fetchUserData = async () => {
