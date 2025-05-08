@@ -526,7 +526,7 @@ const ClassCalendar = () => {
   const handleSelectClass = (cls: ClassWithBooking) => {
     setSelectedClass(cls);
     
-    // Check if this class is already booked
+    // FIX: Check both ways to ensure accurate booking status detection
     const isBooked = cls.isBooked || bookedClasses.includes(cls.id);
     
     // Set the state to control dialog display
@@ -574,6 +574,18 @@ const ClassCalendar = () => {
     setIsBookingInProgress(true);
     
     try {
+      // FIX: Double check that class isn't already booked before proceeding
+      if (bookedClasses.includes(selectedClass.id)) {
+        toast({
+          title: "Already booked",
+          description: "You have already booked this class.",
+          variant: "destructive"
+        });
+        setIsBookingInProgress(false);
+        setConfirmDialogOpen(false);
+        return;
+      }
+      
       // Special handling for demo user
       if (user.id === "demo-user-id") {
         // Simulate successful booking for demo user
@@ -617,18 +629,6 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Check if user has already booked this specific class
-      if (bookedClasses.includes(selectedClass.id)) {
-        toast({
-          title: "Already booked",
-          description: "You have already booked this class.",
-          variant: "destructive"
-        });
-        setIsBookingInProgress(false);
-        setConfirmDialogOpen(false);
-        return;
-      }
-      
       // Insert booking into Supabase
       const { error } = await supabase
         .from('bookings')
@@ -655,13 +655,13 @@ const ClassCalendar = () => {
       }
       
       // Update local state
-      setBookedClasses([...bookedClasses, selectedClass.id]);
+      setBookedClasses(prevBookedClasses => [...prevBookedClasses, selectedClass.id]);
       
       // Update classes to mark as booked
       setClasses(prevClasses => 
         prevClasses.map(cls => ({
           ...cls,
-          isBooked: bookedClasses.includes(cls.id) || cls.id === selectedClass.id,
+          isBooked: cls.id === selectedClass.id ? true : cls.isBooked || bookedClasses.includes(cls.id),
           enrolled: cls.id === selectedClass.id ? (cls.enrolled || 0) + 1 : cls.enrolled
         }))
       );
@@ -907,7 +907,7 @@ const ClassCalendar = () => {
   };
   
   const allClasses = getClassesByDate();
-  const myBookedClasses = allClasses.filter(cls => cls.isBooked);
+  const myBookedClasses = allClasses.filter(cls => cls.isBooked || bookedClasses.includes(cls.id));
   
   // Get classes for the selected date
   const classesForSelectedDate = selectedDate 
@@ -949,7 +949,8 @@ const ClassCalendar = () => {
 
   // Render class card for week view
   const renderWeekDayClass = (cls: ClassWithBooking) => {
-    const isBooked = cls.isBooked;
+    // FIX: Check both ways to ensure accurate booking status detection
+    const isBooked = cls.isBooked || bookedClasses.includes(cls.id);
     const typeKey = (cls.type || 'default') as keyof typeof classTypeColors;
     const typeColor = classTypeColors[typeKey] || classTypeColors.default;
     const isPast = isClassInPast(new Date(cls.schedule), cls.start_time);
