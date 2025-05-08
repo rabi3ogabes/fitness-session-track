@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -163,45 +162,55 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
   }
 };
 
-// Add a new helper function to directly cancel a booking
+// Add a new helper function to directly cancel a booking - FIXED
 export const cancelClassBooking = async (userId: string, classId: number): Promise<boolean> => {
-  // First delete the booking
-  const { error: deleteError } = await supabase
-    .from('bookings')
-    .delete()
-    .eq('user_id', userId)
-    .eq('class_id', classId);
+  try {
+    console.log(`Cancelling booking for user ${userId}, class ${classId}`);
+    
+    // First get the class details to update the enrolled count
+    const { data: classData, error: classError } = await supabase
+      .from('classes')
+      .select('enrolled')
+      .eq('id', classId)
+      .single();
   
-  if (deleteError) {
-    console.error("Error deleting booking:", deleteError);
+    if (classError) {
+      console.error("Error getting class data:", classError);
+      throw classError;
+    }
+    
+    // Then delete the booking
+    const { error: deleteError } = await supabase
+      .from('bookings')
+      .delete()
+      .eq('user_id', userId)
+      .eq('class_id', classId);
+  
+    if (deleteError) {
+      console.error("Error deleting booking:", deleteError);
+      throw deleteError;
+    }
+  
+    console.log("Booking successfully deleted");
+    
+    // Update the enrolled count if it's greater than 0
+    if (classData && classData.enrolled && classData.enrolled > 0) {
+      const { error: updateError } = await supabase
+        .from('classes')
+        .update({ enrolled: classData.enrolled - 1 })
+        .eq('id', classId);
+      
+      if (updateError) {
+        console.error("Error updating class enrolled count:", updateError);
+        // Don't fail the whole operation if just the count update fails
+      } else {
+        console.log(`Updated class ${classId} enrolled count to ${classData.enrolled - 1}`);
+      }
+    }
+    
+    return true;
+  } catch (err) {
+    console.error("Error in cancelClassBooking:", err);
     return false;
   }
-  
-  // Then get the class details to update the enrolled count
-  const { data: classData, error: classError } = await supabase
-    .from('classes')
-    .select('enrolled')
-    .eq('id', classId)
-    .single();
-  
-  if (classError || !classData) {
-    console.error("Error getting class data:", classError);
-    return true; // Return true anyway since the booking was deleted
-  }
-  
-  // Update the enrolled count if it's greater than 0
-  if (classData.enrolled && classData.enrolled > 0) {
-    const { error: updateError } = await supabase
-      .from('classes')
-      .update({ enrolled: classData.enrolled - 1 })
-      .eq('id', classId);
-    
-    if (updateError) {
-      console.error("Error updating class enrolled count:", updateError);
-      // The booking was deleted but the enrolled count wasn't updated
-      return true;
-    }
-  }
-  
-  return true;
 };

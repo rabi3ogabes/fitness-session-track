@@ -218,7 +218,7 @@ const ClassCalendar = () => {
   const [isClassAlreadyBooked, setIsClassAlreadyBooked] = useState(false);
   
   // Ref to track if we need to refresh data after a cancellation
-  const pendingRefresh = useRef(false);
+  const needsRefresh = useRef(false);
 
   const { toast } = useToast();
   const { user } = useAuth();
@@ -382,7 +382,7 @@ const ClassCalendar = () => {
             });
             
             setClasses(classesWithType);
-            pendingRefresh.current = false;
+            needsRefresh.current = false;
           } else {
             // Fallback to demo data if no classes returned
             setClasses(DEMO_CLASSES);
@@ -396,11 +396,13 @@ const ClassCalendar = () => {
         }
       } finally {
         setIsLoading(false);
+        // Reset the refresh flag after data is loaded
+        needsRefresh.current = false;
       }
     };
     
     fetchClasses();
-  }, [isNetworkConnected, pendingRefresh.current]);
+  }, [isNetworkConnected, needsRefresh.current]);
   
   // Fetch user bookings from Supabase
   useEffect(() => {
@@ -487,7 +489,7 @@ const ClassCalendar = () => {
     };
     
     fetchBookings();
-  }, [user, isNetworkConnected, pendingRefresh.current]);
+  }, [user, isNetworkConnected, needsRefresh.current]);
   
   // Function to highlight dates with classes
   const isDayWithClass = (date: Date) => {
@@ -746,6 +748,7 @@ const ClassCalendar = () => {
       console.log("Class date:", classDate);
       console.log("Current time:", now);
       console.log("Hours difference:", hoursDifference);
+      console.log("Attempting to cancel class ID:", classId);
       
       if (hoursDifference < systemSettings.cancellationTimeLimit) {
         toast({
@@ -759,7 +762,7 @@ const ClassCalendar = () => {
       // Special handling for demo user
       if (user.id === "demo-user-id") {
         // Simulate successful cancellation for demo user
-        setBookedClasses(bookedClasses.filter(id => id !== classId));
+        setBookedClasses(prevBookedClasses => prevBookedClasses.filter(id => id !== classId));
         
         // Update classes to remove booked status and decrease enrolled count
         setClasses(prevClasses => 
@@ -834,7 +837,13 @@ const ClassCalendar = () => {
       }
       
       // Set the flag to refresh data on next render cycle
-      pendingRefresh.current = true;
+      needsRefresh.current = true;
+      
+      // Force a re-render by setting a temporary loading state
+      setIsLoading(true);
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 300);
       
       toast({
         title: "Class cancelled",
