@@ -217,8 +217,8 @@ const ClassCalendar = () => {
   const [activeTab, setActiveTab] = useState("weekView");
   const [isClassAlreadyBooked, setIsClassAlreadyBooked] = useState(false);
   
-  // Replace pendingRefresh ref with a state variable that will trigger re-renders
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  // Ref to track if we need to refresh data after a cancellation
+  const pendingRefresh = useRef(false);
 
   const { toast } = useToast();
   const { user } = useAuth();
@@ -385,6 +385,7 @@ const ClassCalendar = () => {
             });
             
             setClasses(classesWithType);
+            pendingRefresh.current = false;
           } else {
             // Fallback to demo data if no classes returned
             setClasses(DEMO_CLASSES);
@@ -402,7 +403,7 @@ const ClassCalendar = () => {
     };
     
     fetchClasses();
-  }, [isNetworkConnected, refreshTrigger]);
+  }, [isNetworkConnected, pendingRefresh.current]);
   
   // Fetch user bookings from Supabase - enhanced with better error handling
   useEffect(() => {
@@ -490,7 +491,7 @@ const ClassCalendar = () => {
     };
     
     fetchBookings();
-  }, [user, isNetworkConnected, refreshTrigger]);
+  }, [user, isNetworkConnected, pendingRefresh.current]);
   
   // Function to highlight dates with classes
   const isDayWithClass = (date: Date) => {
@@ -850,9 +851,8 @@ const ClassCalendar = () => {
         }
       }
       
-      // IMPORTANT: Trigger a fresh data fetch after successful cancellation
-      // This ensures the UI reflects the actual state in the database
-      setRefreshTrigger(prev => prev + 1);
+      // Set the flag to refresh data on next render cycle
+      pendingRefresh.current = true;
       
       toast({
         title: "Class cancelled",

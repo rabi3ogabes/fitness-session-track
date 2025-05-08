@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -162,7 +163,7 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
   }
 };
 
-// Enhanced cancelClassBooking function with better error handling, debugging, and transaction-like behavior
+// Enhanced cancelClassBooking function with better error handling and debugging
 export const cancelClassBooking = async (userId: string, classId: number): Promise<boolean> => {
   if (!userId || !classId) {
     console.error("Invalid userId or classId:", { userId, classId });
@@ -177,38 +178,22 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
       .from('bookings')
       .select('*')
       .eq('user_id', userId)
-      .eq('class_id', classId);
+      .eq('class_id', classId)
+      .maybeSingle();
     
     if (bookingCheckError) {
       console.error("Error checking booking existence:", bookingCheckError);
       return false;
     }
     
-    if (!bookingData || bookingData.length === 0) {
+    if (!bookingData) {
       console.warn("Booking not found for cancellation:", { userId, classId });
       return false;
     }
     
-    console.log("Found booking(s) to cancel:", bookingData);
+    console.log("Found booking to cancel:", bookingData);
     
-    // Get the class details BEFORE deleting the booking
-    // This ensures we have the current enrolled count
-    const { data: classData, error: classError } = await supabase
-      .from('classes')
-      .select('enrolled')
-      .eq('id', classId)
-      .single();
-    
-    if (classError || !classData) {
-      console.error("Error getting class data:", classError);
-      return false; // Don't proceed if we can't get class data
-    }
-    
-    // Count bookings that will be deleted
-    const bookingsCount = bookingData.length;
-    console.log(`Will delete ${bookingsCount} booking(s) and update enrolled count from ${classData.enrolled}`);
-    
-    // Delete the booking(s)
+    // Delete the booking
     const { error: deleteError } = await supabase
       .from('bookings')
       .delete()
@@ -220,50 +205,40 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
       return false;
     }
     
-    console.log("Successfully deleted booking(s)");
+    console.log("Successfully deleted booking");
+    
+    // Get the class details to update the enrolled count
+    const { data: classData, error: classError } = await supabase
+      .from('classes')
+      .select('enrolled')
+      .eq('id', classId)
+      .single();
+    
+    if (classError || !classData) {
+      console.error("Error getting class data:", classError);
+      console.warn("Booking was deleted but class data couldn't be updated");
+      return true; // Return true since the booking was deleted
+    }
     
     // Update the enrolled count if it's greater than 0
     if (classData.enrolled && classData.enrolled > 0) {
-      // Ensure we don't set enrolled to a negative value
-      const newEnrolledCount = Math.max(0, classData.enrolled - bookingsCount);
-      
-      console.log(`Updating class ${classId} enrolled count from ${classData.enrolled} to ${newEnrolledCount}`);
-      
       const { error: updateError } = await supabase
         .from('classes')
-        .update({ enrolled: newEnrolledCount })
+        .update({ enrolled: classData.enrolled - 1 })
         .eq('id', classId);
       
       if (updateError) {
         console.error("Error updating class enrolled count:", updateError);
-        // Even though enrollment count update failed, the booking was deleted
-        // So we still return true but log the error
         console.warn("Booking was deleted but enrolled count wasn't updated");
+        // The booking was deleted but the enrolled count wasn't updated
         return true;
       }
       
       console.log("Successfully updated class enrolled count:", { 
         classId, 
         oldCount: classData.enrolled, 
-        newCount: newEnrolledCount,
-        bookingsRemoved: bookingsCount
+        newCount: classData.enrolled - 1 
       });
-    }
-    
-    // Double-check that the booking was actually deleted
-    const { data: checkData, error: checkError } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('class_id', classId);
-    
-    if (checkError) {
-      console.error("Error verifying booking deletion:", checkError);
-    } else if (checkData && checkData.length > 0) {
-      console.warn("Booking was not successfully deleted despite no reported errors");
-      return false;
-    } else {
-      console.log("Verified booking deletion - no bookings found in secondary check");
     }
     
     return true;
