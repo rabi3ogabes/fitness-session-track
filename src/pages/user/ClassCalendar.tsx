@@ -453,7 +453,10 @@ const ClassCalendar = () => {
                 isBooked: bookedClassIds.includes(cls.id)
               }))
             );
+            
+            console.log("Booked classes found:", bookedClassIds);
           } else {
+            console.log("No bookings found for user");
             // No bookings found
             setBookedClasses([]);
             
@@ -526,7 +529,7 @@ const ClassCalendar = () => {
   const handleSelectClass = (cls: ClassWithBooking) => {
     setSelectedClass(cls);
     
-    // FIX: Check both ways to ensure accurate booking status detection
+    // Check both ways to ensure accurate booking status detection
     const isBooked = cls.isBooked || bookedClasses.includes(cls.id);
     
     // Set the state to control dialog display
@@ -907,7 +910,11 @@ const ClassCalendar = () => {
   };
   
   const allClasses = getClassesByDate();
-  const myBookedClasses = allClasses.filter(cls => cls.isBooked || bookedClasses.includes(cls.id));
+  
+  // FIX: Combine both booking indicators to correctly identify booked classes
+  const myBookedClasses = allClasses.filter(cls => {
+    return cls.isBooked === true || bookedClasses.includes(cls.id);
+  });
   
   // Get classes for the selected date
   const classesForSelectedDate = selectedDate 
