@@ -722,6 +722,12 @@ const ClassCalendar = () => {
     if (!user) return;
     
     try {
+      // Show a loading toast to indicate cancellation is in progress
+      toast({
+        title: "Cancelling booking...",
+        description: "Please wait while we process your cancellation request",
+      });
+      
       // Calculate if cancellation is within allowed time limit
       const classHour = parseInt(classTime.split(':')[0]);
       const classMinute = parseInt(classTime.split(':')[1] || '0');
@@ -745,10 +751,10 @@ const ClassCalendar = () => {
       // Calculate hours difference correctly
       const hoursDifference = (classDate.getTime() - now.getTime()) / (1000 * 60 * 60);
       
-      console.log("Class date:", classDate);
-      console.log("Current time:", now);
-      console.log("Hours difference:", hoursDifference);
-      console.log("Attempting to cancel class ID:", classId);
+      console.log("[handleCancelBooking] Class date:", classDate);
+      console.log("[handleCancelBooking] Current time:", now);
+      console.log("[handleCancelBooking] Hours difference:", hoursDifference);
+      console.log("[handleCancelBooking] Attempting to cancel class ID:", classId);
       
       if (hoursDifference < systemSettings.cancellationTimeLimit) {
         toast({
@@ -796,38 +802,36 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Show cancellation in progress indicator
-      toast({
-        title: "Cancelling booking...",
-        description: "Please wait while we process your cancellation."
-      });
-      
       // Use the helper function to cancel the booking with improved logging
-      console.log(`Calling cancelClassBooking for user ${user.id}, class ${classId}`);
+      console.log(`[handleCancelBooking] Calling cancelClassBooking for user ${user.id}, class ${classId}`);
       const cancellationSuccess = await cancelClassBooking(user.id, classId);
-      console.log(`Cancellation success: ${cancellationSuccess}`);
+      console.log(`[handleCancelBooking] Cancellation result: ${cancellationSuccess}`);
       
       if (!cancellationSuccess) {
-        throw new Error("Failed to cancel booking");
+        toast({
+          title: "Failed to cancel booking",
+          description: "Please try again later",
+          variant: "destructive"
+        });
+        return;
       }
       
-      // Force immediate refresh of data after successful cancellation
-      try {
-        // Update local state immediately to show the cancellation
-        setBookedClasses(prevBookedClasses => prevBookedClasses.filter(id => id !== classId));
-        
-        // Update classes to remove booked status and decrease enrolled count
-        setClasses(prevClasses => 
-          prevClasses.map(cls => ({
-            ...cls,
-            isBooked: cls.id === classId ? false : cls.isBooked,
-            enrolled: cls.id === classId && cls.enrolled ? cls.enrolled - 1 : cls.enrolled
-          }))
-        );
-        
-        // Update user sessions
-        if (user) {
-          const newRemainingSession = userData.remainingSessions + 1;
+      // Immediate UI update before database sync
+      setBookedClasses(prevBookedClasses => prevBookedClasses.filter(id => id !== classId));
+      
+      // Update classes to remove booked status and decrease enrolled count
+      setClasses(prevClasses => 
+        prevClasses.map(cls => ({
+          ...cls,
+          isBooked: cls.id === classId ? false : cls.isBooked,
+          enrolled: cls.id === classId && cls.enrolled ? cls.enrolled - 1 : cls.enrolled
+        }))
+      );
+      
+      // Update user sessions
+      if (user) {
+        const newRemainingSession = userData.remainingSessions + 1;
+        try {
           const { error: profileError } = await supabase
             .from('profiles')
             .update({ 
@@ -836,7 +840,7 @@ const ClassCalendar = () => {
             .eq('id', user.id);
           
           if (profileError) {
-            console.error("Error updating user sessions:", profileError);
+            console.error("[handleCancelBooking] Error updating user sessions:", profileError);
           } else {
             // Update local state for user data
             setUserData({
@@ -844,75 +848,34 @@ const ClassCalendar = () => {
               remainingSessions: newRemainingSession
             });
           }
+        } catch (err) {
+          console.error("[handleCancelBooking] Error updating profile:", err);
         }
-        
-        // CRITICAL FIX: Add a longer delay before checking for booking status
-        // This ensures the database has fully processed the deletion
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Critical fix: Get the latest booking data from server AFTER the cancellation
-        const { data: latestBookings, error: bookingsError } = await supabase
-          .from('bookings')
-          .select('class_id')
-          .eq('user_id', user.id)
-          .eq('status', 'confirmed');
-        
-        if (bookingsError) {
-          console.error("Error refreshing booking data:", bookingsError);
-          throw bookingsError;
-        }
-        
-        // Update bookedClasses with the latest data from server
-        const latestBookedClassIds = latestBookings?.map(booking => booking.class_id) || [];
-        console.log("Latest booked classes from server after cancellation:", latestBookedClassIds);
-        setBookedClasses(latestBookedClassIds);
-        
-        // Update classes to reflect the latest booking status
-        setClasses(prevClasses => 
-          prevClasses.map(cls => ({
-            ...cls,
-            isBooked: latestBookedClassIds.includes(cls.id)
-          }))
-        );
-        
-        // Force component refresh through state update
-        setSelectedDate(new Date(selectedDate || new Date()));
-        needsRefresh.current = true;
-        
-        toast({
-          title: "Class cancelled",
-          description: `You've successfully cancelled your ${className} class. The trainer has been notified.`,
-        });
-        
-        // Trigger an immediate data refresh to ensure UI is up-to-date
-        setTimeout(() => {
-          // This will force the useEffect to run again and fetch fresh data
-          setRetrying(true);
-          setTimeout(() => {
-            setRetrying(false);
-            // Final state reset to trigger data refresh
-            needsRefresh.current = true;
-          }, 300);
-        }, 500);
-        
-      } catch (err) {
-        console.error("Error refreshing data after cancellation:", err);
-        
-        // Even if refresh fails, notify the user that the cancellation was successful 
-        // but they may need to refresh
-        toast({
-          title: "Class cancelled",
-          description: `Your booking was cancelled, but there was an issue refreshing the page data.`,
-        });
-        
-        // Force a full page reload to get fresh data
-        window.location.reload();
       }
+      
+      // Delay before showing success message to allow database operations to complete
+      setTimeout(() => {
+        // Ensure the database is updated with the changes
+        needsRefresh.current = true;
+        setRetrying(prevState => !prevState); // Toggle to trigger a re-fetch
+        
+        toast({
+          title: "Class cancelled",
+          description: `You've successfully cancelled your ${className} class.`,
+        });
+      }, 800);
+      
+      // Force additional refreshes to ensure UI is updated
+      setTimeout(() => {
+        // This will force the useEffect to run again and fetch fresh data
+        needsRefresh.current = true;
+        setRetrying(prevState => !prevState);
+      }, 1500);
     } catch (err) {
-      console.error("Error in handleCancelBooking:", err);
+      console.error("[handleCancelBooking] Error in handleCancelBooking:", err);
       toast({
         title: "Failed to cancel booking",
-        description: "Please try again later",
+        description: "An unexpected error occurred. Please try again later.",
         variant: "destructive"
       });
     }

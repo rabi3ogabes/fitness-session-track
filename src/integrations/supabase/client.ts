@@ -162,66 +162,120 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
   }
 };
 
-// Fixed booking cancellation function with more robust error handling and verification
+// Fixed booking cancellation function with more robust error handling, retries and verification
 export const cancelClassBooking = async (userId: string, classId: number): Promise<boolean> => {
   try {
-    console.log(`Cancelling booking for user ${userId}, class ${classId}`);
+    console.log(`Starting booking cancellation for user ${userId}, class ${classId}`);
     
-    // Get the booking information first
-    const { data: bookings, error: checkError } = await supabase
+    // STEP 1: Get the booking information first to confirm it exists
+    const { data: bookingData, error: bookingError } = await supabase
       .from('bookings')
       .select('id')
       .eq('user_id', userId)
       .eq('class_id', classId);
     
-    if (checkError) {
-      console.error("Error checking booking existence:", checkError);
-      throw checkError;
+    if (bookingError) {
+      console.error("[cancelClassBooking] Error checking booking existence:", bookingError);
+      throw bookingError;
     }
     
-    if (!bookings || bookings.length === 0) {
-      console.log("No bookings found to cancel");
+    if (!bookingData || bookingData.length === 0) {
+      console.error("[cancelClassBooking] No bookings found to cancel");
       return false;
     }
     
-    console.log(`Found ${bookings.length} booking(s) to cancel`);
+    console.log(`[cancelClassBooking] Found ${bookingData.length} booking(s) to cancel: `, bookingData);
     
-    // Get the class details first to update the enrolled count correctly
+    // STEP 2: Get current enrolled count from class
     const { data: classData, error: classError } = await supabase
       .from('classes')
       .select('enrolled')
       .eq('id', classId)
       .single();
-  
+      
     if (classError) {
-      console.error("Error getting class data:", classError);
-      throw classError;
+      console.error("[cancelClassBooking] Error getting class data:", classError);
+      // Continue despite this error
     }
     
-    // First, attempt to delete by using the specific booking IDs rather than filters
-    // This is more reliable because we're targeting exact records
-    for (const booking of bookings) {
-      console.log(`Attempting to delete booking ID: ${booking.id}`);
-      const { error: deleteError } = await supabase
+    const currentEnrolled = classData?.enrolled || 0;
+    console.log(`[cancelClassBooking] Current class enrolled count: ${currentEnrolled}`);
+    
+    // STEP 3: Delete each booking by ID (more reliable)
+    let successfulDeletes = 0;
+    for (const booking of bookingData) {
+      const bookingId = booking.id;
+      console.log(`[cancelClassBooking] Deleting booking ID: ${bookingId}`);
+      
+      // Try up to 3 times to delete the booking
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const { error: deleteError } = await supabase
+          .from('bookings')
+          .delete()
+          .eq('id', bookingId);
+        
+        if (deleteError) {
+          console.error(`[cancelClassBooking] Error deleting booking ID ${bookingId} (attempt ${attempt}/3):`, deleteError);
+          
+          if (attempt === 3) {
+            throw new Error(`Failed to delete booking after 3 attempts: ${deleteError.message}`);
+          }
+          
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+        } else {
+          console.log(`[cancelClassBooking] Successfully deleted booking ID ${bookingId}`);
+          successfulDeletes++;
+          break; // Exit retry loop on success
+        }
+      }
+    }
+    
+    // STEP 4: Verify deletions worked by checking if any bookings remain
+    const { data: verifyData, error: verifyError } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('class_id', classId);
+      
+    if (verifyError) {
+      console.error("[cancelClassBooking] Error verifying bookings deleted:", verifyError);
+      // Continue despite this error if we had some successful deletes
+      if (successfulDeletes === 0) {
+        return false;
+      }
+    } else if (verifyData && verifyData.length > 0) {
+      console.error("[cancelClassBooking] Warning: Still found bookings after deletion attempt:", verifyData);
+      
+      // Last ditch effort - try direct filter deletion
+      const { error: finalDeleteError } = await supabase
         .from('bookings')
         .delete()
-        .eq('id', booking.id);
+        .eq('user_id', userId)
+        .eq('class_id', classId);
       
-      if (deleteError) {
-        console.error(`Error deleting booking ID ${booking.id}:`, deleteError);
-        throw deleteError;
+      if (finalDeleteError) {
+        console.error("[cancelClassBooking] Final delete attempt failed:", finalDeleteError);
+        return false;
       }
       
-      console.log(`Successfully deleted booking ID: ${booking.id}`);
+      // Check one more time
+      const { data: finalVerifyData } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('class_id', classId);
+        
+      if (finalVerifyData && finalVerifyData.length > 0) {
+        console.error("[cancelClassBooking] Critical error: Could not delete bookings after multiple attempts");
+        return false;
+      }
     }
-  
-    console.log(`Successfully deleted ${bookings.length} booking(s)`);
     
-    // Update the enrolled count if it's greater than 0
-    if (classData && classData.enrolled && classData.enrolled > 0) {
-      // Decrease by the number of bookings deleted (typically 1)
-      const newEnrolledCount = Math.max(0, classData.enrolled - bookings.length);
-      console.log(`Updating class ${classId} enrolled count from ${classData.enrolled} to ${newEnrolledCount}`);
+    // STEP 5: Update the enrolled count
+    if (currentEnrolled > 0) {
+      const newEnrolledCount = Math.max(0, currentEnrolled - successfulDeletes);
+      console.log(`[cancelClassBooking] Updating class ${classId} enrolled count from ${currentEnrolled} to ${newEnrolledCount}`);
       
       const { error: updateError } = await supabase
         .from('classes')
@@ -229,62 +283,17 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
         .eq('id', classId);
       
       if (updateError) {
-        console.error("Error updating class enrolled count:", updateError);
-        // Continue despite error in count update, as the booking itself was cancelled
-        console.log("Booking was cancelled but class count wasn't updated");
+        console.error("[cancelClassBooking] Error updating class enrolled count:", updateError);
+        // Continue despite this error since the booking itself was cancelled
       } else {
-        console.log(`Updated class ${classId} enrolled count to ${newEnrolledCount}`);
+        console.log(`[cancelClassBooking] Successfully updated class ${classId} enrolled count to ${newEnrolledCount}`);
       }
     }
     
-    // Final verification - check if the booking was actually deleted
-    // Add delay to ensure the database has processed the deletion
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const { data: verifyBookings, error: verifyError } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('class_id', classId);
-      
-    if (verifyError) {
-      console.error("Error verifying booking deletion:", verifyError);
-      return false;
-    }
-    
-    if (verifyBookings && verifyBookings.length > 0) {
-      console.error("Booking still exists after delete operation!");
-      
-      // Last resort: Try one more time with direct filter deletion
-      console.log("Attempting final delete operation with filters");
-      const { error: finalDeleteError } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('user_id', userId)
-        .eq('class_id', classId);
-        
-      if (finalDeleteError) {
-        console.error("Final delete attempt failed:", finalDeleteError);
-        return false;
-      }
-      
-      // Check once more
-      const { data: finalVerifyBookings } = await supabase
-        .from('bookings')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('class_id', classId);
-        
-      if (finalVerifyBookings && finalVerifyBookings.length > 0) {
-        console.error("Booking could not be deleted after multiple attempts");
-        return false;
-      }
-    }
-    
-    console.log("Verified booking was deleted successfully");
+    console.log("[cancelClassBooking] Cancellation completed successfully");
     return true;
   } catch (err) {
-    console.error("Error in cancelClassBooking:", err);
+    console.error("[cancelClassBooking] Critical error in cancelClassBooking:", err);
     return false;
   }
 };
