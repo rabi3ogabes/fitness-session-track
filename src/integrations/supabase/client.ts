@@ -162,31 +162,25 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
   }
 };
 
-// Add a new helper function to directly cancel a booking - IMPROVED WITH BETTER ERROR HANDLING
+// Fix the booking cancellation function to properly handle multiple bookings
 export const cancelClassBooking = async (userId: string, classId: number): Promise<boolean> => {
   try {
     console.log(`Cancelling booking for user ${userId}, class ${classId}`);
     
-    // First check if the booking exists to prevent errors when trying to cancel non-existent bookings
-    const { data: bookingExists, error: checkError } = await supabase
+    // Modified: Don't use .single() since there might be multiple bookings
+    const { data: bookings, error: checkError } = await supabase
       .from('bookings')
       .select('id')
       .eq('user_id', userId)
-      .eq('class_id', classId)
-      .single();
+      .eq('class_id', classId);
     
     if (checkError) {
       console.error("Error checking booking existence:", checkError);
-      // If PGRST116, it means no booking was found
-      if (checkError.code === 'PGRST116') {
-        console.log("No booking found to cancel");
-        return false;
-      }
       throw checkError;
     }
     
-    if (!bookingExists) {
-      console.log("No booking found to cancel");
+    if (!bookings || bookings.length === 0) {
+      console.log("No bookings found to cancel");
       return false;
     }
     
@@ -202,7 +196,7 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
       throw classError;
     }
     
-    // Then delete the booking
+    // Then delete the booking - modified to work with multiple potential bookings
     const { error: deleteError } = await supabase
       .from('bookings')
       .delete()
@@ -214,20 +208,23 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
       throw deleteError;
     }
   
-    console.log("Booking successfully deleted");
+    console.log(`Successfully deleted ${bookings.length} booking(s)`);
     
     // Update the enrolled count if it's greater than 0
     if (classData && classData.enrolled && classData.enrolled > 0) {
+      // Decrease by the number of bookings deleted (typically 1)
+      const newEnrolledCount = Math.max(0, classData.enrolled - bookings.length);
+      
       const { error: updateError } = await supabase
         .from('classes')
-        .update({ enrolled: classData.enrolled - 1 })
+        .update({ enrolled: newEnrolledCount })
         .eq('id', classId);
       
       if (updateError) {
         console.error("Error updating class enrolled count:", updateError);
         // Don't fail the whole operation if just the count update fails
       } else {
-        console.log(`Updated class ${classId} enrolled count to ${classData.enrolled - 1}`);
+        console.log(`Updated class ${classId} enrolled count to ${newEnrolledCount}`);
       }
     }
     

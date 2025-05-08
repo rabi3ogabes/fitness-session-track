@@ -803,75 +803,77 @@ const ClassCalendar = () => {
         throw new Error("Failed to cancel booking");
       }
       
-      // Update local state immediately to show the cancellation
-      setBookedClasses(prevBookedClasses => prevBookedClasses.filter(id => id !== classId));
-      
-      // Update classes to remove booked status and decrease enrolled count
-      setClasses(prevClasses => 
-        prevClasses.map(cls => ({
-          ...cls,
-          isBooked: cls.id === classId ? false : cls.isBooked,
-          enrolled: cls.id === classId && cls.enrolled ? cls.enrolled - 1 : cls.enrolled
-        }))
-      );
-      
-      // Update user sessions
-      if (user) {
-        const newRemainingSession = userData.remainingSessions + 1;
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ 
-            sessions_remaining: newRemainingSession
-          })
-          .eq('id', user.id);
+      // Force immediate refresh of data after successful cancellation
+      try {
+        // Update local state immediately to show the cancellation
+        setBookedClasses(prevBookedClasses => prevBookedClasses.filter(id => id !== classId));
         
-        if (profileError) {
-          console.error("Error updating user sessions:", profileError);
-        } else {
-          // Update local state for user data
-          setUserData({
-            ...userData,
-            remainingSessions: newRemainingSession
-          });
-        }
-      }
-      
-      // Force a refresh of booking data by setting needsRefresh flag
-      needsRefresh.current = true;
-      
-      // Force immediate refresh of data
-      const fetchLatestBookings = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('bookings')
-            .select('class_id')
-            .eq('user_id', user.id)
-            .eq('status', 'confirmed');
+        // Update classes to remove booked status and decrease enrolled count
+        setClasses(prevClasses => 
+          prevClasses.map(cls => ({
+            ...cls,
+            isBooked: cls.id === classId ? false : cls.isBooked,
+            enrolled: cls.id === classId && cls.enrolled ? cls.enrolled - 1 : cls.enrolled
+          }))
+        );
+        
+        // Update user sessions
+        if (user) {
+          const newRemainingSession = userData.remainingSessions + 1;
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ 
+              sessions_remaining: newRemainingSession
+            })
+            .eq('id', user.id);
           
-          if (!error && data) {
-            const latestBookedClassIds = data.map(booking => booking.class_id);
-            setBookedClasses(latestBookedClassIds);
-            
-            // Update classes to reflect the latest booking status
-            setClasses(prevClasses => 
-              prevClasses.map(cls => ({
-                ...cls,
-                isBooked: latestBookedClassIds.includes(cls.id)
-              }))
-            );
+          if (profileError) {
+            console.error("Error updating user sessions:", profileError);
+          } else {
+            // Update local state for user data
+            setUserData({
+              ...userData,
+              remainingSessions: newRemainingSession
+            });
           }
-        } catch (err) {
-          console.error("Error refreshing bookings after cancellation:", err);
         }
-      };
-      
-      // Execute immediate refresh
-      await fetchLatestBookings();
-      
-      toast({
-        title: "Class cancelled",
-        description: `You've successfully cancelled your ${className} class. The trainer has been notified.`,
-      });
+        
+        // Get the latest booking data from server
+        const { data: latestBookings } = await supabase
+          .from('bookings')
+          .select('class_id')
+          .eq('user_id', user.id)
+          .eq('status', 'confirmed');
+        
+        // Update bookedClasses with the latest data from server
+        if (latestBookings) {
+          const latestBookedClassIds = latestBookings.map(booking => booking.class_id);
+          setBookedClasses(latestBookedClassIds);
+          
+          // Update classes to reflect the latest booking status
+          setClasses(prevClasses => 
+            prevClasses.map(cls => ({
+              ...cls,
+              isBooked: latestBookedClassIds.includes(cls.id)
+            }))
+          );
+        }
+        
+        // Force component refresh by toggling the needsRefresh flag
+        needsRefresh.current = true;
+        
+        toast({
+          title: "Class cancelled",
+          description: `You've successfully cancelled your ${className} class. The trainer has been notified.`,
+        });
+      } catch (err) {
+        console.error("Error refreshing data after cancellation:", err);
+        // Even if refresh fails, the cancellation was successful
+        toast({
+          title: "Class cancelled",
+          description: `Your booking was cancelled, but there was an issue refreshing the page data.`,
+        });
+      }
     } catch (err) {
       console.error("Error in handleCancelBooking:", err);
       toast({
