@@ -717,7 +717,7 @@ const ClassCalendar = () => {
     setSelectedClass(null);
   };
   
-  // Enhanced cancel booking function with proper data refreshing
+  // Enhanced cancel booking function for both tabs with guaranteed refresh
   const handleCancelBooking = async (classId: number, classTime: string, className: string) => {
     if (!user) return;
     
@@ -796,8 +796,10 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Use the helper function to cancel the booking
+      // Use the helper function to cancel the booking with improved logging
+      console.log(`Calling cancelClassBooking for user ${user.id}, class ${classId}`);
       const cancellationSuccess = await cancelClassBooking(user.id, classId);
+      console.log(`Cancellation success: ${cancellationSuccess}`);
       
       if (!cancellationSuccess) {
         throw new Error("Failed to cancel booking");
@@ -838,7 +840,10 @@ const ClassCalendar = () => {
           }
         }
         
-        // CRITICAL FIX: Get the latest booking data from server AFTER the cancellation
+        // Critical fix: Get the latest booking data from server AFTER the cancellation
+        // Add delay to ensure database has processed the deletion
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
         const { data: latestBookings, error: bookingsError } = await supabase
           .from('bookings')
           .select('class_id')
@@ -863,7 +868,8 @@ const ClassCalendar = () => {
           }))
         );
         
-        // Force component refresh by setting the needsRefresh flag
+        // Force component refresh through state update
+        setSelectedDate(new Date(selectedDate || new Date()));
         needsRefresh.current = true;
         
         toast({
@@ -872,6 +878,7 @@ const ClassCalendar = () => {
         });
       } catch (err) {
         console.error("Error refreshing data after cancellation:", err);
+        
         // Even if refresh fails, notify the user that the cancellation was successful 
         // but they may need to refresh
         toast({
@@ -879,10 +886,8 @@ const ClassCalendar = () => {
           description: `Your booking was cancelled, but there was an issue refreshing the page data.`,
         });
         
-        // Attempt to force a full data refresh on next render cycle
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        // Force a full page reload to get fresh data
+        window.location.reload();
       }
     } catch (err) {
       console.error("Error in handleCancelBooking:", err);
