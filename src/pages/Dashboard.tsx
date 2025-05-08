@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -78,12 +77,7 @@ const Dashboard = () => {
       
       // If we have profile data, use it
       if (profileData) {
-        console.log("Found profile data:", profileData);
-        if (profileData.sessions_remaining !== null && profileData.sessions_remaining !== undefined) {
-          setSessionsRemaining(Number(profileData.sessions_remaining));
-        } else {
-          setSessionsRemaining(0);
-        }
+        setSessionsRemaining(profileData.sessions_remaining ?? 0);
         setUserMembership(profileData.membership_type || "Basic");
       } else {
         // Try to get data from members table as fallback
@@ -96,16 +90,8 @@ const Dashboard = () => {
         if (memberError) throw memberError;
         
         if (memberData) {
-          console.log("Found member data:", memberData);
-          if (memberData.remaining_sessions !== null && memberData.remaining_sessions !== undefined) {
-            setSessionsRemaining(Number(memberData.remaining_sessions));
-          } else {
-            setSessionsRemaining(0);
-          }
+          setSessionsRemaining(memberData.remaining_sessions ?? 0);
           setUserMembership(memberData.membership || "Basic");
-        } else {
-          console.log("No user data found in either profiles or members tables");
-          setSessionsRemaining(0);
         }
       }
     } catch (error) {
@@ -115,7 +101,6 @@ const Dashboard = () => {
         description: "Please try refreshing the page.",
         variant: "destructive",
       });
-      setSessionsRemaining(0);
     } finally {
       setLoadingUserData(false);
     }
@@ -127,68 +112,50 @@ const Dashboard = () => {
     } else {
       fetchUserData();
     }
-  }, [isAuthenticated, isAdmin, navigate, user]);
+  }, [isAuthenticated, isAdmin, navigate, user, toast]);
 
   // Set up real-time subscription for session count changes
   useEffect(() => {
     if (!isAuthenticated || !user?.email) return;
     
-    console.log("Setting up real-time subscriptions for user:", user.email);
-    
     // Get the channel for the subscription
-    const memberChannel = supabase
-      .channel('member-sessions-changes')
+    const channel = supabase
+      .channel('sessions-changes')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
           table: 'members',
           filter: `email=eq.${user.email}`
         },
         (payload) => {
           console.log('Member data changed:', payload);
-          // Fix TypeScript errors with proper type checking
-          if (payload.new && typeof payload.new === 'object' && 'remaining_sessions' in payload.new) {
-            const newSessions = payload.new.remaining_sessions;
-            console.log("Updating sessions from member table to:", newSessions);
-            setSessionsRemaining(Number(newSessions));
+          if (payload.new && payload.new.remaining_sessions !== undefined) {
+            setSessionsRemaining(payload.new.remaining_sessions);
           }
         }
       )
-      .subscribe((status) => {
-        console.log("Member subscription status:", status);
-      });
-    
-    const profileChannel = supabase
-      .channel('profile-sessions-changes')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
           table: 'profiles',
           filter: `email=eq.${user.email}`
         },
         (payload) => {
           console.log('Profile data changed:', payload);
-          // Fix TypeScript errors with proper type checking
-          if (payload.new && typeof payload.new === 'object' && 'sessions_remaining' in payload.new) {
-            const newSessions = payload.new.sessions_remaining;
-            console.log("Updating sessions from profile table to:", newSessions);
-            setSessionsRemaining(Number(newSessions));
+          if (payload.new && payload.new.sessions_remaining !== undefined) {
+            setSessionsRemaining(payload.new.sessions_remaining);
           }
         }
       )
-      .subscribe((status) => {
-        console.log("Profile subscription status:", status);
-      });
+      .subscribe();
     
-    // Clean up the subscriptions on unmount
+    // Clean up the subscription on unmount
     return () => {
-      console.log("Cleaning up real-time subscriptions");
-      supabase.removeChannel(memberChannel);
-      supabase.removeChannel(profileChannel);
+      supabase.removeChannel(channel);
     };
   }, [isAuthenticated, user]);
 
