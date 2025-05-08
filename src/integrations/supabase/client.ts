@@ -162,7 +162,7 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
   }
 };
 
-// Fix the booking cancellation function to properly handle multiple bookings
+// Fix the booking cancellation function to properly handle bookings and return the actual result
 export const cancelClassBooking = async (userId: string, classId: number): Promise<boolean> => {
   try {
     console.log(`Cancelling booking for user ${userId}, class ${classId}`);

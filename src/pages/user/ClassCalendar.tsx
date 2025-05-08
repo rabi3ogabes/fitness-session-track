@@ -717,7 +717,7 @@ const ClassCalendar = () => {
     setSelectedClass(null);
   };
   
-  // Enhanced cancel booking function with better data sync
+  // Enhanced cancel booking function with proper data refreshing
   const handleCancelBooking = async (classId: number, classTime: string, className: string) => {
     if (!user) return;
     
@@ -838,28 +838,32 @@ const ClassCalendar = () => {
           }
         }
         
-        // Get the latest booking data from server
-        const { data: latestBookings } = await supabase
+        // CRITICAL FIX: Get the latest booking data from server AFTER the cancellation
+        const { data: latestBookings, error: bookingsError } = await supabase
           .from('bookings')
           .select('class_id')
           .eq('user_id', user.id)
           .eq('status', 'confirmed');
         
-        // Update bookedClasses with the latest data from server
-        if (latestBookings) {
-          const latestBookedClassIds = latestBookings.map(booking => booking.class_id);
-          setBookedClasses(latestBookedClassIds);
-          
-          // Update classes to reflect the latest booking status
-          setClasses(prevClasses => 
-            prevClasses.map(cls => ({
-              ...cls,
-              isBooked: latestBookedClassIds.includes(cls.id)
-            }))
-          );
+        if (bookingsError) {
+          console.error("Error refreshing booking data:", bookingsError);
+          throw bookingsError;
         }
         
-        // Force component refresh by toggling the needsRefresh flag
+        // Update bookedClasses with the latest data from server
+        const latestBookedClassIds = latestBookings?.map(booking => booking.class_id) || [];
+        console.log("Latest booked classes from server after cancellation:", latestBookedClassIds);
+        setBookedClasses(latestBookedClassIds);
+        
+        // Update classes to reflect the latest booking status
+        setClasses(prevClasses => 
+          prevClasses.map(cls => ({
+            ...cls,
+            isBooked: latestBookedClassIds.includes(cls.id)
+          }))
+        );
+        
+        // Force component refresh by setting the needsRefresh flag
         needsRefresh.current = true;
         
         toast({
@@ -868,11 +872,17 @@ const ClassCalendar = () => {
         });
       } catch (err) {
         console.error("Error refreshing data after cancellation:", err);
-        // Even if refresh fails, the cancellation was successful
+        // Even if refresh fails, notify the user that the cancellation was successful 
+        // but they may need to refresh
         toast({
           title: "Class cancelled",
           description: `Your booking was cancelled, but there was an issue refreshing the page data.`,
         });
+        
+        // Attempt to force a full data refresh on next render cycle
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       }
     } catch (err) {
       console.error("Error in handleCancelBooking:", err);
@@ -883,7 +893,7 @@ const ClassCalendar = () => {
       });
     }
   };
-
+  
   // Also fix isPastCancellationWindow function in "My Bookings" tab
   const isPastCancellationWindow = (cls: ClassWithBooking) => {
     if (!cls.start_time) return false;
