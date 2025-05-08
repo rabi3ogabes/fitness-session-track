@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -147,9 +148,11 @@ const Dashboard = () => {
         },
         (payload) => {
           console.log('Member data changed:', payload);
-          if (payload.new && payload.new.remaining_sessions !== undefined) {
-            console.log("Updating sessions from member table to:", payload.new.remaining_sessions);
-            setSessionsRemaining(Number(payload.new.remaining_sessions));
+          // Fix TypeScript errors with proper type checking
+          if (payload.new && typeof payload.new === 'object' && 'remaining_sessions' in payload.new) {
+            const newSessions = payload.new.remaining_sessions;
+            console.log("Updating sessions from member table to:", newSessions);
+            setSessionsRemaining(Number(newSessions));
           }
         }
       )
@@ -169,9 +172,11 @@ const Dashboard = () => {
         },
         (payload) => {
           console.log('Profile data changed:', payload);
-          if (payload.new && payload.new.sessions_remaining !== undefined) {
-            console.log("Updating sessions from profile table to:", payload.new.sessions_remaining);
-            setSessionsRemaining(Number(payload.new.sessions_remaining));
+          // Fix TypeScript errors with proper type checking
+          if (payload.new && typeof payload.new === 'object' && 'sessions_remaining' in payload.new) {
+            const newSessions = payload.new.sessions_remaining;
+            console.log("Updating sessions from profile table to:", newSessions);
+            setSessionsRemaining(Number(newSessions));
           }
         }
       )
