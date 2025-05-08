@@ -162,12 +162,35 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
   }
 };
 
-// Add a new helper function to directly cancel a booking - FIXED
+// Add a new helper function to directly cancel a booking - IMPROVED WITH BETTER ERROR HANDLING
 export const cancelClassBooking = async (userId: string, classId: number): Promise<boolean> => {
   try {
     console.log(`Cancelling booking for user ${userId}, class ${classId}`);
     
-    // First get the class details to update the enrolled count
+    // First check if the booking exists to prevent errors when trying to cancel non-existent bookings
+    const { data: bookingExists, error: checkError } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('class_id', classId)
+      .single();
+    
+    if (checkError) {
+      console.error("Error checking booking existence:", checkError);
+      // If PGRST116, it means no booking was found
+      if (checkError.code === 'PGRST116') {
+        console.log("No booking found to cancel");
+        return false;
+      }
+      throw checkError;
+    }
+    
+    if (!bookingExists) {
+      console.log("No booking found to cancel");
+      return false;
+    }
+    
+    // Get the class details first to update the enrolled count correctly
     const { data: classData, error: classError } = await supabase
       .from('classes')
       .select('enrolled')

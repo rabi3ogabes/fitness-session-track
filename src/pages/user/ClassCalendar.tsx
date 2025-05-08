@@ -836,14 +836,37 @@ const ClassCalendar = () => {
         }
       }
       
-      // Set the flag to refresh data on next render cycle
+      // Force a refresh of booking data by setting needsRefresh flag
       needsRefresh.current = true;
       
-      // Force a re-render by setting a temporary loading state
-      setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 300);
+      // Force immediate refresh of data
+      const fetchLatestBookings = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('bookings')
+            .select('class_id')
+            .eq('user_id', user.id)
+            .eq('status', 'confirmed');
+          
+          if (!error && data) {
+            const latestBookedClassIds = data.map(booking => booking.class_id);
+            setBookedClasses(latestBookedClassIds);
+            
+            // Update classes to reflect the latest booking status
+            setClasses(prevClasses => 
+              prevClasses.map(cls => ({
+                ...cls,
+                isBooked: latestBookedClassIds.includes(cls.id)
+              }))
+            );
+          }
+        } catch (err) {
+          console.error("Error refreshing bookings after cancellation:", err);
+        }
+      };
+      
+      // Execute immediate refresh
+      await fetchLatestBookings();
       
       toast({
         title: "Class cancelled",
@@ -920,10 +943,10 @@ const ClassCalendar = () => {
   
   const allClasses = getClassesByDate();
   
-  // FIX: Combine both booking indicators to correctly identify booked classes
-  const myBookedClasses = allClasses.filter(cls => {
-    return cls.isBooked === true || bookedClasses.includes(cls.id);
-  });
+  // Fix: Correctly identify booked classes using both indicators
+  const myBookedClasses = allClasses.filter(cls => 
+    cls.isBooked === true || bookedClasses.includes(cls.id)
+  );
   
   // Get classes for the selected date
   const classesForSelectedDate = selectedDate 
