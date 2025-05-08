@@ -1259,16 +1259,32 @@ const ClassCalendar = () => {
               </div>
               
               <div className="text-sm text-gray-600">
-                <p>If you need to cancel this booking, please go to the "My Bookings" tab.</p>
+                <p>If you need to cancel this booking, you can do it right here or go to the "My Bookings" tab.</p>
               </div>
               
-              <DialogFooter>
+              <DialogFooter className="flex sm:justify-between">
                 <Button 
+                  variant="outline" 
                   onClick={cancelBookingConfirmation}
-                  className="w-full sm:w-auto"
                 >
-                  Cancel
+                  Close
                 </Button>
+                {selectedClass && (
+                  <Button 
+                    onClick={() => {
+                      setConfirmDialogOpen(false);
+                      if (selectedClass) {
+                        handleCancelBooking(selectedClass.id, selectedClass.start_time || '', selectedClass.name);
+                      }
+                    }}
+                    variant="destructive"
+                    size="sm"
+                    className="text-white"
+                    disabled={selectedClass ? isPastCancellationWindow(selectedClass) : false}
+                  >
+                    Cancel Session
+                  </Button>
+                )}
               </DialogFooter>
             </div>
           ) : (
