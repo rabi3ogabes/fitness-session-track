@@ -163,45 +163,87 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
   }
 };
 
-// Add a new helper function to directly cancel a booking
+// Enhanced cancelClassBooking function with better error handling and debugging
 export const cancelClassBooking = async (userId: string, classId: number): Promise<boolean> => {
-  // First delete the booking
-  const { error: deleteError } = await supabase
-    .from('bookings')
-    .delete()
-    .eq('user_id', userId)
-    .eq('class_id', classId);
-  
-  if (deleteError) {
-    console.error("Error deleting booking:", deleteError);
+  if (!userId || !classId) {
+    console.error("Invalid userId or classId:", { userId, classId });
     return false;
   }
   
-  // Then get the class details to update the enrolled count
-  const { data: classData, error: classError } = await supabase
-    .from('classes')
-    .select('enrolled')
-    .eq('id', classId)
-    .single();
+  console.log(`Attempting to cancel booking: user=${userId}, class=${classId}`);
   
-  if (classError || !classData) {
-    console.error("Error getting class data:", classError);
-    return true; // Return true anyway since the booking was deleted
-  }
-  
-  // Update the enrolled count if it's greater than 0
-  if (classData.enrolled && classData.enrolled > 0) {
-    const { error: updateError } = await supabase
-      .from('classes')
-      .update({ enrolled: classData.enrolled - 1 })
-      .eq('id', classId);
+  try {
+    // First check if the booking exists
+    const { data: bookingData, error: bookingCheckError } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('class_id', classId)
+      .maybeSingle();
     
-    if (updateError) {
-      console.error("Error updating class enrolled count:", updateError);
-      // The booking was deleted but the enrolled count wasn't updated
-      return true;
+    if (bookingCheckError) {
+      console.error("Error checking booking existence:", bookingCheckError);
+      return false;
     }
+    
+    if (!bookingData) {
+      console.warn("Booking not found for cancellation:", { userId, classId });
+      return false;
+    }
+    
+    console.log("Found booking to cancel:", bookingData);
+    
+    // Delete the booking
+    const { error: deleteError } = await supabase
+      .from('bookings')
+      .delete()
+      .eq('user_id', userId)
+      .eq('class_id', classId);
+    
+    if (deleteError) {
+      console.error("Error deleting booking:", deleteError);
+      return false;
+    }
+    
+    console.log("Successfully deleted booking");
+    
+    // Get the class details to update the enrolled count
+    const { data: classData, error: classError } = await supabase
+      .from('classes')
+      .select('enrolled')
+      .eq('id', classId)
+      .single();
+    
+    if (classError || !classData) {
+      console.error("Error getting class data:", classError);
+      console.warn("Booking was deleted but class data couldn't be updated");
+      return true; // Return true since the booking was deleted
+    }
+    
+    // Update the enrolled count if it's greater than 0
+    if (classData.enrolled && classData.enrolled > 0) {
+      const { error: updateError } = await supabase
+        .from('classes')
+        .update({ enrolled: classData.enrolled - 1 })
+        .eq('id', classId);
+      
+      if (updateError) {
+        console.error("Error updating class enrolled count:", updateError);
+        console.warn("Booking was deleted but enrolled count wasn't updated");
+        // The booking was deleted but the enrolled count wasn't updated
+        return true;
+      }
+      
+      console.log("Successfully updated class enrolled count:", { 
+        classId, 
+        oldCount: classData.enrolled, 
+        newCount: classData.enrolled - 1 
+      });
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Unexpected error during booking cancellation:", error);
+    return false;
   }
-  
-  return true;
 };

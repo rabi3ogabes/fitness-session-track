@@ -332,7 +332,7 @@ const ClassCalendar = () => {
     fetchUserData();
   }, [user, isNetworkConnected]);
   
-  // Fetch classes from Supabase
+  // Fetch classes from Supabase - enhanced with better error handling and logging
   useEffect(() => {
     const fetchClasses = async () => {
       setIsLoading(true);
@@ -350,6 +350,7 @@ const ClassCalendar = () => {
         setError(null);
         
         try {
+          console.log("Fetching classes from Supabase...");
           const { data, error } = await supabase
             .from('classes')
             .select('*')
@@ -360,6 +361,8 @@ const ClassCalendar = () => {
             console.error("Error fetching classes:", error);
             throw error;
           }
+          
+          console.log("Classes fetched successfully:", data?.length || 0);
           
           if (data && data.length > 0) {
             // Transform and add type property based on class name or difficulty
@@ -402,7 +405,7 @@ const ClassCalendar = () => {
     fetchClasses();
   }, [isNetworkConnected, pendingRefresh.current]);
   
-  // Fetch user bookings from Supabase
+  // Fetch user bookings from Supabase - enhanced with better error handling
   useEffect(() => {
     const fetchBookings = async () => {
       if (!user) return;
@@ -430,6 +433,7 @@ const ClassCalendar = () => {
         }
         
         try {
+          console.log("Fetching user bookings...");
           // Use the latest data from the server, not cached data
           const { data, error } = await supabase
             .from('bookings')
@@ -715,7 +719,7 @@ const ClassCalendar = () => {
     setSelectedClass(null);
   };
   
-  // Enhanced cancel booking function with better data sync
+  // Enhanced cancel booking function with better error handling and feedback
   const handleCancelBooking = async (classId: number, classTime: string, className: string) => {
     if (!user) return;
     
@@ -743,9 +747,13 @@ const ClassCalendar = () => {
       // Calculate hours difference correctly
       const hoursDifference = (classDate.getTime() - now.getTime()) / (1000 * 60 * 60);
       
-      console.log("Class date:", classDate);
-      console.log("Current time:", now);
-      console.log("Hours difference:", hoursDifference);
+      console.log("Class cancellation request:", {
+        classId,
+        className,
+        classDate: classDate.toISOString(), 
+        currentTime: now.toISOString(),
+        hoursDifference
+      });
       
       if (hoursDifference < systemSettings.cancellationTimeLimit) {
         toast({
@@ -793,11 +801,21 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Use the helper function to cancel the booking
+      toast({
+        title: "Processing cancellation...",
+        description: `Cancelling your ${className} class.`,
+      });
+      
+      // Use the enhanced cancelClassBooking function
       const cancellationSuccess = await cancelClassBooking(user.id, classId);
       
       if (!cancellationSuccess) {
-        throw new Error("Failed to cancel booking");
+        toast({
+          title: "Failed to cancel booking",
+          description: "There was an error cancelling your booking. Please try again.",
+          variant: "destructive"
+        });
+        return;
       }
       
       // Update local state immediately to show the cancellation
