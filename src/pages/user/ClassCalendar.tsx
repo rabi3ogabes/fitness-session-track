@@ -717,13 +717,13 @@ const ClassCalendar = () => {
     setSelectedClass(null);
   };
   
-  // Enhanced cancel booking function for both tabs with guaranteed refresh and better error handling
+  // Improved function to handle booking cancellation with better error handling
   const handleCancelBooking = async (classId: number, classTime: string, className: string) => {
     if (!user) return;
     
     try {
-      // Show a loading toast to indicate cancellation is in progress
-      toast({
+      // Show loading toast
+      const loadingToast = toast({
         title: "Cancelling booking...",
         description: "Please wait while we process your cancellation request",
       });
@@ -766,33 +766,37 @@ const ClassCalendar = () => {
       }
       
       // Special handling for demo user
-      if (user.id === "demo-user-id") {
-        // Simulate successful cancellation for demo user
-        setBookedClasses(prevBookedClasses => prevBookedClasses.filter(id => id !== classId));
+      if (user.id === "demo-user-id" || !isNetworkConnected) {
+        // Demo mode logic - simulate cancellation
+        setTimeout(() => {
+          setBookedClasses(prevBookedClasses => prevBookedClasses.filter(id => id !== classId));
+          
+          // Update classes to remove booked status and decrease enrolled count
+          setClasses(prevClasses => 
+            prevClasses.map(cls => ({
+              ...cls,
+              isBooked: cls.id === classId ? false : cls.isBooked,
+              enrolled: cls.id === classId && cls.enrolled ? cls.enrolled - 1 : cls.enrolled
+            }))
+          );
+          
+          // Update user sessions
+          const newRemainingSession = userData.remainingSessions + 1;
+          setUserData({
+            ...userData,
+            remainingSessions: newRemainingSession
+          });
+          
+          toast({
+            title: "Class cancelled (Demo)",
+            description: `You've successfully cancelled your ${className} class in demo mode.`,
+          });
+        }, 1000);
         
-        // Update classes to remove booked status and decrease enrolled count
-        setClasses(prevClasses => 
-          prevClasses.map(cls => ({
-            ...cls,
-            isBooked: cls.id === classId ? false : cls.isBooked,
-            enrolled: cls.id === classId && cls.enrolled ? cls.enrolled - 1 : cls.enrolled
-          }))
-        );
-        
-        // Update user sessions for demo
-        const newRemainingSession = userData.remainingSessions + 1;
-        setUserData({
-          ...userData,
-          remainingSessions: newRemainingSession
-        });
-        
-        toast({
-          title: "Class cancelled (Demo)",
-          description: `You've successfully cancelled your ${className} class in demo mode.`,
-        });
         return;
       }
       
+      // Check network connection
       if (!isNetworkConnected) {
         toast({
           title: "You're offline",
@@ -802,7 +806,7 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Use the helper function to cancel the booking with improved logging
+      // Use the improved cancelClassBooking utility function
       console.log(`[handleCancelBooking] Calling cancelClassBooking for user ${user.id}, class ${classId}`);
       const cancellationSuccess = await cancelClassBooking(user.id, classId);
       console.log(`[handleCancelBooking] Cancellation result: ${cancellationSuccess}`);
@@ -816,7 +820,7 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Immediate UI update before database sync
+      // Immediate UI update
       setBookedClasses(prevBookedClasses => prevBookedClasses.filter(id => id !== classId));
       
       // Update classes to remove booked status and decrease enrolled count
@@ -829,48 +833,40 @@ const ClassCalendar = () => {
       );
       
       // Update user sessions
-      if (user) {
-        const newRemainingSession = userData.remainingSessions + 1;
-        try {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ 
-              sessions_remaining: newRemainingSession
-            })
-            .eq('id', user.id);
-          
-          if (profileError) {
-            console.error("[handleCancelBooking] Error updating user sessions:", profileError);
-          } else {
-            // Update local state for user data
-            setUserData({
-              ...userData,
-              remainingSessions: newRemainingSession
-            });
-          }
-        } catch (err) {
-          console.error("[handleCancelBooking] Error updating profile:", err);
+      const newRemainingSession = userData.remainingSessions + 1;
+      try {
+        // Update user profile in Supabase
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ 
+            sessions_remaining: newRemainingSession
+          })
+          .eq('id', user.id);
+        
+        if (profileError) {
+          console.error("[handleCancelBooking] Error updating user sessions:", profileError);
+        } else {
+          // Update local state for user data
+          setUserData({
+            ...userData,
+            remainingSessions: newRemainingSession
+          });
         }
+      } catch (err) {
+        console.error("[handleCancelBooking] Error updating profile:", err);
       }
       
-      // Delay before showing success message to allow database operations to complete
+      // Force a refresh of the data after a small delay
       setTimeout(() => {
-        // Ensure the database is updated with the changes
         needsRefresh.current = true;
-        setRetrying(prevState => !prevState); // Toggle to trigger a re-fetch
+        setRetrying(prevState => !prevState);
         
         toast({
           title: "Class cancelled",
           description: `You've successfully cancelled your ${className} class.`,
         });
-      }, 800);
+      }, 500);
       
-      // Force additional refreshes to ensure UI is updated
-      setTimeout(() => {
-        // This will force the useEffect to run again and fetch fresh data
-        needsRefresh.current = true;
-        setRetrying(prevState => !prevState);
-      }, 1500);
     } catch (err) {
       console.error("[handleCancelBooking] Error in handleCancelBooking:", err);
       toast({

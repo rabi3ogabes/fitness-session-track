@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -135,14 +134,54 @@ export const CalendarSection = ({
     setBookingDialogOpen(false);
   };
 
-  const handleCancelBooking = () => {
-    // Handle cancellation logic here
+  const handleCancelBooking = async () => {
+    if (!user || !selectedClassId) {
+      toast({
+        title: "Error",
+        description: "Unable to identify the booking to cancel.",
+        variant: "destructive"
+      });
+      setBookingDialogOpen(false);
+      return;
+    }
+    
+    // Show loading toast
     toast({
-      title: "Booking cancelled",
-      description: "Your booking has been cancelled successfully.",
-      variant: "default"
+      title: "Processing cancellation",
+      description: "Please wait while we cancel your booking...",
     });
-    setBookingDialogOpen(false);
+    
+    try {
+      // Cancel the booking using the Supabase client utility
+      const success = await cancelClassBooking(user.id, selectedClassId);
+      
+      if (success) {
+        // Update local state to reflect the cancellation
+        setBookedClasses(prev => prev.filter(id => id !== selectedClassId));
+        
+        toast({
+          title: "Booking cancelled",
+          description: "Your booking has been cancelled successfully.",
+          variant: "default"
+        });
+      } else {
+        // Show error message
+        toast({
+          title: "Failed to cancel booking",
+          description: "Please try again later or contact support if the issue persists.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error cancelling booking:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while cancelling your booking.",
+        variant: "destructive"
+      });
+    } finally {
+      setBookingDialogOpen(false);
+    }
   };
   
   return (
