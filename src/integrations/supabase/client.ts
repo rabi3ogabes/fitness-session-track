@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -173,27 +172,26 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
   console.log(`Attempting to cancel booking: user=${userId}, class=${classId}`);
   
   try {
-    // First check if the booking exists
+    // First check if the booking exists - FIXED: Use regular select instead of maybeSingle
     const { data: bookingData, error: bookingCheckError } = await supabase
       .from('bookings')
       .select('*')
       .eq('user_id', userId)
-      .eq('class_id', classId)
-      .maybeSingle();
+      .eq('class_id', classId);
     
     if (bookingCheckError) {
       console.error("Error checking booking existence:", bookingCheckError);
       return false;
     }
     
-    if (!bookingData) {
+    if (!bookingData || bookingData.length === 0) {
       console.warn("Booking not found for cancellation:", { userId, classId });
       return false;
     }
     
-    console.log("Found booking to cancel:", bookingData);
+    console.log("Found booking(s) to cancel:", bookingData);
     
-    // Delete the booking
+    // Delete the booking(s) - works for single or multiple bookings
     const { error: deleteError } = await supabase
       .from('bookings')
       .delete()
@@ -205,7 +203,7 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
       return false;
     }
     
-    console.log("Successfully deleted booking");
+    console.log("Successfully deleted booking(s)");
     
     // Get the class details to update the enrolled count
     const { data: classData, error: classError } = await supabase
@@ -221,10 +219,16 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
     }
     
     // Update the enrolled count if it's greater than 0
+    // FIXED: Reduce enrolled count by the number of bookings that were deleted
+    const bookingsCount = bookingData.length;
+    
     if (classData.enrolled && classData.enrolled > 0) {
+      // Ensure we don't set enrolled to a negative value
+      const newEnrolledCount = Math.max(0, classData.enrolled - bookingsCount);
+      
       const { error: updateError } = await supabase
         .from('classes')
-        .update({ enrolled: classData.enrolled - 1 })
+        .update({ enrolled: newEnrolledCount })
         .eq('id', classId);
       
       if (updateError) {
@@ -237,7 +241,8 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
       console.log("Successfully updated class enrolled count:", { 
         classId, 
         oldCount: classData.enrolled, 
-        newCount: classData.enrolled - 1 
+        newCount: newEnrolledCount,
+        bookingsRemoved: bookingsCount
       });
     }
     
