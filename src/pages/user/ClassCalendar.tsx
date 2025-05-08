@@ -217,7 +217,7 @@ const ClassCalendar = () => {
   const [activeTab, setActiveTab] = useState("weekView");
   const [isClassAlreadyBooked, setIsClassAlreadyBooked] = useState(false);
   
-  // Use refreshTrigger with a numeric value to force re-fetching data
+  // Replace pendingRefresh ref with a state variable that will trigger re-renders
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const { toast } = useToast();
@@ -332,7 +332,7 @@ const ClassCalendar = () => {
     fetchUserData();
   }, [user, isNetworkConnected]);
   
-  // Fetch classes from Supabase - enhanced with refreshTrigger dependency
+  // Fetch classes from Supabase - enhanced with better error handling and logging
   useEffect(() => {
     const fetchClasses = async () => {
       setIsLoading(true);
@@ -404,7 +404,7 @@ const ClassCalendar = () => {
     fetchClasses();
   }, [isNetworkConnected, refreshTrigger]);
   
-  // Fetch user bookings from Supabase - enhanced with refreshTrigger dependency
+  // Fetch user bookings from Supabase - enhanced with better error handling
   useEffect(() => {
     const fetchBookings = async () => {
       if (!user) return;
@@ -433,14 +433,12 @@ const ClassCalendar = () => {
         
         try {
           console.log("Fetching user bookings...");
-          // Add cache-busting parameter to force fresh data
-          const timestamp = new Date().getTime();
+          // Use the latest data from the server, not cached data
           const { data, error } = await supabase
             .from('bookings')
             .select('class_id')
             .eq('user_id', user.id)
-            .eq('status', 'confirmed')
-            .order('class_id', { ascending: true });
+            .eq('status', 'confirmed');
           
           if (error) {
             console.error("Error fetching bookings:", error);
@@ -449,7 +447,6 @@ const ClassCalendar = () => {
           
           if (data && data.length > 0) {
             const bookedClassIds = data.map(booking => booking.class_id);
-            console.log("Bookings fetched:", bookedClassIds);
             setBookedClasses(bookedClassIds);
             
             // Mark booked classes in the classes array
@@ -721,7 +718,7 @@ const ClassCalendar = () => {
     setSelectedClass(null);
   };
   
-  // Enhanced cancel booking function with better refresh handling
+  // Enhanced cancel booking function with better error handling and feedback
   const handleCancelBooking = async (classId: number, classTime: string, className: string) => {
     if (!user) return;
     
@@ -853,7 +850,7 @@ const ClassCalendar = () => {
         }
       }
       
-      // Force a fresh data fetch after successful cancellation
+      // IMPORTANT: Trigger a fresh data fetch after successful cancellation
       // This ensures the UI reflects the actual state in the database
       setRefreshTrigger(prev => prev + 1);
       
