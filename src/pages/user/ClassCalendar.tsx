@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Calendar } from "@/components/ui/calendar";
 import { format, isSameDay, parseISO, isAfter, addWeeks, startOfWeek, endOfWeek, eachDayOfInterval, addDays, isToday } from "date-fns";
@@ -215,7 +215,11 @@ const ClassCalendar = () => {
   const [retrying, setRetrying] = useState(false);
   const [isNetworkConnected, setIsNetworkConnected] = useState(true);
   const [activeTab, setActiveTab] = useState("weekView");
+  const [isClassAlreadyBooked, setIsClassAlreadyBooked] = useState(false);
   
+  // Ref to track if we need to refresh data after a cancellation
+  const pendingRefresh = useRef(false);
+
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -378,6 +382,7 @@ const ClassCalendar = () => {
             });
             
             setClasses(classesWithType);
+            pendingRefresh.current = false;
           } else {
             // Fallback to demo data if no classes returned
             setClasses(DEMO_CLASSES);
@@ -395,7 +400,7 @@ const ClassCalendar = () => {
     };
     
     fetchClasses();
-  }, [isNetworkConnected]);
+  }, [isNetworkConnected, pendingRefresh.current]);
   
   // Fetch user bookings from Supabase
   useEffect(() => {
@@ -479,7 +484,7 @@ const ClassCalendar = () => {
     };
     
     fetchBookings();
-  }, [user, isNetworkConnected]);
+  }, [user, isNetworkConnected, pendingRefresh.current]);
   
   // Function to highlight dates with classes
   const isDayWithClass = (date: Date) => {
@@ -710,7 +715,7 @@ const ClassCalendar = () => {
     setSelectedClass(null);
   };
   
-  // FIX: Updated the handleCancelBooking function to properly handle cancellations
+  // Enhanced cancel booking function with better data sync
   const handleCancelBooking = async (classId: number, classTime: string, className: string) => {
     if (!user) return;
     
@@ -788,15 +793,15 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Use the new helper function to cancel the booking
+      // Use the helper function to cancel the booking
       const cancellationSuccess = await cancelClassBooking(user.id, classId);
       
       if (!cancellationSuccess) {
         throw new Error("Failed to cancel booking");
       }
       
-      // Update local state
-      setBookedClasses(bookedClasses.filter(id => id !== classId));
+      // Update local state immediately to show the cancellation
+      setBookedClasses(prevBookedClasses => prevBookedClasses.filter(id => id !== classId));
       
       // Update classes to remove booked status and decrease enrolled count
       setClasses(prevClasses => 
@@ -827,6 +832,9 @@ const ClassCalendar = () => {
           });
         }
       }
+      
+      // Set the flag to refresh data on next render cycle
+      pendingRefresh.current = true;
       
       toast({
         title: "Class cancelled",
