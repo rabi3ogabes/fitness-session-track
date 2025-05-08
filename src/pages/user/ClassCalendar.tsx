@@ -717,7 +717,7 @@ const ClassCalendar = () => {
     setSelectedClass(null);
   };
   
-  // Enhanced cancel booking function for both tabs with guaranteed refresh
+  // Enhanced cancel booking function for both tabs with guaranteed refresh and better error handling
   const handleCancelBooking = async (classId: number, classTime: string, className: string) => {
     if (!user) return;
     
@@ -796,6 +796,12 @@ const ClassCalendar = () => {
         return;
       }
       
+      // Show cancellation in progress indicator
+      toast({
+        title: "Cancelling booking...",
+        description: "Please wait while we process your cancellation."
+      });
+      
       // Use the helper function to cancel the booking with improved logging
       console.log(`Calling cancelClassBooking for user ${user.id}, class ${classId}`);
       const cancellationSuccess = await cancelClassBooking(user.id, classId);
@@ -840,10 +846,11 @@ const ClassCalendar = () => {
           }
         }
         
-        // Critical fix: Get the latest booking data from server AFTER the cancellation
-        // Add delay to ensure database has processed the deletion
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // CRITICAL FIX: Add a longer delay before checking for booking status
+        // This ensures the database has fully processed the deletion
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
+        // Critical fix: Get the latest booking data from server AFTER the cancellation
         const { data: latestBookings, error: bookingsError } = await supabase
           .from('bookings')
           .select('class_id')
@@ -876,6 +883,18 @@ const ClassCalendar = () => {
           title: "Class cancelled",
           description: `You've successfully cancelled your ${className} class. The trainer has been notified.`,
         });
+        
+        // Trigger an immediate data refresh to ensure UI is up-to-date
+        setTimeout(() => {
+          // This will force the useEffect to run again and fetch fresh data
+          setRetrying(true);
+          setTimeout(() => {
+            setRetrying(false);
+            // Final state reset to trigger data refresh
+            needsRefresh.current = true;
+          }, 300);
+        }, 500);
+        
       } catch (err) {
         console.error("Error refreshing data after cancellation:", err);
         
@@ -898,7 +917,7 @@ const ClassCalendar = () => {
       });
     }
   };
-  
+
   // Also fix isPastCancellationWindow function in "My Bookings" tab
   const isPastCancellationWindow = (cls: ClassWithBooking) => {
     if (!cls.start_time) return false;

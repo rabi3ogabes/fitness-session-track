@@ -162,7 +162,7 @@ export const cacheDataForOffline = (entityName: string, data: any) => {
   }
 };
 
-// Fixed booking cancellation function with proper transaction handling
+// Fixed booking cancellation function with more robust error handling and verification
 export const cancelClassBooking = async (userId: string, classId: number): Promise<boolean> => {
   try {
     console.log(`Cancelling booking for user ${userId}, class ${classId}`);
@@ -198,24 +198,26 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
       throw classError;
     }
     
-    // Use a more reliable approach: perform each operation separately with explicit error handling
-    
-    // 1. Delete the booking(s)
-    console.log(`Attempting to delete booking(s) for user ${userId}, class ${classId}`);
-    const { error: deleteError } = await supabase
-      .from('bookings')
-      .delete()
-      .eq('user_id', userId)
-      .eq('class_id', classId);
-  
-    if (deleteError) {
-      console.error("Error deleting booking:", deleteError);
-      throw deleteError;
+    // First, attempt to delete by using the specific booking IDs rather than filters
+    // This is more reliable because we're targeting exact records
+    for (const booking of bookings) {
+      console.log(`Attempting to delete booking ID: ${booking.id}`);
+      const { error: deleteError } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', booking.id);
+      
+      if (deleteError) {
+        console.error(`Error deleting booking ID ${booking.id}:`, deleteError);
+        throw deleteError;
+      }
+      
+      console.log(`Successfully deleted booking ID: ${booking.id}`);
     }
   
     console.log(`Successfully deleted ${bookings.length} booking(s)`);
     
-    // 2. Update the enrolled count if it's greater than 0
+    // Update the enrolled count if it's greater than 0
     if (classData && classData.enrolled && classData.enrolled > 0) {
       // Decrease by the number of bookings deleted (typically 1)
       const newEnrolledCount = Math.max(0, classData.enrolled - bookings.length);
@@ -236,6 +238,9 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
     }
     
     // Final verification - check if the booking was actually deleted
+    // Add delay to ensure the database has processed the deletion
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     const { data: verifyBookings, error: verifyError } = await supabase
       .from('bookings')
       .select('id')
@@ -244,13 +249,39 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
       
     if (verifyError) {
       console.error("Error verifying booking deletion:", verifyError);
-    } else if (verifyBookings && verifyBookings.length > 0) {
-      console.error("Booking still exists after delete operation!");
       return false;
-    } else {
-      console.log("Verified booking was deleted successfully");
     }
     
+    if (verifyBookings && verifyBookings.length > 0) {
+      console.error("Booking still exists after delete operation!");
+      
+      // Last resort: Try one more time with direct filter deletion
+      console.log("Attempting final delete operation with filters");
+      const { error: finalDeleteError } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('user_id', userId)
+        .eq('class_id', classId);
+        
+      if (finalDeleteError) {
+        console.error("Final delete attempt failed:", finalDeleteError);
+        return false;
+      }
+      
+      // Check once more
+      const { data: finalVerifyBookings } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('class_id', classId);
+        
+      if (finalVerifyBookings && finalVerifyBookings.length > 0) {
+        console.error("Booking could not be deleted after multiple attempts");
+        return false;
+      }
+    }
+    
+    console.log("Verified booking was deleted successfully");
     return true;
   } catch (err) {
     console.error("Error in cancelClassBooking:", err);
