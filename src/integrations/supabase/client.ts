@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -172,7 +173,7 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
   console.log(`Attempting to cancel booking: user=${userId}, class=${classId}`);
   
   try {
-    // First check if the booking exists - FIXED: Use regular select instead of maybeSingle
+    // First check if the booking exists
     const { data: bookingData, error: bookingCheckError } = await supabase
       .from('bookings')
       .select('*')
