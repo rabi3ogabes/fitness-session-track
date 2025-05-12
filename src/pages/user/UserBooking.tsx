@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingForm from "@/components/BookingForm";
@@ -53,7 +54,7 @@ interface DecrementClassEnrollmentParams {
   class_id: number;
 }
 
-// Define a proper type for the RPC parameter
+// Define a proper type for the RPC parameter - ensuring consistency with TrainerDashboard
 type RPCParams = Record<string, any>;
 
 const UserBooking = () => {
@@ -211,7 +212,7 @@ const UserBooking = () => {
           .single();
           
         if (!classError) {
-          // Fix the type error by using a properly typed parameter object
+          // Use an explicit type for the RPC parameters to fix the "never" type error
           const params: RPCParams = { class_id: classId };
           await supabase.rpc('decrement_class_enrollment', params);
         }

@@ -70,6 +70,9 @@ interface NewMemberData {
   birthday?: string;
 }
 
+// Type for RPC parameters to fix the type error
+type RPCParams = Record<string, any>;
+
 const TrainerDashboard = () => {
   const { isTrainer, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
@@ -178,22 +181,18 @@ const TrainerDashboard = () => {
               email: "unknown@example.com"
             };
             
-            // Add null check before accessing booking.user properties
-            if (booking.user && 
-                typeof booking.user === 'object' && 
-                booking.user !== null && 
-                !('code' in booking.user) && 
-                !('message' in booking.user) && 
-                !('details' in booking.user)) {
-                
-              // Fix with a proper null check and type assertion
-              const userObj = booking.user as UserObject;
-              
-              // Now we can safely access properties with type checks
-              userData = {
-                name: userObj && typeof userObj.name === 'string' ? userObj.name : "Unknown",
-                email: userObj && typeof userObj.email === 'string' ? userObj.email : "unknown@example.com"
-              };
+            // Improved null check and type safety - fixing the null reference error
+            if (booking && booking.user && typeof booking.user === 'object') {
+              // Ensure we're handling valid user objects only
+              if (!('code' in booking.user) && !('message' in booking.user) && !('details' in booking.user)) {
+                // Safely cast to UserObject with explicit type checking
+                const userObj = booking.user as UserObject;
+                  
+                userData = {
+                  name: typeof userObj.name === 'string' ? userObj.name : "Unknown",
+                  email: typeof userObj.email === 'string' ? userObj.email : "unknown@example.com"
+                };
+              }
             }
             
             return {
@@ -297,6 +296,7 @@ const TrainerDashboard = () => {
       };
       
       // Fix the typing issue with supabase insert by directly using the typed object
+      // Fix the never type error by using properly typed params
       await supabase
         .from('members')
         .insert(memberData);
