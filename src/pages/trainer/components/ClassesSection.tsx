@@ -5,9 +5,11 @@ import { ChevronLeft, ChevronRight, AlertCircle, RefreshCw, WifiOff } from "luci
 import { format, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { UsersRound } from "lucide-react";
-import { getFilteredClasses } from "../mockData";
 import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface ClassesSectionProps {
   selectedDate: Date;
@@ -29,6 +31,8 @@ export const ClassesSection = ({
   const [retrying, setRetrying] = useState(false);
   const [isNetworkConnected, setIsNetworkConnected] = useState(true);
   const [classes, setClasses] = useState<any[]>([]);
+  const { user } = useAuth();
+  const { toast } = useToast();
   
   // Monitor network status
   useEffect(() => {
@@ -59,9 +63,11 @@ export const ClassesSection = ({
   // Get classes based on view mode and selected date
   useEffect(() => {
     fetchClasses();
-  }, [viewMode, selectedDate, isNetworkConnected]);
+  }, [viewMode, selectedDate, isNetworkConnected, user]);
   
-  const fetchClasses = () => {
+  const fetchClasses = async () => {
+    if (!user) return;
+    
     try {
       setIsLoading(true);
       setError(null);
@@ -72,8 +78,84 @@ export const ClassesSection = ({
         return;
       }
       
-      const fetchedClasses = getFilteredClasses(viewMode, selectedDate);
-      setClasses(fetchedClasses);
+      // First, get trainer ID
+      const { data: trainerData, error: trainerError } = await supabase
+        .from('trainers')
+        .select('id')
+        .eq('email', user.email)
+        .single();
+        
+      if (trainerError) {
+        console.error('Error fetching trainer data:', trainerError);
+        setError("Couldn't verify trainer information.");
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!trainerData) {
+        setError("No trainer record found for your account.");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Format selected date based on view mode
+      let dateQuery;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      
+      if (viewMode === "today") {
+        dateQuery = format(today, 'yyyy-MM-dd');
+      } else if (viewMode === "tomorrow") {
+        dateQuery = format(tomorrow, 'yyyy-MM-dd');
+      } else {
+        dateQuery = formattedDate;
+      }
+      
+      console.log(`Fetching classes for trainer ${trainerData.id} on date ${dateQuery}`);
+      
+      // Get classes for this trainer on the specified date
+      const { data: classesData, error: classesError } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('trainer_id', trainerData.id)
+        .eq('schedule', dateQuery)
+        .order('start_time');
+        
+      if (classesError) {
+        console.error('Error fetching classes:', classesError);
+        setError("Failed to load classes. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!classesData || classesData.length === 0) {
+        console.log('No classes found for this date');
+        setClasses([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log(`Fetched ${classesData.length} classes`);
+      
+      // Process class data to include formatted time and date
+      const processedClasses = classesData.map(cls => {
+        // Parse date from the schedule field
+        const classDate = new Date(cls.schedule);
+        
+        return {
+          ...cls,
+          date: classDate,
+          formattedDate: format(classDate, 'EEEE, MMMM d'),
+          time: `${cls.start_time} - ${cls.end_time}`,
+        };
+      });
+      
+      setClasses(processedClasses);
       setIsLoading(false);
     } catch (err) {
       console.error("Error loading classes:", err);
@@ -197,7 +279,7 @@ export const ClassesSection = ({
                     ></div>
                     <div className="p-4 sm:p-6">
                       <h3 className="text-lg font-semibold mb-2">{cls.name}</h3>
-                      <p className="text-sm text-gray-500">{format(cls.date, "EEEE, MMMM d")}</p>
+                      <p className="text-sm text-gray-500">{cls.formattedDate}</p>
                       <p className="text-sm text-gray-500">{cls.time}</p>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center">

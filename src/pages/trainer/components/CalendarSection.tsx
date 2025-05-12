@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon, Clock } from "lucide-react";
 import { format, isSameDay, addMonths, subMonths, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns";
 import { cn } from "@/lib/utils";
-import { mockClasses, isDayWithClass, getClassesForDate } from "../mockData";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,14 +25,101 @@ export const CalendarSection = ({
   handleViewClassDetails
 }: CalendarSectionProps) => {
   const [calendarDate, setCalendarDate] = useState<Date>(new Date(selectedDate));
-  const classesForView = getClassesForDate(selectedDate);
   const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [isClassAlreadyBooked, setIsClassAlreadyBooked] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const [userBookings, setUserBookings] = useState<any[]>([]);
-  const [bookedClasses, setBookedClasses] = useState<any[]>([]);
+  const [classesForSelected, setClassesForSelected] = useState<any[]>([]);
+  const [classesInMonth, setClassesInMonth] = useState<Record<string, any[]>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Fetch classes for the current month
+  useEffect(() => {
+    const fetchClassesForMonth = async () => {
+      if (!user) return;
+      
+      try {
+        setIsLoading(true);
+        
+        // Get trainer ID
+        const { data: trainerData, error: trainerError } = await supabase
+          .from('trainers')
+          .select('id')
+          .eq('email', user.email)
+          .single();
+          
+        if (trainerError) {
+          console.error('Error fetching trainer data:', trainerError);
+          return;
+        }
+        
+        if (!trainerData) {
+          console.warn('No trainer record found');
+          return;
+        }
+        
+        // Get start and end dates for the month
+        const monthStart = startOfMonth(calendarDate);
+        const monthEnd = endOfMonth(calendarDate);
+        
+        const startDateString = format(monthStart, 'yyyy-MM-dd');
+        const endDateString = format(monthEnd, 'yyyy-MM-dd');
+        
+        console.log(`Fetching classes from ${startDateString} to ${endDateString}`);
+        
+        // Get all classes for this month for this trainer
+        const { data: classesData, error: classesError } = await supabase
+          .from('classes')
+          .select('*')
+          .eq('trainer_id', trainerData.id)
+          .gte('schedule', startDateString)
+          .lte('schedule', endDateString)
+          .order('schedule')
+          .order('start_time');
+          
+        if (classesError) {
+          console.error('Error fetching classes for month:', classesError);
+          return;
+        }
+        
+        // Organize classes by date
+        const classesByDate: Record<string, any[]> = {};
+        
+        if (classesData) {
+          classesData.forEach(cls => {
+            const dateKey = cls.schedule;
+            
+            if (!classesByDate[dateKey]) {
+              classesByDate[dateKey] = [];
+            }
+            
+            classesByDate[dateKey].push(cls);
+          });
+        }
+        
+        setClassesInMonth(classesByDate);
+        
+        // Update classes for selected date
+        const selectedDateKey = format(selectedDate, 'yyyy-MM-dd');
+        setClassesForSelected(classesByDate[selectedDateKey] || []);
+        
+      } catch (error) {
+        console.error('Error loading calendar data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchClassesForMonth();
+  }, [calendarDate, user]);
+  
+  // Update classes for selected date when the date changes
+  useEffect(() => {
+    const selectedDateKey = format(selectedDate, 'yyyy-MM-dd');
+    setClassesForSelected(classesInMonth[selectedDateKey] || []);
+  }, [selectedDate, classesInMonth]);
   
   // Fetch real user bookings from Supabase
   useEffect(() => {
@@ -41,32 +127,45 @@ export const CalendarSection = ({
       if (!user) return;
       
       try {
+        const { data: trainerData, error: trainerError } = await supabase
+          .from('trainers')
+          .select('id')
+          .eq('email', user.email)
+          .single();
+          
+        if (trainerError || !trainerData) return;
+          
+        // Get bookings for classes taught by this trainer
+        const { data: classesData, error: classesError } = await supabase
+          .from('classes')
+          .select('id')
+          .eq('trainer_id', trainerData.id);
+          
+        if (classesError || !classesData || classesData.length === 0) return;
+        
+        const classIds = classesData.map(c => c.id);
+        
+        // Now get all bookings for these classes
         const { data, error } = await supabase
           .from('bookings')
-          .select('*, classes(*)')
-          .eq('user_id', user.id)
-          .eq('status', 'confirmed');
+          .select('*, user:profiles!bookings_user_id_fkey(*)')
+          .in('class_id', classIds);
           
-        if (error) throw error;
-        setUserBookings(data || []);
+        if (error) {
+          console.error('Error fetching bookings:', error);
+          return;
+        }
         
-        // Process bookings to get class details
         if (data) {
-          const classes = data.map(booking => booking.classes).filter(Boolean);
-          setBookedClasses(classes);
+          setUserBookings(data);
         }
       } catch (error) {
         console.error('Error fetching bookings:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load your bookings. Please try again.",
-          variant: "destructive"
-        });
       }
     };
     
     fetchUserBookings();
-  }, [user, toast]);
+  }, [user]);
   
   // Calendar navigation handlers
   const handlePreviousMonth = () => {
@@ -76,19 +175,6 @@ export const CalendarSection = ({
   const handleNextMonth = () => {
     setCalendarDate(prev => addMonths(prev, 1));
   };
-  
-  // Get dates with classes for the month indicator
-  const daysWithClasses = mockClasses.reduce((acc, cls) => {
-    const classDate = typeof cls.date === 'string' ? parseISO(cls.date) : cls.date;
-    const dateKey = format(classDate, 'yyyy-MM-dd');
-    
-    if (!acc[dateKey]) {
-      acc[dateKey] = [];
-    }
-    
-    acc[dateKey].push(cls);
-    return acc;
-  }, {} as Record<string, any[]>);
   
   // Generate calendar data
   const generateCalendarDays = () => {
@@ -120,29 +206,50 @@ export const CalendarSection = ({
     setBookingDialogOpen(true);
   };
 
-  const handleBookClass = () => {
-    if (isClassAlreadyBooked) {
-      toast({
-        title: "Already booked",
-        description: "You have already booked this class.",
-        variant: "destructive"
-      });
+  const handleViewDetails = () => {
+    if (selectedClassId) {
+      handleViewClassDetails(selectedClassId);
       setBookingDialogOpen(false);
-      return;
     }
-    
-    handleViewClassDetails(selectedClassId as number);
-    setBookingDialogOpen(false);
   };
 
-  const handleCancelBooking = () => {
-    // Handle cancellation logic here
-    toast({
-      title: "Booking cancelled",
-      description: "Your booking has been cancelled successfully.",
-      variant: "default"
-    });
-    setBookingDialogOpen(false);
+  const handleCancelBooking = async () => {
+    if (!selectedClassId || !user) return;
+    
+    try {
+      // Implementation of cancel booking logic
+      const result = await supabase
+        .from('bookings')
+        .delete()
+        .eq('class_id', selectedClassId)
+        .eq('user_id', user.id);
+        
+      if (result.error) {
+        throw result.error;
+      }
+      
+      toast({
+        title: "Booking cancelled",
+        description: "Your booking has been cancelled successfully.",
+        variant: "default"
+      });
+      
+      // Refresh bookings after cancellation
+      const updatedBookings = bookings.filter(booking => 
+        booking.class_id !== selectedClassId
+      );
+      
+      // In a real implementation, you would fetch the updated bookings
+      
+      setBookingDialogOpen(false);
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel booking. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
   
   return (
@@ -209,8 +316,8 @@ export const CalendarSection = ({
               {/* Current month days */}
               {currentMonthDays.map((day, index) => {
                 const dateKey = format(day, 'yyyy-MM-dd');
-                const hasClasses = daysWithClasses[dateKey];
-                const classCount = hasClasses ? hasClasses.length : 0;
+                const hasClasses = classesInMonth[dateKey] && classesInMonth[dateKey].length > 0;
+                const classCount = hasClasses ? classesInMonth[dateKey].length : 0;
                 const isToday = isSameDay(day, new Date());
                 const isSelected = isSameDay(day, selectedDate);
                 
@@ -220,11 +327,12 @@ export const CalendarSection = ({
                     className={cn(
                       "h-10 p-0.5 cursor-pointer",
                       isToday && "font-bold",
-                      isSelected && "bg-purple-50 rounded-md"
+                      isSelected && "bg-purple-50 rounded-md",
+                      hasClasses && "bg-purple-50/50"
                     )}
                     onClick={() => setSelectedDate(day)}
                   >
-                    <div className="flex items-center justify-center h-full">
+                    <div className="flex items-center justify-center h-full relative">
                       <div className={cn(
                         "w-7 h-7 rounded-full flex items-center justify-center",
                         isSelected ? "bg-purple-500 text-white" : "",
@@ -232,6 +340,11 @@ export const CalendarSection = ({
                       )}>
                         {format(day, "d")}
                       </div>
+                      {hasClasses && (
+                        <div className="absolute bottom-0 w-full flex justify-center">
+                          <div className="h-1 w-1 rounded-full bg-purple-500"></div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -254,121 +367,70 @@ export const CalendarSection = ({
           <div className="mt-6">
             <h3 className="font-medium mb-3 flex items-center">
               <Clock className="h-4 w-4 mr-2 text-purple-500" />
-              {userBookings.length > 0 ? 'My Bookings' : 'Classes on ' + format(selectedDate, "MMMM d, yyyy")}
+              Classes on {format(selectedDate, "MMMM d, yyyy")}
             </h3>
             
-            <div className="space-y-3">
-              {userBookings.length > 0 ? (
-                userBookings.map(booking => {
-                  const classData = booking.classes;
-                  if (!classData) return null;
-                  
-                  const classDate = classData.schedule ? new Date(classData.schedule) : new Date();
-                  
-                  return (
-                    <div 
-                      key={booking.id} 
-                      className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{classData.name}</p>
-                          <div className="flex flex-col xs:flex-row text-xs text-gray-500">
-                            <span className="flex items-center mr-2">
-                              <CalendarIcon className="h-3 w-3 mr-1" />
-                              {format(classDate, 'MMM d, yyyy')}
-                            </span>
-                            <span className="flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {classData.start_time} - {classData.end_time}
-                            </span>
+            {isLoading ? (
+              <div className="flex justify-center items-center p-4">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-500"></div>
+                <span className="ml-2 text-sm text-gray-500">Loading classes...</span>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {classesForSelected.length > 0 ? (
+                  classesForSelected.map(cls => {
+                    return (
+                      <div 
+                        key={cls.id} 
+                        className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
+                        onClick={() => handleClassClick(cls.id)}
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">{cls.name}</p>
+                            <div className="flex flex-col xs:flex-row text-xs text-gray-500">
+                              <span className="flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                {cls.start_time} - {cls.end_time}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                            Booked
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : classesForView.length > 0 ? (
-                classesForView.map(cls => {
-                  const isBooked = bookings.some(booking => booking.class_id === cls.id);
-                  
-                  return (
-                    <div 
-                      key={cls.id} 
-                      className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => handleClassClick(cls.id)}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{cls.name}</p>
-                          <div className="text-xs text-gray-500 flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {cls.time}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {isBooked && (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                              Booked
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-white">
+                              {cls.enrolled}/{cls.capacity}
                             </Badge>
-                          )}
-                          <Badge variant="outline" className="bg-white">
-                            {cls.enrolled}/{cls.capacity}
-                          </Badge>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-gray-500 text-center py-6 bg-gray-50 rounded-md border border-dashed border-gray-300">
-                  <p>No classes scheduled</p>
-                  <p className="text-xs mt-1">Select another date</p>
-                </div>
-              )}
-            </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-gray-500 text-center py-6 bg-gray-50 rounded-md border border-dashed border-gray-300">
+                    <p>No classes scheduled</p>
+                    <p className="text-xs mt-1">Select another date</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Class Booking Dialog */}
+          {/* Class Action Dialog */}
           <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>
-                  {isClassAlreadyBooked ? "Cancel Booking" : "Book Class"}
-                </DialogTitle>
+                <DialogTitle>Class Details</DialogTitle>
                 <DialogDescription>
-                  {isClassAlreadyBooked 
-                    ? "You have already booked this class. Would you like to cancel your booking?" 
-                    : "Confirm your class booking"
-                  }
+                  View or manage this class
                 </DialogDescription>
               </DialogHeader>
               
               <DialogFooter className="sm:justify-start">
-                {isClassAlreadyBooked ? (
-                  <>
-                    <Button type="button" variant="outline" onClick={() => setBookingDialogOpen(false)}>
-                      Keep Booking
-                    </Button>
-                    <Button type="button" variant="destructive" onClick={handleCancelBooking}>
-                      Cancel Booking
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button type="button" variant="outline" onClick={() => setBookingDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="button" variant="default" onClick={handleBookClass}>
-                      Confirm Booking
-                    </Button>
-                  </>
-                )}
+                <Button type="button" variant="outline" onClick={() => setBookingDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="button" variant="default" onClick={handleViewDetails}>
+                  View Details
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -220,7 +219,7 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
     }
     
     // Update the enrolled count if it's greater than 0
-    // FIXED: Reduce enrolled count by the number of bookings that were deleted
+    // Reduce enrolled count by the number of bookings that were deleted
     const bookingsCount = bookingData.length;
     
     if (classData.enrolled !== undefined && classData.enrolled > 0) {
