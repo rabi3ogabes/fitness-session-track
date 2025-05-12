@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -181,21 +180,20 @@ const TrainerDashboard = () => {
               email: "unknown@example.com"
             };
             
-            // Completely restructured user data handling to fix null reference errors
-            if (booking?.user) {
-              // Only try to process user data if it exists
-              if (typeof booking.user === 'object' && 
-                  !('code' in booking.user) && 
-                  !('message' in booking.user) && 
-                  !('details' in booking.user)) {
-                
-                // Type assertion after proper checks
+            // Fixed user data handling with proper null checks 
+            if (booking && booking.user !== null && booking.user !== undefined) {
+              if (
+                typeof booking.user === 'object' && 
+                !('code' in booking.user) && 
+                !('message' in booking.user) && 
+                !('details' in booking.user)
+              ) {
+                // Use a safe type casting after proper validation
                 const userObj = booking.user as UserObject;
                 
-                // Now we can safely access properties after validation
                 userData = {
-                  name: typeof userObj?.name === 'string' ? userObj.name : "Unknown",
-                  email: typeof userObj?.email === 'string' ? userObj.email : "unknown@example.com"
+                  name: userObj && typeof userObj.name === 'string' ? userObj.name : "Unknown",
+                  email: userObj && typeof userObj.email === 'string' ? userObj.email : "unknown@example.com"
                 };
               }
             }
@@ -300,11 +298,10 @@ const TrainerDashboard = () => {
         can_be_edited_by_trainers: true
       };
       
-      // Use type assertions to fix the typing issue with supabase insert
-      // Create a properly typed RPC params object
+      // Fixed: Use proper array for supabase insert to match the expected type
       await supabase
         .from('members')
-        .insert(memberData as unknown as Record<string, any>);
+        .insert([memberData]);
       
       toast({
         title: "Member Registered",
