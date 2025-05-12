@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -174,28 +175,21 @@ const TrainerDashboard = () => {
           const processedBookings: Booking[] = bookingsData ? bookingsData.map(booking => {
             const relatedClass = classesData.find(c => c.id === booking.class_id);
             
-            // Fixed: Handle user data safely with type checking
+            // Define default user data - avoiding null references
             let userData = {
               name: "Unknown",
               email: "unknown@example.com"
             };
             
-            // Fixed user data handling with proper null checks 
-            if (booking && booking.user !== null && booking.user !== undefined) {
-              if (
-                typeof booking.user === 'object' && 
-                !('code' in booking.user) && 
-                !('message' in booking.user) && 
-                !('details' in booking.user)
-              ) {
-                // Use a safe type casting after proper validation
-                const userObj = booking.user as UserObject;
-                
-                userData = {
-                  name: userObj && typeof userObj.name === 'string' ? userObj.name : "Unknown",
-                  email: userObj && typeof userObj.email === 'string' ? userObj.email : "unknown@example.com"
-                };
-              }
+            // Handle user object safely with strict null checks
+            if (booking && booking.user) {
+              // Only access user properties if user exists
+              const userObj = booking.user as UserObject;
+              
+              userData = {
+                name: userObj && typeof userObj.name === 'string' ? userObj.name : "Unknown",
+                email: userObj && typeof userObj.email === 'string' ? userObj.email : "unknown@example.com"
+              };
             }
             
             return {
@@ -298,7 +292,7 @@ const TrainerDashboard = () => {
         can_be_edited_by_trainers: true
       };
       
-      // Fixed: Use proper array for supabase insert to match the expected type
+      // Use proper array syntax for insertion to match the expected type
       await supabase
         .from('members')
         .insert([memberData]);

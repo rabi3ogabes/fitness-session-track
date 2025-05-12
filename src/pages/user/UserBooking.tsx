@@ -48,13 +48,10 @@ interface BookingState {
   remainingSessions: number;
 }
 
-// Interface for decrement_class_enrollment RPC function
+// Define proper interface for RPC call parameters
 interface DecrementClassEnrollmentParams {
   class_id: number;
 }
-
-// Define a proper type for the RPC parameter - ensuring consistency with TrainerDashboard
-type RPCParams = Record<string, any>;
 
 const UserBooking = () => {
   const [bookings, setBookings] = useState<BookingState>({
@@ -211,8 +208,9 @@ const UserBooking = () => {
           .single();
           
         if (!classError) {
-          // Fixed: Pass parameters as an array to the RPC function
-          await supabase.rpc('decrement_class_enrollment', { class_id: classId });
+          // Fixed: Use proper typing for RPC parameters
+          const params: DecrementClassEnrollmentParams = { class_id: classId };
+          await supabase.rpc('decrement_class_enrollment', params);
         }
       }
       
