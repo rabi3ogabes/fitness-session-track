@@ -49,7 +49,7 @@ interface TrainerData {
   created_at?: string | null;
 }
 
-// Define an interface for classes by date to avoid recursion
+// Define a simpler structure for classes by date to avoid recursion
 interface ClassesByDate {
   [key: string]: ClassData[];
 }

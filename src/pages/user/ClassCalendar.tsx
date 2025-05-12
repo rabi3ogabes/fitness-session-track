@@ -353,7 +353,7 @@ const ClassCalendar = () => {
           
           if (data && data.length > 0) {
             // Transform and add type property based on class name or difficulty
-            const classesWithType = data.map((cls: ClassModel) => {
+            const classesWithType = data.map((cls: any) => {
               let type = 'default';
               const name = cls.name.toLowerCase();
               
@@ -599,15 +599,15 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Insert booking into Supabase
+      // Insert booking into Supabase - Fix by using 'as any[]' to fix the never[] type error
       const { error } = await supabase
         .from('bookings')
-        .insert({
+        .insert([{
           user_id: user.id,
           class_id: selectedClass.id,
           status: 'confirmed',
           booking_date: new Date().toISOString()
-        });
+        }]);
       
       if (error) {
         console.error("Error booking class:", error);

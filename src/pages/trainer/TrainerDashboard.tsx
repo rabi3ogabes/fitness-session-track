@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -12,13 +13,40 @@ import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ClassesSection } from "./components/ClassesSection";
 
+// Define proper interfaces to prevent excessive type recursion
+interface Booking {
+  id: number;
+  class_id: number;
+  user_id: string;
+  status: string;
+  booking_date: string;
+  user?: {
+    name: string;
+    email: string;
+  };
+  class?: string;
+  date?: string;
+  time?: string;
+}
+
+interface ClassData {
+  id: number;
+  name: string;
+  schedule: string;
+  start_time: string | null;
+  end_time: string | null;
+  capacity: number;
+  enrolled: number | null;
+  trainer_id?: number;
+}
+
 const TrainerDashboard = () => {
   const { isTrainer, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"today" | "tomorrow" | "all">("today");
@@ -198,7 +226,7 @@ const TrainerDashboard = () => {
         return;
       }
       
-      // Also add to members table for admin view - fix the TypeScript error by specifying type
+      // Also add to members table for admin view - fix the TypeScript error by specifying array
       await supabase
         .from('members')
         .insert([{
