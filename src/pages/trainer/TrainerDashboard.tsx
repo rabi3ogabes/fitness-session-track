@@ -153,14 +153,27 @@ const TrainerDashboard = () => {
   
   const handleRegisterMember = async (newMember: any) => {
     try {
-      // Create a new profile in the database
+      // Generate a UUID for the new profile
+      const { data: newUUID, error: uuidError } = await supabase.rpc('generate_uuid');
+      
+      if (uuidError) {
+        console.error("Error generating UUID:", uuidError);
+        toast({
+          title: "Registration Failed",
+          description: "Could not create member profile.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Create a new profile in the database with the generated UUID
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .insert({
+          id: newUUID,
           name: newMember.name,
           email: newMember.email,
           phone_number: newMember.phone || ''
-          // Removed status field as it doesn't exist in the profiles table schema
         })
         .select()
         .single();

@@ -25,70 +25,75 @@ const UserBooking = () => {
       setIsLoading(true);
       
       try {
-        // Convert user.id to UUID type for Supabase query
+        // Get profile data for sessions remaining
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('sessions_remaining, total_sessions')
-          .eq('id', user.id as any)
+          .eq('id', user.id)
           .single();
           
         if (profileError) throw profileError;
         
-        // For now, until we have real data, we'll use mock data
-        // In a real implementation, you would fetch bookings from Supabase
-        const upcomingBookings = [
-          { 
-            id: 1, 
-            className: "Morning Yoga", 
-            date: "2025-05-01", 
-            time: "08:00 AM", 
-            trainer: "Jane Doe",
-            status: "Confirmed"
-          },
-          { 
-            id: 2, 
-            className: "HIIT Workout", 
-            date: "2025-05-03", 
-            time: "10:00 AM", 
-            trainer: "John Smith",
-            status: "Confirmed"
-          },
-        ];
+        // Get user's bookings with class and trainer info
+        const { data: bookingsData, error: bookingsError } = await supabase
+          .from('bookings')
+          .select(`
+            id,
+            class_id,
+            user_id,
+            status,
+            attendance,
+            created_at,
+            classes:class_id(
+              id,
+              name,
+              schedule,
+              start_time,
+              end_time,
+              trainer_id,
+              trainers:trainer_id(
+                id,
+                name
+              )
+            )
+          `)
+          .eq('user_id', user.id);
+          
+        if (bookingsError) throw bookingsError;
         
-        const pastBookings = [
-          { 
-            id: 3, 
-            className: "Strength Training", 
-            date: "2025-04-27", 
-            time: "02:00 PM", 
-            trainer: "Alex Johnson",
-            status: "Completed",
-            attendance: true
-          },
-          { 
-            id: 4, 
-            className: "Pilates", 
-            date: "2025-04-25", 
-            time: "04:00 PM", 
-            trainer: "Sarah Williams",
-            status: "Completed",
-            attendance: true
-          },
-          { 
-            id: 5, 
-            className: "Boxing", 
-            date: "2025-04-22", 
-            time: "06:00 PM", 
-            trainer: "Mike Tyson",
-            status: "Cancelled"
-          },
-        ];
+        console.log('Fetched real bookings from Supabase:', bookingsData);
         
-        // Fix the type error by handling profileData properly with type checking and optional chaining
-        let sessionsRemaining = 7; // Default value
+        const currentDate = new Date();
+        
+        // Process and format the bookings
+        const processedBookings = bookingsData ? bookingsData.map(booking => {
+          const classInfo = booking.classes;
+          return {
+            id: booking.id,
+            className: classInfo?.name || "Unnamed Class",
+            date: classInfo?.schedule || "",
+            time: classInfo?.start_time || "",
+            trainer: classInfo?.trainers?.name || "Unknown Trainer",
+            status: booking.status || "Pending",
+            attendance: booking.attendance || false,
+            classId: classInfo?.id
+          };
+        }) : [];
+        
+        // Split into upcoming and past bookings
+        const upcomingBookings = processedBookings.filter(booking => 
+          new Date(booking.date) >= currentDate
+        );
+        
+        const pastBookings = processedBookings.filter(booking => 
+          new Date(booking.date) < currentDate
+        );
+        
+        // Get sessions remaining from profile data
+        let sessionsRemaining = 0;
         
         if (profileData && typeof profileData === 'object' && 'sessions_remaining' in profileData) {
-          sessionsRemaining = profileData.sessions_remaining ?? 7;
+          sessionsRemaining = profileData.sessions_remaining || 0;
         }
         
         setBookings({
@@ -104,11 +109,11 @@ const UserBooking = () => {
           variant: "destructive"
         });
         
-        // Fallback to default values in case of error
+        // Initialize with empty arrays, not demo data
         setBookings({
           upcomingBookings: [],
           pastBookings: [],
-          remainingSessions: 7 // Default value
+          remainingSessions: 0
         });
       } finally {
         setIsLoading(false);
@@ -118,11 +123,33 @@ const UserBooking = () => {
     fetchUserData();
   }, [user, toast]);
 
-  const handleCancelBooking = async (id: number) => {
+  const handleCancelBooking = async (id: number, classId: number) => {
+    if (!user || !id) return;
+    
     try {
-      // In a real app, we would update the booking in Supabase
-      // For now we'll just update the state
+      // Cancel booking in Supabase
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'Cancelled' })
+        .eq('id', id)
+        .eq('user_id', user.id);
       
+      if (error) throw error;
+      
+      // Also update the enrolled count for the class
+      if (classId) {
+        const { error: classError } = await supabase
+          .from('classes')
+          .select('enrolled')
+          .eq('id', classId)
+          .single();
+          
+        if (!classError) {
+          await supabase.rpc('decrement_class_enrollment', { class_id: classId });
+        }
+      }
+      
+      // Update local state
       setBookings({
         ...bookings,
         upcomingBookings: bookings.upcomingBookings.filter(
@@ -147,15 +174,80 @@ const UserBooking = () => {
   };
 
   const handleBookingComplete = async () => {
-    // In a real app, we would update the booking in Supabase
-    // and refresh the bookings
-    setBookings({
-      ...bookings,
-      remainingSessions: bookings.remainingSessions - 1
-    });
-    
-    // Refresh the bookings list
-    // For a real app, this would fetch the updated bookings
+    // Refresh the bookings after a new booking is made
+    if (user) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('sessions_remaining')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileData) {
+        setBookings({
+          ...bookings,
+          remainingSessions: profileData.sessions_remaining || 0
+        });
+      }
+      
+      // Refresh the bookings list to show the new booking
+      const { data: bookingsData } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          class_id,
+          user_id,
+          status,
+          attendance,
+          created_at,
+          classes:class_id(
+            id,
+            name,
+            schedule,
+            start_time,
+            end_time,
+            trainer_id,
+            trainers:trainer_id(
+              id,
+              name
+            )
+          )
+        `)
+        .eq('user_id', user.id);
+        
+      if (bookingsData) {
+        const currentDate = new Date();
+        
+        // Process and format the bookings
+        const processedBookings = bookingsData.map(booking => {
+          const classInfo = booking.classes;
+          return {
+            id: booking.id,
+            className: classInfo?.name || "Unnamed Class",
+            date: classInfo?.schedule || "",
+            time: classInfo?.start_time || "",
+            trainer: classInfo?.trainers?.name || "Unknown Trainer",
+            status: booking.status || "Pending",
+            attendance: booking.attendance || false,
+            classId: classInfo?.id
+          };
+        });
+        
+        // Split into upcoming and past bookings
+        const upcomingBookings = processedBookings.filter(booking => 
+          new Date(booking.date) >= currentDate
+        );
+        
+        const pastBookings = processedBookings.filter(booking => 
+          new Date(booking.date) < currentDate
+        );
+        
+        setBookings({
+          ...bookings,
+          upcomingBookings,
+          pastBookings
+        });
+      }
+    }
   };
 
   if (isLoading) {
@@ -223,7 +315,7 @@ const UserBooking = () => {
                               {booking.status}
                             </span>
                             <button
-                              onClick={() => handleCancelBooking(booking.id)}
+                              onClick={() => handleCancelBooking(booking.id, booking.classId)}
                               className="text-sm text-red-500 hover:text-red-700"
                             >
                               Cancel

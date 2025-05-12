@@ -31,7 +31,7 @@ export const CalendarSection = ({
   const { user } = useAuth();
   const [userBookings, setUserBookings] = useState<any[]>([]);
   const [classesForSelected, setClassesForSelected] = useState<any[]>([]);
-  // Use Record<string, any[]> instead of Record<string, any[]> to avoid recursive type
+  // Fix recursive type by using a plain object type instead of Record
   const [classesInMonth, setClassesInMonth] = useState<{[key: string]: any[]}>({});
   const [isLoading, setIsLoading] = useState(false);
   
