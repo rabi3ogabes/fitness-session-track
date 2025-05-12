@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -15,11 +14,13 @@ import { ClassesSection } from "./components/ClassesSection";
 
 // Define proper interfaces to prevent excessive type recursion
 interface Booking {
-  id: number;
+  id: string; // Changed from number to string to match actual data structure
   class_id: number;
   user_id: string;
   status: string;
   booking_date: string;
+  notes?: string | null;
+  attendance?: boolean | null;
   user?: {
     name: string;
     email: string;
@@ -37,7 +38,7 @@ interface ClassData {
   end_time: string | null;
   capacity: number;
   enrolled: number | null;
-  trainer_id?: number;
+  trainer?: string | null; // Using trainer field instead of trainer_id
 }
 
 const TrainerDashboard = () => {
@@ -101,11 +102,11 @@ const TrainerDashboard = () => {
         }
         
         // Separate queries instead of relationship that's causing errors
-        // First get classes for this trainer
+        // First get classes for this trainer - using trainer field instead of trainer_id
         const { data: classesData, error: classesError } = await supabase
           .from('classes')
           .select('*')
-          .eq('trainer_id', trainerData.id);
+          .eq('trainer', trainerData.id.toString());
           
         if (classesError) {
           console.error('Error fetching classes:', classesError);
@@ -139,7 +140,7 @@ const TrainerDashboard = () => {
           }
           
           // Process bookings and add class information
-          const processedBookings = bookingsData ? bookingsData.map(booking => {
+          const processedBookings: Booking[] = bookingsData ? bookingsData.map(booking => {
             const relatedClass = classesData.find(c => c.id === booking.class_id);
             return {
               ...booking,
@@ -226,7 +227,7 @@ const TrainerDashboard = () => {
         return;
       }
       
-      // Also add to members table for admin view - fix the TypeScript error by specifying array
+      // Also add to members table for admin view - fix by using array notation
       await supabase
         .from('members')
         .insert([{

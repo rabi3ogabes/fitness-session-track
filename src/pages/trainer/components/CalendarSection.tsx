@@ -26,13 +26,12 @@ interface ClassData {
   end_time: string | null;
   capacity: number;
   enrolled: number | null;
-  trainer_id?: number;
+  trainer?: string | null; // Changed from trainer_id to trainer
   description?: string | null;
   difficulty?: string | null;
   gender?: string | null;
   location?: string | null;
   status?: string | null;
-  trainer?: string | null;
   trainers?: string[] | null;
   created_at?: string | null;
 }
@@ -49,7 +48,7 @@ interface TrainerData {
   created_at?: string | null;
 }
 
-// Define a simpler structure for classes by date to avoid recursion
+// Define a simple record type for classes by date to avoid recursion
 interface ClassesByDate {
   [key: string]: ClassData[];
 }
@@ -106,11 +105,11 @@ export const CalendarSection = ({
         
         console.log(`Fetching classes from ${startDateString} to ${endDateString}`);
         
-        // Get all classes for this month for this trainer
+        // Get all classes for this month for this trainer - using 'trainer' field instead of 'trainer_id'
         const { data: classesData, error: classesError } = await supabase
           .from('classes')
           .select('*')
-          .eq('trainer_id', trainerData.id)
+          .eq('trainer', trainerData.id.toString())
           .gte('schedule', startDateString)
           .lte('schedule', endDateString)
           .order('schedule')
@@ -172,11 +171,11 @@ export const CalendarSection = ({
           
         if (trainerError || !trainerData) return;
           
-        // Get bookings for classes taught by this trainer
+        // Get bookings for classes taught by this trainer - using 'trainer' field
         const { data: classesData, error: classesError } = await supabase
           .from('classes')
           .select('id')
-          .eq('trainer_id', trainerData.id);
+          .eq('trainer', trainerData.id.toString());
           
         if (classesError || !classesData || classesData.length === 0) return;
         
