@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -172,7 +173,7 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
   console.log(`Attempting to cancel booking: user=${userId}, class=${classId}`);
   
   try {
-    // First check if the booking exists - FIXED: Use regular select instead of maybeSingle
+    // First check if the booking exists
     const { data: bookingData, error: bookingCheckError } = await supabase
       .from('bookings')
       .select('*')
@@ -222,9 +223,16 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
     // FIXED: Reduce enrolled count by the number of bookings that were deleted
     const bookingsCount = bookingData.length;
     
-    if (classData.enrolled && classData.enrolled > 0) {
+    if (classData.enrolled !== undefined && classData.enrolled > 0) {
       // Ensure we don't set enrolled to a negative value
       const newEnrolledCount = Math.max(0, classData.enrolled - bookingsCount);
+      
+      console.log("Updating class enrolled count:", { 
+        classId, 
+        oldCount: classData.enrolled, 
+        newCount: newEnrolledCount,
+        bookingsRemoved: bookingsCount
+      });
       
       const { error: updateError } = await supabase
         .from('classes')
