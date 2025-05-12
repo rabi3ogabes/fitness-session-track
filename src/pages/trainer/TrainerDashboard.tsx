@@ -48,12 +48,19 @@ interface GenerateUUIDResponse {
   error: Error | null;
 }
 
+// Define a more specific user object structure to handle type issues
+interface UserObject {
+  name?: string;
+  email?: string;
+  [key: string]: any; // Allow for other properties
+}
+
 // Define a type for the member structure to fix the "never" type error
 interface NewMemberData {
   name: string;
   email: string;
   phone?: string;
-  dob?: string;
+  dob?: string | null;
   gender?: string;
   membership?: string;
   sessions?: number;
@@ -176,11 +183,11 @@ const TrainerDashboard = () => {
                 !('code' in booking.user) && 
                 !('message' in booking.user) && 
                 !('details' in booking.user)) {
-              // Fix these null/undefined checks by using safe optional chaining with nullish coalescing
-              const userObj = booking.user;
+              // Fix with a proper null check and type assertion to handle the 'never' type issues
+              const userObj: UserObject = booking.user as UserObject;
               userData = {
-                name: (userObj && 'name' in userObj && userObj.name) ? userObj.name : "Unknown",
-                email: (userObj && 'email' in userObj && userObj.email) ? userObj.email : "unknown@example.com"
+                name: userObj && typeof userObj.name === 'string' ? userObj.name : "Unknown",
+                email: userObj && typeof userObj.email === 'string' ? userObj.email : "unknown@example.com"
               };
             }
             
@@ -276,16 +283,17 @@ const TrainerDashboard = () => {
         email: newMember.email,
         phone: newMember.phone || '',
         dob: newMember.dob || null,
+        gender: newMember.gender || "Not specified",
         membership: "Basic",
         sessions: 4,
         remaining_sessions: 4,
-        status: "Active",
-        gender: newMember.gender || "Not specified"
+        status: "Active"
       };
       
+      // Explicitly cast the insertion data to 'unknown' first to fix the 'never' type error
       await supabase
         .from('members')
-        .insert([memberData]);
+        .insert([memberData as unknown]);
       
       toast({
         title: "Member Registered",

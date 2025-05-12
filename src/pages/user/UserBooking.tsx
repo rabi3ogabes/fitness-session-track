@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingForm from "@/components/BookingForm";
@@ -209,9 +210,9 @@ const UserBooking = () => {
           
         if (!classError) {
           // Use RPC to decrement the enrollment with proper typing
-          // Fix the string type error by explicitly passing an object with the correct type
+          // Fix the string type error by explicitly casting to unknown first
           const params: DecrementClassEnrollmentParams = { class_id: classId };
-          await supabase.rpc('decrement_class_enrollment', params);
+          await supabase.rpc('decrement_class_enrollment', params as unknown);
         }
       }
       
