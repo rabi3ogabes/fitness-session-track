@@ -17,7 +17,7 @@ interface CalendarSectionProps {
   handleViewClassDetails: (classId: number) => void;
 }
 
-// Define interface for class data to avoid recursive types
+// Define interface for class data without recursive types
 interface ClassData {
   id: number;
   name: string;
@@ -165,7 +165,7 @@ export const CalendarSection = ({
         // Now get all bookings for these classes
         const { data, error } = await supabase
           .from('bookings')
-          .select('*, user:profiles!bookings_user_id_fkey(*)')
+          .select('*, user:user_id(*)')
           .in('class_id', classIds);
           
         if (error) {

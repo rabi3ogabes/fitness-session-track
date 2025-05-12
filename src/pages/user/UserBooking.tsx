@@ -26,9 +26,19 @@ interface BookingData {
   class_id: number;
   user_id: string;
   status: string;
-  attendance: boolean;
+  attendance: boolean | null;
   created_at?: string;
   classes?: ClassInfo;
+}
+
+interface RawBookingData {
+  id: string;
+  class_id: number;
+  user_id: string;
+  status: string;
+  attendance: boolean | null;
+  // This field won't be a ClassInfo type when it comes from Supabase with a relationship error
+  [key: string]: any;
 }
 
 interface ProcessedBooking {
@@ -75,58 +85,80 @@ const UserBooking = () => {
           
         if (profileError) throw profileError;
         
-        // Get user's bookings with class and trainer info
+        // Get user's bookings with separate queries to avoid relationship errors
         const { data: bookingsData, error: bookingsError } = await supabase
           .from('bookings')
-          .select(`
-            id,
-            class_id,
-            user_id,
-            status,
-            attendance,
-            classes:class_id(
-              id,
-              name,
-              schedule,
-              start_time,
-              end_time,
-              trainer_id,
-              trainers:trainer_id(
-                id,
-                name
-              )
-            )
-          `)
+          .select('id, class_id, user_id, status, attendance')
           .eq('user_id', user.id);
           
         if (bookingsError) throw bookingsError;
         
-        console.log('Fetched real bookings from Supabase:', bookingsData);
+        console.log('Fetched bookings without classes:', bookingsData);
+        
+        // Process each booking to get class details separately
+        const processedBookings: ProcessedBooking[] = [];
+        
+        if (bookingsData && bookingsData.length > 0) {
+          // Get all class details for these bookings
+          for (const booking of bookingsData) {
+            try {
+              // Get class details
+              const { data: classData, error: classError } = await supabase
+                .from('classes')
+                .select('id, name, schedule, start_time, end_time, trainer_id')
+                .eq('id', booking.class_id)
+                .single();
+                
+              if (classError) {
+                console.error(`Error fetching class ${booking.class_id}:`, classError);
+                continue;
+              }
+              
+              if (!classData) {
+                console.warn(`No class found for booking ${booking.id}`);
+                continue;
+              }
+              
+              // Get trainer details if available
+              let trainerName = "Unknown Trainer";
+              if (classData.trainer_id) {
+                const { data: trainerData } = await supabase
+                  .from('trainers')
+                  .select('name')
+                  .eq('id', classData.trainer_id)
+                  .single();
+                  
+                if (trainerData) {
+                  trainerName = trainerData.name;
+                }
+              }
+              
+              // Add processed booking
+              processedBookings.push({
+                id: booking.id,
+                className: classData.name || "Unnamed Class",
+                date: classData.schedule || "",
+                time: classData.start_time || "",
+                trainer: trainerName,
+                status: booking.status || "Pending",
+                attendance: booking.attendance || false,
+                classId: classData.id
+              });
+            } catch (err) {
+              console.error(`Error processing booking ${booking.id}:`, err);
+            }
+          }
+        }
         
         const currentDate = new Date();
         
-        // Process and format the bookings
-        const processedBookings: ProcessedBooking[] = bookingsData ? bookingsData.map((booking: BookingData) => {
-          const classInfo = booking.classes;
-          return {
-            id: booking.id,
-            className: classInfo?.name || "Unnamed Class",
-            date: classInfo?.schedule || "",
-            time: classInfo?.start_time || "",
-            trainer: classInfo?.trainers?.name || "Unknown Trainer",
-            status: booking.status || "Pending",
-            attendance: booking.attendance || false,
-            classId: classInfo?.id
-          };
-        }) : [];
-        
         // Split into upcoming and past bookings
         const upcomingBookings = processedBookings.filter(booking => 
-          new Date(booking.date) >= currentDate
+          booking.date && new Date(booking.date) >= currentDate
         );
         
         const pastBookings = processedBookings.filter(booking => 
-          new Date(booking.date) < currentDate
+          booking.date && new Date(booking.date) < currentDate
         );
         
         // Get sessions remaining from profile data
@@ -149,7 +181,7 @@ const UserBooking = () => {
           variant: "destructive"
         });
         
-        // Initialize with empty arrays, not demo data
+        // Initialize with empty arrays
         setBookings({
           upcomingBookings: [],
           pastBookings: [],
@@ -229,55 +261,80 @@ const UserBooking = () => {
         });
       }
       
-      // Refresh the bookings list to show the new booking
-      const { data: bookingsData } = await supabase
-        .from('bookings')
-        .select(`
-          id,
-          class_id,
-          user_id,
-          status,
-          attendance,
-          classes:class_id(
-            id,
-            name,
-            schedule,
-            start_time,
-            end_time,
-            trainer_id,
-            trainers:trainer_id(
-              id,
-              name
-            )
-          )
-        `)
-        .eq('user_id', user.id);
+      // Reload bookings with the same approach used in the initial fetch
+      try {
+        // Get user's bookings 
+        const { data: bookingsData, error: bookingsError } = await supabase
+          .from('bookings')
+          .select('id, class_id, user_id, status, attendance')
+          .eq('user_id', user.id);
+          
+        if (bookingsError) throw bookingsError;
         
-      if (bookingsData) {
+        // Process each booking to get class details separately
+        const processedBookings: ProcessedBooking[] = [];
+        
+        if (bookingsData && bookingsData.length > 0) {
+          // Get all class details for these bookings
+          for (const booking of bookingsData) {
+            try {
+              // Get class details
+              const { data: classData, error: classError } = await supabase
+                .from('classes')
+                .select('id, name, schedule, start_time, end_time, trainer_id')
+                .eq('id', booking.class_id)
+                .single();
+                
+              if (classError) {
+                console.error(`Error fetching class ${booking.class_id}:`, classError);
+                continue;
+              }
+              
+              if (!classData) {
+                console.warn(`No class found for booking ${booking.id}`);
+                continue;
+              }
+              
+              // Get trainer details if available
+              let trainerName = "Unknown Trainer";
+              if (classData.trainer_id) {
+                const { data: trainerData } = await supabase
+                  .from('trainers')
+                  .select('name')
+                  .eq('id', classData.trainer_id)
+                  .single();
+                  
+                if (trainerData) {
+                  trainerName = trainerData.name;
+                }
+              }
+              
+              // Add processed booking
+              processedBookings.push({
+                id: booking.id,
+                className: classData.name || "Unnamed Class",
+                date: classData.schedule || "",
+                time: classData.start_time || "",
+                trainer: trainerName,
+                status: booking.status || "Pending",
+                attendance: booking.attendance || false,
+                classId: classData.id
+              });
+            } catch (err) {
+              console.error(`Error processing booking ${booking.id}:`, err);
+            }
+          }
+        }
+        
         const currentDate = new Date();
-        
-        // Process and format the bookings
-        const processedBookings: ProcessedBooking[] = bookingsData.map((booking: BookingData) => {
-          const classInfo = booking.classes;
-          return {
-            id: booking.id,
-            className: classInfo?.name || "Unnamed Class",
-            date: classInfo?.schedule || "",
-            time: classInfo?.start_time || "",
-            trainer: classInfo?.trainers?.name || "Unknown Trainer",
-            status: booking.status || "Pending",
-            attendance: booking.attendance || false,
-            classId: classInfo?.id
-          };
-        });
         
         // Split into upcoming and past bookings
         const upcomingBookings = processedBookings.filter(booking => 
-          new Date(booking.date) >= currentDate
+          booking.date && new Date(booking.date) >= currentDate
         );
         
         const pastBookings = processedBookings.filter(booking => 
-          new Date(booking.date) < currentDate
+          booking.date && new Date(booking.date) < currentDate
         );
         
         setBookings({
@@ -285,6 +342,8 @@ const UserBooking = () => {
           upcomingBookings,
           pastBookings
         });
+      } catch (error) {
+        console.error("Error reloading bookings:", error);
       }
     }
   };

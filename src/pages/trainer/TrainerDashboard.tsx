@@ -172,7 +172,9 @@ const TrainerDashboard = () => {
           id: newUUID,
           email: newMember.email,
           name: newMember.name,
-          phone_number: newMember.phone || ''
+          phone_number: newMember.phone || '',
+          sessions_remaining: 0,
+          total_sessions: 0
         })
         .select();
         
