@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -22,9 +23,9 @@ interface Booking {
   notes?: string | null;
   attendance?: boolean | null;
   user?: {
-    name: string;
-    email: string;
-  };
+    name?: string;
+    email?: string;
+  } | null; // Allow user to be null or have optional properties
   class?: string;
   date?: string;
   time?: string;
@@ -140,14 +141,20 @@ const TrainerDashboard = () => {
           }
           
           // Process bookings and add class information
-          const processedBookings: Booking[] = bookingsData ? bookingsData.map(booking => {
+          const processedBookings = bookingsData ? bookingsData.map(booking => {
             const relatedClass = classesData.find(c => c.id === booking.class_id);
+            // Handle potential error in user field
+            const userData = booking.user && typeof booking.user === 'object' && !('error' in booking.user) 
+              ? booking.user 
+              : { name: "Unknown", email: "unknown@example.com" };
+            
             return {
               ...booking,
+              user: userData,
               class: relatedClass?.name || "Unknown class",
               date: relatedClass?.schedule || format(new Date(), "yyyy-MM-dd"),
               time: relatedClass?.start_time || "Unknown time"
-            };
+            } as Booking;
           }) : [];
           
           console.log('Fetched bookings:', processedBookings);

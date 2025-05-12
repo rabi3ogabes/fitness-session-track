@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,7 @@ interface ClassData {
   end_time: string | null;
   capacity: number;
   enrolled: number | null;
-  trainer?: string | null; // Changed from trainer_id to trainer
+  trainer?: string | null; // Using trainer field instead of trainer_id
   description?: string | null;
   difficulty?: string | null;
   gender?: string | null;
