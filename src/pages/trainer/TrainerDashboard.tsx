@@ -141,10 +141,11 @@ const TrainerDashboard = () => {
           }
           
           // Process bookings and add class information
-          const processedBookings = bookingsData ? bookingsData.map(booking => {
+          const processedBookings: Booking[] = bookingsData ? bookingsData.map(booking => {
             const relatedClass = classesData.find(c => c.id === booking.class_id);
             // Handle potential error in user field with null check
-            const userData = booking.user && typeof booking.user === 'object' && booking.user !== null && !('error' in booking.user) 
+            const userData = booking.user && typeof booking.user === 'object' && booking.user !== null && 
+                             !('error' in booking.user) 
               ? booking.user 
               : { name: "Unknown", email: "unknown@example.com" };
             
@@ -154,7 +155,7 @@ const TrainerDashboard = () => {
               class: relatedClass?.name || "Unknown class",
               date: relatedClass?.schedule || format(new Date(), "yyyy-MM-dd"),
               time: relatedClass?.start_time || "Unknown time"
-            } as Booking;
+            };
           }) : [];
           
           console.log('Fetched bookings:', processedBookings);

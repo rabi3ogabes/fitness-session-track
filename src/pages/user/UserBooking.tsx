@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingForm from "@/components/BookingForm";
@@ -39,7 +38,7 @@ interface ProcessedBooking {
   time: string;
   trainer: string;
   status: string;
-  attendance: boolean;
+  attendance: boolean | null; // Changed to allow null
   classId?: number;
 }
 
@@ -127,7 +126,7 @@ const UserBooking = () => {
                 time: classData.start_time || "",
                 trainer: trainerName,
                 status: booking.status || "Pending",
-                attendance: booking.attendance || false,
+                attendance: booking.attendance,
                 classId: classData.id
               });
             } catch (err) {
@@ -301,7 +300,7 @@ const UserBooking = () => {
                 time: classData.start_time || "",
                 trainer: trainerName,
                 status: booking.status || "Pending",
-                attendance: booking.attendance || false,
+                attendance: booking.attendance,
                 classId: classData.id
               });
             } catch (err) {
