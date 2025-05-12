@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingForm from "@/components/BookingForm";
@@ -49,7 +48,7 @@ interface BookingState {
   remainingSessions: number;
 }
 
-// Define proper interface for RPC call parameters using Record to explicitly define the structure
+// Define proper interface for RPC call parameters
 interface DecrementClassEnrollmentParams {
   class_id: number;
 }
@@ -209,8 +208,10 @@ const UserBooking = () => {
           .single();
           
         if (!classError) {
-          // Create a properly typed parameter object for the RPC call
-          const params: DecrementClassEnrollmentParams = { class_id: classId };
+          // Make sure we're using the correct parameter type
+          const params: DecrementClassEnrollmentParams = { 
+            class_id: classId 
+          };
           await supabase.rpc('decrement_class_enrollment', params);
         }
       }

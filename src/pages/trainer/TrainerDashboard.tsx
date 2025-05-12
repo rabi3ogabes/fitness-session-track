@@ -69,10 +69,11 @@ interface NewMemberData {
   birthday?: string;
 }
 
-// Interface for the generate_uuid RPC function - it takes no parameters
-// Define it as a Record<string, never> to explicitly state it takes no params
-interface GenerateUUIDParams extends Record<string, never> {
-  // Empty interface with Record<string, never> to indicate no parameters
+// Interface for the generate_uuid RPC function
+// Use {} with no properties to indicate the function takes no parameters
+// Since we're using an explicit type cast later, we need to ensure the interface is compatible
+interface GenerateUUIDParams {
+  // Empty interface - using an empty object literal when calling the function
 }
 
 const TrainerDashboard = () => {
@@ -234,8 +235,12 @@ const TrainerDashboard = () => {
   
   const handleRegisterMember = async (newMember: any) => {
     try {
-      // Generate a UUID for the new profile - using proper empty object for the RPC call
-      const { data: newUUID, error: uuidError } = await supabase.rpc('generate_uuid', {} as GenerateUUIDParams) as GenerateUUIDResponse;
+      // Generate a UUID for the new profile
+      // Explicitly cast the empty object to GenerateUUIDParams to satisfy TypeScript
+      const { data: newUUID, error: uuidError } = await supabase.rpc(
+        'generate_uuid', 
+        {} as GenerateUUIDParams
+      ) as GenerateUUIDResponse;
       
       if (uuidError) {
         console.error("Error generating UUID:", uuidError);
