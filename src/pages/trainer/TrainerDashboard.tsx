@@ -149,19 +149,11 @@ const TrainerDashboard = () => {
           // Process bookings and add class information
           const processedBookings: Booking[] = bookingsData ? bookingsData.map(booking => {
             const relatedClass = classesData.find(c => c.id === booking.class_id);
-            // Fixed: Add more comprehensive null checking for booking.user
-            const userData = booking.user && 
-                             typeof booking.user === 'object' && 
-                             booking.user !== null && 
-                             !('error' in booking.user) 
-              ? {
-                  name: booking.user.name || "Unknown",
-                  email: booking.user.email || "unknown@example.com"
-                }
-              : { 
-                  name: "Unknown", 
-                  email: "unknown@example.com" 
-                };
+            // Fix null checks completely by using nullish coalescing and optional chaining
+            const userData = {
+              name: booking.user?.name ?? "Unknown",
+              email: booking.user?.email ?? "unknown@example.com"
+            };
             
             return {
               ...booking,
@@ -203,11 +195,8 @@ const TrainerDashboard = () => {
   
   const handleRegisterMember = async (newMember: any) => {
     try {
-      // Generate a UUID for the new profile - fixed type annotation
-      const { data: newUUID, error: uuidError } = await supabase.rpc('generate_uuid') as {
-        data: string | null;
-        error: Error | null;
-      };
+      // Generate a UUID for the new profile - use the explicit type assertion
+      const { data: newUUID, error: uuidError } = await supabase.rpc('generate_uuid') as GenerateUUIDResponse;
       
       if (uuidError) {
         console.error("Error generating UUID:", uuidError);

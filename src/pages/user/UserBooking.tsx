@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingForm from "@/components/BookingForm";
@@ -48,7 +49,7 @@ interface BookingState {
   remainingSessions: number;
 }
 
-// Fix for the type error: Define explicit type for class ID parameter
+// Fix for type error in the handleCancelBooking function
 const UserBooking = () => {
   const [bookings, setBookings] = useState<BookingState>({
     upcomingBookings: [],
@@ -180,11 +181,12 @@ const UserBooking = () => {
     fetchUserData();
   }, [user, toast]);
 
+  // Fixed type error for classId parameter
   const handleCancelBooking = async (id: string, classId?: number) => {
     if (!user || !id) return;
     
     try {
-      // Fixed: Add proper type safety for classId parameter
+      // Properly type the RPC function call
       // Cancel booking in Supabase
       const { error } = await supabase
         .from('bookings')
@@ -207,7 +209,7 @@ const UserBooking = () => {
           // Use RPC to decrement the enrollment
           await supabase.rpc('decrement_class_enrollment', { 
             class_id: classId 
-          });
+          } as { class_id: number });
         }
       }
       
