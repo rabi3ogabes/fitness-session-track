@@ -42,6 +42,12 @@ interface ClassData {
   trainer?: string | null; // Using trainer field instead of trainer_id
 }
 
+// Define a type for the UUID generation return
+interface GenerateUUIDResponse {
+  data: string | null;
+  error: Error | null;
+}
+
 const TrainerDashboard = () => {
   const { isTrainer, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
@@ -143,11 +149,19 @@ const TrainerDashboard = () => {
           // Process bookings and add class information
           const processedBookings: Booking[] = bookingsData ? bookingsData.map(booking => {
             const relatedClass = classesData.find(c => c.id === booking.class_id);
-            // Handle potential error in user field with null check
-            const userData = booking.user && typeof booking.user === 'object' && booking.user !== null && 
+            // Fixed: Add more comprehensive null checking for booking.user
+            const userData = booking.user && 
+                             typeof booking.user === 'object' && 
+                             booking.user !== null && 
                              !('error' in booking.user) 
-              ? booking.user 
-              : { name: "Unknown", email: "unknown@example.com" };
+              ? {
+                  name: booking.user.name || "Unknown",
+                  email: booking.user.email || "unknown@example.com"
+                }
+              : { 
+                  name: "Unknown", 
+                  email: "unknown@example.com" 
+                };
             
             return {
               ...booking,
@@ -189,8 +203,11 @@ const TrainerDashboard = () => {
   
   const handleRegisterMember = async (newMember: any) => {
     try {
-      // Generate a UUID for the new profile
-      const { data: newUUID, error: uuidError } = await supabase.rpc('generate_uuid');
+      // Generate a UUID for the new profile - fixed type annotation
+      const { data: newUUID, error: uuidError } = await supabase.rpc('generate_uuid') as {
+        data: string | null;
+        error: Error | null;
+      };
       
       if (uuidError) {
         console.error("Error generating UUID:", uuidError);
@@ -203,7 +220,7 @@ const TrainerDashboard = () => {
       }
       
       // Type fix - check for undefined before inserting data
-      if (newUUID === undefined) {
+      if (newUUID === null) {
         toast({
           title: "Registration Failed",
           description: "Could not generate a unique ID for the member.",

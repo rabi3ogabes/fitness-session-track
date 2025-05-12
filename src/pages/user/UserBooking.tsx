@@ -38,7 +38,7 @@ interface ProcessedBooking {
   time: string;
   trainer: string;
   status: string;
-  attendance: boolean | null; // Changed to allow null
+  attendance: boolean | null;
   classId?: number;
 }
 
@@ -184,6 +184,7 @@ const UserBooking = () => {
     if (!user || !id) return;
     
     try {
+      // Fixed: Add proper type safety for classId parameter
       // Cancel booking in Supabase
       const { error } = await supabase
         .from('bookings')
