@@ -143,8 +143,8 @@ const TrainerDashboard = () => {
           // Process bookings and add class information
           const processedBookings = bookingsData ? bookingsData.map(booking => {
             const relatedClass = classesData.find(c => c.id === booking.class_id);
-            // Handle potential error in user field
-            const userData = booking.user && typeof booking.user === 'object' && !('error' in booking.user) 
+            // Handle potential error in user field with null check
+            const userData = booking.user && typeof booking.user === 'object' && booking.user !== null && !('error' in booking.user) 
               ? booking.user 
               : { name: "Unknown", email: "unknown@example.com" };
             

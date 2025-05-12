@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingForm from "@/components/BookingForm";
@@ -48,6 +49,7 @@ interface BookingState {
   remainingSessions: number;
 }
 
+// Fix for the type error: Define explicit type for class ID parameter
 const UserBooking = () => {
   const [bookings, setBookings] = useState<BookingState>({
     upcomingBookings: [],
