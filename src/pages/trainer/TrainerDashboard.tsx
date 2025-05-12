@@ -70,7 +70,7 @@ interface NewMemberData {
   birthday?: string;
 }
 
-// Interface for generate_uuid RPC function parameters
+// Interface for generate_uuid RPC function parameters - explicitly define as empty object
 interface GenerateUUIDParams {}
 
 const TrainerDashboard = () => {
@@ -233,8 +233,9 @@ const TrainerDashboard = () => {
   const handleRegisterMember = async (newMember: any) => {
     try {
       // Generate a UUID for the new profile with explicit type parameters
-      // Fix the type error by using empty object for parameters since generate_uuid doesn't need params
-      const { data: newUUID, error: uuidError } = await supabase.rpc('generate_uuid', {}) as GenerateUUIDResponse;
+      // Define an empty object literal that matches the GenerateUUIDParams interface
+      const generatedUuidParams = {} as GenerateUUIDParams;
+      const { data: newUUID, error: uuidError } = await supabase.rpc('generate_uuid', generatedUuidParams) as GenerateUUIDResponse;
       
       if (uuidError) {
         console.error("Error generating UUID:", uuidError);
