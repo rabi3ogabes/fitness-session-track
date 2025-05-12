@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingForm from "@/components/BookingForm";
@@ -209,7 +208,7 @@ const UserBooking = () => {
           .single();
           
         if (!classError) {
-          // Fixed: Use explicit typing for RPC parameters
+          // Fixed: Create a properly typed parameter object for the RPC call
           const params: DecrementClassEnrollmentParams = { class_id: classId };
           await supabase.rpc('decrement_class_enrollment', params);
         }
