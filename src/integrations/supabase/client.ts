@@ -222,16 +222,9 @@ export const cancelClassBooking = async (userId: string, classId: number): Promi
     // FIXED: Reduce enrolled count by the number of bookings that were deleted
     const bookingsCount = bookingData.length;
     
-    if (classData.enrolled !== undefined && classData.enrolled > 0) {
+    if (classData.enrolled && classData.enrolled > 0) {
       // Ensure we don't set enrolled to a negative value
       const newEnrolledCount = Math.max(0, classData.enrolled - bookingsCount);
-      
-      console.log("Updating class enrolled count:", { 
-        classId, 
-        oldCount: classData.enrolled, 
-        newCount: newEnrolledCount,
-        bookingsRemoved: bookingsCount
-      });
       
       const { error: updateError } = await supabase
         .from('classes')

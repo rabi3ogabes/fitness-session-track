@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -8,7 +7,7 @@ import StatsCard from "@/components/StatsCard";
 import BookingForm from "@/components/BookingForm";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Calendar, Clock, Bell } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, requireAuth } from "@/integrations/supabase/client";
 
 // Mock user data - we will overlay this with real data from Supabase if available
 const userData = {
@@ -57,65 +56,110 @@ const Dashboard = () => {
   const { isAuthenticated, isAdmin, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [sessionsRemaining, setSessionsRemaining] = useState(userData.membership.sessions.remaining);
+  const [sessionsRemaining, setSessionsRemaining] = useState<number | string>(0);
   const [loadingUserData, setLoadingUserData] = useState(true);
   const [userMembership, setUserMembership] = useState(userData.membership.type);
+  
+  // Function to fetch the user's session data from Supabase
+  const fetchUserData = async () => {
+    if (!isAuthenticated || !user?.email) return;
+    
+    try {
+      setLoadingUserData(true);
+      // Try to get user's profile from the profiles table
+      let { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('sessions_remaining, membership_type')
+        .eq('email', user.email)
+        .maybeSingle();
+        
+      if (profileError) throw profileError;
+      
+      // If we have profile data, use it
+      if (profileData) {
+        setSessionsRemaining(profileData.sessions_remaining ?? 0);
+        setUserMembership(profileData.membership_type || "Basic");
+      } else {
+        // Try to get data from members table as fallback
+        const { data: memberData, error: memberError } = await supabase
+          .from('members')
+          .select('remaining_sessions, membership')
+          .eq('email', user.email)
+          .maybeSingle();
+          
+        if (memberError) throw memberError;
+        
+        if (memberData) {
+          setSessionsRemaining(memberData.remaining_sessions ?? 0);
+          setUserMembership(memberData.membership || "Basic");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      toast({
+        title: "Error fetching your session data",
+        description: "Please try refreshing the page.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingUserData(false);
+    }
+  };
   
   useEffect(() => {
     if (isAuthenticated && isAdmin) {
       navigate("/admin");
+    } else {
+      fetchUserData();
     }
-    
-    // Fetch user's session data from Supabase if authenticated
-    const fetchUserData = async () => {
-      if (!isAuthenticated || !user?.email) return;
-      
-      try {
-        setLoadingUserData(true);
-        // Try to get user's profile from the profiles table
-        let { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('sessions_remaining, membership_type')
-          .eq('email', user.email)
-          .maybeSingle();
-          
-        if (profileError) throw profileError;
-        
-        // If we have profile data, use it
-        if (profileData) {
-          setSessionsRemaining(profileData.sessions_remaining || 0);
-          setUserMembership(profileData.membership_type || "Basic");
-        } else {
-          // Try to get data from members table as fallback
-          const { data: memberData, error: memberError } = await supabase
-            .from('members')
-            .select('remaining_sessions, membership')
-            .eq('email', user.email)
-            .maybeSingle();
-            
-          if (memberError) throw memberError;
-          
-          if (memberData) {
-            setSessionsRemaining(memberData.remaining_sessions || 0);
-            setUserMembership(memberData.membership || "Basic");
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        toast({
-          title: "Error fetching your session data",
-          description: "Please try refreshing the page.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoadingUserData(false);
-      }
-    };
-    
-    fetchUserData();
   }, [isAuthenticated, isAdmin, navigate, user, toast]);
 
-  const isLowOnSessions = sessionsRemaining <= 2;
+  // Set up real-time subscription for session count changes
+  useEffect(() => {
+    if (!isAuthenticated || !user?.email) return;
+    
+    // Get the channel for the subscription
+    const channel = supabase
+      .channel('sessions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'members',
+          filter: `email=eq.${user.email}`
+        },
+        (payload) => {
+          console.log('Member data changed:', payload);
+          if (payload.new && payload.new.remaining_sessions !== undefined) {
+            setSessionsRemaining(payload.new.remaining_sessions);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `email=eq.${user.email}`
+        },
+        (payload) => {
+          console.log('Profile data changed:', payload);
+          if (payload.new && payload.new.sessions_remaining !== undefined) {
+            setSessionsRemaining(payload.new.sessions_remaining);
+          }
+        }
+      )
+      .subscribe();
+    
+    // Clean up the subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, user]);
+
+  const isLowOnSessions = typeof sessionsRemaining === 'number' && sessionsRemaining <= 2;
 
   return (
     <DashboardLayout title="User Dashboard">
@@ -203,7 +247,7 @@ const Dashboard = () => {
         </div>
 
         <div className="lg:col-span-1">
-          <BookingForm remainingSessions={sessionsRemaining} />
+          <BookingForm remainingSessions={Number(sessionsRemaining)} />
         </div>
       </div>
     </DashboardLayout>
