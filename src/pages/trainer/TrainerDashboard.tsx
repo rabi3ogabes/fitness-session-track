@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -160,6 +161,16 @@ const TrainerDashboard = () => {
         toast({
           title: "Registration Failed",
           description: "Could not create member profile.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Type fix - check for undefined before inserting data
+      if (newUUID === undefined) {
+        toast({
+          title: "Registration Failed",
+          description: "Could not generate a unique ID for the member.",
           variant: "destructive"
         });
         return;

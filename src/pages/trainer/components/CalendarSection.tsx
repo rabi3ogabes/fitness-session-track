@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,7 @@ interface CalendarSectionProps {
   handleViewClassDetails: (classId: number) => void;
 }
 
-// Define interface for class data without recursive types
+// Define interface for class data with explicit properties
 interface ClassData {
   id: number;
   name: string;
@@ -26,7 +27,27 @@ interface ClassData {
   end_time: string | null;
   capacity: number;
   enrolled: number | null;
-  // Add other properties as needed
+  trainer_id?: number;
+  description?: string | null;
+  difficulty?: string | null;
+  gender?: string | null;
+  location?: string | null;
+  status?: string | null;
+  trainer?: string | null;
+  trainers?: string[] | null;
+  created_at?: string | null;
+}
+
+// Define an interface for trainer data
+interface TrainerData {
+  id: number;
+  name: string;
+  email?: string;
+  phone?: string | null;
+  gender?: string | null;
+  specialization?: string | null;
+  status?: string | null;
+  created_at?: string | null;
 }
 
 // Define an interface for classes by date to avoid recursion

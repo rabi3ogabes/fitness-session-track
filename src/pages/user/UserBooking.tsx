@@ -9,16 +9,18 @@ import { useToast } from "@/hooks/use-toast";
 
 // Define interfaces to improve type safety
 interface ClassInfo {
-  id?: number;
-  name?: string;
-  schedule?: string;
-  start_time?: string;
-  end_time?: string;
+  id: number;
+  name: string;
+  schedule: string;
+  start_time: string | null;
+  end_time: string | null;
   trainer_id?: number;
-  trainers?: {
-    id?: number;
-    name?: string;
-  };
+}
+
+interface TrainerInfo {
+  id: number;
+  name: string;
+  email?: string;
 }
 
 interface BookingData {
@@ -28,17 +30,6 @@ interface BookingData {
   status: string;
   attendance: boolean | null;
   created_at?: string;
-  classes?: ClassInfo;
-}
-
-interface RawBookingData {
-  id: string;
-  class_id: number;
-  user_id: string;
-  status: string;
-  attendance: boolean | null;
-  // This field won't be a ClassInfo type when it comes from Supabase with a relationship error
-  [key: string]: any;
 }
 
 interface ProcessedBooking {
@@ -102,10 +93,10 @@ const UserBooking = () => {
           // Get all class details for these bookings
           for (const booking of bookingsData) {
             try {
-              // Get class details
+              // Get class details - handle error explicitly
               const { data: classData, error: classError } = await supabase
                 .from('classes')
-                .select('id, name, schedule, start_time, end_time, trainer_id')
+                .select('*')
                 .eq('id', booking.class_id)
                 .single();
                 
@@ -119,13 +110,15 @@ const UserBooking = () => {
                 continue;
               }
               
-              // Get trainer details if available
+              // Get trainer details if trainer_id exists
               let trainerName = "Unknown Trainer";
-              if (classData.trainer_id) {
+              const trainerId = classData.trainer_id;
+              
+              if (trainerId !== undefined && trainerId !== null) {
                 const { data: trainerData } = await supabase
                   .from('trainers')
                   .select('name')
-                  .eq('id', classData.trainer_id)
+                  .eq('id', trainerId)
                   .single();
                   
                 if (trainerData) {
@@ -209,15 +202,19 @@ const UserBooking = () => {
       if (error) throw error;
       
       // Also update the enrolled count for the class
-      if (classId) {
-        const { error: classError } = await supabase
+      if (classId !== undefined) {
+        // First check if the class exists and has an enrolled field
+        const { data: classData, error: classError } = await supabase
           .from('classes')
           .select('enrolled')
           .eq('id', classId)
           .single();
           
         if (!classError) {
-          await supabase.rpc('decrement_class_enrollment', { class_id: classId });
+          // Use RPC to decrement the enrollment
+          await supabase.rpc('decrement_class_enrollment', { 
+            class_id: classId 
+          });
         }
       }
       
@@ -278,10 +275,10 @@ const UserBooking = () => {
           // Get all class details for these bookings
           for (const booking of bookingsData) {
             try {
-              // Get class details
+              // Get class details - handling error explicitly
               const { data: classData, error: classError } = await supabase
                 .from('classes')
-                .select('id, name, schedule, start_time, end_time, trainer_id')
+                .select('*')
                 .eq('id', booking.class_id)
                 .single();
                 
@@ -295,13 +292,15 @@ const UserBooking = () => {
                 continue;
               }
               
-              // Get trainer details if available
+              // Get trainer details if trainer_id exists
               let trainerName = "Unknown Trainer";
-              if (classData.trainer_id) {
+              const trainerId = classData.trainer_id;
+              
+              if (trainerId !== undefined && trainerId !== null) {
                 const { data: trainerData } = await supabase
                   .from('trainers')
                   .select('name')
-                  .eq('id', classData.trainer_id)
+                  .eq('id', trainerId)
                   .single();
                   
                 if (trainerData) {
