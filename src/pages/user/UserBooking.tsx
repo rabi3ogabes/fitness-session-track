@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingForm from "@/components/BookingForm";
@@ -14,7 +13,7 @@ interface ClassInfo {
   schedule: string;
   start_time: string | null;
   end_time: string | null;
-  trainer_id?: number;
+  trainer: string | null;
 }
 
 interface TrainerInfo {
@@ -110,20 +109,12 @@ const UserBooking = () => {
                 continue;
               }
               
-              // Get trainer details if trainer_id exists
+              // Get trainer details using the trainer field (not trainer_id)
               let trainerName = "Unknown Trainer";
-              const trainerId = classData.trainer_id;
               
-              if (trainerId !== undefined && trainerId !== null) {
-                const { data: trainerData } = await supabase
-                  .from('trainers')
-                  .select('name')
-                  .eq('id', trainerId)
-                  .single();
-                  
-                if (trainerData) {
-                  trainerName = trainerData.name;
-                }
+              // Using trainer name directly from classData if available
+              if (classData.trainer) {
+                trainerName = classData.trainer;
               }
               
               // Add processed booking
@@ -292,20 +283,12 @@ const UserBooking = () => {
                 continue;
               }
               
-              // Get trainer details if trainer_id exists
+              // Get trainer details using the trainer field (not trainer_id)
               let trainerName = "Unknown Trainer";
-              const trainerId = classData.trainer_id;
               
-              if (trainerId !== undefined && trainerId !== null) {
-                const { data: trainerData } = await supabase
-                  .from('trainers')
-                  .select('name')
-                  .eq('id', trainerId)
-                  .single();
-                  
-                if (trainerData) {
-                  trainerName = trainerData.name;
-                }
+              // Using trainer name directly from classData if available
+              if (classData.trainer) {
+                trainerName = classData.trainer;
               }
               
               // Add processed booking

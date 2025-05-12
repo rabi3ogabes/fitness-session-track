@@ -199,7 +199,7 @@ const TrainerDashboard = () => {
         return;
       }
       
-      // Also add to members table for admin view
+      // Also add to members table for admin view - fix the TypeScript error here
       await supabase
         .from('members')
         .insert({
