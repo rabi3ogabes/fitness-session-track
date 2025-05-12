@@ -209,6 +209,7 @@ const UserBooking = () => {
           
         if (!classError) {
           // Use RPC to decrement the enrollment with proper typing
+          // Fix the string type error by explicitly passing an object with the correct type
           const params: DecrementClassEnrollmentParams = { class_id: classId };
           await supabase.rpc('decrement_class_enrollment', params);
         }

@@ -48,6 +48,19 @@ interface GenerateUUIDResponse {
   error: Error | null;
 }
 
+// Define a type for the member structure to fix the "never" type error
+interface NewMemberData {
+  name: string;
+  email: string;
+  phone?: string;
+  dob?: string;
+  gender?: string;
+  membership?: string;
+  sessions?: number;
+  remaining_sessions?: number;
+  status?: string;
+}
+
 const TrainerDashboard = () => {
   const { isTrainer, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
@@ -163,9 +176,11 @@ const TrainerDashboard = () => {
                 !('code' in booking.user) && 
                 !('message' in booking.user) && 
                 !('details' in booking.user)) {
+              // Fix these null/undefined checks by using safe optional chaining with nullish coalescing
+              const userObj = booking.user;
               userData = {
-                name: booking.user.name || "Unknown",
-                email: booking.user.email || "unknown@example.com"
+                name: (userObj && 'name' in userObj && userObj.name) ? userObj.name : "Unknown",
+                email: (userObj && 'email' in userObj && userObj.email) ? userObj.email : "unknown@example.com"
               };
             }
             
@@ -255,20 +270,22 @@ const TrainerDashboard = () => {
         return;
       }
       
-      // Also add to members table for admin view - fix by using typed object
+      // Also add to members table for admin view - fix by using proper type casting
+      const memberData: NewMemberData = {
+        name: newMember.name,
+        email: newMember.email,
+        phone: newMember.phone || '',
+        dob: newMember.dob || null,
+        membership: "Basic",
+        sessions: 4,
+        remaining_sessions: 4,
+        status: "Active",
+        gender: newMember.gender || "Not specified"
+      };
+      
       await supabase
         .from('members')
-        .insert([{
-          name: newMember.name,
-          email: newMember.email,
-          phone: newMember.phone || '',
-          birthday: newMember.dob || null,
-          membership: "Basic",
-          sessions: 4,
-          remaining_sessions: 4,
-          status: "Active",
-          gender: newMember.gender || "Not specified"
-        }] as any);
+        .insert([memberData]);
       
       toast({
         title: "Member Registered",
