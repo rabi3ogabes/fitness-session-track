@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -5,84 +6,18 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { CalendarSection } from "./components/CalendarSection";
 import { ClassDetailsDialog } from "./components/ClassDetailsDialog";
 import NewMemberDialog from "./components/NewMemberDialog";
-import { supabase } from "@/integrations/supabase/client";
+import { mockBookings } from "./mockData";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { ClassesSection } from "./components/ClassesSection";
-
-// Define proper interfaces to prevent excessive type recursion
-interface Booking {
-  id: string; // Changed from number to string to match actual data structure
-  class_id: number;
-  user_id: string;
-  status: string;
-  booking_date: string;
-  notes?: string | null;
-  attendance?: boolean | null;
-  user?: {
-    name?: string;
-    email?: string;
-  } | null; // Allow user to be null or have optional properties
-  class?: string;
-  date?: string;
-  time?: string;
-}
-
-interface ClassData {
-  id: number;
-  name: string;
-  schedule: string;
-  start_time: string | null;
-  end_time: string | null;
-  capacity: number;
-  enrolled: number | null;
-  trainer?: string | null; // Using trainer field instead of trainer_id
-}
-
-// Define a type for the UUID generation return
-interface GenerateUUIDResponse {
-  data: string | null;
-  error: Error | null;
-}
-
-// Define a more specific user object structure to handle type issues
-interface UserObject {
-  name?: string;
-  email?: string;
-  [key: string]: any; // Allow for other properties
-}
-
-// Define a type for the member structure to fix the "never" type error
-interface NewMemberData {
-  name: string;
-  email: string;
-  phone?: string;
-  dob?: string | null;
-  gender?: string;
-  membership?: string;
-  sessions?: number;
-  remaining_sessions?: number;
-  status?: string;
-  can_be_edited_by_trainers?: boolean;
-  birthday?: string;
-}
-
-// Interface for the generate_uuid RPC function
-// This is a simple empty interface for the RPC function that takes no arguments
-interface GenerateUUIDParams {}
 
 const TrainerDashboard = () => {
-  const { isTrainer, isAuthenticated, user } = useAuth();
+  const { isTrainer, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState(mockBookings);
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
-  const [isDataLoading, setIsDataLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<"today" | "tomorrow" | "all">("today");
   
   // New member registration dialog
   const [isNewMemberDialogOpen, setIsNewMemberDialogOpen] = useState(false);
@@ -100,221 +35,26 @@ const TrainerDashboard = () => {
     }
   }, [isAuthenticated, isTrainer, navigate]);
   
-  // Fetch bookings data from Supabase
-  useEffect(() => {
-    const fetchBookings = async () => {
-      if (!user) return;
-      
-      try {
-        setIsDataLoading(true);
-        
-        // Get all bookings for classes where this trainer is assigned
-        const { data: trainerData, error: trainerError } = await supabase
-          .from('trainers')
-          .select('id')
-          .eq('email', user.email)
-          .single();
-          
-        if (trainerError) {
-          console.error('Error fetching trainer data:', trainerError);
-          toast({
-            title: "Error",
-            description: "Failed to verify trainer information.",
-            variant: "destructive"
-          });
-          setIsDataLoading(false);
-          return;
-        }
-        
-        if (!trainerData) {
-          console.warn('No trainer record found for this user');
-          setBookings([]);
-          setIsDataLoading(false);
-          return;
-        }
-        
-        // Separate queries instead of relationship that's causing errors
-        // First get classes for this trainer - using trainer field instead of trainer_id
-        const { data: classesData, error: classesError } = await supabase
-          .from('classes')
-          .select('*')
-          .eq('trainer', trainerData.id.toString());
-          
-        if (classesError) {
-          console.error('Error fetching classes:', classesError);
-          toast({
-            title: "Error",
-            description: "Failed to load your classes. Please try again.",
-            variant: "destructive"
-          });
-          setIsDataLoading(false);
-          return;
-        }
-        
-        // Then get bookings for these classes
-        if (classesData && classesData.length > 0) {
-          const classIds = classesData.map(cls => cls.id);
-          
-          const { data: bookingsData, error: bookingsError } = await supabase
-            .from('bookings')
-            .select('*, user:user_id(name, email)')
-            .in('class_id', classIds);
-            
-          if (bookingsError) {
-            console.error('Error fetching bookings:', bookingsError);
-            toast({
-              title: "Error",
-              description: "Failed to load booking information. Please try again.",
-              variant: "destructive"
-            });
-            setIsDataLoading(false);
-            return;
-          }
-          
-          // Process bookings and add class information
-          const processedBookings: Booking[] = bookingsData ? bookingsData.map(booking => {
-            const relatedClass = classesData.find(c => c.id === booking.class_id);
-            
-            // Define default user data - avoiding null references
-            let userData = {
-              name: "Unknown",
-              email: "unknown@example.com"
-            };
-            
-            // Handle user object safely with strict null checks
-            if (booking && booking.user) {
-              // Only access user properties if user exists
-              const userObj = booking.user as UserObject;
-              
-              userData = {
-                name: userObj && typeof userObj.name === 'string' ? userObj.name : "Unknown",
-                email: userObj && typeof userObj.email === 'string' ? userObj.email : "unknown@example.com"
-              };
-            }
-            
-            return {
-              ...booking,
-              user: userData,
-              class: relatedClass?.name || "Unknown class",
-              date: relatedClass?.schedule || format(new Date(), "yyyy-MM-dd"),
-              time: relatedClass?.start_time || "Unknown time"
-            };
-          }) : [];
-          
-          console.log('Fetched bookings:', processedBookings);
-          setBookings(processedBookings);
-        } else {
-          console.log('No classes found for this trainer');
-          setBookings([]);
-        }
-      } catch (error) {
-        console.error('Error fetching trainer bookings:', error);
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred while loading data.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsDataLoading(false);
-      }
-    };
-    
-    if (isAuthenticated && isTrainer && user) {
-      fetchBookings();
-    }
-  }, [isAuthenticated, isTrainer, user, toast]);
-  
   // Handler for viewing class details to ensure dialog opens
   const handleViewClassDetails = (classId: number) => {
     setSelectedClass(classId);
     setIsClassDetailsOpen(true);
   };
   
-  const handleRegisterMember = async (newMember: any) => {
-    try {
-      // Generate a UUID for the new profile
-      // Using type assertion to any for the RPC call to avoid typing issues
-      const { data: newUUID, error: uuidError } = await supabase.rpc(
-        'generate_uuid', 
-        {} as any
-      ) as GenerateUUIDResponse;
-      
-      if (uuidError) {
-        console.error("Error generating UUID:", uuidError);
-        toast({
-          title: "Registration Failed",
-          description: "Could not create member profile.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Type fix - check for undefined before inserting data
-      if (newUUID === null) {
-        toast({
-          title: "Registration Failed",
-          description: "Could not generate a unique ID for the member.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Create a new profile in the database with the generated UUID
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: newUUID,
-          email: newMember.email,
-          name: newMember.name,
-          phone_number: newMember.phone || '',
-          sessions_remaining: 0,
-          total_sessions: 0
-        })
-        .select();
-        
-      if (profileError) {
-        console.error("Error creating profile:", profileError);
-        toast({
-          title: "Registration Failed",
-          description: "Could not create member profile.",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      // Fix the type error by creating a properly typed object for insertion
-      const memberData: NewMemberData = {
-        name: newMember.name,
-        email: newMember.email,
-        phone: newMember.phone || '',
-        dob: newMember.dob || null,
-        gender: newMember.gender || "Not specified",
-        membership: "Basic",
-        sessions: 4,
-        remaining_sessions: 4,
-        status: "Active",
-        can_be_edited_by_trainers: true
-      };
-      
-      // Use proper array syntax for insertion to match the expected type
-      await supabase
-        .from('members')
-        .insert([memberData]);
-      
-      toast({
-        title: "Member Registered",
-        description: `${newMember.name} has been successfully registered.`,
-      });
-      
-      setIsNewMemberDialogOpen(false);
-    } catch (error) {
-      console.error("Error registering member:", error);
-      toast({
-        title: "Registration Failed",
-        description: "An unexpected error occurred.",
-        variant: "destructive"
-      });
-    }
+  const handleRegisterMember = (newMember: any) => {
+    // Add a new booking for this member to today's date
+    const newId = Math.max(...bookings.map(b => b.id)) + 1;
+    const bookingToAdd = {
+      id: newId,
+      member: newMember.name,
+      class: "First Session",
+      date: format(new Date(), "yyyy-MM-dd"),
+      time: format(new Date(), "h:mm a"),
+      status: "Present", // Auto-mark as present
+    };
+    
+    setBookings([...bookings, bookingToAdd]);
+    setIsNewMemberDialogOpen(false);
   };
 
   // Custom NewMemberButton component
@@ -338,23 +78,12 @@ const TrainerDashboard = () => {
       <div className="flex justify-end mb-4">
         <NewMemberButton onClick={() => setIsNewMemberDialogOpen(true)} />
       </div>
-      
-      <div className="grid grid-cols-1 gap-6">
-        <CalendarSection 
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          bookings={bookings}
-          handleViewClassDetails={handleViewClassDetails}
-        />
-        
-        <ClassesSection
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          handleViewClassDetails={handleViewClassDetails}
-        />
-      </div>
+      <CalendarSection 
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
+        bookings={bookings}
+        handleViewClassDetails={handleViewClassDetails}
+      />
       
       {/* Class details dialog - moved outside tabs to ensure it renders properly */}
       <ClassDetailsDialog 
@@ -367,7 +96,11 @@ const TrainerDashboard = () => {
       <NewMemberDialog 
         isOpen={isNewMemberDialogOpen}
         onOpenChange={setIsNewMemberDialogOpen}
-        onMemberAdded={handleRegisterMember}
+        onMemberAdded={() => {
+          // After member is added, you might want to refresh the list
+          // This is a placeholder for any refresh action
+          console.log("Member added successfully");
+        }}
       />
     </DashboardLayout>
   );

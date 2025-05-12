@@ -266,7 +266,14 @@ const ClassCalendar = () => {
       if (!user) return;
       
       try {
-        // Remove demo user check to ensure we always fetch real data
+        // Check if this is demo user or if we're falling back to demo mode
+        if (user.id === "demo-user-id" || !isNetworkConnected) {
+          // For demo mode, use hardcoded data
+          setUserData(DEMO_USER_DATA);
+          setError(null);
+          return;
+        }
+        
         if (!isNetworkConnected) {
           setError("You are currently offline. Reconnect to load your profile data.");
           return;
@@ -309,27 +316,33 @@ const ClassCalendar = () => {
             totalSessions: data.total_sessions || 0,
           });
         } catch (err) {
-          console.error("Failed to get user profile:", err);
-          setError("Failed to load user profile data. Please try again.");
+          // Fall back to demo data on error
+          console.error("Failed to get user profile, using demo data:", err);
+          setUserData(DEMO_USER_DATA);
+          setError("Failed to load user profile data. Using demo data instead.");
         }
       } catch (err) {
         console.error("Error in fetchUserData:", err);
-        setError("Failed to load user data. Please try again.");
+        // Fall back to demo data
+        setUserData(DEMO_USER_DATA);
+        setError("Failed to load user data. Using demo data instead.");
       }
     };
     
     fetchUserData();
   }, [user, isNetworkConnected]);
   
-  // Fetch classes from Supabase - enhanced to always use real data
+  // Fetch classes from Supabase - enhanced with better error handling and logging
   useEffect(() => {
     const fetchClasses = async () => {
       setIsLoading(true);
       
       try {
         if (!isNetworkConnected) {
+          // If offline, use demo data
+          setClasses(DEMO_CLASSES);
           setIsLoading(false);
-          setError("You're offline. Please reconnect to view classes.");
+          setError("You're offline. Using demo class data.");
           return;
         }
 
@@ -353,7 +366,7 @@ const ClassCalendar = () => {
           
           if (data && data.length > 0) {
             // Transform and add type property based on class name or difficulty
-            const classesWithType = data.map((cls: any) => {
+            const classesWithType = data.map((cls: ClassModel) => {
               let type = 'default';
               const name = cls.name.toLowerCase();
               
@@ -374,14 +387,15 @@ const ClassCalendar = () => {
             setClasses(classesWithType);
             pendingRefresh.current = false;
           } else {
-            // No classes found - show empty state instead of demo data
-            setClasses([]);
-            setError("No classes found in the database.");
+            // Fallback to demo data if no classes returned
+            setClasses(DEMO_CLASSES);
+            setError("No classes found in the database. Using demo data.");
           }
         } catch (err) {
+          // Fallback to demo data on error
           console.error("Error fetching classes:", err);
-          setError("Failed to load classes from the server. Please try again.");
-          setClasses([]); // Set empty array instead of demo data
+          setClasses(DEMO_CLASSES);
+          setError("Failed to load classes from the server. Using demo data instead.");
         }
       } finally {
         setIsLoading(false);
@@ -391,7 +405,7 @@ const ClassCalendar = () => {
     fetchClasses();
   }, [isNetworkConnected, pendingRefresh.current]);
   
-  // Fetch user bookings from Supabase - enhanced to always use real data
+  // Fetch user bookings from Supabase - enhanced with better error handling
   useEffect(() => {
     const fetchBookings = async () => {
       if (!user) return;
@@ -399,6 +413,20 @@ const ClassCalendar = () => {
       try {
         // Clear previous bookings to prevent stale data
         setBookedClasses([]);
+        
+        if (user.id === "demo-user-id") {
+          // For demo mode, use hardcoded bookings
+          setBookedClasses([3]); // Mark class ID 3 as booked in demo mode
+          
+          // Update classes to mark as booked
+          setClasses(prevClasses => 
+            prevClasses.map(cls => ({
+              ...cls,
+              isBooked: cls.id === 3
+            }))
+          );
+          return;
+        }
         
         if (!isNetworkConnected) {
           return; // Don't attempt to fetch if offline
@@ -446,7 +474,16 @@ const ClassCalendar = () => {
           }
         } catch (err) {
           console.error("Error fetching bookings:", err);
-          setError("Failed to load your bookings. Please try again.");
+          // Fallback for demo purposes
+          if (user.id === "demo-user-id" || !isNetworkConnected) {
+            setBookedClasses([3]);
+            setClasses(prevClasses => 
+              prevClasses.map(cls => ({
+                ...cls,
+                isBooked: cls.id === 3
+              }))
+            );
+          }
         }
       } catch (err) {
         console.error("Error in fetchBookings:", err);
@@ -599,15 +636,15 @@ const ClassCalendar = () => {
         return;
       }
       
-      // Insert booking into Supabase - Fix by using 'as any[]' to fix the never[] type error
+      // Insert booking into Supabase
       const { error } = await supabase
         .from('bookings')
-        .insert([{
+        .insert({
           user_id: user.id,
           class_id: selectedClass.id,
           status: 'confirmed',
           booking_date: new Date().toISOString()
-        }]);
+        });
       
       if (error) {
         console.error("Error booking class:", error);
@@ -682,7 +719,7 @@ const ClassCalendar = () => {
     setSelectedClass(null);
   };
   
-  // Enhanced cancel booking function with better database update validation
+  // Enhanced cancel booking function with better error handling and feedback
   const handleCancelBooking = async (classId: number, classTime: string, className: string) => {
     if (!user) return;
     
@@ -727,6 +764,34 @@ const ClassCalendar = () => {
         return;
       }
       
+      // Special handling for demo user
+      if (user.id === "demo-user-id") {
+        // Simulate successful cancellation for demo user
+        setBookedClasses(bookedClasses.filter(id => id !== classId));
+        
+        // Update classes to remove booked status and decrease enrolled count
+        setClasses(prevClasses => 
+          prevClasses.map(cls => ({
+            ...cls,
+            isBooked: cls.id === classId ? false : cls.isBooked,
+            enrolled: cls.id === classId && cls.enrolled ? cls.enrolled - 1 : cls.enrolled
+          }))
+        );
+        
+        // Update user sessions for demo
+        const newRemainingSession = userData.remainingSessions + 1;
+        setUserData({
+          ...userData,
+          remainingSessions: newRemainingSession
+        });
+        
+        toast({
+          title: "Class cancelled (Demo)",
+          description: `You've successfully cancelled your ${className} class in demo mode.`,
+        });
+        return;
+      }
+      
       if (!isNetworkConnected) {
         toast({
           title: "You're offline",
@@ -741,10 +806,8 @@ const ClassCalendar = () => {
         description: `Cancelling your ${className} class.`,
       });
       
-      // Use the enhanced cancelClassBooking function with additional logging
-      console.log("About to cancel booking for user:", user.id, "class:", classId);
+      // Use the enhanced cancelClassBooking function
       const cancellationSuccess = await cancelClassBooking(user.id, classId);
-      console.log("Cancellation result:", cancellationSuccess);
       
       if (!cancellationSuccess) {
         toast({
@@ -770,8 +833,6 @@ const ClassCalendar = () => {
       // Update user sessions
       if (user) {
         const newRemainingSession = userData.remainingSessions + 1;
-        console.log("Updating user session count to:", newRemainingSession);
-        
         const { error: profileError } = await supabase
           .from('profiles')
           .update({ 
@@ -781,11 +842,6 @@ const ClassCalendar = () => {
         
         if (profileError) {
           console.error("Error updating user sessions:", profileError);
-          toast({
-            title: "Warning",
-            description: "Your booking was cancelled, but we couldn't update your session count.",
-            variant: "destructive"
-          });
         } else {
           // Update local state for user data
           setUserData({
