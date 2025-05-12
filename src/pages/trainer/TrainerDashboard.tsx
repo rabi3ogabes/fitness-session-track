@@ -149,11 +149,25 @@ const TrainerDashboard = () => {
           // Process bookings and add class information
           const processedBookings: Booking[] = bookingsData ? bookingsData.map(booking => {
             const relatedClass = classesData.find(c => c.id === booking.class_id);
-            // Fix null checks completely by using nullish coalescing and optional chaining
-            const userData = {
-              name: booking.user?.name ?? "Unknown",
-              email: booking.user?.email ?? "unknown@example.com"
+            
+            // Fixed: Handle user data safely with type checking
+            let userData = {
+              name: "Unknown",
+              email: "unknown@example.com"
             };
+            
+            // Only access user properties if it exists and is an object (not an error)
+            if (booking.user && 
+                typeof booking.user === 'object' && 
+                booking.user !== null && 
+                !('code' in booking.user) && 
+                !('message' in booking.user) && 
+                !('details' in booking.user)) {
+              userData = {
+                name: booking.user.name || "Unknown",
+                email: booking.user.email || "unknown@example.com"
+              };
+            }
             
             return {
               ...booking,
@@ -241,7 +255,7 @@ const TrainerDashboard = () => {
         return;
       }
       
-      // Also add to members table for admin view - fix by using array notation
+      // Also add to members table for admin view - fix by using typed object
       await supabase
         .from('members')
         .insert([{
@@ -254,7 +268,7 @@ const TrainerDashboard = () => {
           remaining_sessions: 4,
           status: "Active",
           gender: newMember.gender || "Not specified"
-        }]);
+        }] as any);
       
       toast({
         title: "Member Registered",

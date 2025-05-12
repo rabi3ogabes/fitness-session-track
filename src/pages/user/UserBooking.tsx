@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingForm from "@/components/BookingForm";
@@ -49,7 +48,11 @@ interface BookingState {
   remainingSessions: number;
 }
 
-// Fix for type error in the handleCancelBooking function
+// Interface for decrement_class_enrollment RPC function
+interface DecrementClassEnrollmentParams {
+  class_id: number;
+}
+
 const UserBooking = () => {
   const [bookings, setBookings] = useState<BookingState>({
     upcomingBookings: [],
@@ -186,7 +189,6 @@ const UserBooking = () => {
     if (!user || !id) return;
     
     try {
-      // Properly type the RPC function call
       // Cancel booking in Supabase
       const { error } = await supabase
         .from('bookings')
@@ -206,10 +208,9 @@ const UserBooking = () => {
           .single();
           
         if (!classError) {
-          // Use RPC to decrement the enrollment
-          await supabase.rpc('decrement_class_enrollment', { 
-            class_id: classId 
-          } as { class_id: number });
+          // Use RPC to decrement the enrollment with proper typing
+          const params: DecrementClassEnrollmentParams = { class_id: classId };
+          await supabase.rpc('decrement_class_enrollment', params);
         }
       }
       
