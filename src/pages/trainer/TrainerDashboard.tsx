@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -171,12 +170,11 @@ const TrainerDashboard = () => {
         .from('profiles')
         .insert({
           id: newUUID,
-          name: newMember.name,
           email: newMember.email,
+          name: newMember.name,
           phone_number: newMember.phone || ''
         })
-        .select()
-        .single();
+        .select();
         
       if (profileError) {
         console.error("Error creating profile:", profileError);

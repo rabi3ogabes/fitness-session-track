@@ -7,8 +7,49 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
+// Define interfaces to improve type safety
+interface ClassInfo {
+  id?: number;
+  name?: string;
+  schedule?: string;
+  start_time?: string;
+  end_time?: string;
+  trainer_id?: number;
+  trainers?: {
+    id?: number;
+    name?: string;
+  };
+}
+
+interface BookingData {
+  id: string;
+  class_id: number;
+  user_id: string;
+  status: string;
+  attendance: boolean;
+  created_at?: string;
+  classes?: ClassInfo;
+}
+
+interface ProcessedBooking {
+  id: string;
+  className: string;
+  date: string;
+  time: string;
+  trainer: string;
+  status: string;
+  attendance: boolean;
+  classId?: number;
+}
+
+interface BookingState {
+  upcomingBookings: ProcessedBooking[];
+  pastBookings: ProcessedBooking[];
+  remainingSessions: number;
+}
+
 const UserBooking = () => {
-  const [bookings, setBookings] = useState({
+  const [bookings, setBookings] = useState<BookingState>({
     upcomingBookings: [],
     pastBookings: [],
     remainingSessions: 0
@@ -43,7 +84,6 @@ const UserBooking = () => {
             user_id,
             status,
             attendance,
-            created_at,
             classes:class_id(
               id,
               name,
@@ -66,7 +106,7 @@ const UserBooking = () => {
         const currentDate = new Date();
         
         // Process and format the bookings
-        const processedBookings = bookingsData ? bookingsData.map(booking => {
+        const processedBookings: ProcessedBooking[] = bookingsData ? bookingsData.map((booking: BookingData) => {
           const classInfo = booking.classes;
           return {
             id: booking.id,
@@ -123,7 +163,7 @@ const UserBooking = () => {
     fetchUserData();
   }, [user, toast]);
 
-  const handleCancelBooking = async (id: number, classId: number) => {
+  const handleCancelBooking = async (id: string, classId?: number) => {
     if (!user || !id) return;
     
     try {
@@ -198,7 +238,6 @@ const UserBooking = () => {
           user_id,
           status,
           attendance,
-          created_at,
           classes:class_id(
             id,
             name,
@@ -218,7 +257,7 @@ const UserBooking = () => {
         const currentDate = new Date();
         
         // Process and format the bookings
-        const processedBookings = bookingsData.map(booking => {
+        const processedBookings: ProcessedBooking[] = bookingsData.map((booking: BookingData) => {
           const classInfo = booking.classes;
           return {
             id: booking.id,

@@ -17,6 +17,23 @@ interface CalendarSectionProps {
   handleViewClassDetails: (classId: number) => void;
 }
 
+// Define interface for class data to avoid recursive types
+interface ClassData {
+  id: number;
+  name: string;
+  schedule: string;
+  start_time: string | null;
+  end_time: string | null;
+  capacity: number;
+  enrolled: number | null;
+  // Add other properties as needed
+}
+
+// Define an interface for classes by date to avoid recursion
+interface ClassesByDate {
+  [key: string]: ClassData[];
+}
+
 export const CalendarSection = ({ 
   selectedDate, 
   setSelectedDate,
@@ -30,9 +47,9 @@ export const CalendarSection = ({
   const { toast } = useToast();
   const { user } = useAuth();
   const [userBookings, setUserBookings] = useState<any[]>([]);
-  const [classesForSelected, setClassesForSelected] = useState<any[]>([]);
-  // Fix recursive type by using a plain object type instead of Record
-  const [classesInMonth, setClassesInMonth] = useState<{[key: string]: any[]}>({});
+  const [classesForSelected, setClassesForSelected] = useState<ClassData[]>([]);
+  // Use the properly defined type instead of the recursive type
+  const [classesInMonth, setClassesInMonth] = useState<ClassesByDate>({});
   const [isLoading, setIsLoading] = useState(false);
   
   // Fetch classes for the current month
@@ -85,7 +102,7 @@ export const CalendarSection = ({
         }
         
         // Organize classes by date
-        const classesByDate: {[key: string]: any[]} = {};
+        const classesByDate: ClassesByDate = {};
         
         if (classesData) {
           classesData.forEach(cls => {
@@ -95,7 +112,7 @@ export const CalendarSection = ({
               classesByDate[dateKey] = [];
             }
             
-            classesByDate[dateKey].push(cls);
+            classesByDate[dateKey].push(cls as ClassData);
           });
         }
         
