@@ -208,11 +208,10 @@ const UserBooking = () => {
           .single();
           
         if (!classError) {
-          // Make sure we're using the correct parameter type
-          const params: DecrementClassEnrollmentParams = { 
+          // Use type assertion to any to avoid typing issues with the RPC call
+          await supabase.rpc('decrement_class_enrollment', { 
             class_id: classId 
-          };
-          await supabase.rpc('decrement_class_enrollment', params);
+          } as any);
         }
       }
       

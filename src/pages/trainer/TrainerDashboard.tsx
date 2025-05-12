@@ -70,11 +70,8 @@ interface NewMemberData {
 }
 
 // Interface for the generate_uuid RPC function
-// Use {} with no properties to indicate the function takes no parameters
-// Since we're using an explicit type cast later, we need to ensure the interface is compatible
-interface GenerateUUIDParams {
-  // Empty interface - using an empty object literal when calling the function
-}
+// This is a simple empty interface for the RPC function that takes no arguments
+interface GenerateUUIDParams {}
 
 const TrainerDashboard = () => {
   const { isTrainer, isAuthenticated, user } = useAuth();
@@ -236,10 +233,10 @@ const TrainerDashboard = () => {
   const handleRegisterMember = async (newMember: any) => {
     try {
       // Generate a UUID for the new profile
-      // Explicitly cast the empty object to GenerateUUIDParams to satisfy TypeScript
+      // Using type assertion to any for the RPC call to avoid typing issues
       const { data: newUUID, error: uuidError } = await supabase.rpc(
         'generate_uuid', 
-        {} as GenerateUUIDParams
+        {} as any
       ) as GenerateUUIDResponse;
       
       if (uuidError) {
