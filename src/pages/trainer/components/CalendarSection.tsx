@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +31,8 @@ export const CalendarSection = ({
   const { user } = useAuth();
   const [userBookings, setUserBookings] = useState<any[]>([]);
   const [classesForSelected, setClassesForSelected] = useState<any[]>([]);
-  const [classesInMonth, setClassesInMonth] = useState<Record<string, any[]>>({});
+  // Use Record<string, any[]> instead of Record<string, any[]> to avoid recursive type
+  const [classesInMonth, setClassesInMonth] = useState<{[key: string]: any[]}>({});
   const [isLoading, setIsLoading] = useState(false);
   
   // Fetch classes for the current month
@@ -85,7 +85,7 @@ export const CalendarSection = ({
         }
         
         // Organize classes by date
-        const classesByDate: Record<string, any[]> = {};
+        const classesByDate: {[key: string]: any[]} = {};
         
         if (classesData) {
           classesData.forEach(cls => {

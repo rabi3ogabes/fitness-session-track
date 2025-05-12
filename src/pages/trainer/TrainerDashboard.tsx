@@ -159,8 +159,8 @@ const TrainerDashboard = () => {
         .insert({
           name: newMember.name,
           email: newMember.email,
-          phone_number: newMember.phone || '',
-          status: 'Active'
+          phone_number: newMember.phone || ''
+          // Removed status field as it doesn't exist in the profiles table schema
         })
         .select()
         .single();

@@ -15,7 +15,7 @@ interface MembershipPlan {
 interface NewMemberDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onMemberAdded: () => void;
+  onMemberAdded: (newMember: any) => void; // Updated to accept a parameter
 }
 
 const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialogProps) => {
@@ -175,8 +175,8 @@ const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialo
       
       setSelectedPlan(membershipPlans[0]);
       
-      // Notify parent component
-      onMemberAdded();
+      // Notify parent component with the member data
+      onMemberAdded(newMember);
       
       setFormErrors({});
       setPhoneError(null);
