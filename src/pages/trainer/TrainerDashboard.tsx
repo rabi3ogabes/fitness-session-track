@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -199,10 +198,10 @@ const TrainerDashboard = () => {
         return;
       }
       
-      // Also add to members table for admin view - fix the TypeScript error here
+      // Also add to members table for admin view - fix the TypeScript error by specifying type
       await supabase
         .from('members')
-        .insert({
+        .insert([{
           name: newMember.name,
           email: newMember.email,
           phone: newMember.phone || '',
@@ -212,7 +211,7 @@ const TrainerDashboard = () => {
           remaining_sessions: 4,
           status: "Active",
           gender: newMember.gender || "Not specified"
-        });
+        }]);
       
       toast({
         title: "Member Registered",
