@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -70,10 +69,10 @@ interface NewMemberData {
   birthday?: string;
 }
 
-// Interface for generate_uuid RPC function parameters
-// This needs to be an empty interface since the function doesn't take parameters
-interface GenerateUUIDParams {
-  // Empty object type for the generate_uuid function
+// Interface for the generate_uuid RPC function - it takes no parameters
+// Define it as a Record<string, never> to explicitly state it takes no params
+interface GenerateUUIDParams extends Record<string, never> {
+  // Empty interface with Record<string, never> to indicate no parameters
 }
 
 const TrainerDashboard = () => {
@@ -235,10 +234,8 @@ const TrainerDashboard = () => {
   
   const handleRegisterMember = async (newMember: any) => {
     try {
-      // Generate a UUID for the new profile with explicit type parameters
-      // Create an empty object that matches the GenerateUUIDParams interface
-      const generatedUuidParams = {} as GenerateUUIDParams;
-      const { data: newUUID, error: uuidError } = await supabase.rpc('generate_uuid', generatedUuidParams) as GenerateUUIDResponse;
+      // Generate a UUID for the new profile - using proper empty object for the RPC call
+      const { data: newUUID, error: uuidError } = await supabase.rpc('generate_uuid', {} as GenerateUUIDParams) as GenerateUUIDResponse;
       
       if (uuidError) {
         console.error("Error generating UUID:", uuidError);
