@@ -70,8 +70,8 @@ interface NewMemberData {
   birthday?: string;
 }
 
-// Type for RPC parameters to fix the type error
-type RPCParams = Record<string, any>;
+// Interface for generate_uuid RPC function parameters
+interface GenerateUUIDParams {}
 
 const TrainerDashboard = () => {
   const { isTrainer, isAuthenticated, user } = useAuth();
@@ -232,8 +232,9 @@ const TrainerDashboard = () => {
   
   const handleRegisterMember = async (newMember: any) => {
     try {
-      // Generate a UUID for the new profile - use the explicit type assertion
-      const { data: newUUID, error: uuidError } = await supabase.rpc('generate_uuid') as GenerateUUIDResponse;
+      // Generate a UUID for the new profile with explicit type parameters
+      // Fix the type error by using empty object for parameters since generate_uuid doesn't need params
+      const { data: newUUID, error: uuidError } = await supabase.rpc('generate_uuid', {}) as GenerateUUIDResponse;
       
       if (uuidError) {
         console.error("Error generating UUID:", uuidError);
