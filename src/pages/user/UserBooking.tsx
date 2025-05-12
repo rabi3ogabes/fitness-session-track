@@ -212,9 +212,9 @@ const UserBooking = () => {
           .single();
           
         if (!classError) {
-          // Use an explicit type for the RPC parameters to fix the "never" type error
+          // Use an explicitly typed params object to fix the type error
           const params: RPCParams = { class_id: classId };
-          await supabase.rpc('decrement_class_enrollment', params);
+          await supabase.rpc('decrement_class_enrollment', params as any);
         }
       }
       

@@ -181,16 +181,21 @@ const TrainerDashboard = () => {
               email: "unknown@example.com"
             };
             
-            // Improved null check and type safety - fixing the null reference error
-            if (booking && booking.user && typeof booking.user === 'object') {
-              // Ensure we're handling valid user objects only
-              if (!('code' in booking.user) && !('message' in booking.user) && !('details' in booking.user)) {
-                // Safely cast to UserObject with explicit type checking
+            // Completely restructured user data handling to fix null reference errors
+            if (booking?.user) {
+              // Only try to process user data if it exists
+              if (typeof booking.user === 'object' && 
+                  !('code' in booking.user) && 
+                  !('message' in booking.user) && 
+                  !('details' in booking.user)) {
+                
+                // Type assertion after proper checks
                 const userObj = booking.user as UserObject;
-                  
+                
+                // Now we can safely access properties after validation
                 userData = {
-                  name: typeof userObj.name === 'string' ? userObj.name : "Unknown",
-                  email: typeof userObj.email === 'string' ? userObj.email : "unknown@example.com"
+                  name: typeof userObj?.name === 'string' ? userObj.name : "Unknown",
+                  email: typeof userObj?.email === 'string' ? userObj.email : "unknown@example.com"
                 };
               }
             }
@@ -295,11 +300,11 @@ const TrainerDashboard = () => {
         can_be_edited_by_trainers: true
       };
       
-      // Fix the typing issue with supabase insert by directly using the typed object
-      // Fix the never type error by using properly typed params
+      // Use type assertions to fix the typing issue with supabase insert
+      // Create a properly typed RPC params object
       await supabase
         .from('members')
-        .insert(memberData);
+        .insert(memberData as unknown as Record<string, any>);
       
       toast({
         title: "Member Registered",
