@@ -66,6 +66,8 @@ interface NewMemberData {
   sessions?: number;
   remaining_sessions?: number;
   status?: string;
+  can_be_edited_by_trainers?: boolean;
+  birthday?: string;
 }
 
 const TrainerDashboard = () => {
@@ -176,15 +178,18 @@ const TrainerDashboard = () => {
               email: "unknown@example.com"
             };
             
-            // Only access user properties if it exists and is an object (not an error)
+            // Add null check before accessing booking.user properties
             if (booking.user && 
                 typeof booking.user === 'object' && 
                 booking.user !== null && 
                 !('code' in booking.user) && 
                 !('message' in booking.user) && 
                 !('details' in booking.user)) {
-              // Fix with a proper null check and type assertion to handle the 'never' type issues
-              const userObj: UserObject = booking.user as UserObject;
+                
+              // Fix with a proper null check and type assertion
+              const userObj = booking.user as UserObject;
+              
+              // Now we can safely access properties with type checks
               userData = {
                 name: userObj && typeof userObj.name === 'string' ? userObj.name : "Unknown",
                 email: userObj && typeof userObj.email === 'string' ? userObj.email : "unknown@example.com"
@@ -277,7 +282,7 @@ const TrainerDashboard = () => {
         return;
       }
       
-      // Also add to members table for admin view - fix by using proper type casting
+      // Fix the type error by creating a properly typed object for insertion
       const memberData: NewMemberData = {
         name: newMember.name,
         email: newMember.email,
@@ -287,13 +292,14 @@ const TrainerDashboard = () => {
         membership: "Basic",
         sessions: 4,
         remaining_sessions: 4,
-        status: "Active"
+        status: "Active",
+        can_be_edited_by_trainers: true
       };
       
-      // Explicitly cast the insertion data to 'unknown' first to fix the 'never' type error
+      // Fix the typing issue with supabase insert by directly using the typed object
       await supabase
         .from('members')
-        .insert([memberData as unknown]);
+        .insert(memberData);
       
       toast({
         title: "Member Registered",

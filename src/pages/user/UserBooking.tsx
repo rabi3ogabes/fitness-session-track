@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingForm from "@/components/BookingForm";
@@ -53,6 +52,9 @@ interface BookingState {
 interface DecrementClassEnrollmentParams {
   class_id: number;
 }
+
+// Define a proper type for the RPC parameter
+type RPCParams = Record<string, any>;
 
 const UserBooking = () => {
   const [bookings, setBookings] = useState<BookingState>({
@@ -209,10 +211,9 @@ const UserBooking = () => {
           .single();
           
         if (!classError) {
-          // Use RPC to decrement the enrollment with proper typing
-          // Fix the string type error by explicitly casting to unknown first
-          const params: DecrementClassEnrollmentParams = { class_id: classId };
-          await supabase.rpc('decrement_class_enrollment', params as unknown);
+          // Fix the type error by using a properly typed parameter object
+          const params: RPCParams = { class_id: classId };
+          await supabase.rpc('decrement_class_enrollment', params);
         }
       }
       
