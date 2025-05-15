@@ -87,7 +87,7 @@ const Trainers = () => {
     // If authenticated, fetch trainers
     console.log("User is authenticated, fetching trainers");
     fetchTrainers();
-  }, [isAuthenticated, loading, navigate]);
+  }, [isAuthenticated, loading, navigate, toast]);
 
   // Add trainer handler
   const handleAddTrainer = async (trainerData: TrainerFormData) => {
@@ -248,7 +248,9 @@ const Trainers = () => {
         throw listError;
       }
       
-      const userAccount = userList?.users?.find(user => user.email === selectedTrainer.email);
+      // If listError is null, userList is { users: User[]; ... }, so userList.users is User[]
+      // Removed unnecessary optional chaining from userList?.users?
+      const userAccount = userList.users.find(user => user.email === selectedTrainer.email);
       
       if (!userAccount) {
         throw new Error(`Could not find user account for ${selectedTrainer.name}`);
@@ -269,7 +271,7 @@ const Trainers = () => {
       
       toast({
         title: "Password reset successfully",
-        description: `A temporary password has been set: ${tempPassword}`,
+        description: `A temporary password has been set for ${selectedTrainer.name}: ${tempPassword}. They should change it upon next login.`,
       });
       
       setIsResetPasswordDialogOpen(false);

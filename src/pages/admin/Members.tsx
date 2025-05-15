@@ -25,7 +25,7 @@ const Members = () => {
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
   const { toast } = useToast();
   const [paymentHistoryData, setPaymentHistoryData] = useState<PaymentHistoryData>({});
-  const [refreshTrigger, setRefreshTrigger] = useState(0); // Add a refresh trigger
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Fetch members data from Supabase
   useEffect(() => {
@@ -87,7 +87,7 @@ const Members = () => {
     };
 
     fetchMembers();
-  }, [toast, refreshTrigger]); // Add refreshTrigger to dependencies
+  }, [toast, refreshTrigger]);
 
   // Fetch payment history data
   useEffect(() => {
@@ -326,7 +326,9 @@ const Members = () => {
           throw listError;
         }
         
-        const userAccount = userList?.users?.find(user => user.email === member.email);
+        // If listError is null, userList is { users: User[]; ... }, so userList.users is User[]
+        // Removed unnecessary optional chaining from userList?.users?
+        const userAccount = userList.users.find(user => user.email === member.email);
         
         if (!userAccount) {
           throw new Error(`Could not find user account for ${member.name}`);
@@ -403,7 +405,7 @@ const Members = () => {
               {selectedMemberId && (
                 <>
                   Are you sure you want to reset the password for <strong>{members.find(m => m.id === selectedMemberId)?.name}</strong>?<br />
-                  The new password will be their phone number: <strong>{members.find(m => m.id === selectedMemberId)?.phone}</strong>
+                  The new password will be their phone number: <strong>{members.find(m => m.id === selectedMemberId)?.phone?.replace(/[^0-9]/g, '') || 'Temp123!'}</strong>
                 </>
               )}
             </AlertDialogDescription>
