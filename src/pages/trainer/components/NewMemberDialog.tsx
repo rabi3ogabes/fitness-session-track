@@ -12,18 +12,10 @@ interface MembershipPlan {
   sessions: number;
 }
 
-// Interface for the data passed by onMemberAdded callback
-export interface AddedMemberInfo {
-  name: string;
-  email?: string;
-  phone?: string;
-  // Add other fields if consumers of onMemberAdded need them
-}
-
 interface NewMemberDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onMemberAdded: (memberDetails: AddedMemberInfo) => void; // Updated signature
+  onMemberAdded: () => void;
 }
 
 const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialogProps) => {
@@ -169,16 +161,6 @@ const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialo
         description: `${newMember.name} has been successfully registered`,
       });
 
-      // Prepare data for the callback
-      const memberDetailsForCallback: AddedMemberInfo = {
-        name: newMember.name,
-        email: newMember.email,
-        phone: newMember.phone,
-      };
-      
-      // Notify parent component with the new member's details
-      onMemberAdded(memberDetailsForCallback); // Updated call
-
       // Reset form
       setNewMember({
         name: "",
@@ -192,6 +174,9 @@ const NewMemberDialog = ({ isOpen, onOpenChange, onMemberAdded }: NewMemberDialo
       });
       
       setSelectedPlan(membershipPlans[0]);
+      
+      // Notify parent component
+      onMemberAdded();
       
       setFormErrors({});
       setPhoneError(null);

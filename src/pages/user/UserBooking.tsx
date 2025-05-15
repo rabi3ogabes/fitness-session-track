@@ -7,25 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-// Define interfaces to type our data
-interface Booking {
-  id: number;
-  className: string;
-  date: string;
-  time: string;
-  trainer: string;
-  status: string;
-  attendance?: boolean;
-}
-
-interface BookingState {
-  upcomingBookings: Booking[];
-  pastBookings: Booking[];
-  remainingSessions: number;
-}
-
 const UserBooking = () => {
-  const [bookings, setBookings] = useState<BookingState>({
+  const [bookings, setBookings] = useState({
     upcomingBookings: [],
     pastBookings: [],
     remainingSessions: 0
@@ -46,7 +29,7 @@ const UserBooking = () => {
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('sessions_remaining, total_sessions')
-          .eq('id', user.id)
+          .eq('id', user.id as any)
           .single();
           
         if (profileError) throw profileError;

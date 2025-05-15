@@ -10,24 +10,13 @@ import { mockBookings } from "./mockData";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Tables } from "@/integrations/supabase/types";
-
-// Define an interface for the expected parameter type
-interface NewMember {
-  name: string;
-  // Add other properties that might exist in the newMember object
-  email?: string;
-  phone?: string;
-}
 
 const TrainerDashboard = () => {
   const { isTrainer, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [bookings, setBookings] = useState<any[]>(mockBookings); // Using any[] to avoid type issues for now
+  const [bookings, setBookings] = useState(mockBookings);
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   
   // New member registration dialog
@@ -52,7 +41,7 @@ const TrainerDashboard = () => {
     setIsClassDetailsOpen(true);
   };
   
-  const handleRegisterMember = (newMember: NewMember) => {
+  const handleRegisterMember = (newMember: any) => {
     // Add a new booking for this member to today's date
     const newId = Math.max(...bookings.map(b => b.id)) + 1;
     const bookingToAdd = {
@@ -66,13 +55,6 @@ const TrainerDashboard = () => {
     
     setBookings([...bookings, bookingToAdd]);
     setIsNewMemberDialogOpen(false);
-    
-    // Show confirmation toast
-    toast({
-      title: "Member registered",
-      description: `${newMember.name} has been successfully registered.`,
-      variant: "default"
-    });
   };
 
   // Custom NewMemberButton component
@@ -114,7 +96,11 @@ const TrainerDashboard = () => {
       <NewMemberDialog 
         isOpen={isNewMemberDialogOpen}
         onOpenChange={setIsNewMemberDialogOpen}
-        onMemberAdded={handleRegisterMember}
+        onMemberAdded={() => {
+          // After member is added, you might want to refresh the list
+          // This is a placeholder for any refresh action
+          console.log("Member added successfully");
+        }}
       />
     </DashboardLayout>
   );
