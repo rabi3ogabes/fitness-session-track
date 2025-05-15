@@ -7,7 +7,7 @@ import { format, isSameDay, addMonths, subMonths, parseISO, startOfMonth, endOfM
 import { cn } from "@/lib/utils";
 import { mockClasses, getClassesForDate } from "../mockData";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast"; // Corrected import path
+import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Tables } from "@/integrations/supabase/types";
@@ -21,7 +21,7 @@ interface ClassInfo {
 }
 
 interface BookingWithClassDetails extends Tables<'bookings'> {
-  classes: ClassInfo; 
+  classes: ClassInfo | null;
 }
 
 interface CalendarSectionProps {
@@ -87,22 +87,16 @@ export const CalendarSection = ({
           return;
         }
 
-        // Type assertion after fetching, assuming 'classes' can be null if not joined properly or no class associated
-        // The select query above tries to fetch related class. If a booking has no class_id or class_id is invalid, 'classes' might be null.
-        const validBookings = userBookingsData.map(booking => {
-          // Ensure the 'classes' property is not null and conforms to ClassInfo
-          // If classes is null from the join, or not shaped like ClassInfo, handle it
-          if (booking.classes && typeof booking.classes === 'object' && 'id' in booking.classes) {
-            return { ...booking, classes: booking.classes as ClassInfo };
-          }
-          // Handle cases where booking.classes is null or not as expected
-          // For now, we filter them out or provide a default. Here, we assume it comes correctly or needs filtering.
-          // This example implicitly expects 'classes' to be populated correctly by Supabase join.
-          // If 'classes' can be null for a booking, BookingWithClassDetails should reflect that: classes: ClassInfo | null;
-          // And subsequent code must handle null.
-          // For now, we assume the join is successful and provides the ClassInfo shape or is filtered.
-          return booking;
-        }).filter(b => b.classes && typeof b.classes === 'object' && 'id' in b.classes) as BookingWithClassDetails[];
+        // Type assertion after fetching, ensuring classes can be null and handling that case
+        const validBookings = userBookingsData
+          .filter(booking => booking.classes !== null) // Filter out any bookings where classes is null
+          .map(booking => {
+            if (booking.classes && typeof booking.classes === 'object' && 'id' in booking.classes) {
+              return { ...booking, classes: booking.classes as ClassInfo };
+            }
+            // This should not happen after the filter, but keep it for type safety
+            return { ...booking, classes: null };
+          }) as BookingWithClassDetails[];
         
         setUserBookings(validBookings);
 
@@ -138,6 +132,11 @@ export const CalendarSection = ({
     acc[dateKey].push(cls);
     return acc;
   }, {} as Record<string, any[]>);
+  
+  // Function to safely check if a booking has valid class data
+  const hasValidClassData = (booking: BookingWithClassDetails): booking is BookingWithClassDetails & { classes: ClassInfo } => {
+    return booking.classes !== null;
+  };
   
   const generateCalendarDays = () => {
     const monthStart = startOfMonth(calendarDate);
@@ -306,7 +305,7 @@ export const CalendarSection = ({
               <Clock className="h-4 w-4 mr-2 text-purple-500" />
               {/* Logic to display "My Bookings" or "Classes on selected date" */}
               {/* For simplicity, showing classes for selected date or user's bookings if any */}
-              {userBookings.filter(b => isSameDay(parseISO(b.classes.schedule), selectedDate)).length > 0 
+              {userBookings.filter(booking => hasValidClassData(booking) && isSameDay(parseISO(booking.classes.schedule), selectedDate)).length > 0 
                 ? `My Bookings for ${format(selectedDate, "MMMM d")}` 
                 : `Available Classes on ${format(selectedDate, "MMMM d")}`
               }
@@ -314,46 +313,49 @@ export const CalendarSection = ({
             
             <div className="space-y-3">
               {/* Display user's bookings for the selected date */}
-              {userBookings.length > 0 && userBookings.filter(b => isSameDay(parseISO(b.classes.schedule), selectedDate)).map(booking => {
-                const classData = booking.classes;
-                // classData should not be null here due to earlier filtering if BookingWithClassDetails.classes is ClassInfo | null
-                // Assuming classData is always present now.
-                const classDate = parseISO(classData.schedule); // schedule should be a valid ISO string
-                
-                return (
-                  <div 
-                    key={booking.id} 
-                    className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
-                    // Potentially allow cancelling by clicking here too, or viewing details.
-                    // onClick={() => handleClassClick(classData.id)} // Re-eval this: handleClassClick is for booking *new* classes.
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium text-gray-800">{classData.name}</p>
-                        <div className="flex flex-col sm:flex-row text-xs text-gray-500 mt-1">
-                          <span className="flex items-center mr-3">
-                            <CalendarIcon className="h-3 w-3 mr-1" />
-                            {format(classDate, 'MMM d, yyyy')}
-                          </span>
-                          <span className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {classData.start_time || 'N/A'} - {classData.end_time || 'N/A'}
-                          </span>
+              {userBookings.length > 0 && userBookings
+                .filter(booking => hasValidClassData(booking) && isSameDay(parseISO(booking.classes.schedule), selectedDate))
+                .map(booking => {
+                  // Safe to access booking.classes since we filtered with hasValidClassData
+                  const classData = booking.classes;
+                  const classDate = parseISO(classData.schedule);
+                  
+                  return (
+                    <div 
+                      key={booking.id} 
+                      className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-gray-800">{classData.name}</p>
+                          <div className="flex flex-col sm:flex-row text-xs text-gray-500 mt-1">
+                            <span className="flex items-center mr-3">
+                              <CalendarIcon className="h-3 w-3 mr-1" />
+                              {format(classDate, 'MMM d, yyyy')}
+                            </span>
+                            <span className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {classData.start_time || 'N/A'} - {classData.end_time || 'N/A'}
+                            </span>
+                          </div>
                         </div>
+                        <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200"> 
+                          Booked
+                        </Badge>
                       </div>
-                      <Badge variant="outlineSuccess" className="text-xs"> 
-                        Booked
-                      </Badge>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
 
               {/* Display available classes if no bookings for the date, or if we decide to show both */}
-              {classesForView.length > 0 && userBookings.filter(b => isSameDay(parseISO(b.classes.schedule), selectedDate)).length === 0 && (
+              {classesForView.length > 0 && userBookings.filter(booking => 
+                hasValidClassData(booking) && isSameDay(parseISO(booking.classes.schedule), selectedDate)
+              ).length === 0 && (
                 classesForView.map(cls => {
                   // Check if this available class is already booked by the user (globally, not just on this date)
-                  const isGloballyBooked = userBookings.some(userBooking => userBooking.class_id === cls.id);
+                  const isGloballyBooked = userBookings.some(userBooking => 
+                    hasValidClassData(userBooking) && userBooking.class_id === cls.id
+                  );
                   
                   return (
                     <div 
@@ -370,15 +372,15 @@ export const CalendarSection = ({
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {isGloballyBooked && ( // Or use isClassAlreadyBooked which is set in handleClassClick
-                            <Badge variant="outlineSuccess" className="text-xs">
+                          {isGloballyBooked && (
+                            <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">
                               Booked
                             </Badge>
                           )}
                           <Badge variant="outline" className="text-xs">
                             {cls.enrolled}/{cls.capacity}
                           </Badge>
-                           <Button size="xs" variant="outline" className="text-xs" onClick={(e) => { e.stopPropagation(); handleClassClick(cls.id); }}>
+                          <Button size="sm" variant="outline" className="text-xs" onClick={(e) => { e.stopPropagation(); handleClassClick(cls.id); }}>
                             Book
                           </Button>
                         </div>
@@ -389,7 +391,9 @@ export const CalendarSection = ({
               )}
               
               {/* No classes available and no user bookings for the selected date */}
-              {classesForView.length === 0 && userBookings.filter(b => isSameDay(parseISO(b.classes.schedule), selectedDate)).length === 0 && (
+              {classesForView.length === 0 && userBookings.filter(booking => 
+                hasValidClassData(booking) && isSameDay(parseISO(booking.classes.schedule), selectedDate)
+              ).length === 0 && (
                 <div className="text-gray-500 text-center py-6 bg-gray-50 rounded-md border border-dashed border-gray-300">
                   <p>No classes scheduled for this date.</p>
                   <p className="text-xs mt-1">Please select another date.</p>
