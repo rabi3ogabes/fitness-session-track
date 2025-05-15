@@ -248,9 +248,8 @@ const Trainers = () => {
         throw listError;
       }
       
-      // If listError is null, userList is { users: User[]; ... }, so userList.users is User[]
-      // Removed unnecessary optional chaining from userList?.users?
-      const userAccount = userList.users.find(user => user.email === selectedTrainer.email);
+      // Correctly access the users array via userList.data.users
+      const userAccount = userList.data.users.find(user => user.email === selectedTrainer.email);
       
       if (!userAccount) {
         throw new Error(`Could not find user account for ${selectedTrainer.name}`);
