@@ -75,7 +75,7 @@ const CANCELLATION_WINDOW_HOURS = 4; // Minimum hours before class to allow canc
 const UserClassCalendar = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [isModalOpen, setIsModalOpen] useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
