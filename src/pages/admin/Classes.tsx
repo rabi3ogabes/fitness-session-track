@@ -895,7 +895,7 @@ const Classes = () => {
                     </FormItem>
                   )}
                 />
-                {/* ... FormFields for description, location, difficulty, color ... */}
+
                 <FormField
                   control={form.control}
                   name="description"
@@ -963,7 +963,7 @@ const Classes = () => {
                     </FormItem>
                   )}
                 />
-
+              </div>
 
               <DrawerFooter>
                 <Button type="submit" className="bg-gym-blue hover:bg-gym-dark-blue" disabled={form.formState.isSubmitting}>
