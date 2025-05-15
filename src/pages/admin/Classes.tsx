@@ -96,6 +96,7 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command"
+import { cn } from '@/lib/utils';
 
 // Types and Utilities
 import {
@@ -802,7 +803,7 @@ const Classes = () => {
                     <FormItem>
                       <FormLabel>Capacity</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="Capacity" {...field} />
+                        <Input type="number" placeholder="Capacity" {...field} onChange={e => field.onChange(parseInt(e.target.value,10) || 0)} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

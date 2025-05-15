@@ -84,28 +84,6 @@ const UserClassCalendar = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isRetrying, setIsRetrying] = useState(false);
 
-
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      toast({ title: "Status", description: "You are back online." });
-      fetchData(); // Refetch data when online
-    };
-    const handleOffline = () => {
-      setIsOnline(false);
-      toast({ title: "Status", description: "You are offline. Some features may be limited.", variant: "destructive" });
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [toast, fetchData]);
-
-
   const getCurrentUserId = useCallback(async () => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
@@ -156,7 +134,6 @@ const UserClassCalendar = () => {
           }
       });
 
-
       const calendarEvents = classesData?.map((cls: FullClassInfo) => {
         const classDate = parse(cls.schedule, 'yyyy-MM-dd', new Date());
         const startTimeParts = cls.start_time.split(':');
@@ -198,6 +175,25 @@ const UserClassCalendar = () => {
     }
   }, [isOnline, getCurrentUserId, toast]);
 
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast({ title: "Status", description: "You are back online." });
+      fetchData(); // Refetch data when online
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast({ title: "Status", description: "You are offline. Some features may be limited.", variant: "destructive" });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [toast, fetchData]);
 
   useEffect(() => {
     fetchData();
@@ -274,7 +270,6 @@ const UserClassCalendar = () => {
     }
   };
 
-
   const handleCancelBooking = async (bookingId: string) => { // Ensure bookingId is string
     if (!userId) {
       toast({ title: 'Error', description: 'User not identified.', variant: 'destructive' });
@@ -319,7 +314,6 @@ const UserClassCalendar = () => {
     setIsRetrying(true);
     fetchData().finally(() => setIsRetrying(false));
   };
-
 
   const EventComponent: React.FC<EventProps<CalendarEvent>> = ({ event }) => (
     <div className={`p-1 text-xs rounded-sm h-full flex flex-col justify-center ${event.isBooking ? 'bg-gym-blue text-white' : 'bg-gray-200 text-gray-700'} hover:opacity-80 transition-opacity`}>
@@ -396,7 +390,7 @@ const UserClassCalendar = () => {
       </>
     );
   };
-  
+
   const dayPropGetter = (date: Date) => {
     if (isBefore(date, startOfToday()) && getDay(date) !== getDay(startOfToday())) { 
       return {
@@ -433,7 +427,6 @@ const UserClassCalendar = () => {
     return { style };
   };
 
-
   if (isLoading && events.length === 0) { 
     return (
       <DashboardLayout title="My Class Calendar">
@@ -444,7 +437,7 @@ const UserClassCalendar = () => {
       </DashboardLayout>
     );
   }
-  
+
   return (
     <DashboardLayout title="My Class Calendar">
       <h1 className="text-3xl font-bold mb-6 text-gym-blue">My Class Calendar</h1>
@@ -476,26 +469,36 @@ const UserClassCalendar = () => {
         </Alert>
       )}
 
-      <div className="bg-white p-2 sm:p-4 rounded-lg shadow-lg" style={{ height: '70vh', minHeight: '500px' }}>
-        <Calendar
-          localizer={localizer}
-          events={events}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: '100%' }}
-          onSelectEvent={handleSelectEvent}
-          selectable={false} 
-          views={['month', 'week', 'day']}
-          defaultView="month"
-          components={{
-            event: EventComponent,
-          }}
-          eventPropGetter={eventPropGetter}
-          messages={{
-            noEventsInRange: 'There are no classes scheduled in this range.',
-          }}
-        />
-      </div>
+      {isLoading && events.length === 0 && ( 
+        <div className="flex justify-center items-center h-64">
+          <RefreshCw className="h-8 w-8 animate-spin text-gym-blue" />
+          <p className="ml-2 text-lg">Loading your schedule...</p>
+        </div>
+      )}
+
+      {!isLoading && !error && (
+          <div className="bg-white p-2 sm:p-4 rounded-lg shadow-lg" style={{ height: '70vh', minHeight: '500px' }}>
+            <Calendar
+              localizer={localizer}
+              events={events}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: '100%' }}
+              onSelectEvent={handleSelectEvent}
+              selectable={false} 
+              views={['month', 'week', 'day']}
+              defaultView="month"
+              components={{
+                event: EventComponent,
+              }}
+              eventPropGetter={eventPropGetter}
+              messages={{
+                noEventsInRange: 'There are no classes scheduled in this range.',
+              }}
+            />
+          </div>
+      )}
+      
 
       {selectedEvent && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -517,6 +520,5 @@ const startOfToday = () => {
 const subMinutes = (date: Date, amount: number): Date => {
   return addMinutes(date, -amount);
 };
-
 
 export default UserClassCalendar;
