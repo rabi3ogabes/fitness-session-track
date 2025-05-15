@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,9 +40,11 @@ export const CalendarSection = ({
       if (!user) return;
       
       try {
+        // Updated select query to be more explicit about the columns from the 'classes' table
+        // and to help Supabase resolve the relationship.
         const { data, error } = await supabase
           .from('bookings')
-          .select('*, classes(*)')
+          .select('*, classes(id, name, schedule, start_time, end_time)') 
           .eq('user_id', user.id)
           .eq('status', 'confirmed');
           
