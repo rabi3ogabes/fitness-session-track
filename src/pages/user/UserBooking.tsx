@@ -1,14 +1,30 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingForm from "@/components/BookingForm";
 import { Calendar, CheckCircle, XCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, cancelClassBooking } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
+// Define types for our booking data from Supabase
+interface Booking {
+  id: string; // UUID from Supabase
+  className: string;
+  date: string;
+  time: string;
+  trainer: string;
+  status: string;
+  attendance?: boolean | null;
+}
+
+interface BookingsState {
+  upcomingBookings: Booking[];
+  pastBookings: Booking[];
+  remainingSessions: number;
+}
+
 const UserBooking = () => {
-  const [bookings, setBookings] = useState({
+  const [bookings, setBookings] = useState<BookingsState>({
     upcomingBookings: [],
     pastBookings: [],
     remainingSessions: 0
@@ -18,144 +34,133 @@ const UserBooking = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (!user) return;
+  const fetchUserData = async () => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
     
-    const fetchUserData = async () => {
-      setIsLoading(true);
-      
-      try {
-        // Convert user.id to UUID type for Supabase query
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('sessions_remaining, total_sessions')
-          .eq('id', user.id as any)
-          .single();
-          
-        if (profileError) throw profileError;
-        
-        // For now, until we have real data, we'll use mock data
-        // In a real implementation, you would fetch bookings from Supabase
-        const upcomingBookings = [
-          { 
-            id: 1, 
-            className: "Morning Yoga", 
-            date: "2025-05-01", 
-            time: "08:00 AM", 
-            trainer: "Jane Doe",
-            status: "Confirmed"
-          },
-          { 
-            id: 2, 
-            className: "HIIT Workout", 
-            date: "2025-05-03", 
-            time: "10:00 AM", 
-            trainer: "John Smith",
-            status: "Confirmed"
-          },
-        ];
-        
-        const pastBookings = [
-          { 
-            id: 3, 
-            className: "Strength Training", 
-            date: "2025-04-27", 
-            time: "02:00 PM", 
-            trainer: "Alex Johnson",
-            status: "Completed",
-            attendance: true
-          },
-          { 
-            id: 4, 
-            className: "Pilates", 
-            date: "2025-04-25", 
-            time: "04:00 PM", 
-            trainer: "Sarah Williams",
-            status: "Completed",
-            attendance: true
-          },
-          { 
-            id: 5, 
-            className: "Boxing", 
-            date: "2025-04-22", 
-            time: "06:00 PM", 
-            trainer: "Mike Tyson",
-            status: "Cancelled"
-          },
-        ];
-        
-        // Fix the type error by handling profileData properly with type checking and optional chaining
-        let sessionsRemaining = 7; // Default value
-        
-        if (profileData && typeof profileData === 'object' && 'sessions_remaining' in profileData) {
-          sessionsRemaining = profileData.sessions_remaining ?? 7;
-        }
-        
-        setBookings({
-          upcomingBookings,
-          pastBookings,
-          remainingSessions: sessionsRemaining
-        });
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        toast({
-          title: "Error loading data",
-          description: "Could not load your booking data. Please try again later.",
-          variant: "destructive"
-        });
-        
-        // Fallback to default values in case of error
-        setBookings({
-          upcomingBookings: [],
-          pastBookings: [],
-          remainingSessions: 7 // Default value
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    setIsLoading(true);
     
-    fetchUserData();
-  }, [user, toast]);
-
-  const handleCancelBooking = async (id: number) => {
     try {
-      // In a real app, we would update the booking in Supabase
-      // For now we'll just update the state
+      // Fetch profile data (sessions remaining)
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('sessions_remaining, total_sessions')
+        .eq('id', user.id) // user.id is UUID string
+        .single();
+        
+      if (profileError) throw profileError;
+      
+      let sessionsRemaining = 7; // Default value
+      if (profileData && typeof profileData === 'object' && 'sessions_remaining' in profileData) {
+        sessionsRemaining = profileData.sessions_remaining ?? 7;
+      }
+
+      // Fetch bookings data
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          booking_date,
+          status,
+          attendance,
+          notes,
+          classes (
+            name,
+            trainer
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (bookingsError) throw bookingsError;
+
+      const now = new Date();
+      const formattedUpcomingBookings: Booking[] = [];
+      const formattedPastBookings: Booking[] = [];
+
+      if (bookingsData) {
+        bookingsData.forEach(booking => {
+          // Ensure booking.classes is not null, which can happen if the join fails or class is deleted
+          if (!booking.classes) {
+            console.warn(`Booking with ID ${booking.id} is missing class details.`);
+            return; // Skip this booking or handle as appropriate
+          }
+          const bookingDate = new Date(booking.booking_date);
+          const bookingDetails: Booking = {
+            id: booking.id,
+            className: booking.classes.name,
+            date: bookingDate.toISOString().split('T')[0], // YYYY-MM-DD
+            time: bookingDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+            trainer: booking.classes.trainer || "N/A", 
+            status: booking.status,
+            attendance: booking.attendance,
+          };
+
+          if (bookingDate >= now) {
+            formattedUpcomingBookings.push(bookingDetails);
+          } else {
+            formattedPastBookings.push(bookingDetails);
+          }
+        });
+      }
+      
+      formattedUpcomingBookings.sort((a, b) => new Date(`${a.date} ${a.time}`).getTime() - new Date(`${b.date} ${b.time}`).getTime());
+      formattedPastBookings.sort((a, b) => new Date(`${b.date} ${b.time}`).getTime() - new Date(`${a.date} ${a.time}`).getTime());
       
       setBookings({
-        ...bookings,
-        upcomingBookings: bookings.upcomingBookings.filter(
-          (booking) => booking.id !== id
-        ),
-        remainingSessions: bookings.remainingSessions + 1
+        upcomingBookings: formattedUpcomingBookings,
+        pastBookings: formattedPastBookings,
+        remainingSessions: sessionsRemaining
       });
+
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      toast({
+        title: "Error loading data",
+        description: "Could not load your booking data. Please try again later.",
+        variant: "destructive"
+      });
+      setBookings({
+        upcomingBookings: [],
+        pastBookings: [],
+        remainingSessions: 7 // Fallback
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchUserData();
+  }, [user, toast]); // fetchUserData is now stable
+
+  const handleCancelBooking = async (bookingId: string) => { // Changed id type to string
+    if (!user) return;
+    try {
+      await cancelClassBooking(bookingId, user.id);
+      
+      // Re-fetch all data to update lists and potentially remaining sessions
+      await fetchUserData(); 
       
       toast({
         title: "Booking cancelled",
         description: "Your booking has been successfully cancelled.",
-        variant: "default"
       });
     } catch (error) {
       console.error("Error cancelling booking:", error);
       toast({
         title: "Error cancelling booking",
-        description: "Could not cancel your booking. Please try again later.",
+        description: (error as Error).message || "Could not cancel your booking. Please try again later.",
         variant: "destructive"
       });
     }
   };
 
   const handleBookingComplete = async () => {
-    // In a real app, we would update the booking in Supabase
-    // and refresh the bookings
-    setBookings({
-      ...bookings,
-      remainingSessions: bookings.remainingSessions - 1
-    });
-    
-    // Refresh the bookings list
-    // For a real app, this would fetch the updated bookings
+    // Assuming BookingForm.tsx handles DB updates for new booking & sessions_remaining.
+    // We just need to refresh the data here.
+    await fetchUserData();
   };
 
   if (isLoading) {
@@ -203,7 +208,7 @@ const UserBooking = () => {
                   <div className="space-y-4">
                     {bookings.upcomingBookings.map((booking) => (
                       <div key={booking.id} className="p-4 border border-gray-200 rounded-md">
-                        <div className="flex justify-between">
+                        <div className="flex justify-between items-center">
                           <div className="flex items-start space-x-3">
                             <div className="p-2 bg-gym-light rounded-md">
                               <Calendar className="h-5 w-5 text-gym-blue" />
@@ -219,15 +224,21 @@ const UserBooking = () => {
                             </div>
                           </div>
                           <div className="flex items-center">
-                            <span className="mr-3 px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                            <span className={`mr-3 px-2 py-1 text-xs rounded-full ${
+                              booking.status === 'Confirmed' ? 'bg-green-100 text-green-800' :
+                              booking.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800' // For other statuses like 'Pending'
+                            }`}>
                               {booking.status}
                             </span>
-                            <button
-                              onClick={() => handleCancelBooking(booking.id)}
-                              className="text-sm text-red-500 hover:text-red-700"
-                            >
-                              Cancel
-                            </button>
+                            {booking.status === 'Confirmed' && (
+                              <button
+                                onClick={() => handleCancelBooking(booking.id)}
+                                className="text-sm text-red-500 hover:text-red-700"
+                              >
+                                Cancel
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -246,7 +257,7 @@ const UserBooking = () => {
                   <div className="space-y-4">
                     {bookings.pastBookings.map((booking) => (
                       <div key={booking.id} className="p-4 border border-gray-200 rounded-md">
-                        <div className="flex justify-between">
+                        <div className="flex justify-between items-center">
                           <div className="flex items-start space-x-3">
                             <div className="p-2 bg-gray-100 rounded-md">
                               <Calendar className="h-5 w-5 text-gray-500" />
@@ -262,19 +273,24 @@ const UserBooking = () => {
                             </div>
                           </div>
                           <div className="flex items-center">
-                            {booking.status === "Completed" ? (
+                            {booking.status === "Completed" || booking.status === "Attended" ? ( // Added Attended
                               <div className="flex items-center">
-                                {booking.attendance ? (
+                                {booking.attendance === true ? (
                                   <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                                ) : (
+                                ) : booking.attendance === false ? ( // Explicitly check for false for Absent
                                   <XCircle className="h-5 w-5 text-red-500 mr-2" />
-                                )}
-                                <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                                  {booking.status}
+                                ) : null } {/* Or some indicator for not marked */}
+                                <span className={`px-2 py-1 text-xs rounded-full ${
+                                  booking.attendance ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
+                                }`}>
+                                  {booking.attendance ? "Attended" : booking.status} 
                                 </span>
                               </div>
                             ) : (
-                              <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                booking.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
                                 {booking.status}
                               </span>
                             )}
