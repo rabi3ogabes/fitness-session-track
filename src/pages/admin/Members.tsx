@@ -324,14 +324,33 @@ const Members = () => {
         const { data: userList, error: listError } = await supabase.auth.admin.listUsers();
         
         if (listError) {
+          toast({
+            title: "Error listing user accounts",
+            description: listError.message,
+            variant: "destructive",
+          });
           throw listError;
         }
+
+        if (!userList) {
+          toast({
+            title: "Error listing user accounts",
+            description: "No data returned for user accounts.",
+            variant: "destructive",
+          });
+          throw new Error("User list data is null");
+        }
         
-        // Correctly access the users array via userList.users
         const userAccount = userList.users.find(user => user.email === member.email);
         
         if (!userAccount) {
-          throw new Error(`Could not find user account for ${member.name}`);
+          toast({
+            title: "User account not found",
+            description: `Could not find user account for ${member.name}. Their password cannot be reset at this time.`,
+            variant: "warning",
+          });
+          // Similar to Trainers.tsx, we'll return instead of throwing for a better UX.
+          return;
         }
         
         // Use the custom password provided

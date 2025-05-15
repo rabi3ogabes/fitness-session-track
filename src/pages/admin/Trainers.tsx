@@ -245,14 +245,35 @@ const Trainers = () => {
       const { data: userList, error: listError } = await supabase.auth.admin.listUsers();
       
       if (listError) {
+        toast({
+          title: "Error listing user accounts",
+          description: listError.message,
+          variant: "destructive",
+        });
         throw listError;
       }
+
+      if (!userList) {
+        toast({
+          title: "Error listing user accounts",
+          description: "No data returned for user accounts.",
+          variant: "destructive",
+        });
+        throw new Error("User list data is null");
+      }
       
-      // Correctly access the users array via userList.users
-      const userAccount = userList.data.users.find(user => user.email === selectedTrainer.email);
+      const userAccount = userList.users.find(user => user.email === selectedTrainer.email);
       
       if (!userAccount) {
-        throw new Error(`Could not find user account for ${selectedTrainer.name}`);
+        toast({
+          title: "User account not found",
+          description: `Could not find user account for ${selectedTrainer.name}. Their password cannot be reset at this time.`,
+          variant: "warning",
+        });
+        // It might be better not to throw an error here, but to inform the admin.
+        // Depending on desired UX, you could allow proceeding or just stop.
+        // For now, let's prevent proceeding to avoid confusion.
+        return; 
       }
       
       // Use the custom password provided by the admin
