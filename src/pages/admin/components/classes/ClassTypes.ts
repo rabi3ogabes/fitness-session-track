@@ -1,17 +1,18 @@
+
 export interface ClassModel {
   id: number;
   name: string;
   trainer: string;
   schedule: string;
   capacity: number;
-  enrolled?: number; // Made optional to match FullClassInfo usage
-  status: string;
+  enrolled?: number;
+  status?: string; // Made optional
   gender?: "Male" | "Female" | "All" | string;
   trainers?: string[];
   recurrence?: string;
   created_at?: string;
-  start_time?: string;
-  end_time?: string;
+  start_time?: string; // Changed from startTime
+  end_time?: string;   // Changed from endTime
   description?: string;
   location?: string;
   color?: string;
@@ -55,8 +56,8 @@ export interface ClassFormState {
   isRecurring: boolean;
   recurringFrequency: "Daily" | "Weekly" | "Monthly";
   selectedDays: string[];
-  startTime: string;
-  endTime: string;
+  start_time: string; // Changed from startTime
+  end_time: string;   // Changed from endTime
   endDate?: Date;
   description?: string;
   location?: string;
@@ -64,8 +65,8 @@ export interface ClassFormState {
   color?: string;
 }
 
-export const formatClassTime = (startTime: string, endTime: string): string => {
-  if (!startTime || !endTime) return "Time not set";
+export const formatClassTime = (start_time: string, end_time: string): string => { // Changed parameters
+  if (!start_time || !end_time) return "Time not set";
   
   const formatTime = (time: string): string => {
     const [hours, minutes] = time.split(':').map(Number);
@@ -74,12 +75,12 @@ export const formatClassTime = (startTime: string, endTime: string): string => {
     return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
   };
   
-  return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+  return `${formatTime(start_time)} - ${formatTime(end_time)}`;
 };
 
 export const checkScheduleConflict = (
-  classA: Pick<ClassModel, 'schedule' | 'start_time' | 'end_time' | 'trainers'>, // Changed to start_time and end_time
-  classB: Pick<ClassModel, 'schedule' | 'start_time' | 'end_time' | 'trainers'>  // Changed to start_time and end_time
+  classA: Pick<ClassModel, 'schedule' | 'start_time' | 'end_time' | 'trainers'>,
+  classB: Pick<ClassModel, 'schedule' | 'start_time' | 'end_time' | 'trainers'>
 ): boolean => {
   if (classA.schedule !== classB.schedule || 
       !classA.start_time || !classA.end_time || 
@@ -99,3 +100,4 @@ export const checkScheduleConflict = (
     (classA.start_time <= classB.start_time && classA.end_time >= classB.end_time)
   );
 };
+

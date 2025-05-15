@@ -119,10 +119,6 @@ const Classes = () => {
   const [classToDelete, setClassToDelete] = useState<number | null>(null);
   const { toast } = useToast();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [selectedColor, setSelectedColor] = useState<string>('#7dd3fc'); // Default color
   const [isScheduleConflict, setIsScheduleConflict] = useState(false);
   const [conflictMessage, setConflictMessage] = useState<string>('');
 
@@ -142,8 +138,8 @@ const Classes = () => {
     isRecurring: z.boolean().default(false),
     recurringFrequency: z.enum(["Daily", "Weekly", "Monthly"]).default("Weekly"),
     selectedDays: z.string().array().default([]),
-    startTime: z.string(),
-    endTime: z.string(),
+    start_time: z.string(),
+    end_time: z.string(),
     endDate: z.date().optional(),
     description: z.string().optional(),
     location: z.string().optional(),
@@ -163,8 +159,8 @@ const Classes = () => {
       isRecurring: false,
       recurringFrequency: "Weekly",
       selectedDays: [],
-      startTime: "09:00",
-      endTime: "10:00",
+      start_time: "09:00",
+      end_time: "10:00",
       description: "",
       location: "",
       difficulty: "Beginner",
@@ -230,15 +226,13 @@ const Classes = () => {
             status: classData.status || "Active",
             gender: classData.gender || "All",
             trainers: classData.trainers || [],
-            startTime: classData.start_time || "09:00",
-            endTime: classData.end_time || "10:00",
+            start_time: classData.start_time || "09:00",
+            end_time: classData.end_time || "10:00",
             description: classData.description || "",
             location: classData.location || "",
             difficulty: classData.difficulty || "Beginner",
             color: classData.color || '#7dd3fc',
             created_at: classData.created_at,
-            start_time: classData.start_time,
-            end_time: classData.end_time,
           }));
 
           setClasses(formattedClasses);
@@ -270,9 +264,8 @@ const Classes = () => {
       
       if (trainers) {
         console.log("Trainers loaded:", trainers);
-        // Process trainers into the format expected by the form
         const trainerOptions = trainers.map(trainer => ({
-          name: trainer.name || '', // Add null check to avoid runtime errors
+          name: trainer.name || '',
           email: trainer.email || ''
         }));
         setAvailableTrainers(trainerOptions);
@@ -300,8 +293,8 @@ const Classes = () => {
       const conflict = classes.some(existingClass => {
         const newClass = {
           schedule: values.schedule,
-          startTime: values.startTime,
-          endTime: values.endTime,
+          start_time: values.start_time,
+          end_time: values.end_time,
           trainers: values.trainers,
         };
         return checkScheduleConflict(existingClass, newClass);
@@ -326,14 +319,14 @@ const Classes = () => {
           .from('classes')
           .insert({
             name: values.name,
-            trainer: values.trainers.join(', '), // Store trainer emails as a comma-separated string
-            trainers: values.trainers, // Store trainer emails as an array
+            trainer: values.trainers.join(', '),
+            trainers: values.trainers,
             schedule: values.schedule,
             capacity: values.capacity,
             status: "Active",
             gender: values.gender,
-            start_time: values.startTime,
-            end_time: values.endTime,
+            start_time: values.start_time,
+            end_time: values.end_time,
             description: values.description,
             location: values.location,
             difficulty: values.difficulty,
@@ -363,15 +356,13 @@ const Classes = () => {
             status: classData.status || "Active",
             gender: classData.gender || "All",
             trainers: classData.trainers || [],
-            startTime: classData.start_time || "09:00",
-            endTime: classData.end_time || "10:00",
+            start_time: classData.start_time || "09:00",
+            end_time: classData.end_time || "10:00",
             description: classData.description || "",
             location: classData.location || "",
             difficulty: classData.difficulty || "Beginner",
             color: classData.color || '#7dd3fc',
             created_at: classData.created_at,
-            start_time: classData.start_time,
-            end_time: classData.end_time,
           }));
           setClasses(formattedClasses);
         }
@@ -380,11 +371,11 @@ const Classes = () => {
         form.reset();
         setIsDrawerOpen(false);
       });
-    } catch (err: any) {
-      console.error("Error creating class:", err);
+    } catch (err) {
+      console.error("Error in handleCreateClass:", err);
       toast({
         title: "Failed to create class",
-        description: err.message || "An unexpected error occurred",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
     }
@@ -398,8 +389,8 @@ const Classes = () => {
         if (existingClass.id === editedClass.id) return false; // Skip self
         const newClass = {
           schedule: editedClass.schedule,
-          startTime: editedClass.startTime,
-          endTime: editedClass.endTime,
+          start_time: editedClass.start_time,
+          end_time: editedClass.end_time,
           trainers: editedClass.trainers,
         };
         return checkScheduleConflict(existingClass, newClass);
@@ -427,8 +418,8 @@ const Classes = () => {
             capacity: editedClass.capacity,
             status: editedClass.status,
             gender: editedClass.gender,
-            start_time: editedClass.startTime,
-            end_time: editedClass.endTime,
+            start_time: editedClass.start_time,
+            end_time: editedClass.end_time,
             description: editedClass.description,
             location: editedClass.location,
             difficulty: editedClass.difficulty,
@@ -453,11 +444,11 @@ const Classes = () => {
           description: `${editedClass.name} has been updated`,
         });
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error updating class:", err);
       toast({
         title: "Failed to update class",
-        description: err.message || "An unexpected error occurred",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
     }
@@ -487,11 +478,11 @@ const Classes = () => {
           description: "The class has been deleted",
         });
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error deleting class:", err);
       toast({
         title: "Failed to delete class",
-        description: err.message || "An unexpected error occurred",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
@@ -545,25 +536,14 @@ const Classes = () => {
           description: "The class's status has been updated successfully",
         });
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error toggling class status:", err);
       toast({
         title: "Failed to update status",
-        description: err.message || "An unexpected error occurred",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
     }
-  };
-
-  // Function to handle day selection
-  const handleDaySelect = (dayValue: string) => {
-    setSelectedDays(prev => {
-      if (prev.includes(dayValue)) {
-        return prev.filter(day => day !== dayValue);
-      } else {
-        return [...prev, dayValue];
-      }
-    });
   };
 
   return (
@@ -580,6 +560,7 @@ const Classes = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Trainer</TableHead>
                 <TableHead>Schedule</TableHead>
+                <TableHead>Time</TableHead>
                 <TableHead>Capacity</TableHead>
                 <TableHead>Enrolled</TableHead>
                 <TableHead>Status</TableHead>
@@ -589,22 +570,23 @@ const Classes = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={8} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : classes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">No classes found.</TableCell>
+                  <TableCell colSpan={8} className="text-center">No classes found.</TableCell>
                 </TableRow>
               ) : (
                 classes.map((cls) => (
                   <TableRow key={cls.id}>
                     <TableCell>{cls.name}</TableCell>
-                    <TableCell>{cls.trainer}</TableCell>
-                    <TableCell>{cls.schedule} ({formatClassTime(cls.startTime || "09:00", cls.endTime || "10:00")})</TableCell>
+                    <TableCell>{Array.isArray(cls.trainers) ? cls.trainers.join(', ') : cls.trainer}</TableCell>
+                    <TableCell>{cls.schedule}</TableCell>
+                    <TableCell>{formatClassTime(cls.start_time || "00:00", cls.end_time || "00:00")}</TableCell>
                     <TableCell>{cls.capacity}</TableCell>
                     <TableCell>{cls.enrolled}</TableCell>
                     <TableCell>{cls.status}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
                       <Button variant="secondary" size="sm" onClick={() => openEditDialog(cls)}>
                         Edit
                       </Button>
@@ -621,9 +603,9 @@ const Classes = () => {
             </TableBody>
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={7}>
+                <TableCell colSpan={8}>
                   <DrawerTrigger asChild>
-                    <Button>Add Class</Button>
+                    <Button onClick={() => { form.reset(); setIsDrawerOpen(true); }}>Add Class</Button>
                   </DrawerTrigger>
                 </TableCell>
               </TableRow>
@@ -644,60 +626,44 @@ const Classes = () => {
           {currentClass && (
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Name
-                </Label>
-                <Input
-                  id="name"
-                  defaultValue={currentClass.name}
-                  className="col-span-3"
-                  onChange={(e) => setCurrentClass({ ...currentClass, name: e.target.value })}
-                />
+                <Label htmlFor="edit-name" className="text-right">Name</Label>
+                <Input id="edit-name" value={currentClass.name} className="col-span-3" onChange={(e) => setCurrentClass(prev => prev ? {...prev, name: e.target.value} : null)} />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="trainer" className="text-right">
-                  Trainer
-                </Label>
-                <Input
-                  id="trainer"
-                  defaultValue={currentClass.trainer}
-                  className="col-span-3"
-                  onChange={(e) => setCurrentClass({ ...currentClass, trainer: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="schedule" className="text-right">
-                  Schedule
-                </Label>
-                <Input
-                  id="schedule"
-                  defaultValue={currentClass.schedule}
-                  className="col-span-3"
-                  onChange={(e) => setCurrentClass({ ...currentClass, schedule: e.target.value })}
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="capacity" className="text-right">
-                  Capacity
-                </Label>
-                <Input
-                  id="capacity"
-                  defaultValue={String(currentClass.capacity)}
-                  className="col-span-3"
-                  onChange={(e) => setCurrentClass({ ...currentClass, capacity: Number(e.target.value) })}
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="status" className="text-right">
-                  Status
-                </Label>
-                <Select
-                  defaultValue={currentClass.status}
-                  onValueChange={(value) => setCurrentClass({ ...currentClass, status: value })}
+                <Label htmlFor="edit-trainer" className="text-right">Trainer</Label>
+                <Select 
+                  value={currentClass.trainer} 
+                  onValueChange={(value) => setCurrentClass(prev => prev ? {...prev, trainer: value, trainers: [value]} : null)}
                 >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a status" />
-                  </SelectTrigger>
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select trainer" /></SelectTrigger>
+                  <SelectContent>
+                    {availableTrainers.map(t => <SelectItem key={t.email} value={t.name}>{t.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-schedule" className="text-right">Schedule</Label>
+                <Input type="date" id="edit-schedule" value={currentClass.schedule} className="col-span-3" onChange={(e) => setCurrentClass(prev => prev ? {...prev, schedule: e.target.value} : null)} />
+              </div>
+               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-start_time" className="text-right">Start Time</Label>
+                <Input type="time" id="edit-start_time" value={currentClass.start_time} className="col-span-3" onChange={(e) => setCurrentClass(prev => prev ? {...prev, start_time: e.target.value} : null)} />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-end_time" className="text-right">End Time</Label>
+                <Input type="time" id="edit-end_time" value={currentClass.end_time} className="col-span-3" onChange={(e) => setCurrentClass(prev => prev ? {...prev, end_time: e.target.value} : null)} />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-capacity" className="text-right">Capacity</Label>
+                <Input type="number" id="edit-capacity" value={String(currentClass.capacity)} className="col-span-3" onChange={(e) => setCurrentClass(prev => prev ? {...prev, capacity: Number(e.target.value)} : null)} />
+              </div>
+               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="edit-status" className="text-right">Status</Label>
+                <Select 
+                  value={currentClass.status} 
+                  onValueChange={(value) => setCurrentClass(prev => prev ? {...prev, status: value} : null)}
+                >
+                  <SelectTrigger className="col-span-3"><SelectValue placeholder="Select status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Active">Active</SelectItem>
                     <SelectItem value="Inactive">Inactive</SelectItem>
@@ -705,28 +671,22 @@ const Classes = () => {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="gender" className="text-right">
-                  Gender
-                </Label>
-                <Select
-                  defaultValue={currentClass.gender}
-                  onValueChange={(value) => setCurrentClass({ ...currentClass, gender: value })}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Male">Male</SelectItem>
-                    <SelectItem value="Female">Female</SelectItem>
-                    <SelectItem value="All">All</SelectItem>
-                  </SelectContent>
+                <Label htmlFor="edit-gender" className="text-right">Gender</Label>
+                 <Select value={currentClass.gender} onValueChange={(value) => setCurrentClass(prev => prev ? {...prev, gender: value} : null)}>
+                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Select gender" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="All">All</SelectItem>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                    </SelectContent>
                 </Select>
               </div>
+              {/* Add other fields like description, location, difficulty, color as needed */}
             </div>
           )}
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="secondary">
+              <Button type="button" variant="secondary" onClick={() => setIsEditDialogOpen(false)}>
                 Cancel
               </Button>
             </DialogClose>
@@ -824,7 +784,7 @@ const Classes = () => {
                         </FormControl>
                         <SelectContent>
                           {availableTrainers.map((trainer) => (
-                            <SelectItem key={trainer.email} value={trainer.email}>
+                            <SelectItem key={trainer.email} value={trainer.name}>
                               {trainer.name}
                             </SelectItem>
                           ))}
@@ -859,7 +819,10 @@ const Classes = () => {
                         <PopoverTrigger asChild>
                           <Button
                             variant={"outline"}
-                            className="w-[240px] pl-3 text-left font-normal"
+                            className={cn(
+                              "w-[240px] pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
                           >
                             {field.value ? (
                               format(new Date(field.value), "yyyy-MM-dd")
@@ -873,10 +836,7 @@ const Classes = () => {
                           <Calendar
                             mode="single"
                             selected={field.value ? new Date(field.value) : undefined}
-                            onSelect={(date) => field.onChange(format(date!, "yyyy-MM-dd"))}
-                            disabled={(date) =>
-                              date > new Date() || date < new Date("1900-01-01")
-                            }
+                            onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
                             initialFocus
                           />
                         </PopoverContent>
@@ -888,7 +848,7 @@ const Classes = () => {
 
                 <FormField
                   control={form.control}
-                  name="startTime"
+                  name="start_time"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Start Time</FormLabel>
@@ -913,7 +873,7 @@ const Classes = () => {
 
                 <FormField
                   control={form.control}
-                  name="endTime"
+                  name="end_time"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>End Time</FormLabel>
@@ -935,7 +895,7 @@ const Classes = () => {
                     </FormItem>
                   )}
                 />
-
+                {/* ... FormFields for description, location, difficulty, color ... */}
                 <FormField
                   control={form.control}
                   name="description"
@@ -944,14 +904,11 @@ const Classes = () => {
                       <FormLabel>Description</FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder="Description"
+                          placeholder="Describe the class..."
                           className="resize-none"
                           {...field}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Write a few words about the class.
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -964,13 +921,13 @@ const Classes = () => {
                     <FormItem>
                       <FormLabel>Location</FormLabel>
                       <FormControl>
-                        <Input placeholder="Location" {...field} />
+                        <Input placeholder="e.g. Studio A" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-
+                
                 <FormField
                   control={form.control}
                   name="difficulty"
@@ -993,7 +950,6 @@ const Classes = () => {
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="color"
@@ -1007,14 +963,15 @@ const Classes = () => {
                     </FormItem>
                   )}
                 />
-              </div>
-              {isScheduleConflict && (
-                <div className="p-4 bg-red-100 border border-red-400 text-red-700">
-                  {conflictMessage}
-                </div>
-              )}
+
+
               <DrawerFooter>
-                <Button type="submit" className="bg-gym-blue hover:bg-gym-dark-blue">Create Class</Button>
+                <Button type="submit" className="bg-gym-blue hover:bg-gym-dark-blue" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? "Creating..." : "Create Class"}
+                </Button>
+                <DrawerClose asChild>
+                  <Button variant="outline" onClick={() => setIsDrawerOpen(false)}>Cancel</Button>
+                </DrawerClose>
               </DrawerFooter>
             </form>
           </Form>

@@ -75,8 +75,8 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
     enrolled: 0,
     status: "Active",
     gender: "All",
-    startTime: "09:00",
-    endTime: "10:00"
+    start_time: "09:00",
+    end_time: "10:00"
   });
   
   const [selectedTrainers, setSelectedTrainers] = useState<string[]>([]);
@@ -85,8 +85,14 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
 
   useEffect(() => {
     if (currentClass) {
-      setEditClass(currentClass);
-      setSelectedTrainers(currentClass.trainers || [currentClass.trainer]);
+      // Ensure currentClass has start_time and end_time or provide defaults
+      const classToEdit = {
+        ...currentClass,
+        start_time: currentClass.start_time || "09:00",
+        end_time: currentClass.end_time || "10:00",
+      };
+      setEditClass(classToEdit);
+      setSelectedTrainers(currentClass.trainers || [currentClass.trainer].filter(Boolean) as string[]);
       setMainTrainer(currentClass.trainer || "");
       setTimeError(null);
     }
@@ -96,29 +102,29 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
     const { name, value } = e.target;
     console.log(`Edit input change - field: ${name}, value: ${value}`);
     
-    if (name === "capacity") {
-      setEditClass(prev => ({ 
-        ...prev, 
-        [name]: parseInt(value) || 0 
-      }));
-    } else {
-      setEditClass(prev => ({ ...prev, [name]: value }));
+    let updatedValue: string | number = value;
+    if (name === "capacity" || name === "enrolled") {
+      updatedValue = parseInt(value) || 0;
     }
+  
+    setEditClass(prev => ({ 
+      ...prev, 
+      [name]: updatedValue
+    }));
     
-    // Clear time error when times change
-    if (name === "startTime" || name === "endTime") {
-      validateTimes(name === "startTime" ? value : editClass.startTime, 
-                   name === "endTime" ? value : editClass.endTime);
+    if (name === "start_time" || name === "end_time") {
+      validateTimes(name === "start_time" ? value : editClass.start_time, 
+                   name === "end_time" ? value : editClass.end_time);
     }
   };
 
-  const validateTimes = (startTime: string | undefined, endTime: string | undefined) => {
-    if (!startTime || !endTime) {
+  const validateTimes = (start_time: string | undefined, end_time: string | undefined) => { // Changed parameters
+    if (!start_time || !end_time) {
       setTimeError("Start and end times are required");
       return false;
     }
     
-    if (startTime >= endTime) {
+    if (start_time >= end_time) {
       setTimeError("End time must be after start time");
       return false;
     }
@@ -128,36 +134,26 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
   };
 
   const checkForScheduleConflicts = () => {
-    // Only check if trainers are selected and we have a current class
     if (selectedTrainers.length === 0 || !currentClass) return null;
 
-    const { startTime, endTime, schedule } = editClass;
+    const { start_time, end_time, schedule } = editClass; // Changed from startTime, endTime
 
-    // Check for conflicts with existing classes
     for (const existingClass of existingClasses) {
-      // Skip the current class being edited
       if (existingClass.id === currentClass.id) continue;
-      
-      // Skip classes that don't have time data yet
-      if (!existingClass.startTime || !existingClass.endTime) continue;
-      
-      // Skip classes on different dates
-      // This is a simplified check - in a real app you'd need more sophisticated date comparison
+      if (!existingClass.start_time || !existingClass.end_time) continue; // Changed from startTime, endTime
       if (schedule !== existingClass.schedule) continue;
       
-      // Skip classes with no overlapping trainers
-      const existingTrainers = existingClass.trainers || [existingClass.trainer];
+      const existingTrainers = existingClass.trainers || [existingClass.trainer].filter(Boolean) as string[];
       const hasCommonTrainer = selectedTrainers.some(trainer => 
         existingTrainers.includes(trainer)
       );
       
       if (!hasCommonTrainer) continue;
 
-      // Check for time overlap
-      if ((startTime! >= existingClass.startTime! && startTime! < existingClass.endTime!) ||
-          (endTime! > existingClass.startTime! && endTime! <= existingClass.endTime!) ||
-          (startTime! <= existingClass.startTime! && endTime! >= existingClass.endTime!)) {
-        return `Schedule conflict with ${existingClass.name} (${existingClass.schedule} ${existingClass.startTime}-${existingClass.endTime})`;
+      if ((start_time! >= existingClass.start_time! && start_time! < existingClass.end_time!) ||
+          (end_time! > existingClass.start_time! && end_time! <= existingClass.end_time!) ||
+          (start_time! <= existingClass.start_time! && end_time! >= existingClass.end_time!)) {
+        return `Schedule conflict with ${existingClass.name} (${existingClass.schedule} ${existingClass.start_time}-${existingClass.end_time})`; // Changed properties
       }
     }
     
@@ -197,7 +193,7 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
     }
   };
 
-  const renderTimeSelect = (id: string, label: string, value: string | undefined, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void) => (
+  const renderTimeSelect = (id: "start_time" | "end_time", label: string, value: string | undefined, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void) => ( // id type updated
     <div className="grid grid-cols-4 items-center gap-4">
       <Label htmlFor={id} className="text-right">{label}*</Label>
       <div className="col-span-3">
@@ -205,7 +201,7 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
           <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
           <select
             id={id}
-            name={id}
+            name={id} // name should match state property
             value={value || "09:00"}
             onChange={onChange}
             className="w-full border border-input h-10 rounded-md px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -223,23 +219,22 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
   );
   
   const handleUpdateClass = () => {
-    // Validate times
-    if (!validateTimes(editClass.startTime, editClass.endTime)) {
+    if (!validateTimes(editClass.start_time, editClass.end_time)) { // Changed properties
       return;
     }
     
-    // Check for schedule conflicts
     const conflict = checkForScheduleConflicts();
     if (conflict) {
       setTimeError(conflict);
       return;
     }
     
-    const updatedClass = {
+    const updatedClass: ClassModel = {
       ...editClass,
       trainers: selectedTrainers,
-      // For backward compatibility, set trainer to mainTrainer if available or first selected trainer or empty string
-      trainer: mainTrainer || (selectedTrainers.length > 0 ? selectedTrainers[0] : "")
+      trainer: mainTrainer || (selectedTrainers.length > 0 ? selectedTrainers[0] : ""),
+      start_time: editClass.start_time || "09:00", // fallback if undefined
+      end_time: editClass.end_time || "10:00",   // fallback if undefined
     };
     
     onUpdateClass(updatedClass);
@@ -344,8 +339,8 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
               />
             </div>
             
-            {renderTimeSelect("startTime", "Start Time", editClass.startTime, handleInputChange)}
-            {renderTimeSelect("endTime", "End Time", editClass.endTime, handleInputChange)}
+            {renderTimeSelect("start_time", "Start Time", editClass.start_time, handleInputChange)}
+            {renderTimeSelect("end_time", "End Time", editClass.end_time, handleInputChange)}
             
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-capacity" className="text-right">
@@ -392,10 +387,9 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
             className="bg-gym-blue hover:bg-gym-dark-blue"
             disabled={
               !editClass.name || 
-              // Removed requirement for mainTrainer and selectedTrainers
               editClass.capacity <= 0 ||
-              !editClass.startTime ||
-              !editClass.endTime ||
+              !editClass.start_time || // Changed from startTime
+              !editClass.end_time ||   // Changed from endTime
               !!timeError
             }
           >
