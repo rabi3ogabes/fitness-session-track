@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,11 +5,24 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon, Clock } from "lucide-react";
 import { format, isSameDay, addMonths, subMonths, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns";
 import { cn } from "@/lib/utils";
-import { mockClasses, isDayWithClass, getClassesForDate } from "../mockData";
+import { mockClasses, getClassesForDate } from "../mockData";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { Tables } from "@/integrations/supabase/types";
+
+interface ClassInfo {
+  id: number;
+  name: string;
+  schedule: string;
+  start_time: string | null;
+  end_time: string | null;
+}
+
+interface BookingWithClassDetails extends Tables<'bookings'>['Row'] {
+  classes: ClassInfo;
+}
 
 interface CalendarSectionProps {
   selectedDate: Date;
@@ -32,16 +44,15 @@ export const CalendarSection = ({
   const [isClassAlreadyBooked, setIsClassAlreadyBooked] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-  const [userBookings, setUserBookings] = useState<any[]>([]);
-  const [bookedClasses, setBookedClasses] = useState<any[]>([]);
   
-  // Fetch real user bookings from Supabase
+  const [userBookings, setUserBookings] = useState<BookingWithClassDetails[]>([]);
+  const [bookedClasses, setBookedClasses] = useState<ClassInfo[]>([]);
+  
   useEffect(() => {
     const fetchUserBookings = async () => {
       if (!user) return;
       
       try {
-        // Use a simpler query first to check if the bookings table exists and is accessible
         const { data: bookingsCheck, error: checkError } = await supabase
           .from('bookings')
           .select('id')
@@ -52,8 +63,6 @@ export const CalendarSection = ({
           throw checkError;
         }
         
-        // If we can access the bookings table, try to get user's bookings
-        // Instead of using a join, fetch bookings first
         const { data: userBookingsData, error: bookingsError } = await supabase
           .from('bookings')
           .select('*')
@@ -65,19 +74,18 @@ export const CalendarSection = ({
           throw bookingsError;
         }
         
-        // If no bookings found, return empty array
         if (!userBookingsData || userBookingsData.length === 0) {
           setUserBookings([]);
           setBookedClasses([]);
           return;
         }
         
-        // For each booking, fetch the class details separately
-        const bookingsWithClasses = await Promise.all(
+        const bookingsWithPotentialClasses = await Promise.all(
           userBookingsData.map(async (booking) => {
-            if (!booking.class_id) return booking;
+            if (!booking.class_id) {
+              return booking; 
+            }
             
-            // Fetch class details for this booking
             const { data: classData, error: classError } = await supabase
               .from('classes')
               .select('id, name, schedule, start_time, end_time')
@@ -89,19 +97,22 @@ export const CalendarSection = ({
               return { ...booking, classes: null };
             }
             
-            return { ...booking, classes: classData };
+            return { ...booking, classes: classData as ClassInfo };
           })
         );
         
-        console.log('Processed bookings with classes:', bookingsWithClasses);
-        setUserBookings(bookingsWithClasses.filter(b => b.classes !== null));
+        console.log('Processed bookings with potential classes:', bookingsWithPotentialClasses);
+
+        function hasValidClass(b: any): b is BookingWithClassDetails {
+          return b && typeof b === 'object' && 'classes' in b && b.classes !== null && typeof b.classes === 'object';
+        }
         
-        // Process bookings to get class details
-        const classes = bookingsWithClasses
-          .map(booking => booking.classes)
-          .filter(Boolean);
-          
-        setBookedClasses(classes);
+        const validBookingsWithClasses = bookingsWithPotentialClasses.filter(hasValidClass);
+        setUserBookings(validBookingsWithClasses);
+        
+        const classDetailsList = validBookingsWithClasses.map(booking => booking.classes);
+        setBookedClasses(classDetailsList);
+
       } catch (error: any) {
         console.error('Error in booking/class fetching process:', error);
         toast({
@@ -115,7 +126,6 @@ export const CalendarSection = ({
     fetchUserBookings();
   }, [user, toast]);
   
-  // Calendar navigation handlers
   const handlePreviousMonth = () => {
     setCalendarDate(prev => subMonths(prev, 1));
   };
@@ -124,7 +134,6 @@ export const CalendarSection = ({
     setCalendarDate(prev => addMonths(prev, 1));
   };
   
-  // Get dates with classes for the month indicator
   const daysWithClasses = mockClasses.reduce((acc, cls) => {
     const classDate = typeof cls.date === 'string' ? parseISO(cls.date) : cls.date;
     const dateKey = format(classDate, 'yyyy-MM-dd');
@@ -137,7 +146,6 @@ export const CalendarSection = ({
     return acc;
   }, {} as Record<string, any[]>);
   
-  // Generate calendar data
   const generateCalendarDays = () => {
     const monthStart = startOfMonth(calendarDate);
     const monthEnd = endOfMonth(calendarDate);
@@ -147,10 +155,8 @@ export const CalendarSection = ({
     const days = eachDayOfInterval({ start: startDate, end: endDate });
     const startDay = getDay(monthStart);
     
-    // Add empty cells for days before the start of month
     const prevMonthDays = Array(startDay).fill(null);
     
-    // Calculate days needed to complete the last row
     const daysAfter = (7 - ((days.length + startDay) % 7)) % 7;
     const nextMonthDays = Array(daysAfter).fill(null);
     
@@ -160,7 +166,6 @@ export const CalendarSection = ({
   const { prevMonthDays, currentMonthDays, nextMonthDays } = generateCalendarDays();
 
   const handleClassClick = (classId: number) => {
-    // Check if class is already booked
     const isBooked = bookings.some(booking => booking.class_id === classId);
     setSelectedClassId(classId);
     setIsClassAlreadyBooked(isBooked);
@@ -183,7 +188,6 @@ export const CalendarSection = ({
   };
 
   const handleCancelBooking = () => {
-    // Handle cancellation logic here
     toast({
       title: "Booking cancelled",
       description: "Your booking has been cancelled successfully.",
@@ -230,7 +234,6 @@ export const CalendarSection = ({
               </Button>
             </div>
             
-            {/* Calendar header - days of week */}
             <div className="grid grid-cols-7 gap-1 text-center mb-2">
               {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, i) => (
                 <div key={i} className="text-xs font-medium text-gray-500 h-8 flex items-center justify-center">
@@ -239,9 +242,7 @@ export const CalendarSection = ({
               ))}
             </div>
             
-            {/* Calendar grid */}
             <div className="grid grid-cols-7 gap-1">
-              {/* Previous month filler days */}
               {prevMonthDays.map((_, index) => (
                 <div 
                   key={`prev-${index}`} 
@@ -253,11 +254,9 @@ export const CalendarSection = ({
                 </div>
               ))}
               
-              {/* Current month days */}
               {currentMonthDays.map((day, index) => {
                 const dateKey = format(day, 'yyyy-MM-dd');
                 const hasClasses = daysWithClasses[dateKey];
-                const classCount = hasClasses ? hasClasses.length : 0;
                 const isToday = isSameDay(day, new Date());
                 const isSelected = isSameDay(day, selectedDate);
                 
@@ -284,7 +283,6 @@ export const CalendarSection = ({
                 );
               })}
               
-              {/* Next month filler days */}
               {nextMonthDays.map((_, index) => (
                 <div 
                   key={`next-${index}`} 
@@ -310,7 +308,7 @@ export const CalendarSection = ({
                   const classData = booking.classes;
                   if (!classData) return null;
                   
-                  const classDate = classData.schedule ? new Date(classData.schedule) : new Date();
+                  const classDate = classData.schedule ? parseISO(classData.schedule) : new Date();
                   
                   return (
                     <div 
@@ -381,7 +379,6 @@ export const CalendarSection = ({
             </div>
           </div>
 
-          {/* Class Booking Dialog */}
           <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
