@@ -128,7 +128,9 @@ export const CalendarSection = ({
   const hasValidClassData = (booking: BookingWithClassDetails): booking is BookingWithClassDetails & { classes: ClassInfo } => {
     return booking.classes !== null && 
            typeof booking.classes === 'object' && 
+           'id' in booking.classes &&
            typeof booking.classes.id === 'number' && 
+           'schedule' in booking.classes &&
            typeof booking.classes.schedule === 'string';
   };
 
@@ -137,9 +139,9 @@ export const CalendarSection = ({
     if (!hasValidClassData(booking)) {
       return false; // booking.classes is null or not a valid ClassInfo object
     }
-    // At this point, TypeScript knows booking.classes is ClassInfo (non-null and has 'schedule')
+    // At this point, TypeScript knows booking.classes is ClassInfo (non-null and has required properties)
     try {
-      const classDate = parseISO(booking.classes.schedule); // Accessing schedule safely
+      const classDate = parseISO(booking.classes.schedule); // Now safe to access
       return isSameDay(classDate, selectedDate);
     } catch (error) {
       console.error("Invalid date format encountered for booking schedule:", booking.classes.schedule, error);
@@ -322,9 +324,10 @@ export const CalendarSection = ({
             <div className="space-y-3">
               {/* Display user's bookings for the selected date (using pre-filtered bookingsForSelectedDate) */}
               {bookingsForSelectedDate.length > 0 && bookingsForSelectedDate.map(booking => {
-                  // booking.classes is guaranteed to be ClassInfo here due to the filter
-                  const classData = booking.classes!; // Can use non-null assertion or just access directly
-                  const classDate = parseISO(classData.schedule); // schedule is string
+                  // booking.classes is guaranteed to be ClassInfo here due to our filtering
+                  // with hasValidClassData, so it's safe to use with non-null assertion
+                  const classData = booking.classes!;
+                  const classDate = parseISO(classData.schedule);
                   
                   return (
                     <div 
