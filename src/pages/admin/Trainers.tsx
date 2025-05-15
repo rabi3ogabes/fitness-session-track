@@ -237,7 +237,7 @@ const Trainers = () => {
   };
 
   // Reset password handler
-  const handleResetPassword = async () => {
+  const handleResetPassword = async (newPassword: string) => {
     if (!selectedTrainer) return;
     
     try {
@@ -248,20 +248,17 @@ const Trainers = () => {
         throw listError;
       }
       
-      // Correctly access the users array via userList.data.users
+      // Correctly access the users array via userList.users
       const userAccount = userList.data.users.find(user => user.email === selectedTrainer.email);
       
       if (!userAccount) {
         throw new Error(`Could not find user account for ${selectedTrainer.name}`);
       }
       
-      // Generate a temporary password using their phone number (or a default if no phone number)
-      const tempPassword = selectedTrainer.phone ? selectedTrainer.phone.replace(/[^0-9]/g, '') : 'Trainer123!';
-      
-      // Reset the user's password
+      // Use the custom password provided by the admin
       const { error: resetError } = await supabase.auth.admin.updateUserById(
         userAccount.id, 
-        { password: tempPassword }
+        { password: newPassword }
       );
       
       if (resetError) {
@@ -270,7 +267,7 @@ const Trainers = () => {
       
       toast({
         title: "Password reset successfully",
-        description: `A temporary password has been set for ${selectedTrainer.name}: ${tempPassword}. They should change it upon next login.`,
+        description: `A new password has been set for ${selectedTrainer.name}`,
       });
       
       setIsResetPasswordDialogOpen(false);

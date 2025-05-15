@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase, requireAuth } from "@/integrations/supabase/client";
+import PasswordResetDialog from "@/components/shared/PasswordResetDialog";
 
 // Components
 import MemberSearch from "./components/members/MemberSearch";
@@ -311,7 +312,7 @@ const Members = () => {
     setIsResetPasswordDialogOpen(true);
   };
   
-  const confirmResetPassword = async () => {
+  const confirmResetPassword = async (newPassword: string) => {
     if (selectedMemberId === null) return;
     
     try {
@@ -326,20 +327,17 @@ const Members = () => {
           throw listError;
         }
         
-        // Correctly access the users array via userList.data.users
-        const userAccount = userList.data.users.find(user => user.email === member.email);
+        // Correctly access the users array via userList.users
+        const userAccount = userList.users.find(user => user.email === member.email);
         
         if (!userAccount) {
           throw new Error(`Could not find user account for ${member.name}`);
         }
         
-        // Generate a temporary password using their phone number (or a default if no phone number)
-        const tempPassword = member.phone ? member.phone.replace(/[^0-9]/g, '') : 'Temp123!';
-        
-        // Reset the user's password
+        // Use the custom password provided
         const { error: resetError } = await supabase.auth.admin.updateUserById(
           userAccount.id, 
-          { password: tempPassword }
+          { password: newPassword }
         );
         
         if (resetError) {
@@ -348,7 +346,7 @@ const Members = () => {
         
         toast({
           title: "Password reset successfully",
-          description: `${member.name}'s password has been reset to ${tempPassword}`,
+          description: `${member.name}'s password has been updated successfully`,
         });
         setIsResetPasswordDialogOpen(false);
         setSelectedMemberId(null);
@@ -395,30 +393,16 @@ const Members = () => {
         paymentHistoryData={paymentHistoryData}
       />
       
-      {/* Reset Password Confirmation Dialog */}
-      <AlertDialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Reset Password</AlertDialogTitle>
-            <AlertDialogDescription>
-              {selectedMemberId && (
-                <>
-                  Are you sure you want to reset the password for <strong>{members.find(m => m.id === selectedMemberId)?.name}</strong>?<br />
-                  The new password will be their phone number: <strong>{members.find(m => m.id === selectedMemberId)?.phone?.replace(/[^0-9]/g, '') || 'Temp123!'}</strong>
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsResetPasswordDialogOpen(false)}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmResetPassword} className="bg-gym-blue hover:bg-gym-dark-blue">
-              Reset Password
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Custom Password Reset Dialog */}
+      {selectedMemberId !== null && (
+        <PasswordResetDialog
+          isOpen={isResetPasswordDialogOpen}
+          onClose={() => setIsResetPasswordDialogOpen(false)}
+          onConfirm={confirmResetPassword}
+          entityName={members.find(m => m.id === selectedMemberId)?.name || "Member"}
+          entityType="member"
+        />
+      )}
     </DashboardLayout>
   );
 };

@@ -1,39 +1,25 @@
 
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import PasswordResetDialog from "@/components/shared/PasswordResetDialog";
 import { Trainer } from "./types";
 
 interface ResetPasswordDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (password: string) => void;
   trainer: Trainer | null;
 }
 
 const ResetPasswordDialog = ({ isOpen, onClose, onConfirm, trainer }: ResetPasswordDialogProps) => {
+  if (!trainer) return null;
+
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Reset Password</AlertDialogTitle>
-          <AlertDialogDescription>
-            {trainer && (
-              <>
-                Are you sure you want to reset the password for <strong>{trainer.name}</strong>?
-                A password reset email will be sent to <strong>{trainer.email}</strong>.
-              </>
-            )}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>
-            Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} className="bg-gym-blue hover:bg-gym-dark-blue">
-            Reset Password
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <PasswordResetDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      onConfirm={onConfirm}
+      entityName={trainer.name}
+      entityType="trainer"
+    />
   );
 };
 
