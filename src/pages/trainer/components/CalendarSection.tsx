@@ -8,7 +8,7 @@ import { format, isSameDay, addMonths, subMonths, parseISO, startOfMonth, endOfM
 import { cn } from "@/lib/utils";
 import { mockClasses, isDayWithClass, getClassesForDate } from "../mockData";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 
@@ -52,7 +52,9 @@ export const CalendarSection = ({
         
         // Process bookings to get class details
         if (data) {
-          const classes = data.map(booking => booking.classes).filter(Boolean);
+          const classes = data
+            .map(booking => booking.classes)
+            .filter(Boolean);
           setBookedClasses(classes);
         }
       } catch (error) {
@@ -143,6 +145,16 @@ export const CalendarSection = ({
       variant: "default"
     });
     setBookingDialogOpen(false);
+  };
+
+  // Helper function to safely handle class data from bookings
+  const isValidClassData = (classData: any): boolean => {
+    return classData !== null && 
+           typeof classData === 'object' && 
+           'schedule' in classData && 
+           'name' in classData && 
+           'start_time' in classData && 
+           'end_time' in classData;
   };
   
   return (
@@ -261,8 +273,11 @@ export const CalendarSection = ({
               {userBookings.length > 0 ? (
                 userBookings.map(booking => {
                   const classData = booking.classes;
-                  if (!classData) return null;
                   
+                  // Skip this booking if classData is null or invalid
+                  if (!isValidClassData(classData)) return null;
+                  
+                  // Now TypeScript knows classData is valid and has the required properties
                   const classDate = classData.schedule ? new Date(classData.schedule) : new Date();
                   
                   return (
@@ -292,7 +307,7 @@ export const CalendarSection = ({
                       </div>
                     </div>
                   );
-                })
+                }).filter(Boolean)  // Filter out any null entries
               ) : classesForView.length > 0 ? (
                 classesForView.map(cls => {
                   const isBooked = bookings.some(booking => booking.class_id === cls.id);
