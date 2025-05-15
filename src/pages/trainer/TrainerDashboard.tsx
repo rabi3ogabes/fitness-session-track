@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -12,13 +13,34 @@ import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+// Define a type for our mock bookings
+interface MockBooking {
+  id: number;
+  member: string;
+  class: string;
+  date: string;
+  time: string;
+  status: string;
+}
+
+// Define a type for the Supabase bookings based on the error message
+interface SupabaseBooking {
+  attendance: boolean;
+  booking_date: string;
+  class_id: number;
+  id: string;
+  notes: string;
+  status: string;
+  user_id: string;
+}
+
 const TrainerDashboard = () => {
   const { isTrainer, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [bookings, setBookings] = useState(mockBookings);
+  const [bookings, setBookings] = useState<MockBooking[]>(mockBookings);
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -50,7 +72,7 @@ const TrainerDashboard = () => {
         const { data: trainerClasses, error: classesError } = await supabase
           .from('classes')
           .select('*')
-          .eq('trainer_id', user.id);
+          .eq('trainer', user.id); // Use 'trainer' instead of 'trainer_id' based on the error
           
         if (classesError) {
           console.error("Error fetching trainer classes:", classesError);
@@ -60,12 +82,14 @@ const TrainerDashboard = () => {
             variant: "destructive"
           });
           // Fall back to mock data if there's an error
+          setIsLoading(false);
           return;
         }
         
         if (!trainerClasses || trainerClasses.length === 0) {
           console.log("No classes found for this trainer");
           // If no classes found, we'll use the mock data
+          setIsLoading(false);
           return;
         }
         
@@ -81,11 +105,27 @@ const TrainerDashboard = () => {
         if (bookingsError) {
           console.error("Error fetching bookings:", bookingsError);
           // Fall back to mock data if there's an error
+          setIsLoading(false);
           return;
         }
         
         if (classBookings && classBookings.length > 0) {
-          setBookings(classBookings);
+          // Transform Supabase bookings to match the expected format
+          const formattedBookings: MockBooking[] = classBookings.map((booking: SupabaseBooking) => {
+            // Get a matching class for display purposes
+            const matchingClass = trainerClasses.find(c => c.id === booking.class_id) || { name: 'Unknown', start_time: '00:00' };
+            
+            return {
+              id: parseInt(booking.id) || Math.floor(Math.random() * 1000), // Convert string ID to number or generate random
+              member: booking.user_id, // We might want to fetch member names in a production app
+              class: matchingClass.name || 'Unknown Class',
+              date: booking.booking_date || format(new Date(), 'yyyy-MM-dd'),
+              time: matchingClass.start_time || '00:00',
+              status: booking.status || 'Pending'
+            };
+          });
+          
+          setBookings(formattedBookings);
         } else {
           console.log("No bookings found for trainer classes, using mock data");
           // Keep using mock data if no real bookings
