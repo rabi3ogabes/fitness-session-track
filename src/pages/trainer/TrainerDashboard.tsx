@@ -10,6 +10,8 @@ import { mockBookings } from "./mockData";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Tables } from "@/integrations/supabase/types";
 
 // Define an interface for the expected parameter type
 interface NewMember {
@@ -22,9 +24,10 @@ interface NewMember {
 const TrainerDashboard = () => {
   const { isTrainer, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [bookings, setBookings] = useState(mockBookings);
+  const [bookings, setBookings] = useState<any[]>(mockBookings); // Using any[] to avoid type issues for now
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
   
   // New member registration dialog
@@ -63,6 +66,13 @@ const TrainerDashboard = () => {
     
     setBookings([...bookings, bookingToAdd]);
     setIsNewMemberDialogOpen(false);
+    
+    // Show confirmation toast
+    toast({
+      title: "Member registered",
+      description: `${newMember.name} has been successfully registered.`,
+      variant: "default"
+    });
   };
 
   // Custom NewMemberButton component

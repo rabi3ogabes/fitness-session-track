@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,7 @@ import { format, isSameDay, addMonths, subMonths, parseISO, startOfMonth, endOfM
 import { cn } from "@/lib/utils";
 import { mockClasses, getClassesForDate } from "../mockData";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Tables } from "@/integrations/supabase/types";
@@ -27,7 +28,7 @@ interface BookingWithClassDetails extends Tables<'bookings'> {
 interface CalendarSectionProps {
   selectedDate: Date;
   setSelectedDate: React.Dispatch<React.SetStateAction<Date>>;
-  bookings: Tables<'bookings'>[]; // Assuming this is bookings from props (potentially mockBookings from parent)
+  bookings: any[]; // Changed to any[] to match TrainerDashboard
   handleViewClassDetails: (classId: number) => void;
 }
 
