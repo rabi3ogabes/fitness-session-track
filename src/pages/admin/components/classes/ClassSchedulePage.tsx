@@ -336,11 +336,14 @@ const ClassSchedulePage = () => {
         enrolled: cls.enrolled || 0,
         status: cls.status || "Active",
         gender: cls.gender || "All",
-        startTime: cls.start_time || "",
-        endTime: cls.end_time || "",
+        start_time: cls.start_time || "", // Corrected from startTime
+        end_time: cls.end_time || "",   // Corrected from endTime
         description: cls.description,
         location: cls.location,
         difficulty: cls.difficulty,
+        created_at: cls.created_at, // ensure created_at is mapped if needed for sorting or display
+        recurrence: cls.recurrence, // ensure recurrence is mapped
+        color: cls.color // ensure color is mapped
       }));
       
       setClasses(formattedClasses);
@@ -1140,7 +1143,7 @@ const ClassSchedulePage = () => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {formatTime(cls.startTime || "")} - {formatTime(cls.endTime || "")}
+                        {formatTime(cls.start_time || "")} - {formatTime(cls.end_time || "")}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
