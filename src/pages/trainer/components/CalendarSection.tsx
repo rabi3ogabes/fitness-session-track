@@ -15,7 +15,7 @@ import { Tables } from "@/integrations/supabase/types";
 interface ClassInfo {
   id: number;
   name: string;
-  schedule: string;
+  schedule: string; // ISO date string
   start_time: string | null;
   end_time: string | null;
 }
@@ -27,14 +27,14 @@ interface BookingWithClassDetails extends Tables<'bookings'> {
 interface CalendarSectionProps {
   selectedDate: Date;
   setSelectedDate: React.Dispatch<React.SetStateAction<Date>>;
-  bookings: any[]; // Note: Type 'any' here. Consider defining a more specific type based on mockBookings and its usage.
+  bookings: Tables<'bookings'>[]; // Assuming this is bookings from props (potentially mockBookings from parent)
   handleViewClassDetails: (classId: number) => void;
 }
 
 export const CalendarSection = ({ 
   selectedDate, 
   setSelectedDate,
-  bookings,
+  bookings: propBookings, // Renamed to avoid confusion with userBookings state
   handleViewClassDetails
 }: CalendarSectionProps) => {
   const [calendarDate, setCalendarDate] = useState<Date>(new Date(selectedDate));
@@ -52,16 +52,6 @@ export const CalendarSection = ({
       if (!user) return;
       
       try {
-        // Check if bookings table exists or is accessible (optional sanity check)
-        const { data: bookingsCheck, error: checkError } = await supabase
-          .from('bookings')
-          .select('id', { count: 'exact', head: true }); // More efficient check
-          
-        if (checkError) {
-          console.error('Error checking bookings table:', checkError);
-          // Decide if this is a critical error to throw
-        }
-        
         const { data: userBookingsData, error: bookingsError } = await supabase
           .from('bookings')
           .select(`
@@ -87,16 +77,13 @@ export const CalendarSection = ({
           return;
         }
 
-        // Type assertion after fetching, ensuring classes can be null and handling that case
         const validBookings = userBookingsData
-          .filter(booking => booking.classes !== null) // Filter out any bookings where classes is null
           .map(booking => {
             if (booking.classes && typeof booking.classes === 'object' && 'id' in booking.classes) {
               return { ...booking, classes: booking.classes as ClassInfo };
             }
-            // This should not happen after the filter, but keep it for type safety
             return { ...booking, classes: null };
-          }) as BookingWithClassDetails[];
+          }) as BookingWithClassDetails[]; // Asserting the final structure
         
         setUserBookings(validBookings);
 
@@ -135,8 +122,26 @@ export const CalendarSection = ({
   
   // Function to safely check if a booking has valid class data
   const hasValidClassData = (booking: BookingWithClassDetails): booking is BookingWithClassDetails & { classes: ClassInfo } => {
-    return booking.classes !== null;
+    return booking.classes !== null && 
+           typeof booking.classes === 'object' && 
+           typeof booking.classes.id === 'number' && 
+           typeof booking.classes.schedule === 'string';
   };
+
+  // Pre-calculate bookings for the selected date to ensure type safety and avoid redundant filtering
+  const bookingsForSelectedDate = userBookings.filter(booking => {
+    if (!hasValidClassData(booking)) {
+      return false; // booking.classes is null or not a valid ClassInfo object
+    }
+    // At this point, TypeScript knows booking.classes is ClassInfo (non-null and has 'schedule')
+    try {
+      const classDate = parseISO(booking.classes.schedule); // Accessing schedule safely
+      return isSameDay(classDate, selectedDate);
+    } catch (error) {
+      console.error("Invalid date format encountered for booking schedule:", booking.classes.schedule, error);
+      return false; // If date parsing fails, treat as not matching
+    }
+  });
   
   const generateCalendarDays = () => {
     const monthStart = startOfMonth(calendarDate);
@@ -147,10 +152,7 @@ export const CalendarSection = ({
     const days = eachDayOfInterval({ start: startDate, end: endDate });
     const startDay = getDay(monthStart); // 0 (Sun) - 6 (Sat)
     
-    // Create placeholders for days from previous month
     const prevMonthDays = Array(startDay).fill(null);
-    
-    // Calculate placeholders for days from next month to fill the grid
     const daysAfter = (7 - ((days.length + startDay) % 7)) % 7;
     const nextMonthDays = Array(daysAfter).fill(null);
     
@@ -160,12 +162,18 @@ export const CalendarSection = ({
   const { prevMonthDays, currentMonthDays, nextMonthDays } = generateCalendarDays();
 
   const handleClassClick = (classId: number) => {
-    // The `bookings` prop here is from TrainerDashboard (mockBookings)
-    // It needs `class_id` for this logic to work. `mockBookings` has `class` (string name).
-    // This will likely not work as intended without `class_id` in `bookings` prop items.
-    const isBooked = bookings.some(booking => (booking as any).class_id === classId); 
+    // Logic for propBookings (mock data from parent)
+    // This needs class_id. `mockBookings` has `class` (string name).
+    const isBookedUsingPropBookings = propBookings.some(b => (b as any).class_id === classId && b.status === 'confirmed');
+    
+    // Check against user's actual bookings from Supabase for the selected class ID
+    const isBookedForThisClass = userBookings.some(userBooking => 
+      hasValidClassData(userBooking) && userBooking.class_id === classId
+    );
+
     setSelectedClassId(classId);
-    setIsClassAlreadyBooked(isBooked);
+    // Favor checking against actual user bookings if available
+    setIsClassAlreadyBooked(isBookedForThisClass || isBookedUsingPropBookings);
     setBookingDialogOpen(true);
   };
 
@@ -179,7 +187,6 @@ export const CalendarSection = ({
       setBookingDialogOpen(false);
       return;
     }
-    // If selectedClassId is not null, proceed
     if (selectedClassId !== null) {
       handleViewClassDetails(selectedClassId);
     }
@@ -258,9 +265,8 @@ export const CalendarSection = ({
                 </div>
               ))}
               
-              {currentMonthDays.map((day) => { // Removed index as dateKey is unique
+              {currentMonthDays.map((day) => {
                 const dateKey = format(day, 'yyyy-MM-dd');
-                // const hasClasses = daysWithClasses[dateKey]; // We show classes below, not dots on calendar for now
                 const isToday = isSameDay(day, new Date());
                 const isSelected = isSameDay(day, selectedDate);
                 
@@ -278,7 +284,7 @@ export const CalendarSection = ({
                         "w-7 h-7 rounded-full flex items-center justify-center text-sm",
                         isSelected ? "bg-purple-500 text-white font-semibold" : "text-gray-700",
                         isToday && !isSelected ? "border border-purple-500 text-purple-600 font-medium" : "",
-                        isToday && isSelected ? "font-semibold" : "" // isSelected already styles it well
+                        isToday && isSelected ? "font-semibold" : ""
                       )}>
                         {format(day, "d")}
                       </div>
@@ -303,22 +309,18 @@ export const CalendarSection = ({
           <div className="mt-6">
             <h3 className="font-medium mb-3 flex items-center text-gray-700">
               <Clock className="h-4 w-4 mr-2 text-purple-500" />
-              {/* Logic to display "My Bookings" or "Classes on selected date" */}
-              {/* For simplicity, showing classes for selected date or user's bookings if any */}
-              {userBookings.filter(booking => hasValidClassData(booking) && isSameDay(parseISO(booking.classes.schedule), selectedDate)).length > 0 
+              {bookingsForSelectedDate.length > 0 
                 ? `My Bookings for ${format(selectedDate, "MMMM d")}` 
                 : `Available Classes on ${format(selectedDate, "MMMM d")}`
               }
             </h3>
             
             <div className="space-y-3">
-              {/* Display user's bookings for the selected date */}
-              {userBookings.length > 0 && userBookings
-                .filter(booking => hasValidClassData(booking) && isSameDay(parseISO(booking.classes.schedule), selectedDate))
-                .map(booking => {
-                  // Safe to access booking.classes since we filtered with hasValidClassData
-                  const classData = booking.classes;
-                  const classDate = parseISO(classData.schedule);
+              {/* Display user's bookings for the selected date (using pre-filtered bookingsForSelectedDate) */}
+              {bookingsForSelectedDate.length > 0 && bookingsForSelectedDate.map(booking => {
+                  // booking.classes is guaranteed to be ClassInfo here due to the filter
+                  const classData = booking.classes!; // Can use non-null assertion or just access directly
+                  const classDate = parseISO(classData.schedule); // schedule is string
                   
                   return (
                     <div 
@@ -347,12 +349,9 @@ export const CalendarSection = ({
                   );
                 })}
 
-              {/* Display available classes if no bookings for the date, or if we decide to show both */}
-              {classesForView.length > 0 && userBookings.filter(booking => 
-                hasValidClassData(booking) && isSameDay(parseISO(booking.classes.schedule), selectedDate)
-              ).length === 0 && (
+              {/* Display available classes if no bookings for the date */}
+              {classesForView.length > 0 && bookingsForSelectedDate.length === 0 && (
                 classesForView.map(cls => {
-                  // Check if this available class is already booked by the user (globally, not just on this date)
                   const isGloballyBooked = userBookings.some(userBooking => 
                     hasValidClassData(userBooking) && userBooking.class_id === cls.id
                   );
@@ -391,9 +390,7 @@ export const CalendarSection = ({
               )}
               
               {/* No classes available and no user bookings for the selected date */}
-              {classesForView.length === 0 && userBookings.filter(booking => 
-                hasValidClassData(booking) && isSameDay(parseISO(booking.classes.schedule), selectedDate)
-              ).length === 0 && (
+              {classesForView.length === 0 && bookingsForSelectedDate.length === 0 && (
                 <div className="text-gray-500 text-center py-6 bg-gray-50 rounded-md border border-dashed border-gray-300">
                   <p>No classes scheduled for this date.</p>
                   <p className="text-xs mt-1">Please select another date.</p>
@@ -411,7 +408,6 @@ export const CalendarSection = ({
                 <DialogDescription>
                   {isClassAlreadyBooked 
                     ? "You have already booked this class. You can manage your bookings from your profile." 
-                    // Removed cancel option from here as it's complex.
                     : "Confirm your class booking. Details will be shown on the next step."
                   }
                 </DialogDescription>
@@ -423,11 +419,6 @@ export const CalendarSection = ({
                     <Button type="button" variant="outline" onClick={() => setBookingDialogOpen(false)}>
                       Close
                     </Button>
-                    {/* Alternative: Go to my bookings page? 
-                    <Button type="button" variant="default" onClick={() => { navigate('/user/bookings'); setBookingDialogOpen(false); }}>
-                      View My Bookings
-                    </Button> 
-                    */}
                   </>
                 ) : (
                   <>
