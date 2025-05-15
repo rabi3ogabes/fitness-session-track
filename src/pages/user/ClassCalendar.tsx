@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { supabase, cancelClassBooking } from '@/integrations/supabase/client'; // Added cancelClassBooking
+import { supabase } from '@/integrations/supabase/client';
 import { Calendar, dateFnsLocalizer, EventProps, SlotInfo } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, addMinutes, isBefore, isEqual, addDays } from 'date-fns';
-import enUS from 'date-fns/locale/en-US';
+import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -15,31 +15,31 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { AlertCircle, CheckCircle, XCircle, CalendarDays, Clock, Users, Info, Tag, WifiOff, RefreshCw } from 'lucide-react';
-import { ClassModel } from '@/pages/admin/components/classes/ClassTypes'; // Assuming ClassModel is defined here
-import DashboardLayout from '@/components/DashboardLayout'; // Using DashboardLayout
+import { ClassModel } from '@/pages/admin/components/classes/ClassTypes';
+import DashboardLayout from '@/components/DashboardLayout';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-
+import { cancelClassBooking } from '@/integrations/supabase/client';
 
 interface Booking {
-  id: string; // Assuming booking ID is a string (UUID from Supabase)
+  id: string; 
   class_id: number;
   user_id: string;
-  booking_date: string;
-  class_details?: FullClassInfo; // Optional: To store enriched class details
+  booking_date: string; 
+  class_details?: FullClassInfo; 
 }
 
 interface CalendarEvent {
-  id: string; // Use booking id as event id
+  id: string; 
   title: string;
   start: Date;
   end: Date;
   allDay?: boolean;
   resource?: any;
-  isBooking?: boolean; // To distinguish bookings from general classes
-  classDetails?: FullClassInfo; // Store full class details for the modal
-  bookingDetails?: Booking; // Store booking details if it's a booking
+  isBooking?: boolean; 
+  classDetails?: FullClassInfo; 
+  bookingDetails?: Booking; 
 }
 
 // Extended ClassModel to include all necessary fields from 'classes' table
@@ -55,7 +55,7 @@ interface FullClassInfo extends ClassModel {
   // description is already in ClassModel (string)
   // location is already in ClassModel (string)
   // difficulty is already in ClassModel (string)
-  enrolled?: number;
+  // enrolled is now optional in ClassModel, consistent here
   status?: string;
   trainers?: string[]; // array of trainer names or IDs
 }
@@ -103,7 +103,7 @@ const UserClassCalendar = () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [toast]);
+  }, [toast, fetchData]);
 
 
   const getCurrentUserId = useCallback(async () => {
@@ -129,13 +129,11 @@ const UserClassCalendar = () => {
 
     const currentUserId = await getCurrentUserId();
     if (!currentUserId) {
-      // Error is already set by getCurrentUserId if needed
       return;
     }
     setUserId(currentUserId);
 
     try {
-      // Fetch all active classes
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
         .select('*')
@@ -143,23 +141,16 @@ const UserClassCalendar = () => {
 
       if (classesError) throw classesError;
 
-      // Fetch user's bookings
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
-        .select('id, class_id, booking_date') // booking_date is the specific instance booked
+        .select('id, class_id, booking_date')
         .eq('user_id', currentUserId);
 
       if (bookingsError) throw bookingsError;
       
-      const userBookingMap = new Map<string, Booking>(); // Key: "classId_dateString", Value: Booking
+      const userBookingMap = new Map<string, Booking>();
       bookingsData?.forEach(booking => {
           if (booking.class_id && booking.booking_date) {
-            // Assuming booking_date is a full timestamp. We need to format it to match class schedule dates if classes are recurring.
-            // For simplicity, if classes table 'schedule' is yyyy-MM-dd, and booking_date is too, then direct match.
-            // If classes are single instances, booking_date might be the class schedule date.
-            // This logic depends on how recurring classes and their specific instances are stored and booked.
-            // For this example, let's assume booking.class_id refers to the main class template,
-            // and booking_date indicates the specific date of the booked instance.
              const classDateStr = format(new Date(booking.booking_date), "yyyy-MM-dd");
              userBookingMap.set(`${booking.class_id}_${classDateStr}`, booking as Booking);
           }
@@ -181,12 +172,12 @@ const UserClassCalendar = () => {
         const existingBooking = userBookingMap.get(eventKey);
 
         return {
-          id: existingBooking ? existingBooking.id : `class_${cls.id}_${cls.schedule}`, // Use booking ID if booked, otherwise a unique class instance ID
+          id: existingBooking ? existingBooking.id : `class_${cls.id}_${cls.schedule}`,
           title: cls.name,
           start: startDate,
           end: endDate,
           allDay: false,
-          resource: cls, // Store original class data
+          resource: cls, 
           isBooking: !!existingBooking,
           classDetails: cls,
           bookingDetails: existingBooking,
@@ -227,7 +218,6 @@ const UserClassCalendar = () => {
         return;
     }
 
-    // Prevent booking if class is in the past
     const classStartTime = new Date(classInfo.schedule);
     const [hours, minutes] = classInfo.start_time.split(':');
     classStartTime.setHours(parseInt(hours), parseInt(minutes));
@@ -244,42 +234,38 @@ const UserClassCalendar = () => {
 
     setIsBookingInProgress(true);
     try {
-      // Check current enrollment vs capacity
       if (classInfo.enrolled !== undefined && classInfo.capacity !== undefined && classInfo.enrolled >= classInfo.capacity) {
         toast({ title: 'Class Full', description: 'This class is already full.', variant: 'destructive' });
         setIsBookingInProgress(false);
         return;
       }
 
-      // Create booking
       const { data: bookingData, error: bookingError } = await supabase
         .from('bookings')
         .insert({
-          class_id: classInfo.id, // classInfo.id is number here
+          class_id: classInfo.id, 
           user_id: userId,
-          booking_date: classInfo.schedule, // Assuming classInfo.schedule is "yyyy-MM-dd" for the specific instance
-          status: 'confirmed', // Default status
+          booking_date: classInfo.schedule, 
+          status: 'confirmed', 
         })
         .select()
         .single();
 
       if (bookingError) throw bookingError;
 
-      // Increment enrolled count if the 'classes' table has an 'enrolled' column
-      if (classInfo.enrolled !== undefined) {
+      if (classInfo.enrolled !== undefined) { // enrolled is optional now
         const { error: updateError } = await supabase
           .from('classes')
           .update({ enrolled: (classInfo.enrolled || 0) + 1 })
           .eq('id', classInfo.id);
         if (updateError) {
             console.warn("Failed to update enrolled count, booking still successful:", updateError);
-            // Optionally rollback booking or log for admin
         }
       }
       
       toast({ title: 'Success', description: `Booked for ${classInfo.name} successfully!`, className: "bg-green-500 text-white" });
       setIsModalOpen(false);
-      fetchData(); // Refresh data to show updated booking status
+      fetchData(); 
     } catch (err: any) {
       console.error('Error booking class:', err);
       toast({ title: 'Error', description: `Failed to book class: ${err.message}`, variant: 'destructive' });
@@ -289,7 +275,7 @@ const UserClassCalendar = () => {
   };
 
 
-  const handleCancelBooking = async (bookingId: string | number) => {
+  const handleCancelBooking = async (bookingId: string) => { // Ensure bookingId is string
     if (!userId) {
       toast({ title: 'Error', description: 'User not identified.', variant: 'destructive' });
       return;
@@ -299,33 +285,28 @@ const UserClassCalendar = () => {
         return;
     }
 
-    // Find the class associated with this booking to update its enrollment
-    const eventToCancel = events.find(event => event.bookingDetails?.id === String(bookingId));
+    const eventToCancel = events.find(event => event.bookingDetails?.id === bookingId);
     const classInfo = eventToCancel?.classDetails;
 
 
     setIsCancelling(true);
     try {
-      // The cancelClassBooking function expects bookingId as string | number, and userId as string.
-      // Since bookings.id is uuid (string), we should pass bookingId as a string.
-      await cancelClassBooking(String(bookingId), userId);
+      await cancelClassBooking(bookingId, userId); // bookingId is now string
 
-      // Decrement enrolled count if classInfo is found and it has 'enrolled' count
        if (classInfo && classInfo.id && classInfo.enrolled !== undefined && classInfo.enrolled > 0) {
         const { error: updateError } = await supabase
           .from('classes')
           .update({ enrolled: classInfo.enrolled - 1 })
-          .eq('id', classInfo.id); // classInfo.id is number, matches classes table 'id' (integer)
+          .eq('id', classInfo.id); 
 
         if (updateError) {
             console.warn("Failed to update enrolled count on cancellation, booking still cancelled:", updateError);
-            // Log for admin or handle discrepancy
         }
       }
 
       toast({ title: 'Cancelled', description: 'Your booking has been cancelled.', className: "bg-yellow-500 text-white" });
       setIsModalOpen(false);
-      fetchData(); // Refresh data
+      fetchData(); 
     } catch (err: any) {
       console.error('Error cancelling booking:', err);
       toast({ title: 'Error', description: `Failed to cancel booking: ${err.message}`, variant: 'destructive' });
@@ -351,7 +332,9 @@ const UserClassCalendar = () => {
   const renderModalContent = () => {
     if (!selectedEvent || !selectedEvent.classDetails) return null;
     const { classDetails, bookingDetails, start } = selectedEvent;
-    const isPastClass = isBefore(start, subMinutes(new Date(), 5)); // Allow a small grace period
+    const eventStartTime = typeof start === 'string' ? parse(start, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx", new Date()) : start;
+
+    const isPastClass = isBefore(eventStartTime, subMinutes(new Date(), 5)); 
     const canBook = !isPastClass && !bookingDetails && (classDetails.enrolled || 0) < classDetails.capacity && isOnline;
     const canCancel = !isPastClass && bookingDetails && isOnline;
 
@@ -360,7 +343,7 @@ const UserClassCalendar = () => {
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-gym-blue">{classDetails.name}</DialogTitle>
           <DialogDescription className="text-sm text-gray-500">
-            {format(start, 'MMMM d, yyyy')} from {format(selectedEvent.start, 'p')} to {format(selectedEvent.end, 'p')}
+            {format(eventStartTime, 'MMMM d, yyyy')} from {format(selectedEvent.start, 'p')} to {format(selectedEvent.end, 'p')}
           </DialogDescription>
         </DialogHeader>
         <div className="mt-4 space-y-3 text-sm">
@@ -399,10 +382,10 @@ const UserClassCalendar = () => {
               Book Class
             </Button>
           )}
-          {canCancel && (
+          {canCancel && bookingDetails && ( // Ensure bookingDetails is not null before accessing id
             <Button
               variant="destructive"
-              onClick={() => handleCancelBooking(bookingDetails!.id)} // bookingDetails guaranteed here
+              onClick={() => handleCancelBooking(String(bookingDetails.id))} 
               disabled={isCancelling || !isOnline}
             >
               {isCancelling && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
@@ -414,13 +397,12 @@ const UserClassCalendar = () => {
     );
   };
   
-  // Helper to adjust for past classes, making them slightly transparent
   const dayPropGetter = (date: Date) => {
-    if (isBefore(date, startOfToday()) && getDay(date) !== getDay(startOfToday())) { // Check if the day is before today
+    if (isBefore(date, startOfToday()) && getDay(date) !== getDay(startOfToday())) { 
       return {
-        className: 'rbc-past-day', // You'll need to define this style in your CSS
+        className: 'rbc-past-day', 
         style: {
-          backgroundColor: '#f0f0f0', // Example: slightly grey out past days
+          backgroundColor: '#f0f0f0', 
         },
       };
     }
@@ -438,22 +420,21 @@ const UserClassCalendar = () => {
       cursor: 'pointer'
     };
     if (event.isBooking) {
-      style.backgroundColor = '#2563eb'; // Blue for booked
+      style.backgroundColor = '#2563eb'; 
       style.color = 'white';
     } else {
-      style.backgroundColor = '#e5e7eb'; // Light gray for available
-      style.color = '#374151'; // Darker gray text
+      style.backgroundColor = '#e5e7eb'; 
+      style.color = '#374151'; 
     }
-     // Check if the class start time is in the past
     if (event.start && isBefore(event.start, new Date())) {
-      style.opacity = 0.6; // Make past events slightly transparent
+      style.opacity = 0.6; 
       style.cursor = 'not-allowed';
     }
     return { style };
   };
 
 
-  if (isLoading && events.length === 0) { // Show loader only on initial load
+  if (isLoading && events.length === 0) { 
     return (
       <DashboardLayout title="My Class Calendar">
         <div className="flex justify-center items-center h-64">
@@ -479,7 +460,7 @@ const UserClassCalendar = () => {
         </Alert>
       )}
 
-      {error && !isLoading && ( // Show error only if not loading and error exists
+      {error && !isLoading && ( 
          <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Schedule</AlertTitle>
@@ -503,15 +484,13 @@ const UserClassCalendar = () => {
           endAccessor="end"
           style={{ height: '100%' }}
           onSelectEvent={handleSelectEvent}
-          selectable={false} // Or true if you want to handle onSelectSlot
-          // onSelectSlot={handleSelectSlot} // Implement if needed for booking empty slots
+          selectable={false} 
           views={['month', 'week', 'day']}
           defaultView="month"
           components={{
             event: EventComponent,
           }}
           eventPropGetter={eventPropGetter}
-          // dayPropGetter={dayPropGetter} // To style past days
           messages={{
             noEventsInRange: 'There are no classes scheduled in this range.',
           }}
@@ -529,7 +508,6 @@ const UserClassCalendar = () => {
   );
 };
 
-// Helper function, ensure it's defined or imported if used elsewhere
 const startOfToday = () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);

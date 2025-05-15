@@ -1,28 +1,20 @@
-
 export interface ClassModel {
   id: number;
   name: string;
   trainer: string;
   schedule: string;
   capacity: number;
-  enrolled: number;
+  enrolled?: number; // Made optional to match FullClassInfo usage
   status: string;
   gender?: "Male" | "Female" | "All" | string;
   trainers?: string[];
   recurrence?: string;
-  startTime?: string;
-  endTime?: string;
-  // Add properties that come from Supabase
   created_at?: string;
   start_time?: string;
   end_time?: string;
-  // Add a description field for better class information
   description?: string;
-  // Add a location field to specify where the class is held
   location?: string;
-  // Add a color field for visual identification in calendars
   color?: string;
-  // Add a difficulty level
   difficulty?: "Beginner" | "Intermediate" | "Advanced" | string;
 }
 
@@ -66,18 +58,15 @@ export interface ClassFormState {
   startTime: string;
   endTime: string;
   endDate?: Date;
-  // Add new fields
   description?: string;
   location?: string;
   difficulty?: "Beginner" | "Intermediate" | "Advanced";
   color?: string;
 }
 
-// Add a utility function to format class times
 export const formatClassTime = (startTime: string, endTime: string): string => {
   if (!startTime || !endTime) return "Time not set";
   
-  // Convert 24h format to 12h format with AM/PM
   const formatTime = (time: string): string => {
     const [hours, minutes] = time.split(':').map(Number);
     const period = hours >= 12 ? 'PM' : 'AM';
@@ -88,29 +77,25 @@ export const formatClassTime = (startTime: string, endTime: string): string => {
   return `${formatTime(startTime)} - ${formatTime(endTime)}`;
 };
 
-// Add a utility function to check for schedule conflicts
 export const checkScheduleConflict = (
-  classA: Pick<ClassModel, 'schedule' | 'startTime' | 'endTime' | 'trainers'>,
-  classB: Pick<ClassModel, 'schedule' | 'startTime' | 'endTime' | 'trainers'>
+  classA: Pick<ClassModel, 'schedule' | 'start_time' | 'end_time' | 'trainers'>, // Changed to start_time and end_time
+  classB: Pick<ClassModel, 'schedule' | 'start_time' | 'end_time' | 'trainers'>  // Changed to start_time and end_time
 ): boolean => {
-  // Skip if different dates or missing time data
   if (classA.schedule !== classB.schedule || 
-      !classA.startTime || !classA.endTime || 
-      !classB.startTime || !classB.endTime) {
+      !classA.start_time || !classA.end_time || 
+      !classB.start_time || !classB.end_time) {
     return false;
   }
   
-  // Check for trainer overlap
   const hasCommonTrainer = (classA.trainers || []).some(trainerA => 
     (classB.trainers || []).includes(trainerA)
   );
   
   if (!hasCommonTrainer) return false;
   
-  // Check for time overlap
   return (
-    (classA.startTime >= classB.startTime && classA.startTime < classB.endTime) ||
-    (classA.endTime > classB.startTime && classA.endTime <= classB.endTime) ||
-    (classA.startTime <= classB.startTime && classA.endTime >= classB.endTime)
+    (classA.start_time >= classB.start_time && classA.start_time < classB.end_time) ||
+    (classA.end_time > classB.start_time && classA.end_time <= classB.end_time) ||
+    (classA.start_time <= classB.start_time && classA.end_time >= classB.end_time)
   );
 };
