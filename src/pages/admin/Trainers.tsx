@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -262,17 +263,19 @@ const Trainers = () => {
         throw new Error("User list data is null");
       }
       
-      const userAccount = userList.users.find(user => user.email === selectedTrainer.email);
+      // Fix for Property 'email' does not exist on type 'never'
+      // Explicitly type the user with a more specific type
+      type User = { email: string; id: string };
+      const userAccount = userList.users.find((user: User) => user.email === selectedTrainer.email);
       
       if (!userAccount) {
         toast({
           title: "User account not found",
           description: `Could not find user account for ${selectedTrainer.name}. Their password cannot be reset at this time.`,
-          variant: "warning",
+          // Fix for Type '"warning"' is not assignable to type '"default" | "destructive"'
+          variant: "destructive",  // Changed from "warning" to "destructive"
         });
-        // It might be better not to throw an error here, but to inform the admin.
-        // Depending on desired UX, you could allow proceeding or just stop.
-        // For now, let's prevent proceeding to avoid confusion.
+        // It's better not to throw an error here, but to inform the admin.
         return; 
       }
       

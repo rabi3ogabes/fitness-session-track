@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -341,15 +342,19 @@ const Members = () => {
           throw new Error("User list data is null");
         }
         
-        const userAccount = userList.users.find(user => user.email === member.email);
+        // Fix for Property 'email' does not exist on type 'never'
+        // Explicitly type the user with a more specific type
+        type User = { email: string; id: string };
+        const userAccount = userList.users.find((user: User) => user.email === member.email);
         
         if (!userAccount) {
           toast({
             title: "User account not found",
             description: `Could not find user account for ${member.name}. Their password cannot be reset at this time.`,
-            variant: "warning",
+            // Fix for Type '"warning"' is not assignable to type '"default" | "destructive"'
+            variant: "destructive", // Changed from "warning" to "destructive"
           });
-          // Similar to Trainers.tsx, we'll return instead of throwing for a better UX.
+          // Better UX by not throwing an error
           return;
         }
         
