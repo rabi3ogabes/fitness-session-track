@@ -319,10 +319,16 @@ const Members = () => {
       if (!member) return;
       
       await requireAuth(async () => {
-        // Get member's auth ID from their email
-        const { data: userResponse, error: userError } = await supabase.auth.admin.getUserByEmail(member.email);
+        // Get list of users and find by email
+        const { data: userList, error: listError } = await supabase.auth.admin.listUsers();
         
-        if (userError || !userResponse?.user) {
+        if (listError) {
+          throw listError;
+        }
+        
+        const userAccount = userList?.users?.find(user => user.email === member.email);
+        
+        if (!userAccount) {
           throw new Error(`Could not find user account for ${member.name}`);
         }
         
@@ -331,7 +337,7 @@ const Members = () => {
         
         // Reset the user's password
         const { error: resetError } = await supabase.auth.admin.updateUserById(
-          userResponse.user.id, 
+          userAccount.id, 
           { password: tempPassword }
         );
         

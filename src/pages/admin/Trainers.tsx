@@ -241,10 +241,16 @@ const Trainers = () => {
     if (!selectedTrainer) return;
     
     try {
-      // Get trainer's auth ID from their email
-      const { data: userResponse, error: userError } = await supabase.auth.admin.getUserByEmail(selectedTrainer.email);
+      // Get list of users and find by email
+      const { data: userList, error: listError } = await supabase.auth.admin.listUsers();
       
-      if (userError || !userResponse?.user) {
+      if (listError) {
+        throw listError;
+      }
+      
+      const userAccount = userList?.users?.find(user => user.email === selectedTrainer.email);
+      
+      if (!userAccount) {
         throw new Error(`Could not find user account for ${selectedTrainer.name}`);
       }
       
@@ -253,7 +259,7 @@ const Trainers = () => {
       
       // Reset the user's password
       const { error: resetError } = await supabase.auth.admin.updateUserById(
-        userResponse.user.id, 
+        userAccount.id, 
         { password: tempPassword }
       );
       
