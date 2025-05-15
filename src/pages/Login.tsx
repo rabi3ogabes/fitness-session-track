@@ -134,8 +134,7 @@ const Login = () => {
     setError(null);
   };
 
-  // Update the login function to ensure we're using the correct toast 
-  // This doesn't change functionality, just ensures the toast is called correctly
+  // Handle login form submission
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
