@@ -311,17 +311,48 @@ const Members = () => {
     setIsResetPasswordDialogOpen(true);
   };
   
-  const confirmResetPassword = () => {
+  const confirmResetPassword = async () => {
     if (selectedMemberId === null) return;
     
-    const member = members.find(m => m.id === selectedMemberId);
-    if (member) {
-      toast({
-        title: "Password reset successfully",
-        description: `${member.name}'s password has been reset to their phone number`,
+    try {
+      const member = members.find(m => m.id === selectedMemberId);
+      if (!member) return;
+      
+      await requireAuth(async () => {
+        // Get member's auth ID from their email
+        const { data: userResponse, error: userError } = await supabase.auth.admin.getUserByEmail(member.email);
+        
+        if (userError || !userResponse?.user) {
+          throw new Error(`Could not find user account for ${member.name}`);
+        }
+        
+        // Generate a temporary password using their phone number (or a default if no phone number)
+        const tempPassword = member.phone ? member.phone.replace(/[^0-9]/g, '') : 'Temp123!';
+        
+        // Reset the user's password
+        const { error: resetError } = await supabase.auth.admin.updateUserById(
+          userResponse.user.id, 
+          { password: tempPassword }
+        );
+        
+        if (resetError) {
+          throw resetError;
+        }
+        
+        toast({
+          title: "Password reset successfully",
+          description: `${member.name}'s password has been reset to ${tempPassword}`,
+        });
+        setIsResetPasswordDialogOpen(false);
+        setSelectedMemberId(null);
       });
-      setIsResetPasswordDialogOpen(false);
-      setSelectedMemberId(null);
+    } catch (error: any) {
+      console.error("Error resetting password:", error);
+      toast({
+        title: "Failed to reset password",
+        description: error.message || "There was an error resetting the password",
+        variant: "destructive"
+      });
     }
   };
 

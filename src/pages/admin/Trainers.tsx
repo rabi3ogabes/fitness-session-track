@@ -241,10 +241,29 @@ const Trainers = () => {
     if (!selectedTrainer) return;
     
     try {
-      // In a real implementation with authentication, this would call an API to reset the password
+      // Get trainer's auth ID from their email
+      const { data: userResponse, error: userError } = await supabase.auth.admin.getUserByEmail(selectedTrainer.email);
+      
+      if (userError || !userResponse?.user) {
+        throw new Error(`Could not find user account for ${selectedTrainer.name}`);
+      }
+      
+      // Generate a temporary password using their phone number (or a default if no phone number)
+      const tempPassword = selectedTrainer.phone ? selectedTrainer.phone.replace(/[^0-9]/g, '') : 'Trainer123!';
+      
+      // Reset the user's password
+      const { error: resetError } = await supabase.auth.admin.updateUserById(
+        userResponse.user.id, 
+        { password: tempPassword }
+      );
+      
+      if (resetError) {
+        throw resetError;
+      }
+      
       toast({
-        title: "Password reset requested",
-        description: `A password reset email has been sent to ${selectedTrainer.email}`,
+        title: "Password reset successfully",
+        description: `A temporary password has been set: ${tempPassword}`,
       });
       
       setIsResetPasswordDialogOpen(false);
