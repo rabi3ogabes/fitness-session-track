@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -102,11 +101,15 @@ export const CalendarSection = ({
   }, [user, toast]);
   
   const handlePreviousMonth = () => {
-    setCalendarDate(prev => subMonths(prev, 1));
+    // Fix the type error by not using a callback for setCalendarDate
+    const newDate = subMonths(calendarDate, 1);
+    setCalendarDate(newDate);
   };
   
   const handleNextMonth = () => {
-    setCalendarDate(prev => addMonths(prev, 1));
+    // Fix the type error by not using a callback for setCalendarDate
+    const newDate = addMonths(calendarDate, 1);
+    setCalendarDate(newDate);
   };
   
   const daysWithClasses = mockClasses.reduce((acc, cls) => {
