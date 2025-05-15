@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,7 @@ import { format, isSameDay, addMonths, subMonths, parseISO, startOfMonth, endOfM
 import { cn } from "@/lib/utils";
 import { mockClasses, isDayWithClass, getClassesForDate } from "../mockData";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 
@@ -40,24 +41,69 @@ export const CalendarSection = ({
       if (!user) return;
       
       try {
-        // Updated select query to be more explicit about the columns from the 'classes' table
-        // and to help Supabase resolve the relationship.
-        const { data, error } = await supabase
+        // Use a simpler query first to check if the bookings table exists and is accessible
+        const { data: bookingsCheck, error: checkError } = await supabase
           .from('bookings')
-          .select('*, classes(id, name, schedule, start_time, end_time)') 
+          .select('id')
+          .limit(1);
+          
+        if (checkError) {
+          console.error('Error checking bookings table:', checkError);
+          throw checkError;
+        }
+        
+        // If we can access the bookings table, try to get user's bookings
+        // Instead of using a join, fetch bookings first
+        const { data: userBookingsData, error: bookingsError } = await supabase
+          .from('bookings')
+          .select('*')
           .eq('user_id', user.id)
           .eq('status', 'confirmed');
           
-        if (error) throw error;
-        setUserBookings(data || []);
+        if (bookingsError) {
+          console.error('Error fetching bookings:', bookingsError);
+          throw bookingsError;
+        }
+        
+        // If no bookings found, return empty array
+        if (!userBookingsData || userBookingsData.length === 0) {
+          setUserBookings([]);
+          setBookedClasses([]);
+          return;
+        }
+        
+        // For each booking, fetch the class details separately
+        const bookingsWithClasses = await Promise.all(
+          userBookingsData.map(async (booking) => {
+            if (!booking.class_id) return booking;
+            
+            // Fetch class details for this booking
+            const { data: classData, error: classError } = await supabase
+              .from('classes')
+              .select('id, name, schedule, start_time, end_time')
+              .eq('id', booking.class_id)
+              .single();
+              
+            if (classError) {
+              console.error(`Error fetching class ${booking.class_id}:`, classError);
+              return { ...booking, classes: null };
+            }
+            
+            return { ...booking, classes: classData };
+          })
+        );
+        
+        console.log('Processed bookings with classes:', bookingsWithClasses);
+        setUserBookings(bookingsWithClasses.filter(b => b.classes !== null));
         
         // Process bookings to get class details
-        if (data) {
-          const classes = data.map(booking => booking.classes).filter(Boolean);
-          setBookedClasses(classes);
-        }
-      } catch (error) {
-        console.error('Error fetching bookings:', error);
+        const classes = bookingsWithClasses
+          .map(booking => booking.classes)
+          .filter(Boolean);
+          
+        setBookedClasses(classes);
+      } catch (error: any) {
+        console.error('Error in booking/class fetching process:', error);
         toast({
           title: "Error",
           description: "Failed to load your bookings. Please try again.",
