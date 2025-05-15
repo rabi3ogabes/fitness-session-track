@@ -75,7 +75,7 @@ const CANCELLATION_WINDOW_HOURS = 4; // Minimum hours before class to allow canc
 const UserClassCalendar = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -391,17 +391,17 @@ const UserClassCalendar = () => {
 
           {/* Messages for booking/cancellation status */}
           {!bookingDetails && !isPastClass && sessionsRemaining !== null && sessionsRemaining <= 0 && isOnline && (
-            <Badge variant="warning" className="py-1 px-2 bg-yellow-100 text-yellow-700 border-yellow-300">
+            <Badge variant="outline" className="py-1 px-2 bg-yellow-100 text-yellow-700 border-yellow-300">
               <AlertTriangle className="w-4 h-4 mr-1" /> You have no session credits. Please renew your membership.
             </Badge>
           )}
           {!bookingDetails && !isPastClass && isFull && isOnline && (
-             <Badge variant="warning" className="py-1 px-2 bg-orange-100 text-orange-700 border-orange-300">
+             <Badge variant="outline" className="py-1 px-2 bg-orange-100 text-orange-700 border-orange-300">
                 <Users className="w-4 h-4 mr-1" /> This class is currently full.
             </Badge>
           )}
           {bookingDetails && !isPastClass && !withinCancellationWindow && isOnline && (
-            <Badge variant="info" className="py-1 px-2 bg-blue-100 text-blue-700 border-blue-300">
+            <Badge variant="outline" className="py-1 px-2 bg-blue-100 text-blue-700 border-blue-300">
               <BadgeInfo className="w-4 h-4 mr-1" /> It's too late to cancel this booking (less than {CANCELLATION_WINDOW_HOURS} hours before start).
             </Badge>
           )}
