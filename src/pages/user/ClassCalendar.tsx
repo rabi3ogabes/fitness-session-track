@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar, dateFnsLocalizer, EventProps, SlotInfo } from 'react-big-calendar';
-import { format, parse, startOfWeek, getDay, addMinutes, isBefore, isEqual, addDays } from 'date-fns';
+import { Calendar, dateFnsLocalizer, EventProps } from 'react-big-calendar';
+import { format, parse, startOfWeek, getDay, addMinutes, isBefore, isEqual, addDays, differenceInHours, subMinutes as dateFnsSubMinutes } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { AlertCircle, CheckCircle, XCircle, CalendarDays, Clock, Users, Info, Tag, WifiOff, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle, XCircle, CalendarDays, Clock, Users, Info, Tag, WifiOff, RefreshCw, AlertTriangle, BadgeInfo } from 'lucide-react';
 import { ClassModel } from '@/pages/admin/components/classes/ClassTypes';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Badge } from '@/components/ui/badge';
@@ -60,7 +60,6 @@ interface FullClassInfo extends ClassModel {
   trainers?: string[]; // array of trainer names or IDs
 }
 
-
 const localizer = dateFnsLocalizer({
   format,
   parse,
@@ -71,6 +70,8 @@ const localizer = dateFnsLocalizer({
   },
 });
 
+const CANCELLATION_WINDOW_HOURS = 4; // Minimum hours before class to allow cancellation
+
 const UserClassCalendar = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -80,6 +81,7 @@ const UserClassCalendar = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isBookingInProgress, setIsBookingInProgress] = useState(false);
+  const [sessionsRemaining, setSessionsRemaining] = useState<number | null>(null);
   const { toast } = useToast();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -104,14 +106,30 @@ const UserClassCalendar = () => {
 
     setIsLoading(true);
     setError(null);
+    setSessionsRemaining(null); // Reset while fetching
 
     const currentUserId = await getCurrentUserId();
     if (!currentUserId) {
+      setIsLoading(false); // Stop loading if no user ID
       return;
     }
     setUserId(currentUserId);
 
     try {
+      // Fetch user profile to get sessions_remaining
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('sessions_remaining')
+        .eq('id', currentUserId)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') { // PGRST116: single row not found
+        console.error('Error fetching user profile:', profileError);
+        toast({ title: "Error", description: "Could not fetch your session details.", variant: "destructive" });
+        // We can still proceed to fetch classes, but booking might be affected
+      }
+      setSessionsRemaining(profileData?.sessions_remaining ?? 0);
+
       const { data: classesData, error: classesError } = await supabase
         .from('classes')
         .select('*')
@@ -227,7 +245,6 @@ const UserClassCalendar = () => {
         return;
     }
 
-
     setIsBookingInProgress(true);
     try {
       if (classInfo.enrolled !== undefined && classInfo.capacity !== undefined && classInfo.enrolled >= classInfo.capacity) {
@@ -325,19 +342,27 @@ const UserClassCalendar = () => {
 
   const renderModalContent = () => {
     if (!selectedEvent || !selectedEvent.classDetails) return null;
-    const { classDetails, bookingDetails, start } = selectedEvent;
+    const { classDetails, bookingDetails, start, end } = selectedEvent; // Added end
     const eventStartTime = typeof start === 'string' ? parse(start, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx", new Date()) : start;
 
-    const isPastClass = isBefore(eventStartTime, subMinutes(new Date(), 5)); 
-    const canBook = !isPastClass && !bookingDetails && (classDetails.enrolled || 0) < classDetails.capacity && isOnline;
-    const canCancel = !isPastClass && bookingDetails && isOnline;
+    const isPastClass = isBefore(eventStartTime, dateFnsSubMinutes(new Date(), 5)); // Allow actions up to 5 mins after start
+    
+    // Booking conditions
+    const hasCredits = sessionsRemaining !== null && sessionsRemaining > 0;
+    const isFull = (classDetails.enrolled || 0) >= classDetails.capacity;
+    const canBook = !isPastClass && !bookingDetails && !isFull && hasCredits && isOnline;
+
+    // Cancellation conditions
+    const withinCancellationWindow = differenceInHours(eventStartTime, new Date()) >= CANCELLATION_WINDOW_HOURS;
+    const canCancel = !isPastClass && bookingDetails && isOnline && withinCancellationWindow;
+
 
     return (
       <>
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-gym-blue">{classDetails.name}</DialogTitle>
           <DialogDescription className="text-sm text-gray-500">
-            {format(eventStartTime, 'MMMM d, yyyy')} from {format(selectedEvent.start, 'p')} to {format(selectedEvent.end, 'p')}
+            {format(eventStartTime, 'MMMM d, yyyy')} from {format(start, 'p')} to {format(end, 'p')}
           </DialogDescription>
         </DialogHeader>
         <div className="mt-4 space-y-3 text-sm">
@@ -363,20 +388,43 @@ const UserClassCalendar = () => {
                 <WifiOff className="w-4 h-4 mr-1" /> You are offline. Actions disabled.
             </Badge>
           )}
+
+          {/* Messages for booking/cancellation status */}
+          {!bookingDetails && !isPastClass && sessionsRemaining !== null && sessionsRemaining <= 0 && isOnline && (
+            <Badge variant="warning" className="py-1 px-2 bg-yellow-100 text-yellow-700 border-yellow-300">
+              <AlertTriangle className="w-4 h-4 mr-1" /> You have no session credits. Please renew your membership.
+            </Badge>
+          )}
+          {!bookingDetails && !isPastClass && isFull && isOnline && (
+             <Badge variant="warning" className="py-1 px-2 bg-orange-100 text-orange-700 border-orange-300">
+                <Users className="w-4 h-4 mr-1" /> This class is currently full.
+            </Badge>
+          )}
+          {bookingDetails && !isPastClass && !withinCancellationWindow && isOnline && (
+            <Badge variant="info" className="py-1 px-2 bg-blue-100 text-blue-700 border-blue-300">
+              <BadgeInfo className="w-4 h-4 mr-1" /> It's too late to cancel this booking (less than {CANCELLATION_WINDOW_HOURS} hours before start).
+            </Badge>
+          )}
+           {sessionsRemaining === null && !bookingDetails && !isPastClass && isOnline && (
+             <Badge variant="outline" className="py-1 px-2">
+                <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> Checking session credits...
+            </Badge>
+           )}
+
         </div>
         <DialogFooter className="mt-6">
           <Button variant="outline" onClick={() => setIsModalOpen(false)}>Close</Button>
           {canBook && (
             <Button
               onClick={() => handleBookClass(classDetails)}
-              disabled={isBookingInProgress || !isOnline}
+              disabled={isBookingInProgress || !isOnline || sessionsRemaining === null}
               className="bg-gym-green hover:bg-gym-green/90 text-white"
             >
               {isBookingInProgress && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
               Book Class
             </Button>
           )}
-          {canCancel && bookingDetails && ( // Ensure bookingDetails is not null before accessing id
+          {canCancel && bookingDetails && ( 
             <Button
               variant="destructive"
               onClick={() => handleCancelBooking(String(bookingDetails.id))} 
@@ -427,7 +475,7 @@ const UserClassCalendar = () => {
     return { style };
   };
 
-  if (isLoading && events.length === 0) { 
+  if (isLoading && events.length === 0 && sessionsRemaining === null) { 
     return (
       <DashboardLayout title="My Class Calendar">
         <div className="flex justify-center items-center h-64">
@@ -469,10 +517,10 @@ const UserClassCalendar = () => {
         </Alert>
       )}
 
-      {isLoading && events.length === 0 && ( 
+      {isLoading && (events.length === 0 || sessionsRemaining === null) && ( 
         <div className="flex justify-center items-center h-64">
           <RefreshCw className="h-8 w-8 animate-spin text-gym-blue" />
-          <p className="ml-2 text-lg">Loading your schedule...</p>
+          <p className="ml-2 text-lg">Loading your schedule and session details...</p>
         </div>
       )}
 
@@ -495,6 +543,7 @@ const UserClassCalendar = () => {
               messages={{
                 noEventsInRange: 'There are no classes scheduled in this range.',
               }}
+              // dayPropGetter={dayPropGetter} // Kept if needed
             />
           </div>
       )}
@@ -515,10 +564,6 @@ const startOfToday = () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return today;
-};
-
-const subMinutes = (date: Date, amount: number): Date => {
-  return addMinutes(date, -amount);
 };
 
 export default UserClassCalendar;
