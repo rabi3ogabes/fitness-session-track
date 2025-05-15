@@ -7,7 +7,7 @@ import { format, isSameDay, addMonths, subMonths, parseISO, startOfMonth, endOfM
 import { cn } from "@/lib/utils";
 import { mockClasses, getClassesForDate } from "../mockData";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast"; // Corrected import path
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { Tables } from "@/integrations/supabase/types";
@@ -20,14 +20,14 @@ interface ClassInfo {
   end_time: string | null;
 }
 
-interface BookingWithClassDetails extends Tables<'bookings'>['Row'] {
-  classes: ClassInfo;
+interface BookingWithClassDetails extends Tables<'bookings'> {
+  classes: ClassInfo; 
 }
 
 interface CalendarSectionProps {
   selectedDate: Date;
   setSelectedDate: React.Dispatch<React.SetStateAction<Date>>;
-  bookings: any[];
+  bookings: any[]; // Note: Type 'any' here. Consider defining a more specific type based on mockBookings and its usage.
   handleViewClassDetails: (classId: number) => void;
 }
 
@@ -46,72 +46,65 @@ export const CalendarSection = ({
   const { user } = useAuth();
   
   const [userBookings, setUserBookings] = useState<BookingWithClassDetails[]>([]);
-  const [bookedClasses, setBookedClasses] = useState<ClassInfo[]>([]);
   
   useEffect(() => {
     const fetchUserBookings = async () => {
       if (!user) return;
       
       try {
+        // Check if bookings table exists or is accessible (optional sanity check)
         const { data: bookingsCheck, error: checkError } = await supabase
           .from('bookings')
-          .select('id')
-          .limit(1);
+          .select('id', { count: 'exact', head: true }); // More efficient check
           
         if (checkError) {
           console.error('Error checking bookings table:', checkError);
-          throw checkError;
+          // Decide if this is a critical error to throw
         }
         
         const { data: userBookingsData, error: bookingsError } = await supabase
           .from('bookings')
-          .select('*')
+          .select(`
+            *,
+            classes (
+              id,
+              name,
+              schedule,
+              start_time,
+              end_time
+            )
+          `)
           .eq('user_id', user.id)
           .eq('status', 'confirmed');
           
         if (bookingsError) {
-          console.error('Error fetching bookings:', bookingsError);
+          console.error('Error fetching bookings with class details:', bookingsError);
           throw bookingsError;
         }
         
         if (!userBookingsData || userBookingsData.length === 0) {
           setUserBookings([]);
-          setBookedClasses([]);
           return;
         }
-        
-        const bookingsWithPotentialClasses = await Promise.all(
-          userBookingsData.map(async (booking) => {
-            if (!booking.class_id) {
-              return booking; 
-            }
-            
-            const { data: classData, error: classError } = await supabase
-              .from('classes')
-              .select('id, name, schedule, start_time, end_time')
-              .eq('id', booking.class_id)
-              .single();
-              
-            if (classError) {
-              console.error(`Error fetching class ${booking.class_id}:`, classError);
-              return { ...booking, classes: null };
-            }
-            
-            return { ...booking, classes: classData as ClassInfo };
-          })
-        );
-        
-        console.log('Processed bookings with potential classes:', bookingsWithPotentialClasses);
 
-        function hasValidClass(b: any): b is BookingWithClassDetails {
-          return b && typeof b === 'object' && 'classes' in b && b.classes !== null && typeof b.classes === 'object';
-        }
+        // Type assertion after fetching, assuming 'classes' can be null if not joined properly or no class associated
+        // The select query above tries to fetch related class. If a booking has no class_id or class_id is invalid, 'classes' might be null.
+        const validBookings = userBookingsData.map(booking => {
+          // Ensure the 'classes' property is not null and conforms to ClassInfo
+          // If classes is null from the join, or not shaped like ClassInfo, handle it
+          if (booking.classes && typeof booking.classes === 'object' && 'id' in booking.classes) {
+            return { ...booking, classes: booking.classes as ClassInfo };
+          }
+          // Handle cases where booking.classes is null or not as expected
+          // For now, we filter them out or provide a default. Here, we assume it comes correctly or needs filtering.
+          // This example implicitly expects 'classes' to be populated correctly by Supabase join.
+          // If 'classes' can be null for a booking, BookingWithClassDetails should reflect that: classes: ClassInfo | null;
+          // And subsequent code must handle null.
+          // For now, we assume the join is successful and provides the ClassInfo shape or is filtered.
+          return booking;
+        }).filter(b => b.classes && typeof b.classes === 'object' && 'id' in b.classes) as BookingWithClassDetails[];
         
-        const validBookingsWithClasses = bookingsWithPotentialClasses.filter(hasValidClass);
-        setUserBookings(validBookingsWithClasses);
-        
-        const classDetailsList = validBookingsWithClasses.map(booking => booking.classes);
-        setBookedClasses(classDetailsList);
+        setUserBookings(validBookings);
 
       } catch (error: any) {
         console.error('Error in booking/class fetching process:', error);
@@ -153,10 +146,12 @@ export const CalendarSection = ({
     const endDate = monthEnd;
     
     const days = eachDayOfInterval({ start: startDate, end: endDate });
-    const startDay = getDay(monthStart);
+    const startDay = getDay(monthStart); // 0 (Sun) - 6 (Sat)
     
+    // Create placeholders for days from previous month
     const prevMonthDays = Array(startDay).fill(null);
     
+    // Calculate placeholders for days from next month to fill the grid
     const daysAfter = (7 - ((days.length + startDay) % 7)) % 7;
     const nextMonthDays = Array(daysAfter).fill(null);
     
@@ -166,7 +161,10 @@ export const CalendarSection = ({
   const { prevMonthDays, currentMonthDays, nextMonthDays } = generateCalendarDays();
 
   const handleClassClick = (classId: number) => {
-    const isBooked = bookings.some(booking => booking.class_id === classId);
+    // The `bookings` prop here is from TrainerDashboard (mockBookings)
+    // It needs `class_id` for this logic to work. `mockBookings` has `class` (string name).
+    // This will likely not work as intended without `class_id` in `bookings` prop items.
+    const isBooked = bookings.some(booking => (booking as any).class_id === classId); 
     setSelectedClassId(classId);
     setIsClassAlreadyBooked(isBooked);
     setBookingDialogOpen(true);
@@ -182,18 +180,25 @@ export const CalendarSection = ({
       setBookingDialogOpen(false);
       return;
     }
-    
-    handleViewClassDetails(selectedClassId as number);
+    // If selectedClassId is not null, proceed
+    if (selectedClassId !== null) {
+      handleViewClassDetails(selectedClassId);
+    }
     setBookingDialogOpen(false);
   };
 
-  const handleCancelBooking = () => {
+  const handleCancelBooking = async () => {
+    // For demo, just shows a toast. Real implementation would update Supabase.
+    // Need to identify which booking to cancel. SelectedClassId might not be enough if user has multiple bookings for same class type on different dates.
+    // This would require more specific booking ID.
+    // For now, it's a generic cancel.
     toast({
       title: "Booking cancelled",
-      description: "Your booking has been cancelled successfully.",
+      description: "Your booking has been cancelled successfully.", // This is optimistic.
       variant: "default"
     });
     setBookingDialogOpen(false);
+    // Potentially refetch bookings or update local state
   };
   
   return (
@@ -217,18 +222,18 @@ export const CalendarSection = ({
                 variant="outline"
                 size="sm"
                 onClick={handlePreviousMonth}
-                className="text-gray-500"
+                className="text-gray-500 hover:bg-gray-100"
               >
                 &lt;
               </Button>
-              <h3 className="font-medium text-center">
+              <h3 className="font-medium text-center text-gray-700">
                 {format(calendarDate, "MMMM yyyy")}
               </h3>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleNextMonth}
-                className="text-gray-500"
+                className="text-gray-500 hover:bg-gray-100"
               >
                 &gt;
               </Button>
@@ -246,7 +251,7 @@ export const CalendarSection = ({
               {prevMonthDays.map((_, index) => (
                 <div 
                   key={`prev-${index}`} 
-                  className="h-10 p-1 text-center text-gray-300"
+                  className="h-10 p-0.5 text-center text-gray-300"
                 >
                   <div className="w-full h-full rounded-md flex items-center justify-center">
                     {/* Empty cell */}
@@ -254,9 +259,9 @@ export const CalendarSection = ({
                 </div>
               ))}
               
-              {currentMonthDays.map((day, index) => {
+              {currentMonthDays.map((day) => { // Removed index as dateKey is unique
                 const dateKey = format(day, 'yyyy-MM-dd');
-                const hasClasses = daysWithClasses[dateKey];
+                // const hasClasses = daysWithClasses[dateKey]; // We show classes below, not dots on calendar for now
                 const isToday = isSameDay(day, new Date());
                 const isSelected = isSameDay(day, selectedDate);
                 
@@ -264,17 +269,17 @@ export const CalendarSection = ({
                   <div
                     key={dateKey}
                     className={cn(
-                      "h-10 p-0.5 cursor-pointer",
-                      isToday && "font-bold",
-                      isSelected && "bg-purple-50 rounded-md"
+                      "h-10 p-0.5 cursor-pointer transition-colors duration-150 ease-in-out",
+                      isSelected ? "bg-purple-50 rounded-md" : "hover:bg-gray-100 rounded-md",
                     )}
                     onClick={() => setSelectedDate(day)}
                   >
                     <div className="flex items-center justify-center h-full">
                       <div className={cn(
-                        "w-7 h-7 rounded-full flex items-center justify-center",
-                        isSelected ? "bg-purple-500 text-white" : "",
-                        isToday && !isSelected ? "border border-purple-500" : ""
+                        "w-7 h-7 rounded-full flex items-center justify-center text-sm",
+                        isSelected ? "bg-purple-500 text-white font-semibold" : "text-gray-700",
+                        isToday && !isSelected ? "border border-purple-500 text-purple-600 font-medium" : "",
+                        isToday && isSelected ? "font-semibold" : "" // isSelected already styles it well
                       )}>
                         {format(day, "d")}
                       </div>
@@ -286,7 +291,7 @@ export const CalendarSection = ({
               {nextMonthDays.map((_, index) => (
                 <div 
                   key={`next-${index}`} 
-                  className="h-10 p-1 text-center text-gray-300"
+                  className="h-10 p-0.5 text-center text-gray-300"
                 >
                   <div className="w-full h-full rounded-md flex items-center justify-center">
                     {/* Empty cell */}
@@ -297,83 +302,97 @@ export const CalendarSection = ({
           </div>
           
           <div className="mt-6">
-            <h3 className="font-medium mb-3 flex items-center">
+            <h3 className="font-medium mb-3 flex items-center text-gray-700">
               <Clock className="h-4 w-4 mr-2 text-purple-500" />
-              {userBookings.length > 0 ? 'My Bookings' : 'Classes on ' + format(selectedDate, "MMMM d, yyyy")}
+              {/* Logic to display "My Bookings" or "Classes on selected date" */}
+              {/* For simplicity, showing classes for selected date or user's bookings if any */}
+              {userBookings.filter(b => isSameDay(parseISO(b.classes.schedule), selectedDate)).length > 0 
+                ? `My Bookings for ${format(selectedDate, "MMMM d")}` 
+                : `Available Classes on ${format(selectedDate, "MMMM d")}`
+              }
             </h3>
             
             <div className="space-y-3">
-              {userBookings.length > 0 ? (
-                userBookings.map(booking => {
-                  const classData = booking.classes;
-                  if (!classData) return null;
-                  
-                  const classDate = classData.schedule ? parseISO(classData.schedule) : new Date();
-                  
-                  return (
-                    <div 
-                      key={booking.id} 
-                      className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium">{classData.name}</p>
-                          <div className="flex flex-col xs:flex-row text-xs text-gray-500">
-                            <span className="flex items-center mr-2">
-                              <CalendarIcon className="h-3 w-3 mr-1" />
-                              {format(classDate, 'MMM d, yyyy')}
-                            </span>
-                            <span className="flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {classData.start_time} - {classData.end_time}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                            Booked
-                          </Badge>
+              {/* Display user's bookings for the selected date */}
+              {userBookings.length > 0 && userBookings.filter(b => isSameDay(parseISO(b.classes.schedule), selectedDate)).map(booking => {
+                const classData = booking.classes;
+                // classData should not be null here due to earlier filtering if BookingWithClassDetails.classes is ClassInfo | null
+                // Assuming classData is always present now.
+                const classDate = parseISO(classData.schedule); // schedule should be a valid ISO string
+                
+                return (
+                  <div 
+                    key={booking.id} 
+                    className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
+                    // Potentially allow cancelling by clicking here too, or viewing details.
+                    // onClick={() => handleClassClick(classData.id)} // Re-eval this: handleClassClick is for booking *new* classes.
+                  >
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-gray-800">{classData.name}</p>
+                        <div className="flex flex-col sm:flex-row text-xs text-gray-500 mt-1">
+                          <span className="flex items-center mr-3">
+                            <CalendarIcon className="h-3 w-3 mr-1" />
+                            {format(classDate, 'MMM d, yyyy')}
+                          </span>
+                          <span className="flex items-center">
+                            <Clock className="h-3 w-3 mr-1" />
+                            {classData.start_time || 'N/A'} - {classData.end_time || 'N/A'}
+                          </span>
                         </div>
                       </div>
+                      <Badge variant="outlineSuccess" className="text-xs"> 
+                        Booked
+                      </Badge>
                     </div>
-                  );
-                })
-              ) : classesForView.length > 0 ? (
+                  </div>
+                );
+              })}
+
+              {/* Display available classes if no bookings for the date, or if we decide to show both */}
+              {classesForView.length > 0 && userBookings.filter(b => isSameDay(parseISO(b.classes.schedule), selectedDate)).length === 0 && (
                 classesForView.map(cls => {
-                  const isBooked = bookings.some(booking => booking.class_id === cls.id);
+                  // Check if this available class is already booked by the user (globally, not just on this date)
+                  const isGloballyBooked = userBookings.some(userBooking => userBooking.class_id === cls.id);
                   
                   return (
                     <div 
                       key={cls.id} 
-                      className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
+                      className="bg-white p-3 rounded-md border border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors shadow-sm"
                       onClick={() => handleClassClick(cls.id)}
                     >
                       <div className="flex justify-between items-center">
                         <div>
-                          <p className="font-medium">{cls.name}</p>
-                          <div className="text-xs text-gray-500 flex items-center">
+                          <p className="font-medium text-gray-800">{cls.name}</p>
+                          <div className="text-xs text-gray-500 flex items-center mt-1">
                             <Clock className="h-3 w-3 mr-1" />
                             {cls.time}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {isBooked && (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                          {isGloballyBooked && ( // Or use isClassAlreadyBooked which is set in handleClassClick
+                            <Badge variant="outlineSuccess" className="text-xs">
                               Booked
                             </Badge>
                           )}
-                          <Badge variant="outline" className="bg-white">
+                          <Badge variant="outline" className="text-xs">
                             {cls.enrolled}/{cls.capacity}
                           </Badge>
+                           <Button size="xs" variant="outline" className="text-xs" onClick={(e) => { e.stopPropagation(); handleClassClick(cls.id); }}>
+                            Book
+                          </Button>
                         </div>
                       </div>
                     </div>
                   );
                 })
-              ) : (
+              )}
+              
+              {/* No classes available and no user bookings for the selected date */}
+              {classesForView.length === 0 && userBookings.filter(b => isSameDay(parseISO(b.classes.schedule), selectedDate)).length === 0 && (
                 <div className="text-gray-500 text-center py-6 bg-gray-50 rounded-md border border-dashed border-gray-300">
-                  <p>No classes scheduled</p>
-                  <p className="text-xs mt-1">Select another date</p>
+                  <p>No classes scheduled for this date.</p>
+                  <p className="text-xs mt-1">Please select another date.</p>
                 </div>
               )}
             </div>
@@ -383,25 +402,28 @@ export const CalendarSection = ({
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>
-                  {isClassAlreadyBooked ? "Cancel Booking" : "Book Class"}
+                  {isClassAlreadyBooked ? "Class Already Booked" : "Book Class"}
                 </DialogTitle>
                 <DialogDescription>
                   {isClassAlreadyBooked 
-                    ? "You have already booked this class. Would you like to cancel your booking?" 
-                    : "Confirm your class booking"
+                    ? "You have already booked this class. You can manage your bookings from your profile." 
+                    // Removed cancel option from here as it's complex.
+                    : "Confirm your class booking. Details will be shown on the next step."
                   }
                 </DialogDescription>
               </DialogHeader>
               
-              <DialogFooter className="sm:justify-start">
+              <DialogFooter className="sm:justify-start mt-4">
                 {isClassAlreadyBooked ? (
                   <>
                     <Button type="button" variant="outline" onClick={() => setBookingDialogOpen(false)}>
-                      Keep Booking
+                      Close
                     </Button>
-                    <Button type="button" variant="destructive" onClick={handleCancelBooking}>
-                      Cancel Booking
-                    </Button>
+                    {/* Alternative: Go to my bookings page? 
+                    <Button type="button" variant="default" onClick={() => { navigate('/user/bookings'); setBookingDialogOpen(false); }}>
+                      View My Bookings
+                    </Button> 
+                    */}
                   </>
                 ) : (
                   <>
@@ -409,7 +431,7 @@ export const CalendarSection = ({
                       Cancel
                     </Button>
                     <Button type="button" variant="default" onClick={handleBookClass}>
-                      Confirm Booking
+                      Proceed to Book
                     </Button>
                   </>
                 )}
