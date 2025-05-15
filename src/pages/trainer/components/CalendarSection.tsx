@@ -7,7 +7,7 @@ import { format, isSameDay, addMonths, subMonths, parseISO, startOfMonth, endOfM
 import { cn } from "@/lib/utils";
 import { mockClasses, getClassesForDate } from "../mockData";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast"; // Changed import path
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 
