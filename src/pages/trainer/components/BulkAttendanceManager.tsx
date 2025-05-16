@@ -1,18 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { mockBookings } from "../mockData";
 import { format } from "date-fns";
 import { Check, Save, X, Users } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client"; // Import Supabase client
-
-interface AttendanceDataItem {
-  id: string; // Booking ID (UUID)
-  member: string;
-  status: string; // Derived from isPresent or booking status
-  isPresent: boolean;
-}
+import { saveAttendanceData, getAttendanceData } from "./attendees/attendeesUtils";
 
 interface BulkAttendanceProps {
   classId: number | null;
@@ -22,70 +17,62 @@ interface BulkAttendanceProps {
 
 export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAttendanceProps) => {
   const { toast } = useToast();
-  const [attendanceData, setAttendanceData] = useState<AttendanceDataItem[]>([]);
+  const [attendanceData, setAttendanceData] = useState<{ id: number; member: string; status: string; isPresent: boolean }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [selectAll, setSelectAll] = useState(true);
+  const [selectAll, setSelectAll] = useState(true); // Default to true to select all
 
+  // Fetch bookings for the selected class and date
   useEffect(() => {
-    if (!classId) {
-      setAttendanceData([]);
-      return;
-    }
+    if (!classId) return;
     
     setIsLoading(true);
     console.log("Loading attendance data for class:", classId, "date:", format(selectedDate, "yyyy-MM-dd"));
     
-    const fetchAttendanceForClass = async () => {
-      try {
-        const dateStart = new Date(selectedDate);
-        dateStart.setHours(0, 0, 0, 0);
-        const dateEnd = new Date(selectedDate);
-        dateEnd.setHours(23, 59, 59, 999);
+    // Format date for storage and lookup
+    const formattedDate = format(selectedDate, "yyyy-MM-dd");
+    
+    // Check if we have saved data first
+    const savedAttendance = getAttendanceData(classId, formattedDate);
+    
+    if (savedAttendance) {
+      console.log("Using saved attendance data:", savedAttendance);
+      // Use saved data if available
+      setAttendanceData(savedAttendance);
+      setSelectAll(savedAttendance.length > 0 && savedAttendance.every(item => item.isPresent));
+      setIsLoading(false);
+      return;
+    }
+    
+    // Otherwise use mock data and filter it
+    console.log("No saved data found, using mock data");
+    // Get bookings for this class and date
+    const filteredBookings = mockBookings.filter(booking => 
+      booking.date === formattedDate && 
+      booking.class === (classId === 1 ? "Morning Yoga" : 
+                        classId === 2 ? "HIIT Workout" : 
+                        classId === 3 ? "Strength Training" : 
+                        classId === 4 ? "Pilates" : 
+                        classId === 5 ? "Spin Class" :
+                        classId === 6 ? "Boxing" :
+                        classId === 7 ? "Zumba" : "")
+    );
 
-        const { data: classBookings, error: bookingsError } = await supabase
-          .from('bookings')
-          .select(`
-            id,
-            attendance,
-            status,
-            user_id,
-            profiles ( name ) 
-          `)
-          .eq('class_id', classId)
-          .gte('booking_date', dateStart.toISOString())
-          .lte('booking_date', dateEnd.toISOString());
-
-        if (bookingsError) throw bookingsError;
-
-        if (classBookings) {
-          const mappedAttendance: AttendanceDataItem[] = classBookings.map(booking => ({
-            id: booking.id,
-            // Use optional chaining here. If types.ts is correct, booking.profiles will be typed.
-            // If types.ts is not correct, this ?. won't fix the compile error but is good practice.
-            member: booking.profiles?.name || `User ${booking.user_id?.substring(0, 6) || 'Unknown'}`, 
-            status: booking.attendance === true ? "Present" : booking.attendance === false ? "Absent" : booking.status || "Booked", 
-            isPresent: booking.attendance === null ? true : booking.attendance,
-          }));
-          
-          console.log("Setting initial attendance data from Supabase:", mappedAttendance);
-          setAttendanceData(mappedAttendance);
-          setSelectAll(mappedAttendance.length > 0 && mappedAttendance.every(item => item.isPresent));
-        } else {
-          setAttendanceData([]);
-          setSelectAll(true); 
-        }
-      } catch (err) {
-        console.error("Error fetching attendance data from Supabase:", err);
-        toast({ title: "Error fetching attendance", description: (err as Error).message, variant: "destructive" });
-        setAttendanceData([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAttendanceForClass();
-  }, [classId, selectedDate, toast]);
+    console.log("Filtered bookings:", filteredBookings);
+    
+    // Mark all members as present by default
+    const mappedAttendance = filteredBookings.map(booking => ({
+      id: booking.id,
+      member: booking.member,
+      status: "Present", // Set all to present by default
+      isPresent: true // All are present by default
+    }));
+    
+    console.log("Setting initial attendance data:", mappedAttendance);
+    setAttendanceData(mappedAttendance);
+    setSelectAll(true); // All are selected by default
+    setIsLoading(false);
+  }, [classId, selectedDate]);
 
   // Handle toggle all attendances
   const handleToggleAll = () => {
@@ -95,84 +82,60 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
     setAttendanceData(prev => 
       prev.map(item => ({
         ...item,
-        isPresent: newSelectAll,
-        status: newSelectAll ? "Present" : "Absent" // Update status accordingly
+        isPresent: newSelectAll
       }))
     );
   };
 
   // Handle individual toggle
-  const handleToggleAttendance = (id: string, value: boolean) => { // id is string (UUID)
-    setAttendanceData(prev => {
-      const newData = prev.map(item => 
-        item.id === id ? { ...item, isPresent: value, status: value ? "Present" : "Absent" } : item
-      );
-      // Update selectAll state based on all items after this change
-      const allSelected = newData.every(item => item.isPresent);
-      setSelectAll(allSelected);
-      return newData;
-    });
+  const handleToggleAttendance = (id: number, value: boolean) => {
+    setAttendanceData(prev => 
+      prev.map(item => 
+        item.id === id ? { ...item, isPresent: value } : item
+      )
+    );
+    
+    // Update selectAll state based on all items
+    const allSelected = attendanceData
+      .map(item => item.id === id ? value : item.isPresent)
+      .every(Boolean);
+    
+    setSelectAll(allSelected);
   };
 
   // Save all attendance changes
-  const handleSaveAttendance = async () => {
-    if (!classId || attendanceData.length === 0) return;
+  const handleSaveAttendance = () => {
+    if (!classId) return;
     
     setIsSaving(true);
     
-    try {
-      const updatePromises = attendanceData.map(item =>
-        supabase
-          .from('bookings')
-          .update({ 
-            attendance: item.isPresent, 
-            // Optionally update status based on attendance. 
-            // Example: if marked present, status becomes 'Attended'. If absent, 'Absent - No Show'.
-            // This depends on desired workflow. For now, just updating attendance.
-            // status: item.isPresent ? 'Attended' : 'Absent - No Show' 
-          })
-          .eq('id', item.id) 
-      );
-
-      const results = await Promise.all(updatePromises);
+    // Format date for storage
+    const formattedDate = format(selectedDate, "yyyy-MM-dd");
+    
+    // Save attendance data to localStorage for persistence
+    const saved = saveAttendanceData(classId, formattedDate, attendanceData);
+    
+    // In a real app, this would be an API call to update all records
+    // For now we'll simulate a delay
+    setTimeout(() => {
+      // Update would happen here
+      setIsSaving(false);
       
-      let hasError = false;
-      results.forEach(result => {
-        if (result.error) {
-          console.error("Error updating attendance for a booking:", result.error);
-          hasError = true;
-        }
-      });
-
-      if (hasError) {
+      if (saved) {
         toast({
-          title: "Error saving attendance",
-          description: "Some attendance records could not be updated.",
-          variant: "destructive"
+          title: "Attendance saved",
+          description: `Updated attendance for ${attendanceData.length} members`,
         });
       } else {
         toast({
-          title: "Attendance saved",
-          description: `Updated attendance for ${attendanceData.length} members.`,
+          title: "Error saving attendance",
+          description: "There was a problem saving the attendance data",
+          variant: "destructive"
         });
-        // Optionally, re-fetch data to confirm, or update local status text
-        setAttendanceData(prev => prev.map(item => ({
-          ...item,
-          status: item.isPresent ? "Present" : "Absent" // Reflect save in status text
-        })));
       }
       
       if (onClose) onClose();
-    } catch (error) {
-      console.error("Error saving attendance to Supabase:", error);
-      toast({
-        title: "Error saving attendance",
-        description: "There was a problem saving the attendance data to the database.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSaving(false);
-    }
+    }, 600);
   };
 
   if (isLoading) {
@@ -186,7 +149,7 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
   if (attendanceData.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500 mb-4">No bookings found for this class on this date.</p>
+        <p className="text-gray-500 mb-4">No bookings found for this class</p>
         {onClose && (
           <Button variant="outline" onClick={onClose}>Close</Button>
         )}
@@ -246,11 +209,13 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
                 <TableCell className="font-medium">{item.member}</TableCell>
                 <TableCell className="hidden md:table-cell">
                   <span className={`px-2 py-1 text-xs rounded-full ${
-                    item.isPresent // Use isPresent for coloring after interaction
+                    item.status === "Present" || item.status === "Completed" 
                       ? "bg-green-100 text-green-800" 
-                      : "bg-red-100 text-red-800"
+                      : item.status === "Absent" 
+                        ? "bg-red-100 text-red-800"
+                        : "bg-yellow-100 text-yellow-800"
                   }`}>
-                    {item.isPresent ? "Present" : "Absent"} {/* Display based on current isPresent state */}
+                    {item.status}
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
@@ -274,7 +239,7 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
         )}
         <Button 
           onClick={handleSaveAttendance} 
-          disabled={isSaving || attendanceData.length === 0} // Disable if no data
+          disabled={isSaving}
           className="bg-gym-blue hover:bg-gym-dark-blue"
         >
           {isSaving ? (
