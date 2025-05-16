@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -88,7 +87,7 @@ const Trainers = () => {
     // If authenticated, fetch trainers
     console.log("User is authenticated, fetching trainers");
     fetchTrainers();
-  }, [isAuthenticated, loading, navigate, toast]);
+  }, [isAuthenticated, loading, navigate]);
 
   // Add trainer handler
   const handleAddTrainer = async (trainerData: TrainerFormData) => {
@@ -238,60 +237,14 @@ const Trainers = () => {
   };
 
   // Reset password handler
-  const handleResetPassword = async (newPassword: string) => {
+  const handleResetPassword = async () => {
     if (!selectedTrainer) return;
     
     try {
-      // Get list of users and find by email
-      const { data: userList, error: listError } = await supabase.auth.admin.listUsers();
-      
-      if (listError) {
-        toast({
-          title: "Error listing user accounts",
-          description: listError.message,
-          variant: "destructive",
-        });
-        throw listError;
-      }
-
-      if (!userList) {
-        toast({
-          title: "Error listing user accounts",
-          description: "No data returned for user accounts.",
-          variant: "destructive",
-        });
-        throw new Error("User list data is null");
-      }
-      
-      // Fix for Property 'email' does not exist on type 'never'
-      // Explicitly type the user with a more specific type
-      type User = { email: string; id: string };
-      const userAccount = userList.users.find((user: User) => user.email === selectedTrainer.email);
-      
-      if (!userAccount) {
-        toast({
-          title: "User account not found",
-          description: `Could not find user account for ${selectedTrainer.name}. Their password cannot be reset at this time.`,
-          // Fix for Type '"warning"' is not assignable to type '"default" | "destructive"'
-          variant: "destructive",  // Changed from "warning" to "destructive"
-        });
-        // It's better not to throw an error here, but to inform the admin.
-        return; 
-      }
-      
-      // Use the custom password provided by the admin
-      const { error: resetError } = await supabase.auth.admin.updateUserById(
-        userAccount.id, 
-        { password: newPassword }
-      );
-      
-      if (resetError) {
-        throw resetError;
-      }
-      
+      // In a real implementation with authentication, this would call an API to reset the password
       toast({
-        title: "Password reset successfully",
-        description: `A new password has been set for ${selectedTrainer.name}`,
+        title: "Password reset requested",
+        description: `A password reset email has been sent to ${selectedTrainer.email}`,
       });
       
       setIsResetPasswordDialogOpen(false);

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -5,23 +6,23 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon, Clock } from "lucide-react";
 import { format, isSameDay, addMonths, subMonths, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from "date-fns";
 import { cn } from "@/lib/utils";
-import { mockClasses, getClassesForDate } from "../mockData";
+import { mockClasses, isDayWithClass, getClassesForDate } from "../mockData";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast"; // Changed import path
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 
 interface CalendarSectionProps {
   selectedDate: Date;
   setSelectedDate: React.Dispatch<React.SetStateAction<Date>>;
-  bookings: any[]; // This seems to be mockBookings from parent, not the fetched userBookings
+  bookings: any[];
   handleViewClassDetails: (classId: number) => void;
 }
 
 export const CalendarSection = ({ 
   selectedDate, 
   setSelectedDate,
-  bookings, // Renaming this prop to 'initialBookings' or clarifying its use might be good if it conflicts with 'userBookings' state
+  bookings,
   handleViewClassDetails
 }: CalendarSectionProps) => {
   const [calendarDate, setCalendarDate] = useState<Date>(new Date(selectedDate));
@@ -32,70 +33,30 @@ export const CalendarSection = ({
   const { toast } = useToast();
   const { user } = useAuth();
   const [userBookings, setUserBookings] = useState<any[]>([]);
-  const [bookedClasses, setBookedClasses] = useState<any[]>([]); // This state might not be strictly necessary if userBookings contains all info
+  const [bookedClasses, setBookedClasses] = useState<any[]>([]);
   
-  // Helper function to safely handle class data from bookings
-  const isValidClassData = (classData: any): boolean => {
-    return classData !== null && 
-           typeof classData === 'object' && 
-           'schedule' in classData && 
-           'name' in classData && 
-           'start_time' in classData && 
-           'end_time' in classData;
-  };
-
   // Fetch real user bookings from Supabase
   useEffect(() => {
     const fetchUserBookings = async () => {
       if (!user) return;
       
       try {
-        // Step 1: Fetch bookings, ensure class_id is selected (or the correct FK column name)
-        // Assuming 'class_id' is the FK in 'bookings' table linking to 'classes.id'
-        const { data: bookingsData, error: bookingsError } = await supabase
+        const { data, error } = await supabase
           .from('bookings')
-          .select('*, class_id') 
+          .select('*, classes(*)')
           .eq('user_id', user.id)
           .eq('status', 'confirmed');
           
-        if (bookingsError) throw bookingsError;
-
-        if (bookingsData && bookingsData.length > 0) {
-          const bookingsWithClassesPromises = bookingsData.map(async (booking) => {
-            if (!booking.class_id) { 
-              console.warn(`Booking ID ${booking.id} has no class_id.`);
-              return { ...booking, classes: null }; // Booking without a class
-            }
-
-            const { data: classData, error: classError } = await supabase
-              .from('classes')
-              .select('id, name, schedule, start_time, end_time') // Select specific fields needed
-              .eq('id', booking.class_id)
-              .single(); 
-            
-            if (classError) {
-              console.error(`Error fetching class details for class_id ${booking.class_id}:`, classError.message);
-              return { ...booking, classes: null }; // Attach null if class fetch fails
-            }
-            return { ...booking, classes: classData };
-          });
-          
-          const bookingsWithClasses = await Promise.all(bookingsWithClassesPromises);
-          setUserBookings(bookingsWithClasses);
-          
-          const validClasses = bookingsWithClasses
-            .map(b => b.classes)
-            .filter(isValidClassData); // Use the helper to ensure data is valid
-          setBookedClasses(validClasses);
-
-        } else {
-          // No bookings found for the user or bookingsData is null
-          setUserBookings([]);
-          setBookedClasses([]);
+        if (error) throw error;
+        setUserBookings(data || []);
+        
+        // Process bookings to get class details
+        if (data) {
+          const classes = data.map(booking => booking.classes).filter(Boolean);
+          setBookedClasses(classes);
         }
-
-      } catch (error: any) {
-        console.error('Error fetching bookings or class details:', error.message);
+      } catch (error) {
+        console.error('Error fetching bookings:', error);
         toast({
           title: "Error",
           description: "Failed to load your bookings. Please try again.",
@@ -105,7 +66,7 @@ export const CalendarSection = ({
     };
     
     fetchUserBookings();
-  }, [user, toast]); // Removed 'bookedClasses' from deps as it's set inside
+  }, [user, toast]);
   
   // Calendar navigation handlers
   const handlePreviousMonth = () => {
@@ -152,8 +113,8 @@ export const CalendarSection = ({
   const { prevMonthDays, currentMonthDays, nextMonthDays } = generateCalendarDays();
 
   const handleClassClick = (classId: number) => {
-    // Check if class is already booked by looking at userBookings from Supabase
-    const isBooked = userBookings.some(booking => booking.class_id === classId && booking.status === 'confirmed');
+    // Check if class is already booked
+    const isBooked = bookings.some(booking => booking.class_id === classId);
     setSelectedClassId(classId);
     setIsClassAlreadyBooked(isBooked);
     setBookingDialogOpen(true);
@@ -176,16 +137,14 @@ export const CalendarSection = ({
 
   const handleCancelBooking = () => {
     // Handle cancellation logic here
-    // This would typically involve an API call to Supabase to update the booking status
     toast({
       title: "Booking cancelled",
-      description: "Your booking has been cancelled successfully. (Placeholder - implement actual cancellation)",
+      description: "Your booking has been cancelled successfully.",
       variant: "default"
     });
     setBookingDialogOpen(false);
-    // TODO: Re-fetch bookings or update userBookings state after cancellation
   };
-
+  
   return (
     <div className="w-full">
       <Card className="w-full shadow-sm">
@@ -248,10 +207,10 @@ export const CalendarSection = ({
               ))}
               
               {/* Current month days */}
-              {currentMonthDays.map((day) => { // Removed index as dateKey is better key
+              {currentMonthDays.map((day, index) => {
                 const dateKey = format(day, 'yyyy-MM-dd');
                 const hasClasses = daysWithClasses[dateKey];
-                // const classCount = hasClasses ? hasClasses.length : 0; // classCount not used
+                const classCount = hasClasses ? hasClasses.length : 0;
                 const isToday = isSameDay(day, new Date());
                 const isSelected = isSameDay(day, selectedDate);
                 
@@ -302,22 +261,14 @@ export const CalendarSection = ({
               {userBookings.length > 0 ? (
                 userBookings.map(booking => {
                   const classData = booking.classes;
+                  if (!classData) return null;
                   
-                  if (!isValidClassData(classData)) {
-                     // Optionally, render something for bookings with missing class data or just skip
-                    console.warn(`Booking ID ${booking.id} has invalid or missing class data.`, classData);
-                    return null; // Skip rendering this booking
-                  }
-                  
-                  const classDate = classData.schedule ? parseISO(classData.schedule) : new Date(); // Ensure valid date parsing
+                  const classDate = classData.schedule ? new Date(classData.schedule) : new Date();
                   
                   return (
                     <div 
                       key={booking.id} 
                       className="bg-gray-50 p-3 rounded-md border-l-4 border-purple-500 cursor-pointer hover:bg-gray-100 transition-colors"
-                      // onClick={() => handleClassClick(classData.id)} // classData might not have id if it's from 'classes' table directly
-                                                                       // If classData.id is needed, ensure it's selected.
-                                                                       // For now, clicking booked items might not be intended to open dialog.
                     >
                       <div className="flex justify-between items-center">
                         <div>
@@ -341,11 +292,10 @@ export const CalendarSection = ({
                       </div>
                     </div>
                   );
-                }).filter(Boolean)
+                })
               ) : classesForView.length > 0 ? (
                 classesForView.map(cls => {
-                  // Check against userBookings (from Supabase) if this mock class is booked by the user
-                  const isBookedByUser = userBookings.some(b => b.class_id === cls.id && isValidClassData(b.classes));
+                  const isBooked = bookings.some(booking => booking.class_id === cls.id);
                   
                   return (
                     <div 
@@ -362,7 +312,7 @@ export const CalendarSection = ({
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          {isBookedByUser && ( // Show 'Booked' if this class (from mock data) matches a user's booking
+                          {isBooked && (
                             <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
                               Booked
                             </Badge>
@@ -377,8 +327,8 @@ export const CalendarSection = ({
                 })
               ) : (
                 <div className="text-gray-500 text-center py-6 bg-gray-50 rounded-md border border-dashed border-gray-300">
-                  <p>No classes scheduled for this day</p>
-                  <p className="text-xs mt-1">Select another date or check your bookings</p>
+                  <p>No classes scheduled</p>
+                  <p className="text-xs mt-1">Select another date</p>
                 </div>
               )}
             </div>

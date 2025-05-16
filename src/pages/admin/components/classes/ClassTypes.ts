@@ -5,17 +5,24 @@ export interface ClassModel {
   trainer: string;
   schedule: string;
   capacity: number;
-  enrolled?: number;
-  status?: string; // Made optional
+  enrolled: number;
+  status: string;
   gender?: "Male" | "Female" | "All" | string;
   trainers?: string[];
   recurrence?: string;
+  startTime?: string;
+  endTime?: string;
+  // Add properties that come from Supabase
   created_at?: string;
-  start_time?: string; // Changed from startTime
-  end_time?: string;   // Changed from endTime
+  start_time?: string;
+  end_time?: string;
+  // Add a description field for better class information
   description?: string;
+  // Add a location field to specify where the class is held
   location?: string;
+  // Add a color field for visual identification in calendars
   color?: string;
+  // Add a difficulty level
   difficulty?: "Beginner" | "Intermediate" | "Advanced" | string;
 }
 
@@ -56,18 +63,21 @@ export interface ClassFormState {
   isRecurring: boolean;
   recurringFrequency: "Daily" | "Weekly" | "Monthly";
   selectedDays: string[];
-  start_time: string; // Changed from startTime
-  end_time: string;   // Changed from endTime
+  startTime: string;
+  endTime: string;
   endDate?: Date;
+  // Add new fields
   description?: string;
   location?: string;
   difficulty?: "Beginner" | "Intermediate" | "Advanced";
   color?: string;
 }
 
-export const formatClassTime = (start_time: string, end_time: string): string => { // Changed parameters
-  if (!start_time || !end_time) return "Time not set";
+// Add a utility function to format class times
+export const formatClassTime = (startTime: string, endTime: string): string => {
+  if (!startTime || !endTime) return "Time not set";
   
+  // Convert 24h format to 12h format with AM/PM
   const formatTime = (time: string): string => {
     const [hours, minutes] = time.split(':').map(Number);
     const period = hours >= 12 ? 'PM' : 'AM';
@@ -75,29 +85,32 @@ export const formatClassTime = (start_time: string, end_time: string): string =>
     return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
   };
   
-  return `${formatTime(start_time)} - ${formatTime(end_time)}`;
+  return `${formatTime(startTime)} - ${formatTime(endTime)}`;
 };
 
+// Add a utility function to check for schedule conflicts
 export const checkScheduleConflict = (
-  classA: Pick<ClassModel, 'schedule' | 'start_time' | 'end_time' | 'trainers'>,
-  classB: Pick<ClassModel, 'schedule' | 'start_time' | 'end_time' | 'trainers'>
+  classA: Pick<ClassModel, 'schedule' | 'startTime' | 'endTime' | 'trainers'>,
+  classB: Pick<ClassModel, 'schedule' | 'startTime' | 'endTime' | 'trainers'>
 ): boolean => {
+  // Skip if different dates or missing time data
   if (classA.schedule !== classB.schedule || 
-      !classA.start_time || !classA.end_time || 
-      !classB.start_time || !classB.end_time) {
+      !classA.startTime || !classA.endTime || 
+      !classB.startTime || !classB.endTime) {
     return false;
   }
   
+  // Check for trainer overlap
   const hasCommonTrainer = (classA.trainers || []).some(trainerA => 
     (classB.trainers || []).includes(trainerA)
   );
   
   if (!hasCommonTrainer) return false;
   
+  // Check for time overlap
   return (
-    (classA.start_time >= classB.start_time && classA.start_time < classB.end_time) ||
-    (classA.end_time > classB.start_time && classA.end_time <= classB.end_time) ||
-    (classA.start_time <= classB.start_time && classA.end_time >= classB.end_time)
+    (classA.startTime >= classB.startTime && classA.startTime < classB.endTime) ||
+    (classA.endTime > classB.startTime && classA.endTime <= classB.endTime) ||
+    (classA.startTime <= classB.startTime && classA.endTime >= classB.endTime)
   );
 };
-

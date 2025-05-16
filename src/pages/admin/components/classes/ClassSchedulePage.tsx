@@ -106,6 +106,7 @@ const ClassSchedulePage = () => {
     },
   });
 
+  // Network status event listeners with better handling
   useEffect(() => {
     const handleOnline = () => {
       setIsNetworkConnected(true);
@@ -113,6 +114,7 @@ const ClassSchedulePage = () => {
         title: "You're back online!",
         description: "Refreshing data from server...",
       });
+      // Auto retry fetch on reconnect
       fetchClasses();
       fetchTrainers();
     };
@@ -129,6 +131,7 @@ const ClassSchedulePage = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
+    // Set initial network status
     setIsNetworkConnected(navigator.onLine);
     
     return () => {
@@ -146,33 +149,35 @@ const ClassSchedulePage = () => {
       return;
     }
     
-    const defaultTrainers = [
-      { id: 1, name: "John Smith" },
-      { id: 2, name: "Sarah Johnson" },
-      { id: 3, name: "Mike Wilson" },
-      { id: 4, name: "Lisa Brown" },
-    ];
-
     try {
       console.log("Fetching trainers...");
+      // Use requireAuth with fallback data for better offline experience
+      const defaultTrainers = [
+        { id: 1, name: "John Smith" },
+        { id: 2, name: "Sarah Johnson" },
+        { id: 3, name: "Mike Wilson" },
+        { id: 4, name: "Lisa Brown" },
+      ];
       
-      const fetchedData = await requireAuth(async () => {
+      const data = await requireAuth(async () => {
         const { data, error } = await supabase
           .from("trainers")
           .select("id, name")
           .eq("status", "Active");
 
         if (error) {
-          console.error("Error fetching trainers from DB:", error);
+          console.error("Error fetching trainers:", error);
           throw error;
         }
         
         console.log("Trainers fetched from database:", data);
         
+        // If no trainers found, create some test trainers
         if (!data || data.length === 0) {
           console.log("No trainers found, creating test trainers");
           await createTestTrainers();
           
+          // Fetch trainers again after creating test trainers
           const { data: refreshedData, error: refreshError } = await supabase
             .from("trainers")
             .select("id, name")
@@ -180,24 +185,25 @@ const ClassSchedulePage = () => {
             
           if (refreshError) {
             console.error("Error fetching trainers after creation:", refreshError);
-            return []; 
+            return defaultTrainers;
           }
           
-          return refreshedData || []; 
+          return refreshedData || defaultTrainers;
         }
         
+        // Cache successful data for offline use
         if (data && data.length > 0) {
           cacheDataForOffline("trainers", data);
         }
         
-        return data; 
-      });
+        return data || [];
+      }, defaultTrainers);
       
-      setTrainers(fetchedData && fetchedData.length > 0 ? fetchedData : defaultTrainers);
-      console.log("Trainers state set with:", fetchedData && fetchedData.length > 0 ? fetchedData : defaultTrainers);
-
+      console.log("Trainers fetched:", data);
+      setTrainers(data || defaultTrainers);
     } catch (error: any) {
-      console.error("Error in fetchTrainers:", error);
+      console.error("Error fetching trainers:", error);
+      // Don't show toast for network errors - we'll display in the UI
       if (!error.message?.includes("Network error")) {
         toast({
           title: "Failed to load trainers",
@@ -206,10 +212,12 @@ const ClassSchedulePage = () => {
         });
       }
       setError(error.message || "Failed to fetch trainers");
-      loadTrainersFromLocalStorage(); 
+      // Try to load from local storage as a fallback
+      loadTrainersFromLocalStorage();
     }
   }, [toast, isNetworkConnected]);
 
+  // Create test trainers function
   const createTestTrainers = async () => {
     try {
       console.log("Creating test trainers...");
@@ -261,21 +269,30 @@ const ClassSchedulePage = () => {
 
   const loadTrainersFromLocalStorage = () => {
     try {
-      const cachedTrainers = localStorage.getItem("trainers"); 
-
+      // First try to use cached trainers from our new caching system
+      const cachedTrainers = localStorage.getItem("cached_trainers");
       if (cachedTrainers) {
         try {
           const parsedTrainers = JSON.parse(cachedTrainers);
           if (Array.isArray(parsedTrainers) && parsedTrainers.length > 0) {
-            console.log("Using cached trainers data from 'trainers' key:", parsedTrainers);
+            console.log("Using cached trainers data:", parsedTrainers);
             setTrainers(parsedTrainers);
             return;
           }
         } catch (e) {
-          console.warn("Error parsing cached trainers from 'trainers' key:", e);
+          console.warn("Error parsing cached trainers:", e);
         }
       }
       
+      // Fall back to older storage methods
+      const legacyTrainers = [
+        { id: 1, name: "John Smith" },
+        { id: 2, name: "Sarah Johnson" },
+        { id: 3, name: "Mike Wilson" },
+        { id: 4, name: "Lisa Brown" },
+      ];
+      
+      // Use fallback trainers if nothing else works
       const fallbackTrainers = [
         { id: 1, name: "John Smith" },
         { id: 2, name: "Sarah Johnson" },
@@ -289,13 +306,14 @@ const ClassSchedulePage = () => {
       setTrainers(fallbackTrainers);
     } catch (error) {
       console.error("Error loading trainers from localStorage:", error);
-      const fallbackTrainersOnError = [
+      // Keep the fallback trainers if there's an error
+      const fallbackTrainers = [
         { id: 1, name: "John Smith" },
         { id: 2, name: "Sarah Johnson" },
         { id: 3, name: "Mike Wilson" },
         { id: 4, name: "Lisa Brown" },
       ];
-      setTrainers(fallbackTrainersOnError);
+      setTrainers(fallbackTrainers);
     }
   };
 
@@ -311,22 +329,18 @@ const ClassSchedulePage = () => {
     }
     
     try {
-      const fetchedData = await requireAuth(async () => {
+      // Use requireAuth with empty array fallback data for offline scenarios
+      const data = await requireAuth(async () => {
         const { data, error } = await supabase
           .from("classes")
           .select("*")
           .order("created_at", { ascending: false });
 
-        if (error) {
-          console.error("Error fetching classes from DB:", error);
-          throw error;
-        }
-        return data || []; 
-      });
+        if (error) throw error;
+        return data;
+      }, []);
       
-      const classesToFormat = fetchedData || [];
-
-      const formattedClasses: ClassModel[] = classesToFormat.map((cls: any) => ({
+      const formattedClasses: ClassModel[] = data.map((cls: any) => ({
         id: cls.id,
         name: cls.name,
         trainer: cls.trainer || "",
@@ -336,20 +350,17 @@ const ClassSchedulePage = () => {
         enrolled: cls.enrolled || 0,
         status: cls.status || "Active",
         gender: cls.gender || "All",
-        start_time: cls.start_time || "", // Corrected from startTime
-        end_time: cls.end_time || "",   // Corrected from endTime
+        startTime: cls.start_time || "",
+        endTime: cls.end_time || "",
         description: cls.description,
         location: cls.location,
         difficulty: cls.difficulty,
-        created_at: cls.created_at, // ensure created_at is mapped if needed for sorting or display
-        recurrence: cls.recurrence, // ensure recurrence is mapped
-        color: cls.color // ensure color is mapped
       }));
       
       setClasses(formattedClasses);
       console.log("Successfully loaded classes:", formattedClasses.length);
     } catch (error: any) {
-      console.error("Error in fetchClasses:", error);
+      console.error("Error fetching classes:", error);
       setError(error.message || "Failed to load classes. Please try again later.");
     } finally {
       setIsLoading(false);
@@ -413,6 +424,7 @@ const ClassSchedulePage = () => {
       }
     } else if (frequency === "Monthly") {
       let currentMonth = new Date(startDate);
+      const dayOfMonth = startDate.getDate();
       
       while (currentMonth <= endDate) {
         dates.push(new Date(currentMonth));
@@ -436,6 +448,7 @@ const ClassSchedulePage = () => {
     try {
       setIsSubmitting(true);
       console.log("Form values:", values);
+      // Validate times
       if (values.startTime >= values.endTime) {
         toast({
           title: "Invalid time range",
@@ -446,40 +459,31 @@ const ClassSchedulePage = () => {
         return;
       }
       
+      // For recurring classes, generate all dates
       if (values.isRecurring && values.endDate) {
-        const today = new Date(); 
-        const selectedDaysForRecurrence = values.selectedDays || []; 
-        if (values.recurringFrequency === "Weekly" && selectedDaysForRecurrence.length === 0) {
-            toast({
-              title: "No days selected",
-              description: "For weekly recurring classes, please select at least one day.",
-              variant: "destructive",
-            });
-            setIsSubmitting(false);
-            return;
-        }
-
+        const today = new Date();
         const dates = generateRecurringDates(
           today,
           values.endDate,
           values.recurringFrequency || "Weekly",
-          selectedDaysForRecurrence
+          values.selectedDays || []
         );
         
         if (dates.length === 0) {
           toast({
             title: "No dates generated",
-            description: "Please check your recurring settings and end date. Ensure end date is in the future and days are selected for weekly recurrence.",
+            description: "Please check your recurring settings",
             variant: "destructive",
           });
           setIsSubmitting(false);
           return;
         }
         
+        // Create multiple class entries
         const classesToCreate = dates.map(date => ({
           name: values.name,
           trainer: values.trainer,
-          trainers: [values.trainer], 
+          trainers: [values.trainer],
           capacity: values.capacity,
           gender: values.gender,
           start_time: values.startTime,
@@ -505,13 +509,18 @@ const ClassSchedulePage = () => {
         }
         
         console.log("Classes created successfully:", data);
+        
         toast({
           title: "Classes created",
-          description: `Created ${data?.length || 0} recurring classes`,
+          description: `Created ${dates.length} recurring classes`,
         });
+        
+        // Refresh classes
         fetchClasses();
       } else {
+        // Create a single class
         console.log("Creating a single class with trainer:", values.trainer);
+        
         const classData = {
           name: values.name,
           trainer: values.trainer,
@@ -520,7 +529,7 @@ const ClassSchedulePage = () => {
           gender: values.gender,
           start_time: values.startTime,
           end_time: values.endTime,
-          schedule: format(values.endDate || new Date(), "yyyy-MM-dd"), 
+          schedule: format(new Date(), "yyyy-MM-dd"),
           status: "Active",
           enrolled: 0,
           description: values.description || null,
@@ -529,6 +538,7 @@ const ClassSchedulePage = () => {
         };
         
         console.log("Class data to insert:", classData);
+        
         const { data, error } = await supabase
           .from("classes")
           .insert(classData)
@@ -540,15 +550,18 @@ const ClassSchedulePage = () => {
         }
         
         console.log("Class created successfully:", data);
+        
         toast({
           title: "Class created",
           description: "New class has been created successfully",
         });
+        
+        // Refresh classes
         fetchClasses();
       }
       
-      setIsOpen(false);
-      form.reset();
+      setIsOpen(false); // Close form early for better UX
+      form.reset(); // Reset form after successful submission
     } catch (error: any) {
       console.error("Error creating class:", error);
       toast({
@@ -583,11 +596,11 @@ const ClassSchedulePage = () => {
       });
       
       fetchClasses();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting class:", error);
       toast({
         title: "Failed to delete class",
-        description: error.message || "An unexpected error occurred",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
@@ -613,11 +626,11 @@ const ClassSchedulePage = () => {
       });
       
       fetchClasses();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating class status:", error);
       toast({
         title: "Failed to update status",
-        description: error.message || "An unexpected error occurred",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
     }
@@ -676,6 +689,7 @@ const ClassSchedulePage = () => {
         </Alert>
       )}
 
+      {/* Show an offline banner if we're offline but there's no other error */}
       {!isNetworkConnected && !error && (
         <Alert variant="default" className="mb-4 bg-yellow-50 border-yellow-200">
           <WifiOff className="h-4 w-4" />
@@ -686,6 +700,7 @@ const ClassSchedulePage = () => {
         </Alert>
       )}
 
+      {/* Class Creation Form Dialog */}
       <Dialog open={isOpen} onOpenChange={(open) => {
         if (!isSubmitting) {
           setIsOpen(open);
@@ -1054,6 +1069,7 @@ const ClassSchedulePage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent>
           <DialogHeader>
@@ -1079,6 +1095,7 @@ const ClassSchedulePage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Classes List */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center flex flex-col items-center">
@@ -1143,7 +1160,7 @@ const ClassSchedulePage = () => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {formatTime(cls.start_time || "")} - {formatTime(cls.end_time || "")}
+                        {formatTime(cls.startTime || "")} - {formatTime(cls.endTime || "")}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">

@@ -96,13 +96,9 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     isRecurring: false,
     recurringFrequency: "Weekly",
     selectedDays: [format(today, "EEEE")],
-    start_time: "17:00", // Changed from startTime
-    end_time: "18:00",   // Changed from endTime
-    endDate: undefined,
-    description: "",
-    location: "",
-    difficulty: "Beginner",
-    color: "#7dd3fc"
+    startTime: "17:00", // Default to 5:00 PM
+    endTime: "18:00",   // Default to 6:00 PM
+    endDate: undefined
   };
   
   const [formState, setFormState] = useState<ClassFormState>(initialFormState);
@@ -119,7 +115,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
       setTimeError(null);
       setSelectedTab("basic");
     }
-  }, [isOpen, initialFormState, today]); // Added initialFormState to dependencies
+  }, [isOpen, today]);
 
   // Update schedule when date changes
   useEffect(() => {
@@ -135,20 +131,20 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     const { name, value } = e.target;
     console.log(`Input change - field: ${name}, value: ${value}`);
     
-    let updatedValue: string | number = value;
     if (name === "capacity") {
-      updatedValue = parseInt(value) || 0;
+      setFormState(prev => ({ 
+        ...prev, 
+        [name]: parseInt(value) || 0 
+      }));
+    } else {
+      setFormState(prev => ({ ...prev, [name]: value }));
     }
-  
-    setFormState(prev => ({ 
-      ...prev, 
-      [name]: updatedValue 
-    }));
     
-    if (name === "start_time" || name === "end_time") {
+    // Clear time error when times change
+    if (name === "startTime" || name === "endTime") {
       validateTimes(
-        name === "start_time" ? value : formState.start_time, 
-        name === "end_time" ? value : formState.end_time
+        name === "startTime" ? value : formState.startTime, 
+        name === "endTime" ? value : formState.endTime
       );
     }
   };
@@ -161,17 +157,31 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
   };
 
   const handleTrainerSelection = (trainer: string, isChecked: boolean) => {
-    setFormState(prev => ({
-      ...prev,
-      trainers: isChecked ? [...prev.trainers, trainer] : prev.trainers.filter(t => t !== trainer)
-    }));
+    if (isChecked) {
+      setFormState(prev => ({
+        ...prev,
+        trainers: [...prev.trainers, trainer]
+      }));
+    } else {
+      setFormState(prev => ({
+        ...prev,
+        trainers: prev.trainers.filter(t => t !== trainer)
+      }));
+    }
   };
 
   const handleDaySelection = (day: string, isChecked: boolean) => {
-    setFormState(prev => ({
-      ...prev,
-      selectedDays: isChecked ? [...prev.selectedDays, day] : prev.selectedDays.filter(d => d !== day)
-    }));
+    if (isChecked) {
+      setFormState(prev => ({
+        ...prev,
+        selectedDays: [...prev.selectedDays, day]
+      }));
+    } else {
+      setFormState(prev => ({
+        ...prev,
+        selectedDays: prev.selectedDays.filter(d => d !== day)
+      }));
+    }
   };
   
   const handleRecurringChange = (isChecked: boolean) => {
@@ -202,17 +212,18 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     }));
   };
 
-  const validateTimes = (start_time: string | undefined, end_time: string | undefined) => { // Changed parameters
-    if (!start_time || !end_time) {
+  const validateTimes = (startTime: string | undefined, endTime: string | undefined) => {
+    if (!startTime || !endTime) {
       setTimeError("Start and end times are required");
       return false;
     }
     
-    if (start_time >= end_time) {
+    if (startTime >= endTime) {
       setTimeError("End time must be after start time");
       return false;
     }
     
+    // Check for conflicts only if we're not adding a recurring class
     if (!formState.isRecurring) {
       const conflict = checkForScheduleConflicts();
       if (conflict) {
@@ -226,25 +237,32 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
   };
 
   const checkForScheduleConflicts = () => {
+    // Only check if trainers are selected
     if (formState.trainers.length === 0) return null;
 
-    const { start_time, end_time, schedule } = formState; // Changed from startTime, endTime
+    const { startTime, endTime, schedule } = formState;
 
+    // Check for conflicts with existing classes
     for (const existingClass of existingClasses) {
-      if (!existingClass.start_time || !existingClass.end_time) continue; // Changed from startTime, endTime
+      // Skip classes that don't have time data yet
+      if (!existingClass.startTime || !existingClass.endTime) continue;
+      
+      // Skip classes on different dates
       if (schedule !== existingClass.schedule) continue;
       
-      const existingTrainers = existingClass.trainers || [existingClass.trainer].filter(Boolean) as string[];
+      // Skip classes with no overlapping trainers
+      const existingTrainers = existingClass.trainers || [existingClass.trainer];
       const hasCommonTrainer = formState.trainers.some(trainer => 
         existingTrainers.includes(trainer)
       );
       
       if (!hasCommonTrainer) continue;
 
-      if ((start_time! >= existingClass.start_time! && start_time! < existingClass.end_time!) ||
-          (end_time! > existingClass.start_time! && end_time! <= existingClass.end_time!) ||
-          (start_time! <= existingClass.start_time! && end_time! >= existingClass.end_time!)) {
-        return `Schedule conflict with ${existingClass.name} (${existingClass.schedule} ${existingClass.start_time}-${existingClass.end_time})`; // Changed properties
+      // Check for time overlap
+      if ((startTime! >= existingClass.startTime! && startTime! < existingClass.endTime!) ||
+          (endTime! > existingClass.startTime! && endTime! <= existingClass.endTime!) ||
+          (startTime! <= existingClass.startTime! && endTime! >= existingClass.endTime!)) {
+        return `Schedule conflict with ${existingClass.name} (${existingClass.schedule} ${existingClass.startTime}-${existingClass.endTime})`;
       }
     }
     
@@ -254,7 +272,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
   const handleAddClass = async () => {
     console.log("Submit button clicked. Validating form...");
     
-    if (!validateTimes(formState.start_time, formState.end_time)) { // Changed properties
+    if (!validateTimes(formState.startTime, formState.endTime)) {
       console.error("Time validation failed:", timeError);
       return;
     }
@@ -271,8 +289,8 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
       return;
     }
     
-    if (!selectedDate && !formState.isRecurring) { // Only require selectedDate if not recurring
-      console.error("Validation failed: Missing date for non-recurring class");
+    if (!selectedDate) {
+      console.error("Validation failed: Missing date");
       toast({
         title: "Date required",
         description: "Please select a date for the class",
@@ -317,12 +335,11 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
         enrolled: 0,
         status: "Active",
         gender: formState.gender,
-        start_time: formState.start_time,
-        end_time: formState.end_time,
+        startTime: formState.startTime,
+        endTime: formState.endTime,
         difficulty: formState.difficulty,
         location: formState.location,
-        description: formState.description,
-        color: formState.color,
+        description: formState.description
       };
       
       console.log("Class data prepared:", classToAdd);
@@ -356,7 +373,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
       console.error("Error in handleAddClass:", error);
       toast({
         title: "Error adding class",
-        description: (error as Error).message || "An unexpected error occurred",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
@@ -366,15 +383,15 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
     }
   };
 
-  const handleTimeChange = (field: "start_time" | "end_time", value: string) => { // field type updated
+  const handleTimeChange = (field: string, value: string) => {
     setFormState(prev => ({
       ...prev,
       [field]: value
     }));
     
     validateTimes(
-      field === "start_time" ? value : formState.start_time,
-      field === "end_time" ? value : formState.end_time
+      field === "startTime" ? value : formState.startTime,
+      field === "endTime" ? value : formState.endTime
     );
   };
 
@@ -512,7 +529,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                     id="capacity"
                     name="capacity"
                     type="number"
-                    value={String(formState.capacity)} // Ensure value is string for Input
+                    value={formState.capacity}
                     onChange={handleInputChange}
                     className="col-span-3"
                     required
@@ -644,8 +661,8 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                   <Label className="text-right">Start Time*</Label>
                   <div className="col-span-3">
                     <Select
-                      value={formState.start_time} // Changed from startTime
-                      onValueChange={(value) => handleTimeChange("start_time", value)} // Changed to start_time
+                      value={formState.startTime}
+                      onValueChange={(value) => handleTimeChange("startTime", value)}
                     >
                       <SelectTrigger className="w-full">
                         <div className="flex items-center">
@@ -668,8 +685,8 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                   <Label className="text-right">End Time*</Label>
                   <div className="col-span-3">
                     <Select
-                      value={formState.end_time} // Changed from endTime
-                      onValueChange={(value) => handleTimeChange("end_time", value)} // Changed to end_time
+                      value={formState.endTime}
+                      onValueChange={(value) => handleTimeChange("endTime", value)}
                     >
                       <SelectTrigger className="w-full">
                         <div className="flex items-center">
@@ -707,9 +724,9 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
             disabled={
               isSubmitting ||
               !formState.name || 
-              (!selectedDate && !formState.isRecurring) || 
-              !formState.start_time || // Changed from startTime
-              !formState.end_time ||   // Changed from endTime
+              !selectedDate || 
+              !formState.startTime ||
+              !formState.endTime ||
               formState.capacity <= 0 ||
               !!timeError ||
               (formState.isRecurring && !formState.endDate) ||

@@ -1,10 +1,8 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase, requireAuth } from "@/integrations/supabase/client";
-import PasswordResetDialog from "@/components/shared/PasswordResetDialog";
 
 // Components
 import MemberSearch from "./components/members/MemberSearch";
@@ -27,7 +25,7 @@ const Members = () => {
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
   const { toast } = useToast();
   const [paymentHistoryData, setPaymentHistoryData] = useState<PaymentHistoryData>({});
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Add a refresh trigger
 
   // Fetch members data from Supabase
   useEffect(() => {
@@ -89,7 +87,7 @@ const Members = () => {
     };
 
     fetchMembers();
-  }, [toast, refreshTrigger]);
+  }, [toast, refreshTrigger]); // Add refreshTrigger to dependencies
 
   // Fetch payment history data
   useEffect(() => {
@@ -313,75 +311,17 @@ const Members = () => {
     setIsResetPasswordDialogOpen(true);
   };
   
-  const confirmResetPassword = async (newPassword: string) => {
+  const confirmResetPassword = () => {
     if (selectedMemberId === null) return;
     
-    try {
-      const member = members.find(m => m.id === selectedMemberId);
-      if (!member) return;
-      
-      await requireAuth(async () => {
-        // Get list of users and find by email
-        const { data: userList, error: listError } = await supabase.auth.admin.listUsers();
-        
-        if (listError) {
-          toast({
-            title: "Error listing user accounts",
-            description: listError.message,
-            variant: "destructive",
-          });
-          throw listError;
-        }
-
-        if (!userList) {
-          toast({
-            title: "Error listing user accounts",
-            description: "No data returned for user accounts.",
-            variant: "destructive",
-          });
-          throw new Error("User list data is null");
-        }
-        
-        // Fix for Property 'email' does not exist on type 'never'
-        // Explicitly type the user with a more specific type
-        type User = { email: string; id: string };
-        const userAccount = userList.users.find((user: User) => user.email === member.email);
-        
-        if (!userAccount) {
-          toast({
-            title: "User account not found",
-            description: `Could not find user account for ${member.name}. Their password cannot be reset at this time.`,
-            // Fix for Type '"warning"' is not assignable to type '"default" | "destructive"'
-            variant: "destructive", // Changed from "warning" to "destructive"
-          });
-          // Better UX by not throwing an error
-          return;
-        }
-        
-        // Use the custom password provided
-        const { error: resetError } = await supabase.auth.admin.updateUserById(
-          userAccount.id, 
-          { password: newPassword }
-        );
-        
-        if (resetError) {
-          throw resetError;
-        }
-        
-        toast({
-          title: "Password reset successfully",
-          description: `${member.name}'s password has been updated successfully`,
-        });
-        setIsResetPasswordDialogOpen(false);
-        setSelectedMemberId(null);
-      });
-    } catch (error: any) {
-      console.error("Error resetting password:", error);
+    const member = members.find(m => m.id === selectedMemberId);
+    if (member) {
       toast({
-        title: "Failed to reset password",
-        description: error.message || "There was an error resetting the password",
-        variant: "destructive"
+        title: "Password reset successfully",
+        description: `${member.name}'s password has been reset to their phone number`,
       });
+      setIsResetPasswordDialogOpen(false);
+      setSelectedMemberId(null);
     }
   };
 
@@ -417,16 +357,30 @@ const Members = () => {
         paymentHistoryData={paymentHistoryData}
       />
       
-      {/* Custom Password Reset Dialog */}
-      {selectedMemberId !== null && (
-        <PasswordResetDialog
-          isOpen={isResetPasswordDialogOpen}
-          onClose={() => setIsResetPasswordDialogOpen(false)}
-          onConfirm={confirmResetPassword}
-          entityName={members.find(m => m.id === selectedMemberId)?.name || "Member"}
-          entityType="member"
-        />
-      )}
+      {/* Reset Password Confirmation Dialog */}
+      <AlertDialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Password</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedMemberId && (
+                <>
+                  Are you sure you want to reset the password for <strong>{members.find(m => m.id === selectedMemberId)?.name}</strong>?<br />
+                  The new password will be their phone number: <strong>{members.find(m => m.id === selectedMemberId)?.phone}</strong>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsResetPasswordDialogOpen(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmResetPassword} className="bg-gym-blue hover:bg-gym-dark-blue">
+              Reset Password
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };
