@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -75,7 +76,17 @@ export const useTrainerCreation = () => {
   // Create a new trainer with improved error handling
   const createTrainer = async (trainerData: TrainerCreationData) => {
     setIsCreating(true);
-    console.log("Creating trainer with data:", trainerData);
+    console.log("Creating trainer with data (client-side auth):", trainerData);
+
+    if (!trainerData.phone || trainerData.phone.trim() === "") {
+      toast({
+        title: "Phone number required for password",
+        description: "The trainer's phone number is required to set their initial password.",
+        variant: "destructive",
+      });
+      setIsCreating(false);
+      return { success: false, error: new Error("Phone number required for password") };
+    }
 
     try {
       const isAuth = await checkAuthenticationStatus();
@@ -87,97 +98,87 @@ export const useTrainerCreation = () => {
 
       console.log("Authentication confirmed, proceeding with trainer creation");
 
-      const formattedData = {
-        name: trainerData.name.trim(),
-        email: trainerData.email.trim(),
+      const trainerEmail = trainerData.email.trim();
+      const trainerPassword = trainerData.phone.trim(); // Use phone as password
+      const trainerName = trainerData.name.trim();
+
+      // Step 1: Create Auth user using supabase.auth.signUp
+      console.log(`Attempting to sign up auth user for ${trainerEmail}`);
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: trainerEmail,
+        password: trainerPassword,
+        options: {
+          data: { // This becomes user_metadata
+            role: 'trainer',
+            name: trainerName,
+          }
+        }
+      });
+
+      if (signUpError) {
+        console.error("Error creating trainer auth user via signUp:", signUpError);
+        toast({
+          title: "Failed to create trainer login",
+          description: signUpError.message || "Could not create authentication account.",
+          variant: "destructive",
+        });
+        return { success: false, error: signUpError };
+      }
+
+      if (!authData.user) {
+        console.error("No user data returned from signUp despite no error. This is unexpected.");
+        toast({
+          title: "Trainer login creation issue",
+          description: "Authentication account creation did not return user data as expected.",
+          variant: "destructive",
+        });
+        return { success: false, error: new Error("Auth user creation failed unexpectedly.") };
+      }
+      
+      console.log(`Auth user created successfully for ${trainerEmail}, ID: ${authData.user.id}. Awaiting email confirmation.`);
+      
+      // Step 2: Insert into 'trainers' table
+      const formattedDataForDb = {
+        name: trainerName,
+        email: trainerEmail,
         phone: trainerData.phone?.trim() || null,
         specialization: trainerData.specialization?.trim() || null,
         status: trainerData.status || "Active",
-        gender: trainerData.gender || "Female", // Ensure default matches form if applicable
+        gender: trainerData.gender || "Female",
       };
 
-      console.log("Formatted data for insertion into 'trainers' table:", formattedData);
+      console.log("Formatted data for insertion into 'trainers' table:", formattedDataForDb);
 
-      // Step 1: Insert into 'trainers' table
       const { data: dbRecord, error: dbError } = await supabase
         .from("trainers")
-        .insert([formattedData])
+        .insert([formattedDataForDb])
         .select()
-        .single(); // Assuming you expect a single record back
+        .single(); 
 
       if (dbError) {
         console.error("Error creating trainer in Supabase 'trainers' table:", dbError);
-        // Check for specific error types like duplicate email if your DB has unique constraints
-        if (dbError.message?.includes('duplicate key') && dbError.message?.includes('email')) {
-           toast({
-            title: "Trainer email already exists",
-            description: "A trainer with this email already exists in the trainers list.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Failed to add trainer to list",
-            description: dbError.message || "Could not save trainer details.",
-            variant: "destructive",
-          });
-        }
-        return { success: false, error: dbError };
+        // If DB insert fails, we should ideally roll back the auth user creation or notify admin.
+        // For now, we'll toast the DB error but acknowledge auth user might exist.
+        toast({
+          title: "Trainer Login Created, but Details Save Failed",
+          description: `Login for ${trainerName} created, but saving details failed: ${dbError.message}. Please manually check/add details in the trainers list. The trainer needs to confirm their email.`,
+          variant: "warning",
+          duration: 10000,
+        });
+        // Consider this a partial success with warning, as auth user was made.
+        return { success: true, data: null, warning: `Trainer details save failed: ${dbError.message}` };
       }
 
       console.log("Trainer record created successfully in 'trainers' table:", dbRecord);
 
-      // Step 2: If phone is provided, attempt to create Auth user via Edge Function
-      if (trainerData.phone && trainerData.phone.trim() !== "") {
-        try {
-          console.log(`Attempting to create auth user for ${trainerData.email} with phone as password.`);
-          const { data: authFuncResponse, error: authFuncError } = await supabase.functions.invoke('create-trainer-user', {
-            body: { email: trainerData.email.trim(), password: trainerData.phone.trim() },
-          });
+      toast({
+        title: "Trainer Account Initiated",
+        description: `${trainerName} has been set up. They will receive an email to confirm their account. Their password is their phone number: ${trainerPassword}.`,
+        duration: 10000,
+      });
+      return { success: true, data: dbRecord };
 
-          if (authFuncError) {
-            // Network error or function invocation error
-            console.error("Error invoking create-trainer-user Edge Function:", authFuncError);
-            throw new Error(authFuncError.message || "Failed to call auth user creation service.");
-          }
-
-          // Edge function invoked, check its response
-          if (authFuncResponse?.error) {
-            console.error("Edge Function returned an error:", authFuncResponse.error);
-            throw new Error(authFuncResponse.error || "Auth user creation failed within edge function.");
-          }
-          
-          console.log("Auth user creation successful:", authFuncResponse);
-          toast({
-            title: "Trainer & Login Account Created",
-            description: `${trainerData.name} has been added. Their login account is set up with their phone number as the password.`,
-          });
-          return { success: true, data: dbRecord };
-
-        } catch (authCreationError: any) {
-          console.error("Error during auth user creation process:", authCreationError);
-          // Trainer record was inserted, but Auth user creation failed.
-          toast({
-            title: "Trainer Added, Login Setup Failed",
-            description: `${trainerData.name}'s details were saved, but login account creation failed: ${authCreationError.message}. Please try setting up their login manually.`,
-            variant: "default",
-            duration: 7000,
-          });
-          // Still return success as the primary operation (DB insert) succeeded.
-          // Include a warning for the calling function to potentially act upon.
-          return { success: true, data: dbRecord, warning: `Auth account creation failed: ${authCreationError.message}` };
-        }
-      } else {
-        // Phone not provided, so only trainer record is created.
-        toast({
-          title: "Trainer Added (No Login Account)",
-          description: `${trainerData.name} has been added to the list. No phone number was provided, so a login account was not created.`,
-          variant: "default",
-          duration: 7000,
-        });
-        return { success: true, data: dbRecord };
-      }
-
-    } catch (error: any) { // General catch for unexpected errors in createTrainer
+    } catch (error: any) { // General catch for unexpected errors
       console.error("Outer error in createTrainer function:", error);
       toast({
         title: "Failed to create trainer",
@@ -296,3 +297,4 @@ export const useTrainerCreation = () => {
     isCreating
   };
 };
+
