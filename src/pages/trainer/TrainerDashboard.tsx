@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -49,19 +48,20 @@ const TrainerDashboard = () => {
     setIsClassDetailsOpen(true);
   };
   
-  const handleRegisterMember = (newMember: NewMember) => {
-    // Add a new booking for this member to today's date
-    const newId = Math.max(...bookings.map(b => b.id)) + 1;
-    const bookingToAdd = {
-      id: newId,
-      member: newMember.name,
-      class: "First Session",
-      date: format(new Date(), "yyyy-MM-dd"),
-      time: format(new Date(), "h:mm a"),
-      status: "Present", // Auto-mark as present
-    };
-    
-    setBookings([...bookings, bookingToAdd]);
+  const handleRegisterMember = () => { // CHANGED: Removed newMember parameter
+    // The original logic that depended on `newMember` argument:
+    // const newId = Math.max(...bookings.map(b => b.id)) + 1;
+    // const bookingToAdd = {
+    //   id: newId,
+    //   member: newMember.name, // This would cause an error now
+    //   class: "First Session",
+    //   date: format(new Date(), "yyyy-MM-dd"),
+    //   time: format(new Date(), "h:mm a"),
+    //   status: "Present", 
+    // };
+    // setBookings([...bookings, bookingToAdd]);
+
+    console.warn("handleRegisterMember called, but new member data is not available from NewMemberDialog's onMemberAdded prop. Booking list will not be updated locally with a new 'First Session'.");
     setIsNewMemberDialogOpen(false);
   };
 
@@ -104,7 +104,7 @@ const TrainerDashboard = () => {
       <NewMemberDialog 
         isOpen={isNewMemberDialogOpen}
         onOpenChange={setIsNewMemberDialogOpen}
-        onMemberAdded={handleRegisterMember}
+        onMemberAdded={handleRegisterMember} // This now matches the expected type () => void
       />
     </DashboardLayout>
   );

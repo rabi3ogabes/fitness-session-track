@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -160,7 +159,7 @@ export const useTrainerCreation = () => {
           toast({
             title: "Trainer Added, Login Setup Failed",
             description: `${trainerData.name}'s details were saved, but login account creation failed: ${authCreationError.message}. Please try setting up their login manually.`,
-            variant: "warning",
+            variant: "default",
             duration: 7000,
           });
           // Still return success as the primary operation (DB insert) succeeded.
@@ -172,7 +171,7 @@ export const useTrainerCreation = () => {
         toast({
           title: "Trainer Added (No Login Account)",
           description: `${trainerData.name} has been added to the list. No phone number was provided, so a login account was not created.`,
-          variant: "info",
+          variant: "default",
           duration: 7000,
         });
         return { success: true, data: dbRecord };
