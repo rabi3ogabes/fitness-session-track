@@ -4,15 +4,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { TrainerFormData } from "../trainers/types"; // Ensure this type is suitable or adjust as needed
 
-interface TrainerData {
-  name: string;
-  email: string;
-  phone?: string;
-  specialization?: string;
-  status: string;
-  gender?: string;
+// The TrainerData interface might be slightly different from TrainerFormData
+// For this hook, let's align with TrainerFormData or a compatible subset.
+// If TrainerFormData is Omit<Trainer, 'id' | 'created_at'>, it should work.
+interface TrainerCreationData extends Omit<TrainerFormData, 'id' | 'created_at'> {
+  // No 'id' or 'created_at' when creating
 }
+
 
 export const useTrainerCreation = () => {
   const { toast } = useToast();
@@ -74,83 +74,115 @@ export const useTrainerCreation = () => {
   };
 
   // Create a new trainer with improved error handling
-  const createTrainer = async (trainerData: TrainerData) => {
+  const createTrainer = async (trainerData: TrainerCreationData) => {
+    setIsCreating(true);
+    console.log("Creating trainer with data:", trainerData);
+
     try {
-      setIsCreating(true);
-      console.log("Creating trainer with data:", trainerData);
-      
-      // Verify authentication
       const isAuth = await checkAuthenticationStatus();
       if (!isAuth) {
         console.error("Authentication check failed for trainer creation");
         setIsCreating(false);
-        return { success: false };
+        return { success: false, error: new Error("Authentication failed") };
       }
-      
+
       console.log("Authentication confirmed, proceeding with trainer creation");
-      
-      // Ensure all data is properly formatted before insertion
+
       const formattedData = {
         name: trainerData.name.trim(),
         email: trainerData.email.trim(),
         phone: trainerData.phone?.trim() || null,
         specialization: trainerData.specialization?.trim() || null,
         status: trainerData.status || "Active",
-        gender: trainerData.gender || null
+        gender: trainerData.gender || "Female", // Ensure default matches form if applicable
       };
-      
-      console.log("Formatted data for insertion:", formattedData);
-      
-      // Attempt insertion with detailed logging
-      console.log("Calling supabase.from('trainers').insert()...");
-      
-      try {
-        const { data, error } = await supabase
-          .from("trainers")
-          .insert([formattedData])
-          .select();
-          
-        console.log("Supabase insert operation completed");
-  
-        if (error) {
-          console.error("Error creating trainer in Supabase:", error);
-          throw error;
-        }
-  
-        console.log("Trainer created successfully in Supabase:", data);
-        toast({
-          title: "Trainer created",
-          description: `${trainerData.name} has been added as a trainer`,
-        });
-        
-        return { success: true, data };
-      } catch (dbError: any) {
-        console.error("Database operation error:", dbError);
-        
-        // Check for specific error types
-        if (dbError.message?.includes('duplicate key')) {
-          toast({
-            title: "Trainer already exists",
-            description: "A trainer with this email already exists in the system",
+
+      console.log("Formatted data for insertion into 'trainers' table:", formattedData);
+
+      // Step 1: Insert into 'trainers' table
+      const { data: dbRecord, error: dbError } = await supabase
+        .from("trainers")
+        .insert([formattedData])
+        .select()
+        .single(); // Assuming you expect a single record back
+
+      if (dbError) {
+        console.error("Error creating trainer in Supabase 'trainers' table:", dbError);
+        // Check for specific error types like duplicate email if your DB has unique constraints
+        if (dbError.message?.includes('duplicate key') && dbError.message?.includes('email')) {
+           toast({
+            title: "Trainer email already exists",
+            description: "A trainer with this email already exists in the trainers list.",
             variant: "destructive",
           });
         } else {
-          throw dbError; // Re-throw for general error handling
+          toast({
+            title: "Failed to add trainer to list",
+            description: dbError.message || "Could not save trainer details.",
+            variant: "destructive",
+          });
         }
-        
         return { success: false, error: dbError };
       }
-    } catch (error: any) {
-      console.error("Error in createTrainer function:", error);
-      
-      // Additional error logging to help diagnose issues
-      if (error.message?.includes('permission denied')) {
-        console.error("This appears to be a permissions issue. Check RLS policies for the trainers table.");
+
+      console.log("Trainer record created successfully in 'trainers' table:", dbRecord);
+
+      // Step 2: If phone is provided, attempt to create Auth user via Edge Function
+      if (trainerData.phone && trainerData.phone.trim() !== "") {
+        try {
+          console.log(`Attempting to create auth user for ${trainerData.email} with phone as password.`);
+          const { data: authFuncResponse, error: authFuncError } = await supabase.functions.invoke('create-trainer-user', {
+            body: { email: trainerData.email.trim(), password: trainerData.phone.trim() },
+          });
+
+          if (authFuncError) {
+            // Network error or function invocation error
+            console.error("Error invoking create-trainer-user Edge Function:", authFuncError);
+            throw new Error(authFuncError.message || "Failed to call auth user creation service.");
+          }
+
+          // Edge function invoked, check its response
+          if (authFuncResponse?.error) {
+            console.error("Edge Function returned an error:", authFuncResponse.error);
+            throw new Error(authFuncResponse.error || "Auth user creation failed within edge function.");
+          }
+          
+          console.log("Auth user creation successful:", authFuncResponse);
+          toast({
+            title: "Trainer & Login Account Created",
+            description: `${trainerData.name} has been added. Their login account is set up with their phone number as the password.`,
+          });
+          return { success: true, data: dbRecord };
+
+        } catch (authCreationError: any) {
+          console.error("Error during auth user creation process:", authCreationError);
+          // Trainer record was inserted, but Auth user creation failed.
+          toast({
+            title: "Trainer Added, Login Setup Failed",
+            description: `${trainerData.name}'s details were saved, but login account creation failed: ${authCreationError.message}. Please try setting up their login manually.`,
+            variant: "warning",
+            duration: 7000,
+          });
+          // Still return success as the primary operation (DB insert) succeeded.
+          // Include a warning for the calling function to potentially act upon.
+          return { success: true, data: dbRecord, warning: `Auth account creation failed: ${authCreationError.message}` };
+        }
+      } else {
+        // Phone not provided, so only trainer record is created.
+        toast({
+          title: "Trainer Added (No Login Account)",
+          description: `${trainerData.name} has been added to the list. No phone number was provided, so a login account was not created.`,
+          variant: "info",
+          duration: 7000,
+        });
+        return { success: true, data: dbRecord };
       }
-      
+
+    } catch (error: any) { // General catch for unexpected errors in createTrainer
+      console.error("Outer error in createTrainer function:", error);
       toast({
         title: "Failed to create trainer",
-        description: error.message || "There was an error creating the trainer",
+        description: error.message || "An unexpected error occurred.",
         variant: "destructive",
       });
       return { success: false, error };
