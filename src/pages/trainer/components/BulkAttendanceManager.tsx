@@ -61,7 +61,8 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
         if (classBookings) {
           const mappedAttendance: AttendanceDataItem[] = classBookings.map(booking => ({
             id: booking.id,
-            // Use optional chaining here
+            // Use optional chaining here. If types.ts is correct, booking.profiles will be typed.
+            // If types.ts is not correct, this ?. won't fix the compile error but is good practice.
             member: booking.profiles?.name || `User ${booking.user_id?.substring(0, 6) || 'Unknown'}`, 
             status: booking.attendance === true ? "Present" : booking.attendance === false ? "Absent" : booking.status || "Booked", 
             isPresent: booking.attendance === null ? true : booking.attendance,

@@ -82,44 +82,23 @@ const UserBooking = () => {
 
       if (bookingsData) {
         bookingsData.forEach(booking => {
-          // Ensure booking.classes is not null, which can happen if the join fails or class is deleted
-          // Add optional chaining for booking.classes as well
-          if (!booking.classes) {
-            console.warn(`Booking with ID ${booking.id} is missing class details.`);
-            // Optionally create a booking detail with placeholder class info
-            const bookingDetails: Booking = {
-              id: booking.id,
-              className: "Unknown Class",
-              date: new Date(booking.booking_date).toISOString().split('T')[0],
-              time: new Date(booking.booking_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
-              trainer: "N/A",
-              status: booking.status,
-              attendance: booking.attendance,
-            };
-            if (new Date(booking.booking_date) >= now) {
-                formattedUpcomingBookings.push(bookingDetails);
-            } else {
-                formattedPastBookings.push(bookingDetails);
-            }
-            return; 
-          }
           const bookingDate = new Date(booking.booking_date);
           const bookingDetails: Booking = {
             id: booking.id,
-            // Use optional chaining here
+            // Use optional chaining here. If types.ts is correct, booking.classes will be typed.
+            // If types.ts is not correct, this ?. won't fix the compile error but is good practice.
             className: booking.classes?.name || "Unknown Class", 
             date: bookingDate.toISOString().split('T')[0], // YYYY-MM-DD
             time: bookingDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
-            // Use optional chaining here
             trainer: booking.classes?.trainer || "N/A", 
             status: booking.status,
             attendance: booking.attendance,
           };
 
-          if (bookingDate >= now) {
-            formattedUpcomingBookings.push(bookingDetails);
+          if (new Date(booking.booking_date) >= now) { // Check if bookingDate is used elsewhere or can be simplified
+              formattedUpcomingBookings.push(bookingDetails);
           } else {
-            formattedPastBookings.push(bookingDetails);
+              formattedPastBookings.push(bookingDetails);
           }
         });
       }
@@ -152,7 +131,7 @@ const UserBooking = () => {
   
   useEffect(() => {
     fetchUserData();
-  }, [user, toast]); // fetchUserData is now stable
+  }, [user, toast]);
 
   const handleCancelBooking = async (bookingId: string) => { // Changed id type to string
     if (!user) return;
