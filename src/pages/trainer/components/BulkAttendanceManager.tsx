@@ -61,21 +61,18 @@ export const BulkAttendanceManager = ({ classId, selectedDate, onClose }: BulkAt
         if (classBookings) {
           const mappedAttendance: AttendanceDataItem[] = classBookings.map(booking => ({
             id: booking.id,
-            member: booking.profiles?.name || `User ${booking.user_id?.substring(0, 6) || 'Unknown'}`,
-            // Default to "Booked" or current status if attendance not yet marked
+            // Use optional chaining here
+            member: booking.profiles?.name || `User ${booking.user_id?.substring(0, 6) || 'Unknown'}`, 
             status: booking.attendance === true ? "Present" : booking.attendance === false ? "Absent" : booking.status || "Booked", 
-            // If attendance is null (not yet marked), default isPresent to true for bulk selection.
-            // If attendance is already set (true/false), use that.
             isPresent: booking.attendance === null ? true : booking.attendance,
           }));
           
           console.log("Setting initial attendance data from Supabase:", mappedAttendance);
           setAttendanceData(mappedAttendance);
-          // Set selectAll based on current isPresent states
           setSelectAll(mappedAttendance.length > 0 && mappedAttendance.every(item => item.isPresent));
         } else {
           setAttendanceData([]);
-          setSelectAll(true); // Default if no data
+          setSelectAll(true); 
         }
       } catch (err) {
         console.error("Error fetching attendance data from Supabase:", err);

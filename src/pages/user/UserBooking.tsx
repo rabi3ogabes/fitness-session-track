@@ -53,8 +53,9 @@ const UserBooking = () => {
       if (profileError) throw profileError;
       
       let sessionsRemaining = 7; // Default value
+      // Ensure profileData is an object and has the property before accessing it
       if (profileData && typeof profileData === 'object' && 'sessions_remaining' in profileData) {
-        sessionsRemaining = profileData.sessions_remaining ?? 7;
+        sessionsRemaining = (profileData as { sessions_remaining: number | null }).sessions_remaining ?? 7;
       }
 
       // Fetch bookings data
@@ -82,17 +83,35 @@ const UserBooking = () => {
       if (bookingsData) {
         bookingsData.forEach(booking => {
           // Ensure booking.classes is not null, which can happen if the join fails or class is deleted
+          // Add optional chaining for booking.classes as well
           if (!booking.classes) {
             console.warn(`Booking with ID ${booking.id} is missing class details.`);
-            return; // Skip this booking or handle as appropriate
+            // Optionally create a booking detail with placeholder class info
+            const bookingDetails: Booking = {
+              id: booking.id,
+              className: "Unknown Class",
+              date: new Date(booking.booking_date).toISOString().split('T')[0],
+              time: new Date(booking.booking_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
+              trainer: "N/A",
+              status: booking.status,
+              attendance: booking.attendance,
+            };
+            if (new Date(booking.booking_date) >= now) {
+                formattedUpcomingBookings.push(bookingDetails);
+            } else {
+                formattedPastBookings.push(bookingDetails);
+            }
+            return; 
           }
           const bookingDate = new Date(booking.booking_date);
           const bookingDetails: Booking = {
             id: booking.id,
-            className: booking.classes.name,
+            // Use optional chaining here
+            className: booking.classes?.name || "Unknown Class", 
             date: bookingDate.toISOString().split('T')[0], // YYYY-MM-DD
             time: bookingDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }),
-            trainer: booking.classes.trainer || "N/A", 
+            // Use optional chaining here
+            trainer: booking.classes?.trainer || "N/A", 
             status: booking.status,
             attendance: booking.attendance,
           };
@@ -281,9 +300,9 @@ const UserBooking = () => {
                                   <XCircle className="h-5 w-5 text-red-500 mr-2" />
                                 ) : null } {/* Or some indicator for not marked */}
                                 <span className={`px-2 py-1 text-xs rounded-full ${
-                                  booking.attendance ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
+                                  booking.attendance ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800" // Consider if !booking.attendance (absent) should be red
                                 }`}>
-                                  {booking.attendance ? "Attended" : booking.status} 
+                                  {booking.attendance === true ? "Attended" : booking.attendance === false ? "Absent" : booking.status} 
                                 </span>
                               </div>
                             ) : (
