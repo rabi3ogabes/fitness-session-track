@@ -336,34 +336,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("Email and password are required");
       }
       
-      // Check if email is in the correct format
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         throw new Error("Invalid email format");
       }
       
-      // First quick check if we're online
       if (!navigator.onLine) {
         throw new Error("You appear to be offline. Please check your internet connection.");
       }
       
-      // Use a more aggressive timeout for login to prevent hanging
       const loginPromise = supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      // Add a shorter timeout to the login promise
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Login timed out. Please try again.")), 8000); // Reduced from 15s to 8s
+        setTimeout(() => reject(new Error("Login timed out. Please try again.")), 8000);
       });
       
-      // Race the login promise against the timeout
-      const result = await Promise.race([loginPromise, timeoutPromise]) as any;
+      const result = await Promise.race([loginPromise, timeoutPromise]) as AuthTokenResponse; // Explicitly type result
       
       if (result.error) {
         console.error("Supabase auth error:", result.error);
         
-        // Provide better error messages based on error type
         let errorMessage = "An unexpected error occurred. Please try again.";
         
         if (result.error.message) {
@@ -387,22 +381,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       console.log("Login successful for:", email);
       
-      // Set user data immediately for faster UI response
       if (result.data?.user) {
+        const supabaseUser = result.data.user;
         setUser({
-          id: result.data.user.id,
-          email: result.data.user.email || '',
-          name: result.data.user.user_metadata?.name || '',
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          name: supabaseUser.user_metadata?.name || '',
+          role: supabaseUser.app_metadata?.role || supabaseUser.user_metadata?.role || '', // Prioritize app_metadata
         });
+
+        // Determine role based on metadata first, then email as fallback
+        let userRole = 'user'; // Default role
+        if (supabaseUser.app_metadata?.role) {
+          userRole = supabaseUser.app_metadata.role;
+        } else if (supabaseUser.user_metadata?.role) { // Fallback to user_metadata
+           userRole = supabaseUser.user_metadata.role;
+        } else { // Fallback to email sniffing if no metadata role
+            if (email.includes('admin')) userRole = 'admin';
+            else if (email.includes('trainer')) userRole = 'trainer';
+        }
+        setRole(userRole);
+        console.log("Role set to:", userRole, "from metadata:", supabaseUser.app_metadata?.role || supabaseUser.user_metadata?.role);
+
+      } else {
+        // This case should ideally not happen if login is successful without error
+        // but handle it defensively.
+        console.warn("Login successful but no user data returned in result.data.user");
+         // Fallback role determination if user object is somehow missing after successful auth
+        let userRole = 'user';
+        if (email.includes('admin')) userRole = 'admin';
+        else if (email.includes('trainer')) userRole = 'trainer';
+        setRole(userRole);
+        console.log("Role (fallback) set to:", userRole);
       }
-      
-      // Determine role based on email
-      let userRole = 'user';
-      if (email.includes('admin')) userRole = 'admin';
-      if (email.includes('trainer')) userRole = 'trainer';
-      
-      setRole(userRole);
-      console.log("Role set to:", userRole);
 
       toast({
         title: "Login successful",
@@ -411,7 +422,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Login error:", error);
       
-      // Improved error handling
       let errorMessage = "Login failed. Please check your credentials and try again.";
       
       if (error.message?.includes("Invalid login credentials")) {
@@ -503,7 +513,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: any) {
       console.error("Signup error:", error);
       
-      // Check if it's a network error
       let errorMessage = "Sign up failed. Please try again later.";
       
       if (!navigator.onLine || error.message?.includes("NetworkError")) {
