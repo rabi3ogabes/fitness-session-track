@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -89,28 +88,28 @@ export const useTrainerCreation = () => {
     }
 
     try {
-      const isAuth = await checkAuthenticationStatus();
-      if (!isAuth) {
-        console.error("Authentication check failed for trainer creation");
-        setIsCreating(false);
-        return { success: false, error: new Error("Authentication failed") };
-      }
+      // No need to call checkAuthenticationStatus as supabase.auth.signUp handles auth context
+      // and provides email confirmation flow. Admin rights for this action
+      // should be checked at the page/component level before calling createTrainer.
 
-      console.log("Authentication confirmed, proceeding with trainer creation");
+      console.log("Proceeding with trainer creation via supabase.auth.signUp");
 
       const trainerEmail = trainerData.email.trim();
-      const trainerPassword = trainerData.phone.trim(); // Use phone as password
+      // Password is the phone number
+      const trainerPassword = trainerData.phone.trim(); 
       const trainerName = trainerData.name.trim();
 
       // Step 1: Create Auth user using supabase.auth.signUp
+      // This will send a confirmation email to the user.
       console.log(`Attempting to sign up auth user for ${trainerEmail}`);
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: trainerEmail,
         password: trainerPassword,
         options: {
-          data: { // This becomes user_metadata
+          data: { // This becomes user_metadata which is accessible client-side after login
             role: 'trainer',
             name: trainerName,
+            // You can add other metadata here if needed, e.g., initial_setup_complete: false
           }
         }
       });
@@ -126,47 +125,59 @@ export const useTrainerCreation = () => {
       }
 
       if (!authData.user) {
+        // This case should ideally be covered by signUpError, but as a safeguard:
         console.error("No user data returned from signUp despite no error. This is unexpected.");
         toast({
           title: "Trainer login creation issue",
-          description: "Authentication account creation did not return user data as expected.",
+          description: "Authentication account creation did not return user data as expected. The user might not have been created.",
           variant: "destructive",
         });
         return { success: false, error: new Error("Auth user creation failed unexpectedly.") };
       }
       
+      // Log specific details about the auth user created.
+      // authData.session will be null until email is confirmed.
       console.log(`Auth user created successfully for ${trainerEmail}, ID: ${authData.user.id}. Awaiting email confirmation.`);
       
-      // Step 2: Insert into 'trainers' table
+      // Step 2: Insert into 'trainers' table using the auth user's ID as the primary key (if 'id' in trainers table is UUID and FK to auth.users.id)
+      // Or, if 'id' is an auto-incrementing integer, you might not need to link it directly here,
+      // but it's good practice to have a user_id (UUID) column in 'trainers' that references auth.users.id.
+      // For this example, assuming 'trainers' table has columns: name, email, phone, specialization, status, gender, and importantly user_id (uuid referencing auth.users.id)
+      
       const formattedDataForDb = {
+        // id: authData.user.id, // If your 'trainers.id' is the auth UUID and primary key
+        user_id: authData.user.id, // If you have a separate user_id FK column
         name: trainerName,
-        email: trainerEmail,
+        email: trainerEmail, // ensure email is unique in trainers table if it's not the PK
         phone: trainerData.phone?.trim() || null,
         specialization: trainerData.specialization?.trim() || null,
-        status: trainerData.status || "Active",
-        gender: trainerData.gender || "Female",
+        status: trainerData.status || "Active", // Or perhaps "PendingConfirmation" until email is verified
+        gender: trainerData.gender || "Female", // Or "Other" / Not Specified
       };
 
       console.log("Formatted data for insertion into 'trainers' table:", formattedDataForDb);
 
+      // Insert into 'trainers' table
       const { data: dbRecord, error: dbError } = await supabase
         .from("trainers")
         .insert([formattedDataForDb])
         .select()
-        .single(); 
+        .single(); // Use single() if you expect one record and want it directly, or just .select() for an array
 
       if (dbError) {
         console.error("Error creating trainer in Supabase 'trainers' table:", dbError);
-        // If DB insert fails, we should ideally roll back the auth user creation or notify admin.
-        // For now, we'll toast the DB error but acknowledge auth user might exist.
+        // If DB insert fails, the auth user still exists and needs to confirm their email.
+        // This is a partial failure. The admin might need to manually add trainer details later
+        // or there should be a retry mechanism.
         toast({
           title: "Trainer Login Created, but Details Save Failed",
-          description: `Login for ${trainerName} created, but saving details failed: ${dbError.message}. Please manually check/add details in the trainers list. The trainer needs to confirm their email.`,
-          variant: "warning",
+          description: `Login for ${trainerName} created, but saving their details failed: ${dbError.message}. Please manually check/add details in the trainers list. The trainer needs to confirm their email.`,
+          variant: "default", // Changed from "warning" to "default"
           duration: 10000,
         });
         // Consider this a partial success with warning, as auth user was made.
-        return { success: true, data: null, warning: `Trainer details save failed: ${dbError.message}` };
+        // The 'data' returned would be null for the DB record part.
+        return { success: true, data: null, warning: `Trainer details save failed: ${dbError.message}. Auth user ID: ${authData.user.id}` };
       }
 
       console.log("Trainer record created successfully in 'trainers' table:", dbRecord);
@@ -174,11 +185,11 @@ export const useTrainerCreation = () => {
       toast({
         title: "Trainer Account Initiated",
         description: `${trainerName} has been set up. They will receive an email to confirm their account. Their password is their phone number: ${trainerPassword}.`,
-        duration: 10000,
+        duration: 10000, // Longer duration for important info
       });
       return { success: true, data: dbRecord };
 
-    } catch (error: any) { // General catch for unexpected errors
+    } catch (error: any) { // General catch for unexpected errors during the process
       console.error("Outer error in createTrainer function:", error);
       toast({
         title: "Failed to create trainer",
@@ -297,4 +308,3 @@ export const useTrainerCreation = () => {
     isCreating
   };
 };
-
