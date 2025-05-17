@@ -223,13 +223,16 @@ const ClassCalendar = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isBookingInProgress, setIsBookingInProgress] = useState(false);
   const [userData, setUserData] = useState<UserData>({
-    name: "User", // Default name
+    name: "User", 
     remainingSessions: 0,
     totalSessions: 0,
   });
+  console.log(userData,"userData")
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
-  const [isNetworkConnected, setIsNetworkConnected] = useState(true);
+  const [isNetworkConnected, setIsNetworkConnected] = useState(
+    navigator.onLine
+  );
   const [activeTab, setActiveTab] = useState("weekView");
   const [isClassAlreadyBooked, setIsClassAlreadyBooked] = useState(false);
 
@@ -272,6 +275,7 @@ const ClassCalendar = () => {
       return cls.isBooked === true || bookedClasses.includes(cls.id);
     });
   }, [allClasses, bookedClasses]);
+
   useEffect(() => {
     const handleOnline = () => {
       setIsNetworkConnected(true);
@@ -287,15 +291,12 @@ const ClassCalendar = () => {
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
-
-    // Set initial network status
-    setIsNetworkConnected(navigator.onLine);
-
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
   }, [error]);
+
   // Calculate if sessions are low (25% or less)
   const sessionsLow =
     userData.remainingSessions <= Math.max(1, userData.totalSessions * 0.25);
