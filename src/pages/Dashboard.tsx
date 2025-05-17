@@ -159,8 +159,8 @@ const Dashboard = () => {
     };
   }, [isAuthenticated, user]);
 
+  
   const isLowOnSessions = typeof sessionsRemaining === 'number' && sessionsRemaining <= 2;
-
   return (
     <DashboardLayout title="User Dashboard">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
