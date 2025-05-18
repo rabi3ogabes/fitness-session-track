@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Mock available plans
 const availablePlans = [
   {
     id: 1,
@@ -55,7 +53,8 @@ const availablePlans = [
   {
     id: 3,
     name: "Ultimate",
-    description: "Unlimited access with personal training and premium amenities",
+    description:
+      "Unlimited access with personal training and premium amenities",
     price: 500, // QAR
     features: [
       "Full gym access",
@@ -73,7 +72,10 @@ const availablePlans = [
 
 const UserMembership = () => {
   const { toast } = useToast();
-  const [currentUser, setCurrentUser] = useState({ name: "Current User", email: "user@example.com" });
+  const [currentUser, setCurrentUser] = useState({
+    name: "Current User",
+    email: "user@example.com",
+  });
   const [currentMembership, setCurrentMembership] = useState({
     name: "Basic",
     type: "Monthly",
@@ -81,257 +83,320 @@ const UserMembership = () => {
     endDate: "May 1, 2025",
     sessions: 12,
     sessionsRemaining: 7,
-    price: 250, // QAR
+    price: 250,
     automatic: true,
   });
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
+  const fetchAllData = async (user) => {
+    setLoading(true);
+
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("name, email")
+        .eq("id", user.id)
+        .single();
+
+      if (profile && profile.name) {
+        setCurrentUser({
+          name: profile.name,
+          email: profile.email || user.email || "user@example.com",
+        });
+      } else {
+        setCurrentUser({
+          name: user.email?.split("@")[0] || "Current User",
+          email: user.email || "user@example.com",
+        });
+      }
+
+      // Get membership data
+      const { data: memberData } = await supabase
+        .from("members")
+        .select("membership, sessions, remaining_sessions")
+        .eq("email", user.email)
+        .single();
+
+      if (memberData) {
+        const today = new Date();
+        const oneMonthLater = new Date();
+        oneMonthLater.setMonth(today.getMonth() + 1);
+
+        setCurrentMembership({
+          name: memberData.membership || "Basic",
+          type: "Monthly",
+          startDate: today.toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          }),
+          endDate: oneMonthLater.toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          }),
+          sessions: memberData.sessions || 12,
+          sessionsRemaining: memberData.remaining_sessions || 0,
+          price:
+            availablePlans.find((p) => p.name === memberData.membership)
+              ?.price || 250,
+          automatic: true,
+        });
+      }
+
+      // Collect payment history data
+      let allPayments = [];
+
+      // First get membership requests (pending payments)
+      const { data: requestsData } = await supabase
+        .from("membership_requests")
+        .select("*")
+        .eq("email", user.email)
+        .order("date", { ascending: false });
+
+      // Process membership requests
+      if (requestsData && requestsData.length > 0) {
+        const pendingPayments = requestsData.map((request) => {
+          const plan = availablePlans.find((p) => p.name === request.type);
+          return {
+            id: `request-${request.id}`,
+            type: request.type,
+            date: request.date,
+            amount: plan?.price || 0,
+            status: request.status,
+            isRequest: true,
+          };
+        });
+        allPayments = [...pendingPayments];
+      }
+
+      // Get confirmed payments
+      const { data: paymentsData } = await supabase
+        .from("payments")
+        .select("*")
+        .eq(
+          "member",
+          profile?.name || user.email?.split("@")[0] || "Current User"
+        )
+        .order("date", { ascending: false });
+
+      // Process confirmed payments
+      if (paymentsData && paymentsData.length > 0) {
+        allPayments = [...allPayments, ...paymentsData];
+      }
+
+      // Check localStorage for any pending requests that haven't been synced
+      try {
+        const localRequests = localStorage.getItem("localMembershipRequests");
+        if (localRequests) {
+          const parsedRequests = JSON.parse(localRequests);
+          const userRequests = parsedRequests.filter(
+            (req) => req.email === user.email
+          );
+
+          if (userRequests.length > 0) {
+            const localPayments = userRequests.map((req) => ({
+              id: `local-${req.id}`,
+              type: req.type,
+              date: req.date,
+              amount:
+                availablePlans.find((p) => p.name === req.type)?.price || 0,
+              status: "Pending",
+              isRequest: true,
+              local: true, // Mark as local to identify
+            }));
+
+            allPayments = [...localPayments, ...allPayments];
+          }
+        }
+      } catch (localErr) {
+        console.error("Error processing local requests:", localErr);
+      }
+
+      // Update payment history state
+      if (allPayments.length > 0) {
+        setPaymentHistory(allPayments);
+      } else {
+        // Fallback to mock data if no real data found
+        setPaymentHistory([
+          {
+            id: 1,
+            type: "Basic Monthly",
+            date: "April 1, 2025",
+            amount: 250,
+            status: "Successful",
+          },
+          {
+            id: 2,
+            type: "Basic Monthly",
+            date: "March 1, 2025",
+            amount: 250,
+            status: "Successful",
+          },
+          {
+            id: 3,
+            type: "Premium Monthly",
+            date: "February 1, 2025",
+            amount: 350,
+            status: "Successful",
+          },
+        ]);
+      }
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      // Fallback to mock data on error
+      setPaymentHistory([
+        {
+          id: 1,
+          type: "Basic Monthly",
+          date: "April 1, 2025",
+          amount: 250,
+          status: "Successful",
+        },
+        {
+          id: 2,
+          type: "Basic Monthly",
+          date: "March 1, 2025",
+          amount: 250,
+          status: "Successful",
+        },
+        {
+          id: 3,
+          type: "Premium Monthly",
+          date: "February 1, 2025",
+          amount: 350,
+          status: "Successful",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch user information and payment history when component mounts
   useEffect(() => {
-    const fetchUserInfo = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      
+    const initializeData = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
-        // Try to get user's name from profiles table or user metadata
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('name, email')
-          .eq('id', user.id)
-          .single();
-        
-        if (profile && profile.name) {
-          setCurrentUser({
-            name: profile.name,
-            email: profile.email || user.email || "user@example.com"
-          });
-        } else {
-          // Fallback to the user's email
-          setCurrentUser({
-            name: user.email?.split('@')[0] || "Current User",
-            email: user.email || "user@example.com"
-          });
-        }
-        
-        // Try to get user's membership and sessions
-        const { data: memberData } = await supabase
-          .from('members')
-          .select('membership, sessions, remaining_sessions')
-          .eq('email', user.email)
-          .single();
-          
-        if (memberData) {
-          // If member data exists, update the current membership
-          const today = new Date();
-          const oneMonthLater = new Date();
-          oneMonthLater.setMonth(today.getMonth() + 1);
-          
-          setCurrentMembership({
-            name: memberData.membership || "Basic",
-            type: "Monthly",
-            startDate: today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-            endDate: oneMonthLater.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-            sessions: memberData.sessions || 12,
-            sessionsRemaining: memberData.remaining_sessions || 0,
-            price: availablePlans.find(plan => plan.name === memberData.membership)?.price || 250,
-            automatic: true,
-          });
-        }
-        
-        // Fetch payment history
-        const fetchPayments = async () => {
-          try {
-            // First try to get from Supabase
-            const { data: paymentsData, error } = await supabase
-              .from('payments')
-              .select('*')
-              .eq('member', profile?.name || user.email?.split('@')[0] || "Current User")
-              .order('date', { ascending: false });
-              
-            if (paymentsData && paymentsData.length > 0) {
-              console.log("Fetched payments:", paymentsData);
-              setPaymentHistory(paymentsData);
-            } else {
-              console.log("No payment data found or error:", error);
-              // Use mock data if no real data
-              setPaymentHistory([
-                {
-                  id: 1,
-                  type: "Basic Monthly",
-                  date: "April 1, 2025",
-                  amount: 250, // QAR
-                  status: "Successful",
-                },
-                {
-                  id: 2,
-                  type: "Basic Monthly",
-                  date: "March 1, 2025",
-                  amount: 250, // QAR
-                  status: "Successful",
-                },
-                {
-                  id: 3,
-                  type: "Premium Monthly",
-                  date: "February 1, 2025",
-                  amount: 350, // QAR
-                  status: "Successful",
-                },
-              ]);
-            }
-          } catch (err) {
-            console.error("Error fetching payments:", err);
-            // Use mock data as fallback
-            setPaymentHistory([
-              {
-                id: 1,
-                type: "Basic Monthly",
-                date: "April 1, 2025",
-                amount: 250, // QAR
-                status: "Successful",
-              },
-              {
-                id: 2,
-                type: "Basic Monthly",
-                date: "March 1, 2025",
-                amount: 250, // QAR
-                status: "Successful",
-              },
-              {
-                id: 3,
-                type: "Premium Monthly",
-                date: "February 1, 2025",
-                amount: 350, // QAR
-                status: "Successful",
-              },
-            ]);
-          } finally {
-            setLoading(false);
-          }
-        };
-        
-        // Also fetch membership requests to show pending payments
-        const fetchMembershipRequests = async () => {
-          try {
-            const { data: requestsData, error } = await supabase
-              .from('membership_requests')
-              .select('*')
-              .eq('email', user.email)
-              .order('date', { ascending: false });
-              
-            if (requestsData && requestsData.length > 0) {
-              console.log("Fetched membership requests:", requestsData);
-              
-              // Transform requests into payment history format
-              const pendingPayments = requestsData.map(request => {
-                const plan = availablePlans.find(p => p.name === request.type);
-                return {
-                  id: `request-${request.id}`,
-                  type: request.type,
-                  date: request.date,
-                  amount: plan?.price || 0,
-                  status: request.status, // Will be "Pending", "Approved", or "Rejected"
-                  isRequest: true
-                };
-              });
-              
-              // Combine with existing payments
-              fetchPayments();
-              setPaymentHistory(prevPayments => [...pendingPayments, ...prevPayments]);
-            } else {
-              fetchPayments();
-            }
-          } catch (err) {
-            console.error("Error fetching membership requests:", err);
-            fetchPayments();
-          }
-        };
-        
-        fetchMembershipRequests();
+        await fetchAllData(user);
+      } else {
+        setLoading(false);
       }
     };
-    
-    fetchUserInfo();
+
+    initializeData();
   }, []);
-  
-  const handleBookPlan = async (planName: string) => {
+
+  const handleBookPlan = async (planName) => {
     // Get the plan details
-    const plan = availablePlans.find(p => p.name === planName);
+    const plan = availablePlans.find((p) => p.name === planName);
     if (!plan) return;
-    
-    // Create a membership request
+
+    // Show toast
     toast({
       title: "Membership request sent",
       description: `Your request for the ${planName} plan has been submitted. A staff member will review it shortly.`,
     });
-    
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-    
-    try {
-      // First, try to add directly to Supabase if connected
-      const { error } = await supabase
-        .from('membership_requests')
-        .insert([{
-          member: currentUser.name,
-          email: currentUser.email,
-          type: planName,
-          date: today,
-          status: "Pending"
-        }]);
-      
-      if (error) {
-        console.error("Error submitting to Supabase:", error);
-        // Fall back to localStorage
-        storeMembershipRequestLocally(planName, today);
-      } else {
-        // Add to the payment history display
-        setPaymentHistory(prev => [{
-          id: `request-${Date.now()}`,
-          type: planName,
-          date: today,
-          amount: plan.price,
-          status: "Pending",
-          isRequest: true
-        }, ...prev]);
-      }
-    } catch (err) {
-      console.error("Exception when submitting request:", err);
-      // Fall back to localStorage
-      storeMembershipRequestLocally(planName, today);
-    }
-  };
-  
-  const storeMembershipRequestLocally = (planName: string, date: string) => {
-    // Store the request in localStorage so the admin page can see it
-    const existingRequests = localStorage.getItem("membershipRequests");
+
+    const today = new Date();
+    const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD format for database
+
+    // Format date for display consistency with other dates in payment history
+    const displayDate = today.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+
+    // Create a request object
+    const requestId = Date.now();
     const newRequest = {
-      id: Date.now(), // Use timestamp as unique ID
+      id: requestId,
       member: currentUser.name,
       email: currentUser.email,
       type: planName,
-      date: date,
-      status: "Pending"
-    };
-    
-    if (existingRequests) {
-      const parsedRequests = JSON.parse(existingRequests);
-      localStorage.setItem("membershipRequests", JSON.stringify([...parsedRequests, newRequest]));
-    } else {
-      localStorage.setItem("membershipRequests", JSON.stringify([newRequest]));
-    }
-    
-    // Also add to the payment history display
-    const plan = availablePlans.find(p => p.name === planName);
-    setPaymentHistory(prev => [{
-      id: `request-${newRequest.id}`,
-      type: planName,
-      date,
-      amount: plan?.price || 0,
+      date: formattedDate,
       status: "Pending",
-      isRequest: true
-    }, ...prev]);
+    };
+
+    // Create a payment history object
+    const newPayment = {
+      id: `local-${requestId}`,
+      type: planName,
+      date: displayDate,
+      amount: plan.price,
+      status: "Pending",
+      isRequest: true,
+      local: true,
+    };
+
+    // Update UI immediately
+    setPaymentHistory((prevHistory) => [newPayment, ...prevHistory]);
+
+    try {
+      // Try to add to Supabase
+      const { error } = await supabase.from("membership_requests").insert([
+        {
+          member: currentUser.name,
+          email: currentUser.email,
+          type: planName,
+          date: formattedDate,
+          status: "Pending",
+        },
+      ]);
+
+      if (error) {
+        storeRequestLocally(newRequest);
+      }
+    } catch (err) {
+      console.error("Exception when submitting request:", err);
+      // Store locally on exception
+      storeRequestLocally(newRequest);
+    }
   };
-  
+
+  const storeRequestLocally = (request) => {
+    // Store the request in localStorage with a dedicated key
+    try {
+      const existingRequests = localStorage.getItem("localMembershipRequests");
+
+      if (existingRequests) {
+        const parsedRequests = JSON.parse(existingRequests);
+        localStorage.setItem(
+          "localMembershipRequests",
+          JSON.stringify([...parsedRequests, request])
+        );
+      } else {
+        localStorage.setItem(
+          "localMembershipRequests",
+          JSON.stringify([request])
+        );
+      }
+    } catch (err) {
+      console.error("Error storing request locally:", err);
+    }
+
+    // Also store in the original location for backward compatibility
+    try {
+      const existingRequests = localStorage.getItem("membershipRequests");
+
+      if (existingRequests) {
+        const parsedRequests = JSON.parse(existingRequests);
+        localStorage.setItem(
+          "membershipRequests",
+          JSON.stringify([...parsedRequests, request])
+        );
+      } else {
+        localStorage.setItem("membershipRequests", JSON.stringify([request]));
+      }
+    } catch (err) {
+      console.error("Error storing request in membershipRequests:", err);
+    }
+  };
+
   return (
     <DashboardLayout title="Membership">
       <div className="space-y-8">
@@ -339,14 +404,19 @@ const UserMembership = () => {
         <Card>
           <CardHeader>
             <CardTitle>Current Membership</CardTitle>
-            <CardDescription>Your current membership details and usage</CardDescription>
+            <CardDescription>
+              Your current membership details and usage
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h3 className="font-medium text-lg">{currentMembership.name} Membership ({currentMembership.type})</h3>
+                <h3 className="font-medium text-lg">
+                  {currentMembership.name} Membership ({currentMembership.type})
+                </h3>
                 <p className="text-gray-500 mt-1">
-                  From {currentMembership.startDate} to {currentMembership.endDate}
+                  From {currentMembership.startDate} to{" "}
+                  {currentMembership.endDate}
                 </p>
                 <p className="mt-4">
                   <span className="font-medium">Sessions:</span>{" "}
@@ -357,7 +427,11 @@ const UserMembership = () => {
                   <div
                     className="bg-gym-blue h-2"
                     style={{
-                      width: `${(currentMembership.sessionsRemaining / currentMembership.sessions) * 100}%`,
+                      width: `${
+                        (currentMembership.sessionsRemaining /
+                          currentMembership.sessions) *
+                        100
+                      }%`,
                     }}
                   ></div>
                 </div>
@@ -380,9 +454,7 @@ const UserMembership = () => {
               <Card
                 key={plan.id}
                 className={`${
-                  plan.recommended
-                    ? "border-2 border-gym-blue relative"
-                    : ""
+                  plan.recommended ? "border-2 border-gym-blue relative" : ""
                 } flex flex-col h-full`}
               >
                 {plan.recommended && (
@@ -396,9 +468,7 @@ const UserMembership = () => {
                 </CardHeader>
                 <CardContent className="flex-grow">
                   <div className="mt-1 mb-4">
-                    <p className="text-3xl font-bold">
-                      QAR {plan.price}
-                    </p>
+                    <p className="text-3xl font-bold">QAR {plan.price}</p>
                   </div>
 
                   <ul className="space-y-2">
@@ -411,8 +481,8 @@ const UserMembership = () => {
                   </ul>
                 </CardContent>
                 <CardFooter className="mt-auto">
-                  <Button 
-                    onClick={() => handleBookPlan(plan.name)} 
+                  <Button
+                    onClick={() => handleBookPlan(plan.name)}
                     className="w-full bg-gym-blue hover:bg-gym-dark-blue"
                   >
                     Get This Plan
@@ -427,7 +497,9 @@ const UserMembership = () => {
         <Card>
           <CardHeader>
             <CardTitle>Payment History</CardTitle>
-            <CardDescription>Your recent membership payments and requests</CardDescription>
+            <CardDescription>
+              Your recent membership payments and requests
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -444,7 +516,7 @@ const UserMembership = () => {
                 </TableHeader>
                 <TableBody>
                   {paymentHistory && paymentHistory.length > 0 ? (
-                    paymentHistory.map((payment: any) => (
+                    paymentHistory.map((payment) => (
                       <TableRow key={payment.id}>
                         <TableCell>{payment.date}</TableCell>
                         <TableCell className="font-medium">
@@ -454,7 +526,8 @@ const UserMembership = () => {
                         <TableCell>
                           <span
                             className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              payment.status === "Successful" || payment.status === "Approved"
+                              payment.status === "Successful" ||
+                              payment.status === "Approved"
                                 ? "bg-green-100 text-green-800"
                                 : payment.status === "Pending"
                                 ? "bg-yellow-100 text-yellow-800"
