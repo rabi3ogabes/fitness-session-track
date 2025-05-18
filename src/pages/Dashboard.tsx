@@ -67,9 +67,9 @@ const Dashboard = () => {
   //   console.log(user, "user");
   // console.log(unbookedClasses, "unbookedClasses");
   // console.log(userData, "userData");
-  console.log(userMembership, "userMembership");
+  // console.log(userMembership, "userMembership");
   // console.log(loadingUserData, "loadingUserData");
-  console.log(sessionsRemaining, "loadingUserData");
+  // console.log(sessionsRemaining, "loadingUserData");
   const fetchUserData = async () => {
     if (!isAuthenticated || !user?.email) return;
 
@@ -81,7 +81,7 @@ const Dashboard = () => {
         .select("sessions_remaining, membership_type")
         .eq("email", user.email)
         .maybeSingle();
-
+    
       if (profileError) throw profileError;
 
       // If we have profile data, use it
