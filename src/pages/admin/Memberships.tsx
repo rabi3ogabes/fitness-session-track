@@ -52,7 +52,6 @@ const Memberships = () => {
         const { data, error } = await supabase
           .from('membership_requests')
           .select('*');
-          
         if (data && data.length > 0) {
           console.log("Loaded membership requests from Supabase:", data);
           setMembershipRequests(data);
@@ -208,91 +207,88 @@ const Memberships = () => {
     });
   };
 
-  const handleApproveRequest = async (id: number) => {
-    // Find the request
-    const request = membershipRequests.find(r => r.id === id);
-    if (!request) return;
-    
-    // Find the membership type to get the number of sessions
-    const membershipType = membershipTypes.find(m => m.name === request.type);
-    if (!membershipType) {
-      toast({
-        title: "Error",
-        description: `Couldn't find membership type ${request.type}`,
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Update the request status
-    const updatedRequests = membershipRequests.map((r) =>
-      r.id === id ? { ...r, status: "Approved" } : r
-    );
-    
-    setMembershipRequests(updatedRequests);
-    localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
-    
-    // Try to update in Supabase if possible
-    try {
-      await supabase
-        .from('membership_requests')
-        .update({ status: "Approved" })
-        .eq('id', id);
-    } catch (err) {
-      console.error("Error updating request in Supabase:", err);
-    }
-    
-    // Add sessions to the member's account
-    try {
-      // First find the member in the members table
-      const { data: memberData, error: memberError } = await supabase
-        .from('members')
-        .select('*')
-        .eq('email', request.email)
-        .single();
-        
-      if (memberData) {
-        // Member exists, update their sessions
-        const currentSessions = memberData.remaining_sessions || 0;
-        const newSessions = currentSessions + membershipType.sessions;
-        
-        await supabase
-          .from('members')
-          .update({ 
-            remaining_sessions: newSessions,
-            membership: request.type
-          })
-          .eq('id', memberData.id);
-          
-        console.log(`Added ${membershipType.sessions} sessions to user ${request.member}`);
-      } else if (memberError) {
-        console.error("Error finding member:", memberError);
-      }
-    } catch (err) {
-      console.error("Error updating member sessions in Supabase:", err);
-    }
-    
-    // Create a payment record
-    const today = new Date().toISOString().split('T')[0];
-    try {
-      await supabase
-        .from('payments')
-        .insert([{
-          member: request.member,
-          date: today,
-          amount: membershipType.price,
-          membership: request.type,
-          status: "Successful"
-        }]);
-    } catch (err) {
-      console.error("Error creating payment record:", err);
-    }
-
+const handleApproveRequest = async (id: number) => {
+  const request = membershipRequests.find(r => r.id === id);
+  if (!request) return;
+  
+  const membershipType = membershipTypes.find(m => m.name === request.type);
+  if (!membershipType) {
     toast({
-      title: "Request approved",
-      description: `The membership request has been approved successfully. ${membershipType.sessions} sessions have been added to ${request.member}'s account.`,
+      title: "Error",
+      description: `Couldn't find membership type ${request.type}`,
+      variant: "destructive"
     });
-  };
+    return;
+  }
+  const updatedRequests = membershipRequests.map((r) =>
+    r.id === id ? { ...r, status: "Approved" } : r
+  );
+  
+  setMembershipRequests(updatedRequests);
+  localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
+  
+  try {
+    await supabase
+      .from('membership_requests')
+      .update({ status: "Approved" })
+      .eq('id', id);
+  } catch (err) {
+    console.error("Error updating request in Supabase:", err);
+  }
+  
+  try {
+    const { data: memberData, error: memberError } = await supabase
+      .from('members')
+      .select('*')
+      .eq('email', request.email)
+      .single();
+      
+    if (memberData) {
+      // Member exists, update their sessions
+      const currentSessions = memberData.remaining_sessions || 0;
+      const newSessions = currentSessions + membershipType.sessions;
+      
+      // Calculate total sessions - either use existing total or start fresh
+      const currentTotalSessions = memberData.total_sessions || 0;
+      const newTotalSessions = currentTotalSessions + membershipType.sessions;
+      await supabase
+        .from('members')
+        .update({ 
+          remaining_sessions: newSessions,
+          membership: request.type,
+          total_sessions: newTotalSessions,  
+          sessions: newTotalSessions       
+        })
+        .eq('id', memberData.id);
+        
+      console.log(`Added ${membershipType.sessions} sessions to user ${request.member}`);
+    } else if (memberError) {
+      console.error("Error finding member:", memberError);
+    }
+  } catch (err) {
+    console.error("Error updating member sessions in Supabase:", err);
+  }
+  
+  const today = new Date().toISOString().split('T')[0];
+  try {
+    await supabase
+      .from('payments')
+      .insert([{
+        member: request.member,
+        date: today,
+        amount: membershipType.price,
+        membership: request.type,
+        status: "Successful"
+      }]);
+  } catch (err) {
+    console.error("Error creating payment record:", err);
+  }
+
+  toast({
+    title: "Request approved",
+    description: `The membership request has been approved successfully. ${membershipType.sessions} sessions have been added to ${request.member}'s account.`,
+  });
+};
 
   const handleRejectRequest = async (id: number) => {
     const updatedRequests = membershipRequests.map((r) =>
