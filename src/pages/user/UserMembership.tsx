@@ -69,22 +69,31 @@ const availablePlans = [
     recommended: false,
   },
 ];
-
+interface MemberShip {
+  name: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  sessions: number;
+  sessionsRemaining: number;
+  price: number;
+  automatic: boolean;
+}
 const UserMembership = () => {
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState({
     name: "Current User",
     email: "user@example.com",
   });
-  const [currentMembership, setCurrentMembership] = useState({
-    name: "Basic",
-    type: "Monthly",
-    startDate: "April 1, 2025",
-    endDate: "May 1, 2025",
-    sessions: 12,
-    sessionsRemaining: 7,
-    price: 250,
-    automatic: true,
+  const [currentMembership, setCurrentMembership] = useState<MemberShip>({
+    name: "",
+    type: "",
+    startDate: "",
+    endDate: "",
+    sessions: 0,
+    sessionsRemaining: 0,
+    price: 0,
+    automatic: false,
   });
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -117,7 +126,6 @@ const UserMembership = () => {
         .select("membership, sessions, remaining_sessions")
         .eq("email", user.email)
         .single();
-
       if (memberData) {
         const today = new Date();
         const oneMonthLater = new Date();
@@ -154,7 +162,6 @@ const UserMembership = () => {
         .select("*")
         .eq("email", user.email)
         .order("date", { ascending: false });
-
       // Process membership requests
       if (requestsData && requestsData.length > 0) {
         const pendingPayments = requestsData.map((request) => {
@@ -180,13 +187,10 @@ const UserMembership = () => {
           profile?.name || user.email?.split("@")[0] || "Current User"
         )
         .order("date", { ascending: false });
-
       // Process confirmed payments
       if (paymentsData && paymentsData.length > 0) {
         allPayments = [...allPayments, ...paymentsData];
       }
-
-      // Check localStorage for any pending requests that haven't been synced
       try {
         const localRequests = localStorage.getItem("localMembershipRequests");
         if (localRequests) {
@@ -204,7 +208,7 @@ const UserMembership = () => {
                 availablePlans.find((p) => p.name === req.type)?.price || 0,
               status: "Pending",
               isRequest: true,
-              local: true, // Mark as local to identify
+              local: true, 
             }));
 
             allPayments = [...localPayments, ...allPayments];
@@ -217,63 +221,11 @@ const UserMembership = () => {
       // Update payment history state
       if (allPayments.length > 0) {
         setPaymentHistory(allPayments);
-      } else {
-        // Fallback to mock data if no real data found
-        setPaymentHistory([
-          {
-            id: 1,
-            type: "Basic Monthly",
-            date: "April 1, 2025",
-            amount: 250,
-            status: "Successful",
-          },
-          {
-            id: 2,
-            type: "Basic Monthly",
-            date: "March 1, 2025",
-            amount: 250,
-            status: "Successful",
-          },
-          {
-            id: 3,
-            type: "Premium Monthly",
-            date: "February 1, 2025",
-            amount: 350,
-            status: "Successful",
-          },
-        ]);
       }
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      // Fallback to mock data on error
-      setPaymentHistory([
-        {
-          id: 1,
-          type: "Basic Monthly",
-          date: "April 1, 2025",
-          amount: 250,
-          status: "Successful",
-        },
-        {
-          id: 2,
-          type: "Basic Monthly",
-          date: "March 1, 2025",
-          amount: 250,
-          status: "Successful",
-        },
-        {
-          id: 3,
-          type: "Premium Monthly",
-          date: "February 1, 2025",
-          amount: 350,
-          status: "Successful",
-        },
-      ]);
     } finally {
       setLoading(false);
     }
   };
-
   // Fetch user information and payment history when component mounts
   useEffect(() => {
     const initializeData = async () => {
@@ -411,34 +363,45 @@ const UserMembership = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h3 className="font-medium text-lg">
-                  {currentMembership.name} Membership ({currentMembership.type})
-                </h3>
-                <p className="text-gray-500 mt-1">
-                  From {currentMembership.startDate} to{" "}
-                  {currentMembership.endDate}
-                </p>
-                <p className="mt-4">
-                  <span className="font-medium">Sessions:</span>{" "}
-                  {currentMembership.sessionsRemaining} remaining out of{" "}
-                  {currentMembership.sessions} total
-                </p>
-                <div className="mt-1 bg-gray-200 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-gym-blue h-2"
-                    style={{
-                      width: `${
-                        (currentMembership.sessionsRemaining /
-                          currentMembership.sessions) *
-                        100
-                      }%`,
-                    }}
-                  ></div>
-                </div>
+                {currentMembership.name === "null" ? (
+                  <p className=" font-medium text-lg mt-1">
+                    you not have a Membership yet
+                  </p>
+                ) : (
+                  <>
+                    <h3 className="font-medium text-lg">
+                      {currentMembership.name} Membership
+                      {currentMembership.type}
+                    </h3>
+                    <p className="text-gray-500 mt-1">
+                      From {currentMembership.startDate} to{" "}
+                      {currentMembership.endDate}
+                    </p>
+                  </>
+                )}
+                {currentMembership.name === "null" ? null : (
+                  <>
+                    <p className="mt-4">
+                      <span className="font-medium">Sessions:</span>{" "}
+                      {currentMembership.sessionsRemaining} remaining out of{" "}
+                      {currentMembership.sessions} total
+                    </p>
+                    <div className="mt-1 bg-gray-200 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-gym-blue h-2"
+                        style={{
+                          width: `${
+                            (currentMembership.sessionsRemaining /
+                              currentMembership.sessions) *
+                            100
+                          }%`,
+                        }}
+                      ></div>
+                    </div>
+                  </>
+                )}
               </div>
-              <div className="border-l-0 md:border-l border-gray-200 pl-0 md:pl-4 mt-4 md:mt-0">
-                {/* Removed the "Disable Auto-Renewal" button as requested */}
-              </div>
+              <div className="border-l-0 md:border-l border-gray-200 pl-0 md:pl-4 mt-4 md:mt-0"></div>
             </div>
           </CardContent>
         </Card>

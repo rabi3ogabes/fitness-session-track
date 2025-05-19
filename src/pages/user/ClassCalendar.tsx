@@ -66,6 +66,7 @@ import { z } from "zod";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Link } from "react-router-dom";
 
 // Class type colors mapping with purple as the primary color
 const classTypeColors = {
@@ -223,11 +224,10 @@ const ClassCalendar = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isBookingInProgress, setIsBookingInProgress] = useState(false);
   const [userData, setUserData] = useState<UserData>({
-    name: "User", 
+    name: "User",
     remainingSessions: 0,
     totalSessions: 0,
   });
-  console.log(userData,"userData")
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   const [isNetworkConnected, setIsNetworkConnected] = useState(
@@ -324,18 +324,16 @@ const ClassCalendar = () => {
 
         // Clear any previous errors
         setError(null);
-
         try {
           // First try to get the user profile
           const { data, error: profileError } = await supabase
-            .from("profiles")
-            .select("name, sessions_remaining, total_sessions")
-            .eq("id", user.id)
+            .from("members")
+            .select("name,total_sessions,remaining_sessions,sessions")
+            .eq("email", user.email)
             .single();
 
+          console.log(data, "profiles profiles");
           if (profileError) {
-            console.error("Error fetching user profile:", profileError);
-            // If the profile doesn't exist, create it with default values
             if (profileError.code === "PGRST116") {
               // Profile not found, use user metadata to create a profile
               // Fix: Access user_metadata safely through user.user_metadata if it exists
@@ -344,8 +342,8 @@ const ClassCalendar = () => {
               // Set default values for now
               setUserData({
                 name: userName,
-                remainingSessions: 10, // Default value
-                totalSessions: 20, // Default value
+                remainingSessions: 10,
+                totalSessions: 20,
               });
 
               return;
@@ -353,11 +351,19 @@ const ClassCalendar = () => {
             throw profileError;
           }
 
-          setUserData({
-            name: data.name || "User",
-            remainingSessions: data.sessions_remaining || 0,
-            totalSessions: data.total_sessions || 0,
-          });
+          if (data && typeof data === "object" && "name" in data) {
+            setUserData({
+              name: (data as any).name || "User",
+              remainingSessions: (data as any).remaining_sessions || 0,
+              totalSessions: (data as any).sessions || 0,
+            });
+          } else {
+            // If data is not valid, fallback to demo data
+            setUserData(DEMO_USER_DATA);
+            setError(
+              "Failed to load user profile data. Using demo data instead."
+            );
+          }
         } catch (err) {
           // Fall back to demo data on error
           console.error("Failed to get user profile, using demo data:", err);
@@ -672,6 +678,7 @@ const ClassCalendar = () => {
 
         // Update user sessions for demo
         const newRemainingSession = userData.remainingSessions - 1;
+        console.log(newRemainingSession, "newRemainingSession");
         setUserData({
           ...userData,
           remainingSessions: newRemainingSession,
@@ -751,11 +758,11 @@ const ClassCalendar = () => {
       if (user) {
         const newRemainingSession = userData.remainingSessions - 1;
         const { error: profileError } = await supabase
-          .from("profiles")
+          .from("members")
           .update({
-            sessions_remaining: newRemainingSession,
+            remaining_sessions: newRemainingSession,
           })
-          .eq("id", user.id);
+          .eq("email", user.email);
 
         if (profileError) {
           console.error("Error updating user sessions:", profileError);
@@ -923,11 +930,11 @@ const ClassCalendar = () => {
       if (user) {
         const newRemainingSession = userData.remainingSessions + 1;
         const { error: profileError } = await supabase
-          .from("profiles")
+          .from("members")
           .update({
-            sessions_remaining: newRemainingSession,
+            remaining_sessions: newRemainingSession,
           })
-          .eq("id", user.id);
+          .eq("email", user.email);
 
         if (profileError) {
           console.error("Error updating user sessions:", profileError);
@@ -1332,12 +1339,27 @@ const ClassCalendar = () => {
                 </div>
 
                 {sessionsLow && (
-                  <Alert className="mt-3" variant="default">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Running Low</AlertTitle>
+                  <Alert
+                    variant="destructive"
+                    className="bg-red-50 border-red-200"
+                  >
+                    <AlertTitle className="text-red-500">
+                      Low Session Count Warning
+                    </AlertTitle>
                     <AlertDescription>
-                      You're running low on sessions. Consider purchasing more
-                      soon.
+                      <p>
+                        You only have {sessionsLow}
+                        {userData.remainingSessions === 1
+                          ? "session"
+                          : "sessions"}
+                        remaining!
+                      </p>
+                      <Link
+                        to="/user/membership"
+                        className="text-red-600 font-medium underline hover:text-red-800 mt-2 inline-block"
+                      >
+                        Click here to upgrade your membership
+                      </Link>
                     </AlertDescription>
                   </Alert>
                 )}
