@@ -79,7 +79,8 @@ const Sidebar = () => {
   const trainerNavItems = [
     { name: "Dashboard", path: "/trainer", icon: <Home className="h-5 w-5" /> },
     { name: "Attendees", path: "/trainer/attendees", icon: <CalendarDays className="h-5 w-5" /> },
-    { name: "Members", path: "/admin/members", icon: <UsersRound className="h-5 w-5" /> },
+    { name: "Members", path: "/trainer/members", icon: <UsersRound className="h-5 w-5" /> },
+    { name: "Membership", path: "/trainer/memberships", icon: <BadgeCheck className="h-5 w-5" /> },
   ];
 
   let navItems = userNavItems;

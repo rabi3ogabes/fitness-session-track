@@ -1,8 +1,14 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,36 +22,156 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from "@/components/ui/table";
 import { Member, PaymentHistoryData, PaymentHistoryItem } from "./types";
-
+import { CardContent } from "@/components/ui/card";
+const availablePlans = [
+  {
+    id: 1,
+    name: "Basic",
+    description: "Access to gym facilities and 12 sessions per month",
+    price: 250, // QAR
+    features: [
+      "Full gym access",
+      "12 trainer sessions per month",
+      "Access to basic classes",
+      "Locker usage",
+    ],
+    recommended: false,
+  },
+  {
+    id: 2,
+    name: "Premium",
+    description: "Full access with 20 sessions per month and additional perks",
+    price: 350, // QAR
+    features: [
+      "Full gym access",
+      "20 trainer sessions per month",
+      "Access to all classes",
+      "Towel service",
+      "1 guest pass per month",
+      "Nutritional consultation",
+    ],
+    recommended: true,
+  },
+  {
+    id: 3,
+    name: "Ultimate",
+    description:
+      "Unlimited access with personal training and premium amenities",
+    price: 500, // QAR
+    features: [
+      "Full gym access",
+      "Unlimited trainer sessions",
+      "Access to all classes",
+      "Towel service",
+      "3 guest passes per month",
+      "Nutritional consultation",
+      "Personalized workout plan",
+      "Massage session once a month",
+    ],
+    recommended: false,
+  },
+];
 interface EditMemberDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   currentMember: Member | null;
   onEditMember: (member: Member) => void;
-  paymentHistoryData: PaymentHistoryData;
+  paymentHistoryData?: PaymentHistoryData;
 }
 
-const EditMemberDialog = ({ 
-  isOpen, 
-  onOpenChange, 
-  currentMember, 
+const EditMemberDialog = ({
+  isOpen,
+  onOpenChange,
+  currentMember,
   onEditMember,
-  paymentHistoryData
 }: EditMemberDialogProps) => {
   const { isAdmin, isTrainer } = useAuth();
+  const [paymentHistoryData, setPaymentHistory] = useState([]);
   const [selectedTab, setSelectedTab] = useState("personal");
-  const [editedMember, setEditedMember] = useState<Member | null>(currentMember);
+  const [editedMember, setEditedMember] = useState<Member | null>(
+    currentMember
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
+  console.log(paymentHistoryData, "paymentHistoryData");
   // Update edited member when currentMember changes
+
+  const fetchAllData = async (currentMember) => {
+    let allPayments = [];
+    console.log(allPayments, "aa");
+    const { data: requestsData } = await supabase
+      .from("membership_requests")
+      .select("*")
+      .eq("email", currentMember.email)
+      .order("date", { ascending: false });
+    if (requestsData && requestsData.length > 0) {
+      const pendingPayments = requestsData.map((request) => {
+        const plan = availablePlans.find((p) => p.name === request.type);
+        return {
+          id: `request-${request.id}`,
+          type: request.type,
+          date: request.date,
+          amount: plan?.price || 0,
+          status: request.status,
+          isRequest: true,
+        };
+      });
+      allPayments = [...pendingPayments];
+    }
+    const { data: paymentsData } = await supabase
+      .from("payments")
+      .select("*")
+      .eq(
+        "member",
+        currentMember?.name ||
+          currentMember.email?.split("@")[0] ||
+          "Current User"
+      )
+      .order("date", { ascending: false });
+    // Process confirmed payments
+    if (paymentsData && paymentsData.length > 0) {
+      allPayments = [...allPayments, ...paymentsData];
+    }
+    try {
+      const localRequests = localStorage.getItem("localMembershipRequests");
+      if (localRequests) {
+        const parsedRequests = JSON.parse(localRequests);
+        const userRequests = parsedRequests.filter(
+          (req) => req.email === currentMember.email
+        );
+
+        if (userRequests.length > 0) {
+          const localPayments = userRequests.map((req) => ({
+            id: `local-${req.id}`,
+            type: req.type,
+            date: req.date,
+            amount: availablePlans.find((p) => p.name === req.type)?.price || 0,
+            status: "Pending",
+            isRequest: true,
+            local: true,
+          }));
+
+          allPayments = [...localPayments, ...allPayments];
+        }
+      }
+    } catch (localErr) {
+      console.error("Error processing local requests:", localErr);
+    }
+
+    // Update payment history state
+    if (allPayments.length > 0) {
+      setPaymentHistory(allPayments);
+    }
+  };
+
   useEffect(() => {
     if (currentMember) {
-      setEditedMember({...currentMember});
+      setEditedMember({ ...currentMember });
       setFormErrors({});
+      fetchAllData(currentMember);
     }
   }, [currentMember]);
 
@@ -63,7 +189,7 @@ const EditMemberDialog = ({
     // Updated validation - exactly 8 digits
     const phoneRegex = /^\d{8}$/;
     if (!phone) return "Phone number is required";
-    if (!phoneRegex.test(phone.replace(/[\s-]/g, ''))) {
+    if (!phoneRegex.test(phone.replace(/[\s-]/g, ""))) {
       return "Please enter a valid phone number (exactly 8 digits)";
     }
     return null;
@@ -71,29 +197,29 @@ const EditMemberDialog = ({
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
-    
+
     if (!editedMember.name.trim()) {
       errors.name = "Name is required";
     }
-    
+
     if (!editedMember.email.trim()) {
       errors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editedMember.email)) {
       errors.email = "Please enter a valid email address";
     }
-    
+
     const phoneError = validatePhone(editedMember.phone);
     if (phoneError) {
       errors.phone = phoneError;
     }
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleFieldChange = (field: string, value: string | number) => {
     setEditedMember({ ...editedMember, [field]: value });
-    
+
     // Clear error when field changes
     if (formErrors[field]) {
       const { [field]: _, ...rest } = formErrors;
@@ -104,7 +230,7 @@ const EditMemberDialog = ({
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const phone = e.target.value;
     setEditedMember({ ...editedMember, phone });
-    
+
     // Clear error when user types
     if (formErrors.phone) {
       const { phone, ...rest } = formErrors;
@@ -119,7 +245,7 @@ const EditMemberDialog = ({
     }
 
     setIsLoading(true);
-    
+
     try {
       console.log("Saving member changes:", editedMember);
       onEditMember(editedMember);
@@ -137,12 +263,12 @@ const EditMemberDialog = ({
           <DialogTitle>Edit Member</DialogTitle>
           <DialogDescription>Update member information</DialogDescription>
         </DialogHeader>
-        
+
         <ScrollArea className="max-h-[calc(90vh-150px)]">
           <div className="px-6 space-y-4">
-            <Tabs 
-              value={selectedTab} 
-              onValueChange={setSelectedTab} 
+            <Tabs
+              value={selectedTab}
+              onValueChange={setSelectedTab}
               className="w-full"
             >
               <TabsList className="grid w-full grid-cols-3">
@@ -152,7 +278,7 @@ const EditMemberDialog = ({
                   <TabsTrigger value="payments">Payment History</TabsTrigger>
                 )}
               </TabsList>
-              
+
               <TabsContent value="personal" className="mt-4">
                 <div className="grid gap-4">
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -163,11 +289,15 @@ const EditMemberDialog = ({
                       <Input
                         id="edit-name"
                         value={editedMember.name}
-                        onChange={(e) => handleFieldChange('name', e.target.value)}
+                        onChange={(e) =>
+                          handleFieldChange("name", e.target.value)
+                        }
                         className={`${formErrors.name ? "border-red-500" : ""}`}
                       />
                       {formErrors.name && (
-                        <p className="text-sm text-red-500">{formErrors.name}</p>
+                        <p className="text-sm text-red-500">
+                          {formErrors.name}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -180,11 +310,17 @@ const EditMemberDialog = ({
                         id="edit-email"
                         type="email"
                         value={editedMember.email}
-                        onChange={(e) => handleFieldChange('email', e.target.value)}
-                        className={`${formErrors.email ? "border-red-500" : ""}`}
+                        onChange={(e) =>
+                          handleFieldChange("email", e.target.value)
+                        }
+                        className={`${
+                          formErrors.email ? "border-red-500" : ""
+                        }`}
                       />
                       {formErrors.email && (
-                        <p className="text-sm text-red-500">{formErrors.email}</p>
+                        <p className="text-sm text-red-500">
+                          {formErrors.email}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -197,11 +333,15 @@ const EditMemberDialog = ({
                         id="edit-phone"
                         value={editedMember.phone}
                         onChange={handlePhoneChange}
-                        className={`${formErrors.phone ? "border-red-500" : ""}`}
+                        className={`${
+                          formErrors.phone ? "border-red-500" : ""
+                        }`}
                         placeholder="8-digit phone number"
                       />
                       {formErrors.phone && (
-                        <p className="text-sm text-red-500">{formErrors.phone}</p>
+                        <p className="text-sm text-red-500">
+                          {formErrors.phone}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -213,8 +353,9 @@ const EditMemberDialog = ({
                       <RadioGroup
                         defaultValue={editedMember.gender || "Male"}
                         value={editedMember.gender || "Male"}
-                        onValueChange={(value: "Male" | "Female") => 
-                          setEditedMember({ ...editedMember, gender: value })}
+                        onValueChange={(value: "Male" | "Female") =>
+                          setEditedMember({ ...editedMember, gender: value })
+                        }
                         className="flex items-center gap-4"
                       >
                         <div className="flex items-center space-x-2">
@@ -236,13 +377,15 @@ const EditMemberDialog = ({
                       id="edit-birthday"
                       type="date"
                       value={editedMember.birthday}
-                      onChange={(e) => handleFieldChange('birthday', e.target.value)}
+                      onChange={(e) =>
+                        handleFieldChange("birthday", e.target.value)
+                      }
                       className="col-span-3"
                     />
                   </div>
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="membership" className="mt-4">
                 <div className="grid gap-4">
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -269,10 +412,18 @@ const EditMemberDialog = ({
                       min="0"
                       max={editedMember.sessions}
                       value={editedMember.remainingSessions}
-                      onChange={(e) => setEditedMember({ 
-                        ...editedMember, 
-                        remainingSessions: Math.max(0, Math.min(editedMember.sessions, parseInt(e.target.value) || 0)) 
-                      })}
+                      onChange={(e) =>
+                        setEditedMember({
+                          ...editedMember,
+                          remainingSessions: Math.max(
+                            0,
+                            Math.min(
+                              editedMember.sessions,
+                              parseInt(e.target.value) || 0
+                            )
+                          ),
+                        })
+                      }
                       className="col-span-3"
                     />
                   </div>
@@ -283,7 +434,9 @@ const EditMemberDialog = ({
                       </label>
                       <select
                         value={editedMember.status}
-                        onChange={(e) => handleFieldChange('status', e.target.value)}
+                        onChange={(e) =>
+                          handleFieldChange("status", e.target.value)
+                        }
                         className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent"
                       >
                         <option value="Active">Active</option>
@@ -297,68 +450,96 @@ const EditMemberDialog = ({
                         Trainer Edit
                       </label>
                       <div className="col-span-3 flex items-center">
-                        <Switch 
+                        <Switch
                           checked={editedMember.canBeEditedByTrainers}
-                          onCheckedChange={() => setEditedMember({ ...editedMember, canBeEditedByTrainers: !editedMember.canBeEditedByTrainers })}
+                          onCheckedChange={() =>
+                            setEditedMember({
+                              ...editedMember,
+                              canBeEditedByTrainers:
+                                !editedMember.canBeEditedByTrainers,
+                            })
+                          }
                         />
-                        <span className="ml-2 text-sm text-gray-500">Allow trainers to edit this member</span>
+                        <span className="ml-2 text-sm text-gray-500">
+                          Allow trainers to edit this member
+                        </span>
                       </div>
                     </div>
                   )}
                 </div>
               </TabsContent>
-              
+
               {(isAdmin || isTrainer) && (
                 <TabsContent value="payments" className="mt-4">
                   <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(paymentHistoryData[editedMember.id] || []).map((payment) => (
-                          <TableRow key={payment.id}>
-                            <TableCell>{payment.date}</TableCell>
-                            <TableCell>{payment.description}</TableCell>
-                            <TableCell>QAR {payment.amount}</TableCell>
-                            <TableCell>
-                              <span className={`px-2 py-1 text-xs rounded-full ${
-                                  payment.status === "Paid"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-yellow-100 text-yellow-800"
-                                }`}>
-                                {payment.status}
-                              </span>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {(!paymentHistoryData[editedMember.id] || paymentHistoryData[editedMember.id].length === 0) && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center py-4 text-gray-500">
-                              No payment history available.
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
+                    <CardContent>
+                      {isLoading ? (
+                        <div className="text-center py-4">
+                          Loading payment history...
+                        </div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Amount</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {paymentHistoryData &&
+                            paymentHistoryData.length > 0 ? (
+                              paymentHistoryData.map((payment) => (
+                                <TableRow key={payment.id}>
+                                  <TableCell>{payment.date}</TableCell>
+                                  <TableCell className="font-medium">
+                                    {payment.type || payment.membership}
+                                  </TableCell>
+                                  <TableCell>QAR {payment.amount}</TableCell>
+                                  <TableCell>
+                                    <span
+                                      className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                        payment.status === "Successful" ||
+                                        payment.status === "Approved"
+                                          ? "bg-green-100 text-green-800"
+                                          : payment.status === "Pending"
+                                          ? "bg-yellow-100 text-yellow-800"
+                                          : "bg-red-100 text-red-800"
+                                      }`}
+                                    >
+                                      {payment.status}
+                                    </span>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            ) : (
+                              <TableRow>
+                                <TableCell
+                                  colSpan={4}
+                                  className="text-center py-4"
+                                >
+                                  No payment history available
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
                   </div>
                 </TabsContent>
               )}
             </Tabs>
           </div>
         </ScrollArea>
-        
+
         <DialogFooter className="p-6 pt-2 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleSaveChanges} 
+          <Button
+            onClick={handleSaveChanges}
             className="bg-gym-blue hover:bg-gym-dark-blue"
             disabled={isLoading}
           >

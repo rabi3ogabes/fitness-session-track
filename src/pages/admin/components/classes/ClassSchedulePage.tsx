@@ -706,7 +706,7 @@ const ClassSchedulePage = () => {
           setIsOpen(open);
         }
       }}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="max-w-md overflow-y-auto max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Create New Class</DialogTitle>
             <DialogDescription>

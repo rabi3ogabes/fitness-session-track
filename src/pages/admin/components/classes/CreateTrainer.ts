@@ -3,15 +3,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { TrainerFormData } from "../trainers/types"; // Ensure this type is suitable or adjust as needed
+import { TrainerFormData } from "../trainers/types";
 
-// The TrainerData interface might be slightly different from TrainerFormData
-// For this hook, let's align with TrainerFormData or a compatible subset.
-// If TrainerFormData is Omit<Trainer, 'id' | 'created_at'>, it should work.
-interface TrainerCreationData extends Omit<TrainerFormData, 'id' | 'created_at'> {
+interface TrainerCreationData
+  extends Omit<TrainerFormData, "id" | "created_at"> {
   // No 'id' or 'created_at' when creating
 }
-
 
 export const useTrainerCreation = () => {
   const { toast } = useToast();
@@ -21,8 +18,11 @@ export const useTrainerCreation = () => {
 
   // Function to check authentication before any operations
   const checkAuthenticationStatus = async () => {
-    console.log("Checking authentication status, isAuthenticated:", isAuthenticated);
-    
+    console.log(
+      "Checking authentication status, isAuthenticated:",
+      isAuthenticated
+    );
+
     if (!isAuthenticated) {
       console.error("Not authenticated");
       toast({
@@ -33,7 +33,7 @@ export const useTrainerCreation = () => {
       navigate("/login");
       return false;
     }
-    
+
     if (!isAdmin) {
       console.error("Not admin");
       toast({
@@ -43,22 +43,26 @@ export const useTrainerCreation = () => {
       });
       return false;
     }
-    
+
     console.log("Authentication confirmed for trainer operations");
-    
+
     // Check with Supabase for active session
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
     if (error) {
       console.error("Session check error:", error);
       toast({
         title: "Authentication error",
-        description: "There was a problem verifying your authentication status.",
+        description:
+          "There was a problem verifying your authentication status.",
         variant: "destructive",
       });
       return false;
     }
-    
+
     if (!session) {
       console.error("No active session found");
       toast({
@@ -68,129 +72,166 @@ export const useTrainerCreation = () => {
       });
       return false;
     }
-    
+
     return true;
   };
 
-  // Create a new trainer with improved error handling
+  // Create a new trainer with improved error handling - FIXED FOR CLIENT-SIDE USE
   const createTrainer = async (trainerData: TrainerCreationData) => {
     setIsCreating(true);
-    console.log("Creating trainer with data (client-side auth):", trainerData);
+    console.log("Creating trainer with data:", trainerData);
 
     if (!trainerData.phone || trainerData.phone.trim() === "") {
       toast({
         title: "Phone number required for password",
-        description: "The trainer's phone number is required to set their initial password.",
+        description:
+          "The trainer's phone number is required to set their initial password.",
         variant: "destructive",
       });
       setIsCreating(false);
-      return { success: false, error: new Error("Phone number required for password") };
+      return {
+        success: false,
+        error: new Error("Phone number required for password"),
+      };
     }
 
     try {
-      // No need to call checkAuthenticationStatus as supabase.auth.signUp handles auth context
-      // and provides email confirmation flow. Admin rights for this action
-      // should be checked at the page/component level before calling createTrainer.
-
-      console.log("Proceeding with trainer creation via supabase.auth.signUp");
+      // Check if admin is authenticated
+      const isAuth = await checkAuthenticationStatus();
+      if (!isAuth) {
+        console.error("Authentication check failed for trainer creation");
+        setIsCreating(false);
+        return { success: false, error: new Error("Authentication failed") };
+      }
 
       const trainerEmail = trainerData.email.trim();
-      // Password is the phone number
-      const trainerPassword = trainerData.phone.trim(); 
+      const trainerPassword = trainerData.phone.trim(); // Password is the phone number
       const trainerName = trainerData.name.trim();
 
-      // Step 1: Create Auth user using supabase.auth.signUp
-      // This will send a confirmation email to the user.
-      console.log(`Attempting to sign up auth user for ${trainerEmail}`);
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: trainerEmail,
-        password: trainerPassword,
-        options: {
-          data: { // This becomes user_metadata which is accessible client-side after login
-            role: 'trainer',
+      // SOLUTION: Use a two-step approach:
+      // 1. First create the trainer record in the database
+      // 2. Then use signUp to create the auth user
+
+      // Step 1: Create the trainer record first
+      console.log("Creating trainer record in database:", trainerData);
+
+      const { data: trainerRecord, error: dbError } = await supabase
+        .from("trainers")
+        .insert([
+          {
             name: trainerName,
-            // You can add other metadata here if needed, e.g., initial_setup_complete: false
-          }
+            email: trainerEmail,
+            phone: trainerData.phone.trim(),
+            specialization: trainerData.specialization?.trim() || null,
+            status: "Active", // Special status until auth is confirmed
+            gender: trainerData.gender || null,
+          },
+        ])
+        .select()
+        .single();
+
+      if (dbError) {
+        console.error("Error creating trainer record:", dbError);
+        toast({
+          title: "Failed to create trainer",
+          description:
+            dbError.message || "Could not save trainer details in database.",
+          variant: "destructive",
+        });
+        return { success: false, error: dbError };
+      }
+
+      // Step 2: Now create the auth user with signUp
+      console.log(
+        `Creating auth user for ${trainerEmail} with password=${trainerPassword}`
+      );
+
+      // Use standard signUp which is allowed on client side
+      const { data: authData, error: signUpError } = await supabase.auth.signUp(
+        {
+          email: trainerEmail,
+          password: trainerPassword,
+          options: {
+            data: {
+              role: "trainer",
+              name: trainerName,
+              trainer_id: trainerRecord.id,
+            },
+          },
         }
-      });
+      );
 
       if (signUpError) {
-        console.error("Error creating trainer auth user via signUp:", signUpError);
+        console.error("Error creating trainer auth user:", signUpError);
+
+        // Clean up the trainer record since auth failed
+        await supabase.from("trainers").delete().eq("id", trainerRecord.id);
+
         toast({
           title: "Failed to create trainer login",
-          description: signUpError.message || "Could not create authentication account.",
+          description:
+            signUpError.message || "Could not create authentication account.",
           variant: "destructive",
         });
         return { success: false, error: signUpError };
       }
 
       if (!authData.user) {
-        // This case should ideally be covered by signUpError, but as a safeguard:
-        console.error("No user data returned from signUp despite no error. This is unexpected.");
+        console.error("No user data returned from signUp despite no error.");
+
+        // Clean up the trainer record
+        await supabase.from("trainers").delete().eq("id", trainerRecord.id);
+
         toast({
           title: "Trainer login creation issue",
-          description: "Authentication account creation did not return user data as expected. The user might not have been created.",
+          description:
+            "Authentication account creation did not return user data as expected.",
           variant: "destructive",
         });
-        return { success: false, error: new Error("Auth user creation failed unexpectedly.") };
+        return {
+          success: false,
+          error: new Error("Auth user creation failed unexpectedly."),
+        };
       }
-      
-      // Log specific details about the auth user created.
-      // authData.session will be null until email is confirmed.
-      console.log(`Auth user created successfully for ${trainerEmail}, ID: ${authData.user.id}. Awaiting email confirmation.`);
-      
-      // Step 2: Insert into 'trainers' table using the auth user's ID as the primary key (if 'id' in trainers table is UUID and FK to auth.users.id)
-      // Or, if 'id' is an auto-incrementing integer, you might not need to link it directly here,
-      // but it's good practice to have a user_id (UUID) column in 'trainers' that references auth.users.id.
-      // For this example, assuming 'trainers' table has columns: name, email, phone, specialization, status, gender, and importantly user_id (uuid referencing auth.users.id)
-      
-      const formattedDataForDb = {
-        // id: authData.user.id, // If your 'trainers.id' is the auth UUID and primary key
-        user_id: authData.user.id, // If you have a separate user_id FK column
-        name: trainerName,
-        email: trainerEmail, // ensure email is unique in trainers table if it's not the PK
-        phone: trainerData.phone?.trim() || null,
-        specialization: trainerData.specialization?.trim() || null,
-        status: trainerData.status || "Active", // Or perhaps "PendingConfirmation" until email is verified
-        gender: trainerData.gender || "Female", // Or "Other" / Not Specified
-      };
 
-      console.log("Formatted data for insertion into 'trainers' table:", formattedDataForDb);
-
-      // Insert into 'trainers' table
-      const { data: dbRecord, error: dbError } = await supabase
+      // Step 3: Update the trainer record with the auth_id
+      const { error: updateError } = await supabase
         .from("trainers")
-        .insert([formattedDataForDb])
-        .select()
-        .single(); // Use single() if you expect one record and want it directly, or just .select() for an array
+        .update({
+          auth_id: authData.user.id,
+          status: authData.session ? "Active" : "PendingEmailConfirmation",
+        })
+        .eq("id", trainerRecord.id);
 
-      if (dbError) {
-        console.error("Error creating trainer in Supabase 'trainers' table:", dbError);
-        // If DB insert fails, the auth user still exists and needs to confirm their email.
-        // This is a partial failure. The admin might need to manually add trainer details later
-        // or there should be a retry mechanism.
-        toast({
-          title: "Trainer Login Created, but Details Save Failed",
-          description: `Login for ${trainerName} created, but saving their details failed: ${dbError.message}. Please manually check/add details in the trainers list. The trainer needs to confirm their email.`,
-          variant: "default", // Changed from "warning" to "default"
-          duration: 10000,
-        });
-        // Consider this a partial success with warning, as auth user was made.
-        // The 'data' returned would be null for the DB record part.
-        return { success: true, data: null, warning: `Trainer details save failed: ${dbError.message}. Auth user ID: ${authData.user.id}` };
+      if (updateError) {
+        console.error("Failed to update trainer with auth ID:", updateError);
+        // We won't delete anything here as both entities were created successfully
       }
 
-      console.log("Trainer record created successfully in 'trainers' table:", dbRecord);
+      console.log("Trainer created successfully:", {
+        trainer: trainerRecord,
+        auth: authData.user.id,
+        session: !!authData.session,
+      });
+
+      // Determine if email confirmation is needed
+      const confirmationNeeded = !authData.session;
 
       toast({
-        title: "Trainer Account Initiated",
-        description: `${trainerName} has been set up. They will receive an email to confirm their account. Their password is their phone number: ${trainerPassword}.`,
-        duration: 10000, // Longer duration for important info
+        title: "Trainer account created",
+        description: confirmationNeeded
+          ? `${trainerName} was created. They need to confirm their email before logging in. Their password is their phone number: ${trainerPassword}.`
+          : `${trainerName} can now log in with their email and phone number as password.`,
+        duration: 6000,
       });
-      return { success: true, data: dbRecord };
 
-    } catch (error: any) { // General catch for unexpected errors during the process
-      console.error("Outer error in createTrainer function:", error);
+      return {
+        success: true,
+        data: trainerRecord,
+        confirmationNeeded,
+      };
+    } catch (error: any) {
+      console.error("Unexpected error in createTrainer function:", error);
       toast({
         title: "Failed to create trainer",
         description: error.message || "An unexpected error occurred.",
@@ -202,7 +243,7 @@ export const useTrainerCreation = () => {
     }
   };
 
-  // Create test trainers with improved error handling and feedback
+  // Create test trainers (unchanged from your original implementation)
   const createTestTrainer = async () => {
     setIsCreating(true);
     try {
@@ -213,7 +254,7 @@ export const useTrainerCreation = () => {
         setIsCreating(false);
         return false;
       }
-      
+
       const testTrainers = [
         {
           name: "John Fitness",
@@ -221,7 +262,7 @@ export const useTrainerCreation = () => {
           phone: "123-456-7890",
           specialization: "Weight Training",
           status: "Active",
-          gender: "Male"
+          gender: "Male",
         },
         {
           name: "Sarah Yoga",
@@ -229,7 +270,7 @@ export const useTrainerCreation = () => {
           phone: "987-654-3210",
           specialization: "Yoga",
           status: "Active",
-          gender: "Female"
+          gender: "Female",
         },
         {
           name: "Mike Running",
@@ -237,33 +278,39 @@ export const useTrainerCreation = () => {
           phone: "555-123-4567",
           specialization: "Cardio",
           status: "Active",
-          gender: "Male"
-        }
+          gender: "Male",
+        },
       ];
-      
+
       console.log("Creating test trainers:", testTrainers);
-      
+
       try {
         // Insert multiple trainers
         const { data, error } = await supabase
           .from("trainers")
           .insert(testTrainers)
           .select();
-          
+
         if (error) {
           console.error("Error creating test trainers:", error);
-          
+
           // Check if it's a duplicate key error, which might not be a problem
-          if (error.message?.includes('duplicate key')) {
-            console.log("Some trainers may already exist, attempting to fetch existing trainers");
-            
+          if (error.message?.includes("duplicate key")) {
+            console.log(
+              "Some trainers may already exist, attempting to fetch existing trainers"
+            );
+
             // Try to fetch trainers to see if we already have some
             const { data: existingTrainers, error: fetchError } = await supabase
               .from("trainers")
               .select("*")
               .limit(10);
-              
-            if (!fetchError && existingTrainers && existingTrainers.length > 0) {
+
+            if (
+              !fetchError &&
+              existingTrainers &&
+              existingTrainers.length > 0
+            ) {
               console.log("Found existing trainers:", existingTrainers);
               toast({
                 title: "Using existing trainers",
@@ -277,13 +324,13 @@ export const useTrainerCreation = () => {
             throw error;
           }
         }
-        
+
         console.log("Test trainers created successfully:", data);
         toast({
           title: "Test trainers created",
           description: `${testTrainers.length} test trainers have been added`,
         });
-        
+
         return true;
       } catch (dbError) {
         console.error("Database operation error for test trainers:", dbError);
@@ -293,7 +340,8 @@ export const useTrainerCreation = () => {
       console.error("Error in createTestTrainer function:", error);
       toast({
         title: "Failed to create test trainers",
-        description: error.message || "There was an error creating test trainers",
+        description:
+          error.message || "There was an error creating test trainers",
         variant: "destructive",
       });
       return false;
@@ -305,6 +353,6 @@ export const useTrainerCreation = () => {
   return {
     createTrainer,
     createTestTrainer,
-    isCreating
+    isCreating,
   };
 };
