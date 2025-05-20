@@ -1,7 +1,16 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase, requireAuth } from "@/integrations/supabase/client";
 
 // Components
@@ -12,19 +21,23 @@ import EditMemberDialog from "./components/members/EditMemberDialog";
 
 // Types
 import { Member, PaymentHistoryData } from "./components/members/types";
+import { useAuth } from "@/context/AuthContext";
 
 const Members = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
-  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] =
+    useState(false);
+  const { isTrainer } = useAuth();
+
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
   const { toast } = useToast();
-  const [paymentHistoryData, setPaymentHistoryData] = useState<PaymentHistoryData>({});
+
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Add a refresh trigger
 
   // Fetch members data from Supabase
@@ -32,13 +45,9 @@ const Members = () => {
     const fetchMembers = async () => {
       try {
         setIsLoading(true);
-        console.log("Fetching members data...");
-        
         await requireAuth(async () => {
-          const { data, error } = await supabase
-            .from('members')
-            .select('*');
-            
+          const { data, error } = await supabase.from("members").select("*");
+
           if (error) {
             console.error("Error fetching members:", error);
             toast({
@@ -48,15 +57,10 @@ const Members = () => {
             });
             return;
           }
-          
-          console.log("Members data received:", data);
-          
           if (!data || data.length === 0) {
-            console.log("No members found in the database");
             setMembers([]);
             return;
           }
-          
           // Transform data to match our Member interface
           const formattedMembers: Member[] = data.map((member: any) => ({
             id: member.id,
@@ -69,9 +73,9 @@ const Members = () => {
             status: member.status || "Active",
             birthday: member.birthday || "",
             canBeEditedByTrainers: member.can_be_edited_by_trainers || false,
-            gender: member.gender || "Male"
+            gender: member.gender || "Male",
           }));
-          
+
           setMembers(formattedMembers);
         });
       } catch (err) {
@@ -87,69 +91,22 @@ const Members = () => {
     };
 
     fetchMembers();
-  }, [toast, refreshTrigger]); // Add refreshTrigger to dependencies
+  }, [toast, refreshTrigger]); 
 
-  // Fetch payment history data
-  useEffect(() => {
-    const fetchPaymentHistory = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('payments')
-          .select('*');
-          
-        if (error) {
-          console.error("Error fetching payments:", error);
-          return;
-        }
-        
-        // Create a mapping of member names to payment histories
-        const paymentHistory: PaymentHistoryData = {};
-        
-        // First, map members to IDs
-        const memberNameToId: Record<string, number> = {};
-        members.forEach(member => {
-          memberNameToId[member.name] = member.id;
-        });
-        
-        // Then organize payment data by member ID
-        data.forEach((payment: any) => {
-          const memberId = memberNameToId[payment.member];
-          if (!memberId) return;
-          
-          if (!paymentHistory[memberId]) {
-            paymentHistory[memberId] = [];
-          }
-          
-          paymentHistory[memberId].push({
-            id: payment.id,
-            date: payment.date,
-            amount: payment.amount,
-            description: `${payment.membership} Membership`,
-            status: payment.status
-          });
-        });
-        
-        setPaymentHistoryData(paymentHistory);
-      } catch (err) {
-        console.error("Error fetching payment history:", err);
-      }
-    };
-
-    if (members.length > 0) {
-      fetchPaymentHistory();
-    }
-  }, [members]);
-
-  const filteredMembers = members.filter(
-    (member) =>
+  const filteredMembers = members.filter((member) => {
+    const matchesSearch =
       member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      member.email.toLowerCase().includes(searchTerm.toLowerCase());
 
+    if (isTrainer && !member.canBeEditedByTrainers) {
+      return false;
+    }
+
+    return matchesSearch;
+  });
   const handleAddMember = async (newMember: Member) => {
-    console.log("Adding new member to state:", newMember);
     // Instead of just updating the state, trigger a refresh
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   const handleEditMember = async (editedMember: Member) => {
@@ -175,28 +132,29 @@ const Members = () => {
           status: editedMember.status,
           birthday: editedMember.birthday,
           can_be_edited_by_trainers: editedMember.canBeEditedByTrainers,
-          gender: editedMember.gender
+          gender: editedMember.gender,
         };
-        
-        console.log("Updating member with ID:", editedMember.id, memberData);
-        
+
+
         const { error } = await supabase
-          .from('members')
+          .from("members")
           .update(memberData)
-          .eq('id', editedMember.id);
-          
+          .eq("id", editedMember.id);
+
         if (error) {
           console.error("Error updating member:", error);
           throw error;
         }
-        
+
         // Update local state
-        setMembers(prevMembers => 
-          prevMembers.map(member => member.id === editedMember.id ? editedMember : member)
+        setMembers((prevMembers) =>
+          prevMembers.map((member) =>
+            member.id === editedMember.id ? editedMember : member
+          )
         );
-        
+
         setIsEditDialogOpen(false);
-        
+
         toast({
           title: "Member updated successfully",
           description: `${editedMember.name}'s information has been updated`,
@@ -213,35 +171,34 @@ const Members = () => {
   };
 
   const openEditDialog = (member: Member) => {
-    setCurrentMember({...member});
+    setCurrentMember({ ...member });
     setIsEditDialogOpen(true);
   };
 
   const toggleMemberStatus = async (id: number) => {
     try {
       // First, find the current member to get their status
-      const member = members.find(m => m.id === id);
+      const member = members.find((m) => m.id === id);
       if (!member) return;
-      
+
       const newStatus = member.status === "Active" ? "Inactive" : "Active";
-      
-      console.log("Toggling status for member:", id, "to", newStatus);
-      
+
+
       await requireAuth(async () => {
         // Update in Supabase
         const { error } = await supabase
-          .from('members')
+          .from("members")
           .update({ status: newStatus })
-          .eq('id', id);
-          
+          .eq("id", id);
+
         if (error) {
           console.error("Error updating member status:", error);
           throw error;
         }
-        
+
         // Update local state
-        setMembers(prevMembers => 
-          prevMembers.map(member => 
+        setMembers((prevMembers) =>
+          prevMembers.map((member) =>
             member.id === id ? { ...member, status: newStatus } : member
           )
         );
@@ -264,36 +221,40 @@ const Members = () => {
   const toggleTrainerEditAccess = async (id: number) => {
     try {
       // First, find the current member
-      const member = members.find(m => m.id === id);
+      const member = members.find((m) => m.id === id);
       if (!member) return;
-      
+
       const newTrainerAccess = !member.canBeEditedByTrainers;
-      
+
       // Use requireAuth for authentication
       await requireAuth(async () => {
         // Update in Supabase
         const { error } = await supabase
-          .from('members')
+          .from("members")
           .update({ can_be_edited_by_trainers: newTrainerAccess })
-          .eq('id', id);
-          
+          .eq("id", id);
+
         if (error) {
           console.error("Error updating trainer access:", error);
           throw error;
         }
-        
+
         // Update local state
-        setMembers(prevMembers => 
-          prevMembers.map(member => 
-            member.id === id ? { ...member, canBeEditedByTrainers: newTrainerAccess } : member
+        setMembers((prevMembers) =>
+          prevMembers.map((member) =>
+            member.id === id
+              ? { ...member, canBeEditedByTrainers: newTrainerAccess }
+              : member
           )
         );
 
         const memberName = member.name;
-        
+
         toast({
           title: "Trainer access updated",
-          description: `${memberName} can ${newTrainerAccess ? 'now' : 'no longer'} be edited by trainers`,
+          description: `${memberName} can ${
+            newTrainerAccess ? "now" : "no longer"
+          } be edited by trainers`,
         });
       });
     } catch (err: any) {
@@ -305,16 +266,16 @@ const Members = () => {
       });
     }
   };
-  
+
   const openResetPasswordDialog = (id: number) => {
     setSelectedMemberId(id);
     setIsResetPasswordDialogOpen(true);
   };
-  
+
   const confirmResetPassword = () => {
     if (selectedMemberId === null) return;
-    
-    const member = members.find(m => m.id === selectedMemberId);
+
+    const member = members.find((m) => m.id === selectedMemberId);
     if (member) {
       toast({
         title: "Password reset successfully",
@@ -327,13 +288,13 @@ const Members = () => {
 
   return (
     <DashboardLayout title="Member Management">
-      <MemberSearch 
-        searchTerm={searchTerm} 
+      <MemberSearch
+        searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onAddClick={() => setIsAddDialogOpen(true)}
       />
 
-      <MemberTable 
+      <MemberTable
         members={members}
         filteredMembers={filteredMembers}
         toggleMemberStatus={toggleMemberStatus}
@@ -354,28 +315,42 @@ const Members = () => {
         onOpenChange={setIsEditDialogOpen}
         currentMember={currentMember}
         onEditMember={handleEditMember}
-        paymentHistoryData={paymentHistoryData}
       />
-      
+
       {/* Reset Password Confirmation Dialog */}
-      <AlertDialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+      <AlertDialog
+        open={isResetPasswordDialogOpen}
+        onOpenChange={setIsResetPasswordDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Reset Password</AlertDialogTitle>
             <AlertDialogDescription>
               {selectedMemberId && (
                 <>
-                  Are you sure you want to reset the password for <strong>{members.find(m => m.id === selectedMemberId)?.name}</strong>?<br />
-                  The new password will be their phone number: <strong>{members.find(m => m.id === selectedMemberId)?.phone}</strong>
+                  Are you sure you want to reset the password for{" "}
+                  <strong>
+                    {members.find((m) => m.id === selectedMemberId)?.name}
+                  </strong>
+                  ?<br />
+                  The new password will be their phone number:{" "}
+                  <strong>
+                    {members.find((m) => m.id === selectedMemberId)?.phone}
+                  </strong>
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsResetPasswordDialogOpen(false)}>
+            <AlertDialogCancel
+              onClick={() => setIsResetPasswordDialogOpen(false)}
+            >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmResetPassword} className="bg-gym-blue hover:bg-gym-dark-blue">
+            <AlertDialogAction
+              onClick={confirmResetPassword}
+              className="bg-gym-blue hover:bg-gym-dark-blue"
+            >
               Reset Password
             </AlertDialogAction>
           </AlertDialogFooter>

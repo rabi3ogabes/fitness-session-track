@@ -220,6 +220,7 @@ const ClassCalendar = () => {
   const [selectedClass, setSelectedClass] = useState<ClassWithBooking | null>(
     null
   );
+  
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isBookingInProgress, setIsBookingInProgress] = useState(false);
@@ -241,7 +242,6 @@ const ClassCalendar = () => {
 
   const { toast } = useToast();
   const { user } = useAuth();
-
   // Create form with validation
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingSchema),
@@ -275,6 +275,9 @@ const ClassCalendar = () => {
       return cls.isBooked === true || bookedClasses.includes(cls.id);
     });
   }, [allClasses, bookedClasses]);
+
+  console.log(bookedClasses,"bookedClasses")
+  console.log(classes,"classes")
 
   useEffect(() => {
     const handleOnline = () => {
@@ -331,8 +334,6 @@ const ClassCalendar = () => {
             .select("name,total_sessions,remaining_sessions,sessions")
             .eq("email", user.email)
             .single();
-
-          console.log(data, "profiles profiles");
           if (profileError) {
             if (profileError.code === "PGRST116") {
               // Profile not found, use user metadata to create a profile
@@ -401,19 +402,15 @@ const ClassCalendar = () => {
         setError(null);
 
         try {
-          console.log("Fetching classes from Supabase...");
           const { data, error } = await supabase
             .from("classes")
             .select("*")
             .eq("status", "Active")
             .order("schedule", { ascending: true });
-
           if (error) {
             console.error("Error fetching classes:", error);
             throw error;
           }
-
-          console.log("Classes fetched successfully:", data?.length || 0);
 
           if (data && data.length > 0) {
             // Transform and add type property based on class name or difficulty
@@ -493,9 +490,7 @@ const ClassCalendar = () => {
         if (!isNetworkConnected) {
           return; // Don't attempt to fetch if offline
         }
-
         try {
-          console.log("Fetching user bookings...");
           // Use the latest data from the server, not cached data
           const { data, error } = await supabase
             .from("bookings")
@@ -507,9 +502,11 @@ const ClassCalendar = () => {
             console.error("Error fetching bookings:", error);
             throw error;
           }
-
+          console.log(data,"datadata data")
           if (data && data.length > 0) {
             const bookedClassIds = data.map((booking) => booking.class_id);
+            
+            console.log(bookedClassIds, " bookedClassIds bookedClassIds")
             setBookedClasses(bookedClassIds);
 
             // Mark booked classes in the classes array
@@ -706,9 +703,10 @@ const ClassCalendar = () => {
         setIsBookingInProgress(false);
         return;
       }
-
+      console.log(user.name, "user.name");
       // Insert booking into Supabase
       const { error } = await supabase.from("bookings").insert({
+        user_name: user.name,
         user_id: user.id,
         class_id: selectedClass.id,
         status: "confirmed",
@@ -723,7 +721,7 @@ const ClassCalendar = () => {
       // Update enrolled count for the class
       const { error: updateError } = await supabase
         .from("classes")
-        .update({ enrolled: (selectedClass.enrolled || 0) + 1 })
+        .update({ enrolled: (selectedClass.enrolled || 0) +1 })
         .eq("id", selectedClass.id);
 
       if (updateError) {
@@ -798,7 +796,7 @@ const ClassCalendar = () => {
   const cancelBookingConfirmation = () => {
     setConfirmDialogOpen(false);
     setSelectedClass(null);
-  };
+  };  
 
   // Enhanced cancel booking function with better error handling and feedback
   const handleCancelBooking = async (
@@ -807,13 +805,13 @@ const ClassCalendar = () => {
     className: string
   ) => {
     if (!user) return;
-
+    console.log(classId, classTime, className, "conslole");
     try {
       // Calculate if cancellation is within allowed time limit
       const classHour = parseInt(classTime.split(":")[0]);
       const classMinute = parseInt(classTime.split(":")[1] || "0");
       const now = new Date();
-
+      
       // Find the class object to get the correct date
       const classToCancel = classes.find((cls) => cls.id === classId);
       if (!classToCancel) {

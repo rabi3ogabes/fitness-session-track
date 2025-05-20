@@ -1,7 +1,17 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import {
+  supabase,
+  checkSupabaseConnection,
+  isOffline,
+} from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AuthTokenResponse, User as SupabaseUser } from '@supabase/supabase-js';
+import { AuthTokenResponse, User as SupabaseUser } from "@supabase/supabase-js";
 
 interface User {
   id: string;
@@ -23,7 +33,13 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  signup: (email: string, password: string, name: string, phone?: string, dob?: string) => Promise<boolean>;
+  signup: (
+    email: string,
+    password: string,
+    name: string,
+    phone?: string,
+    dob?: string
+  ) => Promise<boolean>;
   loading: boolean;
 }
 
@@ -36,7 +52,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   logout: async () => {},
   signup: async () => false,
-  loading: true
+  loading: true,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -49,116 +65,134 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // For roles
   const [role, setRole] = useState<string | null>(null);
-  
+
   // Debug flag to track loading process
   const [initializationStarted, setInitializationStarted] = useState(false);
 
   // Create admin user in Supabase if they don't exist
   const createAdminUser = async () => {
     console.log("Checking if admin user needs to be created...");
-    
+
     try {
       // Check if admin exists
       const { data: existingAdmin, error: checkError } = await supabase
-        .from('profiles')
-        .select('id, email')
-        .eq('email', 'admin@gym.com')
+        .from("profiles")
+        .select("id, email")
+        .eq("email", "admin@gym.com")
         .maybeSingle();
-        
+
       if (checkError) {
         console.error(`Error checking if admin user exists:`, checkError);
         return;
       }
-      
+
       // If admin doesn't exist in profiles or auth table, create them
       if (!existingAdmin) {
         console.log(`Creating admin user`);
 
         try {
-          // Step 1: First check if admin auth user exists 
+          // Step 1: First check if admin auth user exists
           // Define the type for users returned from listUsers
           interface AdminUser extends SupabaseUser {
             email?: string;
           }
 
-          const { data: { users }, error: getUserError } = await supabase.auth.admin.listUsers({
+          const {
+            data: { users },
+            error: getUserError,
+          } = await supabase.auth.admin.listUsers({
             perPage: 100,
-            page: 1
+            page: 1,
           });
 
           if (getUserError) {
-            console.error(`Error checking if admin auth user exists:`, getUserError);
+            console.error(
+              `Error checking if admin auth user exists:`,
+              getUserError
+            );
           }
 
           // Check if admin exists in the retrieved users
           // Add proper type annotation to fix the error
-          const adminUser = users && Array.isArray(users) ? 
-            users.find((u: AdminUser) => u.email === 'admin@gym.com') : 
-            undefined;
+          const adminUser =
+            users && Array.isArray(users)
+              ? users.find((u: AdminUser) => u.email === "admin@gym.com")
+              : undefined;
 
           // If admin auth user doesn't exist
           if (!adminUser) {
             // Sign up the user
-            const { data: authData, error: signupError } = await supabase.auth.signUp({
-              email: 'admin@gym.com',
-              password: 'admin123',
-              options: {
-                data: {
-                  name: 'Admin User',
-                  role: 'admin'
-                }
-              }
-            });
-            
+            const { data: authData, error: signupError } =
+              await supabase.auth.signUp({
+                email: "admin@gym.com",
+                password: "admin123",
+                options: {
+                  data: {
+                    name: "Admin User",
+                    role: "admin",
+                  },
+                },
+              });
+
             if (signupError) {
               console.error(`Error creating admin auth user:`, signupError);
               return;
             }
-            
+
             if (authData?.user) {
-              console.log(`Successfully created admin auth user with ID: ${authData.user.id}`);
-              
-              // Create profile entry 
+              console.log(
+                `Successfully created admin auth user with ID: ${authData.user.id}`
+              );
               const { error: profileError } = await supabase
-                .from('profiles')
+                .from("profiles")
                 .insert({
-                  id: authData.user.id,  
-                  email: 'admin@gym.com',
-                  name: 'Admin User',
-                  phone_number: '12345678'
+                  id: authData.user.id,
+                  email: "admin@gym.com",
+                  name: "Admin User",
+                  phone_number: "12345678",
                 });
-                
+
               if (profileError) {
-                console.error(`Error creating profile for admin:`, profileError);
+                console.error(
+                  `Error creating profile for admin:`,
+                  profileError
+                );
               } else {
                 console.log(`Successfully created profile for admin`);
               }
             }
           } else {
-            console.log("Admin auth user exists but profile might be missing, ensuring profile exists");
-            
+            console.log(
+              "Admin auth user exists but profile might be missing, ensuring profile exists"
+            );
+
             // Create profile for existing auth user
             const adminAuthId = adminUser.id;
             const { error: profileError } = await supabase
-              .from('profiles')
+              .from("profiles")
               .insert({
-                id: adminAuthId,  
-                email: 'admin@gym.com',
-                name: 'Admin User',
-                phone_number: '12345678'
+                id: adminAuthId,
+                email: "admin@gym.com",
+                name: "Admin User",
+                phone_number: "12345678",
               })
               .select()
               .maybeSingle();
-              
+
             if (profileError) {
               // Ignore if error is related to unique constraint
-              if (!profileError.message.includes('unique constraint')) {
-                console.error(`Error creating profile for existing admin:`, profileError);
+              if (!profileError.message.includes("unique constraint")) {
+                console.error(
+                  `Error creating profile for existing admin:`,
+                  profileError
+                );
               } else {
                 console.log("Admin profile already exists");
               }
             } else {
-              console.log(`Successfully created profile for existing admin auth user`);
+              console.log(
+                `Successfully created profile for existing admin auth user`
+              );
             }
           }
         } catch (err) {
@@ -176,101 +210,114 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log("AuthContext initialization started");
     setInitializationStarted(true);
     let isMounted = true;
-    
+
     const initializeAuth = async () => {
       try {
         // Set up auth state change listener first
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          (event, session) => {
-            console.log("Auth state change event:", event);
-            if (!isMounted) return;
-            
-            if (session) {
-              console.log("New session established:", session.user.id);
-              
-              // Set user data immediately without waiting for profile data
-              setUser({
-                id: session.user.id,
-                email: session.user.email || '',
-                name: session.user.user_metadata?.name || '',
-                role: session.user.user_metadata?.role || ''
-              });
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange((event, session) => {
+          console.log("Auth state change event:", event);
+          if (!isMounted) return;
 
-              // Determine role based on email and metadata immediately
-              let userRole = 'user';
-              if (session.user.user_metadata?.role === 'admin' || session.user.email?.includes('admin')) {
-                userRole = 'admin';
-              } else if (session.user.user_metadata?.role === 'trainer' || session.user.email?.includes('trainer')) {
-                userRole = 'trainer';
-              }
-              setRole(userRole);
-              
-              // Fetch profile info in the background
-              setTimeout(() => {
-                if (!isMounted) return;
-                
-                supabase
-                  .from('profiles')
-                  .select('*')
-                  .eq('id', session.user.id)
-                  .maybeSingle()
-                  .then(({ data: profileData }) => {
-                    if (!isMounted) return;
-                    
-                    if (profileData) {
-                      setUserProfile({
-                        sessions_remaining: profileData.sessions_remaining || 0, 
-                        total_sessions: profileData.total_sessions || 0
-                      });
-                    } else {
-                      // Default profile if not found
-                      setUserProfile({
-                        sessions_remaining: 0, 
-                        total_sessions: 0
-                      });
-                    }
-                  });
-              }, 0);
-              
-              // End loading state immediately after setting user data
-              setLoading(false);
-              console.log("AuthContext loading set to false after session established");
-            } else {
-              setUser(null);
-              setUserProfile(null);
-              setRole(null);
-              setLoading(false);
-              console.log("Session cleared, loading set to false");
+          if (session) {
+            console.log("New session established:", session.user.id);
+
+            // Set user data immediately without waiting for profile data
+            setUser({
+              id: session.user.id,
+              email: session.user.email || "",
+              name: session.user.user_metadata?.name || "",
+              role: session.user.user_metadata?.role || "",
+            });
+
+            // Determine role based on email and metadata immediately
+            let userRole = "user";
+            if (
+              session.user.user_metadata?.role === "admin" ||
+              session.user.email?.includes("admin")
+            ) {
+              userRole = "admin";
+            } else if (
+              session.user.user_metadata?.role === "trainer" ||
+              session.user.email?.includes("trainer")
+            ) {
+              userRole = "trainer";
             }
+            setRole(userRole);
+
+            // Fetch profile info in the background
+            setTimeout(() => {
+              if (!isMounted) return;
+
+              supabase
+                .from("profiles")
+                .select("*")
+                .eq("id", session.user.id)
+                .maybeSingle()
+                .then(({ data: profileData }) => {
+                  if (!isMounted) return;
+
+                  if (profileData) {
+                    setUserProfile({
+                      sessions_remaining: profileData.sessions_remaining || 0,
+                      total_sessions: profileData.total_sessions || 0,
+                    });
+                  } else {
+                    // Default profile if not found
+                    setUserProfile({
+                      sessions_remaining: 0,
+                      total_sessions: 0,
+                    });
+                  }
+                });
+            }, 0);
+
+            // End loading state immediately after setting user data
+            setLoading(false);
+            console.log(
+              "AuthContext loading set to false after session established"
+            );
+          } else {
+            setUser(null);
+            setUserProfile(null);
+            setRole(null);
+            setLoading(false);
+            console.log("Session cleared, loading set to false");
           }
-        );
+        });
 
         // Check for an existing session with a short timeout
         console.log("Checking for existing session...");
         const sessionPromise = supabase.auth.getSession();
-        
+
         // Add a short timeout to prevent hanging on session check
-        const timeoutPromise = new Promise<{data: {session: null}, error: Error}>((resolve) => {
+        const timeoutPromise = new Promise<{
+          data: { session: null };
+          error: Error;
+        }>((resolve) => {
           setTimeout(() => {
             console.log("Session check timed out, proceeding without session");
             resolve({
               data: { session: null },
-              error: new Error("Session check timed out")
+              error: new Error("Session check timed out"),
             });
           }, 3000); // Short 3s timeout for initial session check
         });
-        
+
         // Race the promises to handle potential timeouts
-        const { data: { session }, error: sessionError } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]);
+        const {
+          data: { session },
+          error: sessionError,
+        } = await Promise.race([sessionPromise, timeoutPromise]);
 
         if (sessionError) {
           console.error("Session error:", sessionError);
           if (isMounted) {
             setLoading(false);
-            console.log("AuthContext loading set to false due to session error");
+            console.log(
+              "AuthContext loading set to false due to session error"
+            );
           }
         } else if (session) {
           console.log("Session found:", session.user.id);
@@ -282,14 +329,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.log("AuthContext loading set to false (no session)");
           }
         }
-        
+
         // Create admin user in background
         setTimeout(() => {
-          createAdminUser().catch(err => {
+          createAdminUser().catch((err) => {
             console.error("Error creating admin user:", err);
           });
         }, 0);
-        
+
         return () => {
           if (subscription) subscription.unsubscribe();
         };
@@ -301,10 +348,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     };
-    
+
     // Initialize authentication
     initializeAuth();
-    
+
     return () => {
       isMounted = false;
     };
@@ -315,11 +362,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Force loading to false after a timeout
     const failsafeTimer = setTimeout(() => {
       if (loading && initializationStarted) {
-        console.warn("Auth loading failsafe triggered - forcing loading state to false");
+        console.warn(
+          "Auth loading failsafe triggered - forcing loading state to false"
+        );
         setLoading(false);
       }
     }, 5000); // Reduced from 10 to 5 seconds
-    
+
     return () => clearTimeout(failsafeTimer);
   }, [loading, initializationStarted]);
 
@@ -331,35 +380,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       console.log("Login attempt for:", email);
-      
+
       if (!email || !password) {
         throw new Error("Email and password are required");
       }
-      
+
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         throw new Error("Invalid email format");
       }
-      
+
       if (!navigator.onLine) {
-        throw new Error("You appear to be offline. Please check your internet connection.");
+        throw new Error(
+          "You appear to be offline. Please check your internet connection."
+        );
       }
-      
+
       const loginPromise = supabase.auth.signInWithPassword({
         email,
         password,
       });
-      
+
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error("Login timed out. Please try again.")), 8000);
+        setTimeout(
+          () => reject(new Error("Login timed out. Please try again.")),
+          8000
+        );
       });
-      
-      const result = await Promise.race([loginPromise, timeoutPromise]) as AuthTokenResponse; // Explicitly type result
-      
+
+      const result = (await Promise.race([
+        loginPromise,
+        timeoutPromise,
+      ])) as AuthTokenResponse; // Explicitly type result
+
       if (result.error) {
         console.error("Supabase auth error:", result.error);
-        
+
         let errorMessage = "An unexpected error occurred. Please try again.";
-        
+
         if (result.error.message) {
           if (result.error.message.includes("Invalid login credentials")) {
             errorMessage = "The email or password you entered is incorrect.";
@@ -369,95 +426,124 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             errorMessage = result.error.message;
           }
         }
-        
+
         toast({
           title: "Login failed",
           description: errorMessage,
           variant: "destructive",
         });
-        
+
         throw new Error(errorMessage);
       }
-      
+
       console.log("Login successful for:", email);
-      
+
       if (result.data?.user) {
         const supabaseUser = result.data.user;
         setUser({
           id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          name: supabaseUser.user_metadata?.name || '',
-          role: supabaseUser.app_metadata?.role || supabaseUser.user_metadata?.role || '', // Prioritize app_metadata
+          email: supabaseUser.email || "",
+          name: supabaseUser.user_metadata?.name || "",
+          role:
+            supabaseUser.app_metadata?.role ||
+            supabaseUser.user_metadata?.role ||
+            "", // Prioritize app_metadata
         });
 
         // Determine role based on metadata first, then email as fallback
-        let userRole = 'user'; // Default role
+        let userRole = "user"; // Default role
         if (supabaseUser.app_metadata?.role) {
           userRole = supabaseUser.app_metadata.role;
-        } else if (supabaseUser.user_metadata?.role) { // Fallback to user_metadata
-           userRole = supabaseUser.user_metadata.role;
-        } else { // Fallback to email sniffing if no metadata role
-            if (email.includes('admin')) userRole = 'admin';
-            else if (email.includes('trainer')) userRole = 'trainer';
+        } else if (supabaseUser.user_metadata?.role) {
+          // Fallback to user_metadata
+          userRole = supabaseUser.user_metadata.role;
+        } else {
+          // Fallback to email sniffing if no metadata role
+          if (email.includes("admin")) userRole = "admin";
+          else if (email.includes("trainer")) userRole = "trainer";
         }
         setRole(userRole);
-        console.log("Role set to:", userRole, "from metadata:", supabaseUser.app_metadata?.role || supabaseUser.user_metadata?.role);
-
+        console.log(
+          "Role set to:",
+          userRole,
+          "from metadata:",
+          supabaseUser.app_metadata?.role || supabaseUser.user_metadata?.role
+        );
       } else {
         // This case should ideally not happen if login is successful without error
         // but handle it defensively.
-        console.warn("Login successful but no user data returned in result.data.user");
-         // Fallback role determination if user object is somehow missing after successful auth
-        let userRole = 'user';
-        if (email.includes('admin')) userRole = 'admin';
-        else if (email.includes('trainer')) userRole = 'trainer';
+        console.warn(
+          "Login successful but no user data returned in result.data.user"
+        );
+        // Fallback role determination if user object is somehow missing after successful auth
+        let userRole = "user";
+        if (email.includes("admin")) userRole = "admin";
+        else if (email.includes("trainer")) userRole = "trainer";
         setRole(userRole);
         console.log("Role (fallback) set to:", userRole);
       }
 
       toast({
         title: "Login successful",
-        description: "You have been logged in successfully."
+        description: "You have been logged in successfully.",
       });
     } catch (error: any) {
       console.error("Login error:", error);
-      
-      let errorMessage = "Login failed. Please check your credentials and try again.";
-      
+
+      let errorMessage =
+        "Login failed. Please check your credentials and try again.";
+
       if (error.message?.includes("Invalid login credentials")) {
         errorMessage = "The email or password you entered is incorrect.";
-      } else if (!navigator.onLine || error.message?.includes("NetworkError") || error.message?.includes("network")) {
-        errorMessage = "Unable to connect to the authentication service. Please check your internet connection.";
+      } else if (
+        !navigator.onLine ||
+        error.message?.includes("NetworkError") ||
+        error.message?.includes("network")
+      ) {
+        errorMessage =
+          "Unable to connect to the authentication service. Please check your internet connection.";
       } else if (error.message?.includes("timeout")) {
-        errorMessage = "Login request timed out. The server might be temporarily unavailable. Please try again.";
+        errorMessage =
+          "Login request timed out. The server might be temporarily unavailable. Please try again.";
       } else {
-        errorMessage = error.message || "An unexpected error occurred. Please try again.";
+        errorMessage =
+          error.message || "An unexpected error occurred. Please try again.";
       }
-      
+
       toast({
         title: "Login failed",
         description: errorMessage,
         variant: "destructive",
       });
-      
+
       throw new Error(errorMessage);
     }
   };
 
-  const signup = async (email: string, password: string, name: string, phone?: string, dob?: string) => {
+  const signup = async (
+    email: string,
+    password: string,
+    name: string,
+    phone?: string,
+    dob?: string
+  ) => {
     try {
       console.log("Signup attempt for:", email);
-      
+
       // First check if there's an actual network connection to Supabase
       const connectionCheck = await checkSupabaseConnection();
       if (!connectionCheck.connected) {
         if (navigator.onLine) {
-          throw new Error("Cannot connect to authentication server. Please try again later.");
+          throw new Error(
+            "Cannot connect to authentication server. Please try again later."
+          );
         } else {
-          throw new Error("You appear to be offline. Please check your internet connection.");
+          throw new Error(
+            "You appear to be offline. Please check your internet connection."
+          );
         }
       }
-      
+
       // Register new user
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -467,68 +553,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             name,
             phone_number: phone,
             date_of_birth: dob,
-          }
-        }
+          },
+        },
       });
 
       if (error) throw error;
-      
+
       if (data.user) {
         // Create profile for the user
-        await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: email,
-            name: name,
-            phone_number: phone || ''
-          });
+        await supabase.from("profiles").insert({
+          id: data.user.id,
+          email: email,
+          name: name,
+          phone_number: phone || "",
+        });
 
         // Also add to members table for admin view
         const formattedBirthday = dob || null;
-        
-        await supabase
-          .from('members')
-          .insert({
-            name: name,
-            email: email,
-            phone: phone || '',
-            birthday: formattedBirthday,
-            membership: "Basic",
-            sessions: 4,
-            remaining_sessions: 4,
-            status: "Active",
-            gender: "Not specified"
-          });
+
+        await supabase.from("members").insert({
+          name: name,
+          email: email,
+          phone: phone || "",
+          birthday: formattedBirthday,
+          membership: "null",
+          sessions: 0,
+          remaining_sessions: 0,
+          status: "Active",
+          gender: "Not specified",
+        });
       }
-      
-      console.log("Signup successful for:", email);
-      
+
       toast({
         title: "Sign up successful",
-        description: "Your account has been created. Please check your email for verification."
+        description:
+          "Your account has been created. Please check your email for verification.",
       });
-      
+
       return true;
     } catch (error: any) {
       console.error("Signup error:", error);
-      
+
       let errorMessage = "Sign up failed. Please try again later.";
-      
+
       if (!navigator.onLine || error.message?.includes("NetworkError")) {
-        errorMessage = "Unable to connect to the authentication service. Please check your internet connection.";
+        errorMessage =
+          "Unable to connect to the authentication service. Please check your internet connection.";
       } else if (error.message?.includes("already registered")) {
-        errorMessage = "This email is already registered. Please use a different email or try logging in.";
+        errorMessage =
+          "This email is already registered. Please use a different email or try logging in.";
       } else {
-        errorMessage = error.message || "An unexpected error occurred. Please try again.";
+        errorMessage =
+          error.message || "An unexpected error occurred. Please try again.";
       }
-      
+
       toast({
         title: "Sign up failed",
         description: errorMessage,
         variant: "destructive",
       });
-      
+
       throw new Error(errorMessage);
     }
   };
@@ -536,61 +620,71 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       console.log("Logout attempt");
-      
+
       // First attempt to clear local state regardless of network
       const clearLocalState = () => {
         setUser(null);
         setUserProfile(null);
         setRole(null);
         console.log("Local state cleared");
-        
+
         toast({
           title: "Logout successful",
-          description: "You have been logged out successfully."
+          description: "You have been logged out successfully.",
         });
       };
-      
+
       // Set a timeout for the Supabase logout operation
       const timeoutPromise = new Promise<void>((_, reject) => {
         setTimeout(() => {
           // If it times out, we'll still clear local state
           clearLocalState();
-          reject(new Error("Logout request timed out, but you've been logged out locally."));
+          reject(
+            new Error(
+              "Logout request timed out, but you've been logged out locally."
+            )
+          );
         }, 3000);
       });
-      
+
       // Attempt Supabase logout
       const logoutPromise = supabase.auth.signOut().then(({ error }) => {
         if (error) throw error;
         clearLocalState();
         return;
       });
-      
+
       // Race the logout promise against the timeout
       await Promise.race([logoutPromise, timeoutPromise]);
-      
     } catch (error: any) {
       console.error("Logout error:", error);
-      
+
       // Always clear local state on error for better UX
       setUser(null);
       setUserProfile(null);
       setRole(null);
-      
+
       // Check if it's a network error
-      if (!navigator.onLine || error.message?.includes("NetworkError") || error.message?.includes("timeout")) {
+      if (
+        !navigator.onLine ||
+        error.message?.includes("NetworkError") ||
+        error.message?.includes("timeout")
+      ) {
         toast({
           title: "Network Error",
-          description: "Unable to connect to the authentication service, but you've been logged out locally.",
+          description:
+            "Unable to connect to the authentication service, but you've been logged out locally.",
           variant: "destructive",
         });
       } else {
         // Provide better error messages
-        const errorMessage = error.message || "An unexpected error occurred. Please try again.";
-        
+        const errorMessage =
+          error.message || "An unexpected error occurred. Please try again.";
+
         toast({
           title: "Logout issue",
-          description: errorMessage + " However, you've been logged out locally.",
+          description:
+            errorMessage + " However, you've been logged out locally.",
           variant: "destructive",
         });
       }
@@ -601,8 +695,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     <AuthContext.Provider
       value={{
         isAuthenticated: !!user,
-        isAdmin: role === 'admin',
-        isTrainer: role === 'trainer',
+        isAdmin: role === "admin",
+        isTrainer: role === "trainer",
         user,
         userProfile,
         login,

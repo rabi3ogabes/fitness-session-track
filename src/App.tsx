@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -32,6 +31,7 @@ import AttendeesPage from "./pages/trainer/AttendeesPage";
 
 // Context
 import { AuthProvider } from "./context/AuthContext";
+import { MembershipProvider } from "./context/membership";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,7 +39,7 @@ const queryClient = new QueryClient({
       // Speed up loading by showing stale data immediately while refetching in background
       staleTime: 30000, // 30 seconds
       gcTime: 5 * 60 * 1000, // 5 minutes (previously cacheTime)
-      refetchOnWindowFocus: false
+      refetchOnWindowFocus: false,
     },
   },
 });
@@ -47,80 +47,84 @@ const queryClient = new QueryClient({
 // Protected route component with improved loading state handling
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, isTrainer, loading } = useAuth();
-  
+
   if (loading) {
-    return <LoadingIndicator message="Loading authentication..." size="small" />;
+    return (
+      <LoadingIndicator message="Loading authentication..." size="small" />
+    );
   }
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
-  
+
   return children;
 };
 
 // Admin protected route with improved loading state handling
 const AdminProtectedRoute = ({ children }) => {
   const { isAuthenticated, isAdmin, loading } = useAuth();
-  
+
   if (loading) {
-    return <LoadingIndicator message="Verifying admin access..." size="small" />;
+    return (
+      <LoadingIndicator message="Verifying admin access..." size="small" />
+    );
   }
-  
+
   if (!isAuthenticated || !isAdmin) {
     return <Navigate to="/login" />;
   }
-  
+
   return children;
 };
 
 // Trainer home redirect component with improved loading state handling
 const TrainerHomeRedirect = () => {
   const { isAuthenticated, isTrainer, loading } = useAuth();
-  
+
   if (loading) {
     return <LoadingIndicator message="Checking credentials..." size="small" />;
   }
-  
+
   if (isAuthenticated && isTrainer) {
     return <Navigate to="/trainer" />;
   }
-  
+
   return <Index />;
 };
 
 // User dashboard component with role-based redirection and improved loading state handling
 const UserDashboardRedirect = () => {
   const { isAuthenticated, isAdmin, isTrainer, loading } = useAuth();
-  
+
   if (loading) {
     return <LoadingIndicator message="Preparing dashboard..." size="small" />;
   }
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
-  
+
   if (isAdmin) {
     return <Navigate to="/admin" />;
   }
-  
+
   if (isTrainer) {
     return <Navigate to="/trainer" />;
   }
-  
+
   return <Dashboard />;
 };
 
 // AppContent component to separate the routes from the providers
 const AppContent = () => {
   const { loading } = useAuth();
-  
+
   // Show a more lightweight loading indicator
   if (loading) {
     return <LoadingIndicator message="Loading application..." size="small" />;
   }
-  
+
   return (
     <BrowserRouter>
       <Routes>
@@ -129,51 +133,78 @@ const AppContent = () => {
         <Route path="/dashboard" element={<UserDashboardRedirect />} />
 
         {/* Admin Routes */}
-        <Route path="/admin" element={
-          <AdminProtectedRoute>
-            <AdminDashboard />
-          </AdminProtectedRoute>
-        } />
-        <Route path="/admin/members" element={
-          <AdminProtectedRoute>
-            <Members />
-          </AdminProtectedRoute>
-        } />
-        <Route path="/admin/trainers" element={
-          <AdminProtectedRoute>
-            <Trainers />
-          </AdminProtectedRoute>
-        } />
-        <Route path="/admin/classes" element={
-          <AdminProtectedRoute>
-            <ClassSchedulePage />
-          </AdminProtectedRoute>
-        } />
-        <Route path="/admin/memberships" element={
-          <AdminProtectedRoute>
-            <Memberships />
-          </AdminProtectedRoute>
-        } />
-        <Route path="/admin/bookings" element={
-          <AdminProtectedRoute>
-            <Bookings />
-          </AdminProtectedRoute>
-        } />
-        <Route path="/admin/payments" element={
-          <AdminProtectedRoute>
-            <Payments />
-          </AdminProtectedRoute>
-        } />
-        <Route path="/admin/reports" element={
-          <AdminProtectedRoute>
-            <Reports />
-          </AdminProtectedRoute>
-        } />
-        <Route path="/admin/settings" element={
-          <AdminProtectedRoute>
-            <Settings />
-          </AdminProtectedRoute>
-        } />
+        <Route
+          path="/admin"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboard />
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/members"
+          element={
+            <AdminProtectedRoute>
+              <Members />
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/trainers"
+          element={
+            <AdminProtectedRoute>
+              <Trainers />
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/classes"
+          element={
+            <AdminProtectedRoute>
+              <ClassSchedulePage />
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/memberships"
+          element={
+            <AdminProtectedRoute>
+              <Memberships />
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/bookings"
+          element={
+            <AdminProtectedRoute>
+              <Bookings />
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/payments"
+          element={
+            <AdminProtectedRoute>
+              <Payments />
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <AdminProtectedRoute>
+              <Reports />
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <AdminProtectedRoute>
+              <Settings />
+            </AdminProtectedRoute>
+          }
+        />
 
         {/* User Routes */}
         <Route path="/user/profile" element={<UserProfile />} />
@@ -181,18 +212,40 @@ const AppContent = () => {
         <Route path="/user/booking" element={<UserBooking />} />
         <Route path="/user/schedule" element={<UserSchedule />} />
         <Route path="/user/calendar" element={<ClassCalendar />} />
-        
+
         {/* Trainer Routes */}
-        <Route path="/trainer" element={
-          <ProtectedRoute>
-            <TrainerDashboard />
-          </ProtectedRoute>
-        } />
-        <Route path="/trainer/attendees" element={
-          <ProtectedRoute>
-            <AttendeesPage />
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/trainer"
+          element={
+            <ProtectedRoute>
+              <TrainerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/attendees"
+          element={
+            <ProtectedRoute>
+              <AttendeesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/members"
+          element={
+            <ProtectedRoute>
+              <Members />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trainer/Memberships"
+          element={
+            <ProtectedRoute>
+              <Memberships />
+            </ProtectedRoute>
+          }
+        />
 
         {/* 404 Page */}
         <Route path="*" element={<NotFound />} />
@@ -204,11 +257,13 @@ const AppContent = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AppContent />
-      </TooltipProvider>
+      <MembershipProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <AppContent />
+        </TooltipProvider>
+      </MembershipProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

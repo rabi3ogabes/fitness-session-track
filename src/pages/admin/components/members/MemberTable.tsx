@@ -3,9 +3,7 @@ import { Button } from "@/components/ui/button";
 import { PencilIcon, PowerIcon, UserMinusIcon, Lock } from "lucide-react";
 import { Member } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-interface MemberTableProps {
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";interface MemberTableProps {
   members: Member[];
   filteredMembers: Member[];
   toggleMemberStatus: (id: number) => void;
@@ -24,6 +22,7 @@ const MemberTable = ({
   resetPassword,
   isLoading = false
 }: MemberTableProps) => {
+
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow-md overflow-hidden">

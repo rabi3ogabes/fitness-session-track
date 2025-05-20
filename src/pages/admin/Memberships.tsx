@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
-// Mock data
 const initialMembershipTypes = [
   { id: 1, name: "Basic", sessions: 12, price: 250, active: true, description: "Perfect for trying out our gym facilities and classes" },
   { id: 2, name: "Standard", sessions: 4, price: 95, active: true, description: "Ideal for occasional gym-goers" },
@@ -33,8 +33,7 @@ const Memberships = () => {
   });
   const [editMembership, setEditMembership] = useState<typeof membershipTypes[0] | null>(null);
   const { toast } = useToast();
-
-  // Load membership types from localStorage on component mount
+  const {isAdmin} =useAuth()
   useEffect(() => {
     const storedTypes = localStorage.getItem("membershipTypes");
     if (storedTypes) {
@@ -313,11 +312,10 @@ const handleApproveRequest = async (id: number) => {
       description: "The membership request has been rejected",
     });
   };
-
   return (
     <DashboardLayout title="Membership Management">
       <div className="space-y-8">
-        <div>
+        {isAdmin && <div>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold">Membership Types</h2>
             <Button onClick={() => setIsAddDialogOpen(true)} className="bg-gym-blue hover:bg-gym-dark-blue">
@@ -401,7 +399,8 @@ const handleApproveRequest = async (id: number) => {
               </table>
             </div>
           </div>
-        </div>
+        </div>}
+       
 
         <div>
           <h2 className="text-xl font-bold mb-6">Membership Requests</h2>
