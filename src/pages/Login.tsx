@@ -128,11 +128,11 @@ const Login = () => {
   }, []);
 
   // Fill in admin credentials for quick testing
-  const fillTestCredentials = () => {
-    setIdentifier('admin@gym.com');
-    setPassword('admin123');
-    setError(null);
-  };
+  // const fillTestCredentials = () => {
+  //   setIdentifier('admin@gym.com');
+  //   setPassword('admin123');
+  //   setError(null);
+  // };
 
   // Handle login form submission
   const handleLogin = async (e: React.FormEvent) => {
@@ -461,7 +461,7 @@ const Login = () => {
             <p className="mb-2">
               Login with your credentials or create a new account
             </p>
-            <div className="flex justify-center gap-2">
+            {/* <div className="flex justify-center gap-2">
               <Button 
                 variant="outline" 
                 size="sm"
@@ -469,7 +469,7 @@ const Login = () => {
               >
                 Use Test Admin Credentials
               </Button>
-            </div>
+            </div> */}
           </div>
         </div>
         
