@@ -43,7 +43,18 @@ const Settings = () => {
     feature2Title: "Session Booking",
     feature2Description: "Effortless class booking with membership session tracking and management.",
     feature3Title: "Membership Management",
-    feature3Description: "Easily manage different membership packages with automated session tracking."
+    feature3Description: "Easily manage different membership packages with automated session tracking.",
+    featuresSection: "Our Features",
+    testimonialsSection: "What Our Members Say",
+    ctaTitle: "Ready to Transform Your Fitness Journey?",
+    ctaDescription: "Join FitTrack Pro today and take control of your fitness goals with our comprehensive gym management system.",
+    ctaButton: "Get Started Now",
+    companyName: "FitTrack Pro",
+    copyright: "© 2025 All rights reserved",
+    footerLogin: "Login",
+    footerAbout: "About",
+    footerContact: "Contact",
+    footerPrivacy: "Privacy"
   });
   
   const { toast } = useToast();
@@ -155,7 +166,18 @@ const Settings = () => {
       feature2Title: "Progress Tracking",
       feature2Description: "Track your fitness journey with detailed statistics and visualizations to keep you motivated.",
       feature3Title: "Membership Management",
-      feature3Description: "Manage your membership, payments, and subscriptions all in one place."
+      feature3Description: "Manage your membership, payments, and subscriptions all in one place.",
+      featuresSection: "Our Features",
+      testimonialsSection: "What Our Members Say",
+      ctaTitle: "Ready to Transform Your Fitness Journey?",
+      ctaDescription: "Join FitTrack Pro today and take control of your fitness goals with our comprehensive gym management system.",
+      ctaButton: "Get Started Now",
+      companyName: "FitTrack Pro",
+      copyright: "© 2025 All rights reserved",
+      footerLogin: "Login",
+      footerAbout: "About",
+      footerContact: "Contact",
+      footerPrivacy: "Privacy"
     });
     
     toast({
@@ -782,6 +804,159 @@ const Settings = () => {
                       placeholder="Enter feature 3 description"
                     />
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Additional Content Sections */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <Type className="h-5 w-5 text-gym-blue" />
+                <CardTitle>Section Titles</CardTitle>
+              </div>
+              <CardDescription>
+                Configure section headings throughout the homepage
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="features-section">Features Section Title</Label>
+                <Input
+                  id="features-section"
+                  value={mainPageContent.featuresSection}
+                  onChange={(e) => handleMainPageContentChange('featuresSection', e.target.value)}
+                  placeholder="Enter features section title"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="testimonials-section">Testimonials Section Title</Label>
+                <Input
+                  id="testimonials-section"
+                  value={mainPageContent.testimonialsSection}
+                  onChange={(e) => handleMainPageContentChange('testimonialsSection', e.target.value)}
+                  placeholder="Enter testimonials section title"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <Plus className="h-5 w-5 text-gym-blue" />
+                <CardTitle>Call to Action Section</CardTitle>
+              </div>
+              <CardDescription>
+                Configure the call-to-action section at the bottom of the homepage
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="cta-title">CTA Title</Label>
+                <Input
+                  id="cta-title"
+                  value={mainPageContent.ctaTitle}
+                  onChange={(e) => handleMainPageContentChange('ctaTitle', e.target.value)}
+                  placeholder="Enter call-to-action title"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="cta-description">CTA Description</Label>
+                <Textarea
+                  id="cta-description"
+                  value={mainPageContent.ctaDescription}
+                  onChange={(e) => handleMainPageContentChange('ctaDescription', e.target.value)}
+                  rows={3}
+                  placeholder="Enter call-to-action description"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="cta-button">CTA Button Text</Label>
+                <Input
+                  id="cta-button"
+                  value={mainPageContent.ctaButton}
+                  onChange={(e) => handleMainPageContentChange('ctaButton', e.target.value)}
+                  placeholder="Enter button text"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <LayoutDashboard className="h-5 w-5 text-gym-blue" />
+                <CardTitle>Footer Content</CardTitle>
+              </div>
+              <CardDescription>
+                Configure footer text and navigation links
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="company-name">Company Name</Label>
+                <Input
+                  id="company-name"
+                  value={mainPageContent.companyName}
+                  onChange={(e) => handleMainPageContentChange('companyName', e.target.value)}
+                  placeholder="Enter company name"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="copyright">Copyright Text</Label>
+                <Input
+                  id="copyright"
+                  value={mainPageContent.copyright}
+                  onChange={(e) => handleMainPageContentChange('copyright', e.target.value)}
+                  placeholder="Enter copyright text"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="footer-login">Login Link Text</Label>
+                  <Input
+                    id="footer-login"
+                    value={mainPageContent.footerLogin}
+                    onChange={(e) => handleMainPageContentChange('footerLogin', e.target.value)}
+                    placeholder="Login"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="footer-about">About Link Text</Label>
+                  <Input
+                    id="footer-about"
+                    value={mainPageContent.footerAbout}
+                    onChange={(e) => handleMainPageContentChange('footerAbout', e.target.value)}
+                    placeholder="About"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="footer-contact">Contact Link Text</Label>
+                  <Input
+                    id="footer-contact"
+                    value={mainPageContent.footerContact}
+                    onChange={(e) => handleMainPageContentChange('footerContact', e.target.value)}
+                    placeholder="Contact"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="footer-privacy">Privacy Link Text</Label>
+                  <Input
+                    id="footer-privacy"
+                    value={mainPageContent.footerPrivacy}
+                    onChange={(e) => handleMainPageContentChange('footerPrivacy', e.target.value)}
+                    placeholder="Privacy"
+                  />
                 </div>
               </div>
             </CardContent>

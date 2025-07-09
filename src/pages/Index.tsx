@@ -45,6 +45,17 @@ interface MainPageContent {
   feature2Description: string;
   feature3Title: string;
   feature3Description: string;
+  featuresSection: string;
+  testimonialsSection: string;
+  ctaTitle: string;
+  ctaDescription: string;
+  ctaButton: string;
+  companyName: string;
+  copyright: string;
+  footerLogin: string;
+  footerAbout: string;
+  footerContact: string;
+  footerPrivacy: string;
 }
 
 const Index = () => {
@@ -62,7 +73,18 @@ const Index = () => {
     feature2Title: "Progress Tracking",
     feature2Description: "Track your fitness journey with detailed statistics and visualizations to keep you motivated.",
     feature3Title: "Membership Management",
-    feature3Description: "Manage your membership, payments, and subscriptions all in one place."
+    feature3Description: "Manage your membership, payments, and subscriptions all in one place.",
+    featuresSection: "Our Features",
+    testimonialsSection: "What Our Members Say",
+    ctaTitle: "Ready to Transform Your Fitness Journey?",
+    ctaDescription: "Join FitTrack Pro today and take control of your fitness goals with our comprehensive gym management system.",
+    ctaButton: "Get Started Now",
+    companyName: "FitTrack Pro",
+    copyright: "© 2025 All rights reserved",
+    footerLogin: "Login",
+    footerAbout: "About",
+    footerContact: "Contact",
+    footerPrivacy: "Privacy"
   });
   
   const [testimonials, setTestimonials] = useState([
@@ -245,7 +267,7 @@ const Index = () => {
               </Link>
             ) : (
               <Link to="/" className="font-bold text-xl text-gym-blue">
-                FitTrack Pro
+                {content.companyName}
               </Link>
             )}
           </div>
@@ -328,7 +350,7 @@ const Index = () => {
 
       {/* Features Section */}
       <section className="container mx-auto px-4 py-16">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Our Features</h2>
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">{content.featuresSection}</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="bg-gray-800 p-6 rounded-lg transform transition-transform hover:scale-105">
@@ -351,7 +373,7 @@ const Index = () => {
       {/* Testimonial Slider Section */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">What Our Members Say</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">{content.testimonialsSection}</h2>
           
           <Carousel className="max-w-4xl mx-auto">
             <CarouselContent>
@@ -383,13 +405,13 @@ const Index = () => {
       {/* CTA Section */}
       <section className="py-16 bg-gym-blue text-white">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Transform Your Fitness Journey?</h2>
-          <p className="text-xl mb-8 max-w-2xl mx-auto">Join FitTrack Pro today and take control of your fitness goals with our comprehensive gym management system.</p>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6">{content.ctaTitle}</h2>
+          <p className="text-xl mb-8 max-w-2xl mx-auto">{content.ctaDescription}</p>
           <Link
             to="/login"
             className="px-8 py-4 bg-white text-gym-blue font-bold rounded-md hover:bg-gray-100 transition-colors inline-block"
           >
-            Get Started Now
+            {content.ctaButton}
           </Link>
         </div>
       </section>
@@ -399,15 +421,15 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-6 md:mb-0">
-              <h2 className="text-2xl font-bold text-gym-blue">FitTrack Pro</h2>
-              <p className="text-gray-400">© 2025 All rights reserved</p>
+              <h2 className="text-2xl font-bold text-gym-blue">{content.companyName}</h2>
+              <p className="text-gray-400">{content.copyright}</p>
             </div>
             
             <div className="flex gap-6">
-              <Link to="/login" className="text-gray-300 hover:text-white">Login</Link>
-              <a href="#" className="text-gray-300 hover:text-white">About</a>
-              <a href="#" className="text-gray-300 hover:text-white">Contact</a>
-              <a href="#" className="text-gray-300 hover:text-white">Privacy</a>
+              <Link to="/login" className="text-gray-300 hover:text-white">{content.footerLogin}</Link>
+              <a href="#" className="text-gray-300 hover:text-white">{content.footerAbout}</a>
+              <a href="#" className="text-gray-300 hover:text-white">{content.footerContact}</a>
+              <a href="#" className="text-gray-300 hover:text-white">{content.footerPrivacy}</a>
             </div>
           </div>
         </div>
