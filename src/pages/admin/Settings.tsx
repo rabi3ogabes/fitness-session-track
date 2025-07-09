@@ -24,6 +24,10 @@ import {
 const Settings = () => {
   const [cancellationHours, setCancellationHours] = useState(4);
   const [emailNotifications, setEmailNotifications] = useState(true);
+  const [notificationEmails, setNotificationEmails] = useState({
+    email1: "",
+    email2: ""
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -76,6 +80,12 @@ const Settings = () => {
       setFooterColor(savedFooterColor);
     }
     
+    // Load notification emails from local storage
+    const savedNotificationEmails = localStorage.getItem("notificationEmails");
+    if (savedNotificationEmails) {
+      setNotificationEmails(JSON.parse(savedNotificationEmails));
+    }
+    
     // Load main page content from local storage
     const savedMainPageContent = localStorage.getItem("mainPageContent");
     if (savedMainPageContent) {
@@ -109,6 +119,9 @@ const Settings = () => {
     
     // Save main page content to localStorage
     localStorage.setItem("mainPageContent", JSON.stringify(mainPageContent));
+
+    // Save notification emails to localStorage
+    localStorage.setItem("notificationEmails", JSON.stringify(notificationEmails));
 
     // Save other settings to localStorage
     localStorage.setItem("cancellationHours", cancellationHours.toString());
@@ -352,7 +365,7 @@ const Settings = () => {
                   <CardTitle>Notification Settings</CardTitle>
                 </div>
                 <CardDescription>
-                  Configure email notifications for trainers
+                  Configure email notifications for trainers and admin notifications
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -367,6 +380,43 @@ const Settings = () => {
                     checked={emailNotifications} 
                     onCheckedChange={setEmailNotifications} 
                   />
+                </div>
+                
+                <div className="border-t pt-4 space-y-4">
+                  <div>
+                    <p className="font-medium mb-2">Admin Notification Emails</p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      These emails will receive notifications when new users sign up
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="notification-email-1">Primary Email</Label>
+                    <Input
+                      id="notification-email-1"
+                      type="email"
+                      placeholder="admin@example.com"
+                      value={notificationEmails.email1}
+                      onChange={(e) => setNotificationEmails({
+                        ...notificationEmails,
+                        email1: e.target.value
+                      })}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="notification-email-2">Secondary Email (Optional)</Label>
+                    <Input
+                      id="notification-email-2"
+                      type="email"
+                      placeholder="manager@example.com"
+                      value={notificationEmails.email2}
+                      onChange={(e) => setNotificationEmails({
+                        ...notificationEmails,
+                        email2: e.target.value
+                      })}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

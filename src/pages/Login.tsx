@@ -270,6 +270,35 @@ const Login = () => {
       if (success === true) {
         console.log("Signup successful for:", email);
         
+        // Send notification to admin emails
+        try {
+          const notificationEmails = localStorage.getItem("notificationEmails");
+          if (notificationEmails) {
+            const emails = JSON.parse(notificationEmails);
+            const emailList = [emails.email1, emails.email2].filter(Boolean);
+            
+            if (emailList.length > 0) {
+              console.log("Sending signup notification...");
+              const response = await supabase.functions.invoke('send-signup-notification', {
+                body: {
+                  userEmail: email,
+                  userName: name,
+                  notificationEmails: emailList
+                }
+              });
+              
+              if (response.error) {
+                console.error("Failed to send signup notification:", response.error);
+              } else {
+                console.log("Signup notification sent successfully");
+              }
+            }
+          }
+        } catch (notificationError) {
+          console.error("Error sending signup notification:", notificationError);
+          // Don't block the signup process if notification fails
+        }
+        
         toast({
           title: "Signup successful",
           description: "Your account has been created. You can now log in.",
