@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,10 +5,21 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, Mail, Clock, Image, Trash, Palette, LayoutDashboard, Type } from "lucide-react";
+import { Settings as SettingsIcon, Mail, Clock, Image, Trash, Palette, LayoutDashboard, Type, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const Settings = () => {
   const [cancellationHours, setCancellationHours] = useState(4);
@@ -133,6 +143,37 @@ const Settings = () => {
       ...prev,
       [field]: value
     }));
+  };
+
+  const handleResetToDefaults = () => {
+    setMainPageContent({
+      heroTitle: "FitTrack Pro",
+      heroDescription: "The ultimate gym management system for trainers, members, and administrators. Track your fitness journey, manage classes, and achieve your goals.",
+      heroImage: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      feature1Title: "Class Booking",
+      feature1Description: "Book and manage your fitness classes with ease. Never miss a session with our reminder system.",
+      feature2Title: "Progress Tracking",
+      feature2Description: "Track your fitness journey with detailed statistics and visualizations to keep you motivated.",
+      feature3Title: "Membership Management",
+      feature3Description: "Manage your membership, payments, and subscriptions all in one place."
+    });
+    
+    toast({
+      title: "Content reset",
+      description: "All homepage content has been reset to default values.",
+    });
+  };
+
+  const handleClearField = (fieldName: string) => {
+    setMainPageContent(prev => ({
+      ...prev,
+      [fieldName]: ""
+    }));
+    
+    toast({
+      title: "Field cleared",
+      description: `${fieldName} has been cleared.`,
+    });
   };
 
   return (
@@ -378,6 +419,35 @@ const Settings = () => {
         </TabsContent>
         
         <TabsContent value="mainpage" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold">Homepage Content Management</h3>
+              <p className="text-sm text-gray-600">Edit or delete all text and images displayed on the homepage</p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="text-red-600 border-red-300 hover:bg-red-50">
+                  <Trash className="h-4 w-4 mr-2" />
+                  Reset to Defaults
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset Homepage Content</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will reset all homepage content to the default values. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleResetToDefaults} className="bg-red-600 hover:bg-red-700">
+                    Reset All Content
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+
           <Card>
             <CardHeader>
               <div className="flex items-center space-x-2">
@@ -390,33 +460,65 @@ const Settings = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="hero-title">Hero Title</Label>
+                <div className="flex justify-between items-center mb-2">
+                  <Label htmlFor="hero-title">Hero Title</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleClearField('heroTitle')}
+                    className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                  >
+                    <Trash className="h-3 w-3 mr-1" />
+                    Clear
+                  </Button>
+                </div>
                 <Input
                   id="hero-title"
                   value={mainPageContent.heroTitle}
                   onChange={(e) => handleMainPageContentChange('heroTitle', e.target.value)}
-                  className="mt-2"
+                  placeholder="Enter hero title"
                 />
               </div>
               
               <div>
-                <Label htmlFor="hero-description">Hero Description</Label>
+                <div className="flex justify-between items-center mb-2">
+                  <Label htmlFor="hero-description">Hero Description</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleClearField('heroDescription')}
+                    className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                  >
+                    <Trash className="h-3 w-3 mr-1" />
+                    Clear
+                  </Button>
+                </div>
                 <Textarea
                   id="hero-description"
                   value={mainPageContent.heroDescription}
                   onChange={(e) => handleMainPageContentChange('heroDescription', e.target.value)}
-                  className="mt-2"
                   rows={3}
+                  placeholder="Enter hero description"
                 />
               </div>
               
               <div>
-                <Label htmlFor="hero-image">Hero Image URL</Label>
+                <div className="flex justify-between items-center mb-2">
+                  <Label htmlFor="hero-image">Hero Image URL</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleClearField('heroImage')}
+                    className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                  >
+                    <Trash className="h-3 w-3 mr-1" />
+                    Clear
+                  </Button>
+                </div>
                 <Input
                   id="hero-image"
                   value={mainPageContent.heroImage}
                   onChange={(e) => handleMainPageContentChange('heroImage', e.target.value)}
-                  className="mt-2"
                   placeholder="https://example.com/image.jpg"
                 />
                 {mainPageContent.heroImage && (
@@ -449,73 +551,235 @@ const Settings = () => {
             <CardContent>
               <div className="space-y-6">
                 <div className="space-y-4 border-b pb-4">
-                  <h3 className="font-medium">Feature 1</h3>
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-medium">Feature 1</h3>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                        >
+                          <Trash className="h-3 w-3 mr-1" />
+                          Clear All
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Clear Feature 1</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will clear both the title and description for Feature 1.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => {
+                              handleClearField('feature1Title');
+                              handleClearField('feature1Description');
+                            }}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Clear Feature 1
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                   <div>
-                    <Label htmlFor="feature1-title">Title</Label>
+                    <div className="flex justify-between items-center mb-1">
+                      <Label htmlFor="feature1-title">Title</Label>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleClearField('feature1Title')}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 text-xs"
+                      >
+                        <Trash className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <Input
                       id="feature1-title"
                       value={mainPageContent.feature1Title}
                       onChange={(e) => handleMainPageContentChange('feature1Title', e.target.value)}
-                      className="mt-1"
+                      placeholder="Enter feature 1 title"
                     />
                   </div>
                   
                   <div>
-                    <Label htmlFor="feature1-description">Description</Label>
+                    <div className="flex justify-between items-center mb-1">
+                      <Label htmlFor="feature1-description">Description</Label>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleClearField('feature1Description')}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 text-xs"
+                      >
+                        <Trash className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <Textarea
                       id="feature1-description"
                       value={mainPageContent.feature1Description}
                       onChange={(e) => handleMainPageContentChange('feature1Description', e.target.value)}
-                      className="mt-1"
                       rows={2}
+                      placeholder="Enter feature 1 description"
                     />
                   </div>
                 </div>
                 
                 <div className="space-y-4 border-b pb-4">
-                  <h3 className="font-medium">Feature 2</h3>
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-medium">Feature 2</h3>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                        >
+                          <Trash className="h-3 w-3 mr-1" />
+                          Clear All
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Clear Feature 2</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will clear both the title and description for Feature 2.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => {
+                              handleClearField('feature2Title');
+                              handleClearField('feature2Description');
+                            }}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Clear Feature 2
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                   <div>
-                    <Label htmlFor="feature2-title">Title</Label>
+                    <div className="flex justify-between items-center mb-1">
+                      <Label htmlFor="feature2-title">Title</Label>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleClearField('feature2Title')}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 text-xs"
+                      >
+                        <Trash className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <Input
                       id="feature2-title"
                       value={mainPageContent.feature2Title}
                       onChange={(e) => handleMainPageContentChange('feature2Title', e.target.value)}
-                      className="mt-1"
+                      placeholder="Enter feature 2 title"
                     />
                   </div>
                   
                   <div>
-                    <Label htmlFor="feature2-description">Description</Label>
+                    <div className="flex justify-between items-center mb-1">
+                      <Label htmlFor="feature2-description">Description</Label>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleClearField('feature2Description')}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 text-xs"
+                      >
+                        <Trash className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <Textarea
                       id="feature2-description"
                       value={mainPageContent.feature2Description}
                       onChange={(e) => handleMainPageContentChange('feature2Description', e.target.value)}
-                      className="mt-1"
                       rows={2}
+                      placeholder="Enter feature 2 description"
                     />
                   </div>
                 </div>
                 
                 <div className="space-y-4">
-                  <h3 className="font-medium">Feature 3</h3>
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-medium">Feature 3</h3>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                        >
+                          <Trash className="h-3 w-3 mr-1" />
+                          Clear All
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Clear Feature 3</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will clear both the title and description for Feature 3.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => {
+                              handleClearField('feature3Title');
+                              handleClearField('feature3Description');
+                            }}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Clear Feature 3
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                   <div>
-                    <Label htmlFor="feature3-title">Title</Label>
+                    <div className="flex justify-between items-center mb-1">
+                      <Label htmlFor="feature3-title">Title</Label>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleClearField('feature3Title')}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 text-xs"
+                      >
+                        <Trash className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <Input
                       id="feature3-title"
                       value={mainPageContent.feature3Title}
                       onChange={(e) => handleMainPageContentChange('feature3Title', e.target.value)}
-                      className="mt-1"
+                      placeholder="Enter feature 3 title"
                     />
                   </div>
                   
                   <div>
-                    <Label htmlFor="feature3-description">Description</Label>
+                    <div className="flex justify-between items-center mb-1">
+                      <Label htmlFor="feature3-description">Description</Label>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleClearField('feature3Description')}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50 text-xs"
+                      >
+                        <Trash className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <Textarea
                       id="feature3-description"
                       value={mainPageContent.feature3Description}
                       onChange={(e) => handleMainPageContentChange('feature3Description', e.target.value)}
-                      className="mt-1"
                       rows={2}
+                      placeholder="Enter feature 3 description"
                     />
                   </div>
                 </div>
