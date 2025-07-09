@@ -164,6 +164,8 @@ export default function useComingClass() {
       }
       const { data: bookingsData, error: bookingsError } = await supabase
         .from("bookings")
+        .select("class_id")
+        .eq("user_id", user.id);
       if (bookingsError) throw bookingsError;
 
       const bookedClassIds =
