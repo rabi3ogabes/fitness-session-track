@@ -549,17 +549,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      // Send SMTP notification to admin emails
+      // Send SMTP notification to admin email
       try {
-        const notificationEmails = JSON.parse(localStorage.getItem('notificationEmails') || '{"email1":""}');
+        const adminNotificationEmail = localStorage.getItem('adminNotificationEmail');
         const smtpSettings = JSON.parse(localStorage.getItem('smtpSettings') || '{}');
         
-        if (notificationEmails.email1 && smtpSettings.host) {
+        if (adminNotificationEmail && smtpSettings.host) {
           await supabase.functions.invoke('send-smtp-notification', {
             body: {
               userEmail: email,
               userName: name,
-              notificationEmail: notificationEmails.email1,
+              notificationEmail: adminNotificationEmail,
               smtpSettings: smtpSettings
             }
           });
