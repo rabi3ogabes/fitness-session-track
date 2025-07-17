@@ -270,27 +270,30 @@ const Login = () => {
       if (success === true) {
         console.log("Signup successful for:", email);
         
-        // Send notification to admin emails
+        // Send notification to admin emails using SMTP
         try {
           const notificationEmails = localStorage.getItem("notificationEmails");
-          if (notificationEmails) {
+          const smtpSettings = localStorage.getItem("smtpSettings");
+          
+          if (notificationEmails && smtpSettings) {
             const emails = JSON.parse(notificationEmails);
-            const emailList = [emails.email1, emails.email2].filter(Boolean);
+            const smtp = JSON.parse(smtpSettings);
             
-            if (emailList.length > 0) {
-              console.log("Sending signup notification...");
-              const response = await supabase.functions.invoke('send-signup-notification', {
+            if (emails.email1 && smtp.host) {
+              console.log("Sending SMTP signup notification...");
+              const response = await supabase.functions.invoke('send-smtp-notification', {
                 body: {
                   userEmail: email,
                   userName: name,
-                  notificationEmails: emailList
+                  notificationEmail: emails.email1,
+                  smtpSettings: smtp
                 }
               });
               
               if (response.error) {
-                console.error("Failed to send signup notification:", response.error);
+                console.error("Failed to send SMTP notification:", response.error);
               } else {
-                console.log("Signup notification sent successfully");
+                console.log("SMTP notification sent successfully");
               }
             }
           }

@@ -549,6 +549,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
+      // Send SMTP notification to admin emails
+      try {
+        const notificationEmails = JSON.parse(localStorage.getItem('notificationEmails') || '{"email1":""}');
+        const smtpSettings = JSON.parse(localStorage.getItem('smtpSettings') || '{}');
+        
+        if (notificationEmails.email1 && smtpSettings.host) {
+          await supabase.functions.invoke('send-smtp-notification', {
+            body: {
+              userEmail: email,
+              userName: name,
+              notificationEmail: notificationEmails.email1,
+              smtpSettings: smtpSettings
+            }
+          });
+        }
+      } catch (notificationError) {
+        console.error('Failed to send SMTP notification:', notificationError);
+        // Don't fail the signup process if notification fails
+      }
+
       toast({
         title: "Sign up successful",
         description:
