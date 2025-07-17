@@ -1,15 +1,18 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, PowerIcon, UserMinusIcon, Lock } from "lucide-react";
+import { PencilIcon, PowerIcon, UserMinusIcon, Lock, Trash2 } from "lucide-react";
 import { Member } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";interface MemberTableProps {
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+interface MemberTableProps {
   members: Member[];
   filteredMembers: Member[];
   toggleMemberStatus: (id: number) => void;
   toggleTrainerEditAccess: (id: number) => void;
   openEditDialog: (member: Member) => void;
   resetPassword: (id: number) => void;
+  deleteMember: (id: number) => void;
   isLoading?: boolean;
 }
 
@@ -20,6 +23,7 @@ const MemberTable = ({
   toggleTrainerEditAccess,
   openEditDialog,
   resetPassword,
+  deleteMember,
   isLoading = false
 }: MemberTableProps) => {
 
@@ -143,6 +147,26 @@ const MemberTable = ({
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Reset Password</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  if (window.confirm(`Are you sure you want to delete ${member.name}? This action cannot be undone.`)) {
+                                    deleteMember(member.id);
+                                  }
+                                }}
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Delete Member</p>
                             </TooltipContent>
                           </Tooltip>
                         </div>

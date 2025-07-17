@@ -286,6 +286,39 @@ const Members = () => {
     }
   };
 
+  const deleteMember = async (id: number) => {
+    try {
+      await requireAuth(async () => {
+        const { error } = await supabase
+          .from("members")
+          .delete()
+          .eq("id", id);
+
+        if (error) {
+          console.error("Error deleting member:", error);
+          throw error;
+        }
+
+        // Update local state by removing the member
+        setMembers((prevMembers) =>
+          prevMembers.filter((member) => member.id !== id)
+        );
+
+        toast({
+          title: "Member deleted successfully",
+          description: "The member has been removed from the database",
+        });
+      });
+    } catch (err: any) {
+      console.error("Error deleting member:", err);
+      toast({
+        title: "Failed to delete member",
+        description: err.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <DashboardLayout title="Member Management">
       <MemberSearch
@@ -301,6 +334,7 @@ const Members = () => {
         toggleTrainerEditAccess={toggleTrainerEditAccess}
         openEditDialog={openEditDialog}
         resetPassword={(id) => openResetPasswordDialog(id)}
+        deleteMember={deleteMember}
         isLoading={isLoading}
       />
 

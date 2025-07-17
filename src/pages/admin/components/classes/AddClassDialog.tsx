@@ -658,51 +658,31 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                 )}
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right">Start Time*</Label>
-                  <div className="col-span-3">
-                    <Select
-                      value={formState.startTime}
-                      onValueChange={(value) => handleTimeChange("startTime", value)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <div className="flex items-center">
-                          <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <SelectValue />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent position="popper">
-                        {timeOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Label htmlFor="start-time" className="text-right">
+                    Start Time*
+                  </Label>
+                  <Input
+                    id="start-time"
+                    type="time"
+                    value={formState.startTime}
+                    onChange={(e) => handleTimeChange("startTime", e.target.value)}
+                    className="col-span-3"
+                    required
+                  />
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right">End Time*</Label>
-                  <div className="col-span-3">
-                    <Select
-                      value={formState.endTime}
-                      onValueChange={(value) => handleTimeChange("endTime", value)}
-                    >
-                      <SelectTrigger className="w-full">
-                        <div className="flex items-center">
-                          <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
-                          <SelectValue />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent position="popper">
-                        {timeOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Label htmlFor="end-time" className="text-right">
+                    End Time*
+                  </Label>
+                  <Input
+                    id="end-time"
+                    type="time"
+                    value={formState.endTime}
+                    onChange={(e) => handleTimeChange("endTime", e.target.value)}
+                    className="col-span-3"
+                    required
+                  />
                 </div>
                 
                 {timeError && (
