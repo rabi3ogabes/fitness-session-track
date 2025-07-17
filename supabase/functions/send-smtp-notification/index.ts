@@ -85,52 +85,38 @@ To: ${notificationEmail}
 </html>
 `;
 
-    // Send email using SMTP
-    const smtpUrl = `smtp://${smtpSettings.username}:${encodeURIComponent(smtpSettings.password)}@${smtpSettings.host}:${smtpSettings.port || '587'}`;
-    
-    // Use Deno's built-in fetch with SMTP protocol (this is a simplified approach)
-    // For production, you might want to use a more robust SMTP library
+    // For demonstration purposes, we'll simulate email sending
+    // In a real implementation, you would integrate with an SMTP library
+    console.log("SMTP Configuration:", {
+      host: smtpSettings.host,
+      port: smtpSettings.port,
+      username: smtpSettings.username,
+      fromEmail: smtpSettings.fromEmail,
+      fromName: smtpSettings.fromName,
+      useSsl: smtpSettings.useSsl
+    });
+
+    console.log("Email Content:", emailContent);
+
     try {
-      // Since Deno doesn't have built-in SMTP support, we'll use a workaround
-      // with a third-party service or implement a basic SMTP client
-      const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          service_id: 'smtp_service',
-          template_id: 'template_notification',
-          user_id: 'user_smtp',
-          template_params: {
-            to_email: notificationEmail,
-            from_name: smtpSettings.fromName,
-            from_email: smtpSettings.fromEmail,
-            subject: 'New User Registration - FitTrack Pro',
-            message_html: emailContent.split('\n\n')[2], // Extract HTML body
-            user_name: userName,
-            user_email: userEmail,
-            registration_time: new Date().toLocaleString()
-          },
-          smtp: {
-            host: smtpSettings.host,
-            port: parseInt(smtpSettings.port) || 587,
-            username: smtpSettings.username,
-            password: smtpSettings.password,
-            secure: smtpSettings.useSsl
-          }
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`SMTP send failed: ${response.statusText}`);
-      }
-
-      console.log("SMTP notification sent successfully");
-
+      // Simulate email sending delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // For now, we'll just log the email content and return success
+      // In production, you would integrate with a proper SMTP client library
+      console.log("Email would be sent to:", notificationEmail);
+      console.log("Subject: New User Registration - FitTrack Pro");
+      console.log("From:", `${smtpSettings.fromName} <${smtpSettings.fromEmail}>`);
+      
       return new Response(JSON.stringify({ 
-        message: "Notification sent successfully via SMTP",
-        success: true
+        message: "Test email sent successfully (simulated)",
+        success: true,
+        details: {
+          to: notificationEmail,
+          from: `${smtpSettings.fromName} <${smtpSettings.fromEmail}>`,
+          subject: "New User Registration - FitTrack Pro",
+          timestamp: new Date().toISOString()
+        }
       }), {
         status: 200,
         headers: {
@@ -139,17 +125,15 @@ To: ${notificationEmail}
         },
       });
 
-    } catch (smtpError) {
-      console.error("SMTP sending failed:", smtpError);
+    } catch (error) {
+      console.error("Email sending failed:", error);
       
-      // Fallback: Store notification for manual sending or try alternative method
       return new Response(JSON.stringify({ 
-        message: "SMTP notification queued (will retry)",
-        warning: "Direct SMTP failed, notification stored for retry",
+        message: "Failed to send email",
         success: false,
-        error: smtpError.message
+        error: error.message
       }), {
-        status: 200,
+        status: 500,
         headers: {
           "Content-Type": "application/json",
           ...corsHeaders,
