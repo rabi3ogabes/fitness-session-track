@@ -37,27 +37,17 @@ interface AddClassDialogProps {
   existingClasses: ClassModel[];
 }
 
-// Time options for easier selection
-const timeOptions = [
-  { label: "5:00 AM", value: "05:00" },
-  { label: "6:00 AM", value: "06:00" },
-  { label: "7:00 AM", value: "07:00" },
-  { label: "8:00 AM", value: "08:00" },
-  { label: "9:00 AM", value: "09:00" },
-  { label: "10:00 AM", value: "10:00" },
-  { label: "11:00 AM", value: "11:00" },
-  { label: "12:00 PM", value: "12:00" },
-  { label: "1:00 PM", value: "13:00" },
-  { label: "2:00 PM", value: "14:00" },
-  { label: "3:00 PM", value: "15:00" },
-  { label: "4:00 PM", value: "16:00" },
-  { label: "5:00 PM", value: "17:00" },
-  { label: "6:00 PM", value: "18:00" },
-  { label: "7:00 PM", value: "19:00" },
-  { label: "8:00 PM", value: "20:00" },
-  { label: "9:00 PM", value: "21:00" },
-  { label: "10:00 PM", value: "22:00" },
-];
+// Time options with 15-minute intervals
+const timeOptions = [];
+for (let hour = 5; hour <= 22; hour++) {
+  for (let minute = 0; minute < 60; minute += 15) {
+    const timeValue = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayTime = `${displayHour}:${minute.toString().padStart(2, '0')} ${ampm}`;
+    timeOptions.push({ label: displayTime, value: timeValue });
+  }
+}
 
 const weekdays = [
   { label: "Monday", value: "Monday" },
@@ -661,28 +651,42 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                   <Label htmlFor="start-time" className="text-right">
                     Start Time*
                   </Label>
-                  <Input
-                    id="start-time"
-                    type="time"
-                    value={formState.startTime}
-                    onChange={(e) => handleTimeChange("startTime", e.target.value)}
-                    className="col-span-3"
-                    required
-                  />
+                  <Select 
+                    value={formState.startTime} 
+                    onValueChange={(value) => handleTimeChange("startTime", value)}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select start time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="end-time" className="text-right">
                     End Time*
                   </Label>
-                  <Input
-                    id="end-time"
-                    type="time"
-                    value={formState.endTime}
-                    onChange={(e) => handleTimeChange("endTime", e.target.value)}
-                    className="col-span-3"
-                    required
-                  />
+                  <Select 
+                    value={formState.endTime} 
+                    onValueChange={(value) => handleTimeChange("endTime", value)}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select end time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 {timeError && (
