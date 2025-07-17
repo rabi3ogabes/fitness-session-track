@@ -421,19 +421,6 @@ const Settings = () => {
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="notification-email-2">Secondary Email (Optional)</Label>
-                    <Input
-                      id="notification-email-2"
-                      type="email"
-                      placeholder="manager@example.com"
-                      value={notificationEmails.email2}
-                      onChange={(e) => setNotificationEmails({
-                        ...notificationEmails,
-                        email2: e.target.value
-                      })}
-                    />
-                  </div>
                   
                   <div className="border-t pt-4 space-y-4">
                     <div>
