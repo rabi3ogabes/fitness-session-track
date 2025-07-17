@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ const Settings = () => {
     fromName: "Gym System"
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [headerColor, setHeaderColor] = useState<string>("#ffffff");
@@ -153,6 +155,73 @@ const Settings = () => {
         description: "Your settings have been updated successfully.",
       });
     }, 500);
+  };
+
+  const handleTestEmail = async () => {
+    if (!notificationEmails.email1) {
+      toast({
+        title: "Error",
+        description: "Please enter a primary email first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!smtpSettings.host || !smtpSettings.username || !smtpSettings.password || !smtpSettings.fromEmail) {
+      toast({
+        title: "Error", 
+        description: "Please configure all SMTP settings first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTestingEmail(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('send-smtp-notification', {
+        body: {
+          userEmail: "test@example.com",
+          userName: "Test User",
+          notificationEmail: notificationEmails.email1,
+          smtpSettings: {
+            ...smtpSettings,
+            useSsl: true
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Test email sent",
+        description: "A test notification was sent to your primary email.",
+      });
+    } catch (error) {
+      console.error('Test email error:', error);
+      toast({
+        title: "Test failed",
+        description: "Failed to send test email. Please check your SMTP settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingEmail(false);
+    }
+  };
+
+  const handleSaveEmailSettings = () => {
+    // Save notification emails to localStorage
+    localStorage.setItem("notificationEmails", JSON.stringify(notificationEmails));
+    
+    // Save SMTP settings to localStorage
+    localStorage.setItem("smtpSettings", JSON.stringify(smtpSettings));
+
+    toast({
+      title: "Email settings saved",
+      description: "Your email notification settings have been saved successfully.",
+    });
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -421,6 +490,24 @@ const Settings = () => {
                     />
                   </div>
                   
+                  <div className="flex space-x-2 pt-4">
+                    <Button 
+                      variant="outline" 
+                      onClick={handleTestEmail}
+                      disabled={isTestingEmail}
+                      className="flex items-center space-x-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      <span>{isTestingEmail ? "Testing..." : "Test Email"}</span>
+                    </Button>
+                    <Button 
+                      onClick={handleSaveEmailSettings}
+                      className="flex items-center space-x-2"
+                    >
+                      <Mail className="h-4 w-4" />
+                      <span>Save Email Settings</span>
+                    </Button>
+                  </div>
                   
                   <div className="border-t pt-4 space-y-4">
                     <div>
