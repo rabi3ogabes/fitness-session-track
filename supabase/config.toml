@@ -2,3 +2,6 @@ project_id = "wlawjupusugrhojbywyq"
 
 [functions.send-signup-notification]
 verify_jwt = false
+
+[functions.send-smtp-notification]
+verify_jwt = false
