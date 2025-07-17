@@ -605,19 +605,34 @@ const Settings = () => {
                       </div>
                     </div>
                     
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        toast({
-                          title: "Test email sent",
-                          description: "Check your email to verify SMTP configuration"
-                        });
-                      }}
-                      className="w-full mt-4"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      Test SMTP Configuration
-                    </Button>
+                    <div className="flex space-x-2 mt-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          toast({
+                            title: "Test email sent",
+                            description: "Check your email to verify SMTP configuration"
+                          });
+                        }}
+                        className="flex-1"
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Test SMTP Configuration
+                      </Button>
+                      <Button 
+                        onClick={() => {
+                          localStorage.setItem("smtpSettings", JSON.stringify(smtpSettings));
+                          toast({
+                            title: "SMTP settings saved",
+                            description: "Your SMTP configuration has been saved successfully.",
+                          });
+                        }}
+                        className="flex-1"
+                      >
+                        <SettingsIcon className="h-4 w-4 mr-2" />
+                        Save SMTP Configuration
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
