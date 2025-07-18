@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { supabase, requireAuth, isOffline, cacheDataForOffline } from "@/integrations/supabase/client";
+import {
+  supabase,
+  requireAuth,
+  isOffline,
+  cacheDataForOffline,
+} from "@/integrations/supabase/client";
 import { format, addDays, addWeeks, addMonths, parse } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -34,17 +39,91 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { ClassModel } from "./ClassTypes";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Clock, AlertCircle, RefreshCw, WifiOff } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  CalendarIcon,
+  Clock,
+  AlertCircle,
+  RefreshCw,
+  WifiOff,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
 
 const timeOptions = [
-  "05:00", "05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30",
-  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30",
-  "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
-  "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30",
-  "21:00", "21:30", "22:00"
+  "05:00",
+  "05:15",
+  "05:30",
+  "05:45",
+  "06:00",
+  "06:15",
+  "06:30",
+  "06:45",
+  "07:00",
+  "07:15",
+  "07:30",
+  "07:45",
+  "08:00",
+  "08:15",
+  "08:30",
+  "08:45",
+  "09:00",
+  "09:15",
+  "09:30",
+  "09:45",
+  "10:00",
+  "10:15",
+  "10:30",
+  "10:45",
+  "11:00",
+  "11:15",
+  "11:30",
+  "11:45",
+  "12:00",
+  "12:15",
+  "12:30",
+  "12:45",
+  "13:00",
+  "13:15",
+  "13:30",
+  "13:45",
+  "14:00",
+  "14:15",
+  "14:30",
+  "14:45",
+  "15:00",
+  "15:15",
+  "15:30",
+  "15:45",
+  "16:00",
+  "16:15",
+  "16:30",
+  "16:45",
+  "17:00",
+  "17:15",
+  "17:30",
+  "17:45",
+  "18:00",
+  "18:15",
+  "18:30",
+  "18:45",
+  "19:00",
+  "19:15",
+  "19:30",
+  "19:45",
+  "20:00",
+  "20:15",
+  "20:30",
+  "20:45",
+  "21:00",
+  "21:15",
+  "21:30",
+  "21:45",
+  "22:00",
 ];
 
 const weekdays = [
@@ -66,7 +145,10 @@ const formSchema = z.object({
   endTime: z.string().min(1, "End time is required"),
   isRecurring: z.boolean().default(false),
   recurringFrequency: z.enum(["Weekly", "Monthly"]).optional(),
-  selectedDays: z.array(z.string()).min(1, "Select at least one day").optional(),
+  selectedDays: z
+    .array(z.string())
+    .min(1, "Select at least one day")
+    .optional(),
   description: z.string().optional(),
   location: z.string().optional(),
   difficulty: z.enum(["Beginner", "Intermediate", "Advanced"]).optional(),
@@ -87,7 +169,7 @@ const ClassSchedulePage = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [classToDelete, setClassToDelete] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -118,7 +200,7 @@ const ClassSchedulePage = () => {
       fetchClasses();
       fetchTrainers();
     };
-    
+
     const handleOffline = () => {
       setIsNetworkConnected(false);
       toast({
@@ -127,28 +209,28 @@ const ClassSchedulePage = () => {
         variant: "destructive",
       });
     };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
     // Set initial network status
     setIsNetworkConnected(navigator.onLine);
-    
+
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
   const fetchTrainers = useCallback(async () => {
     setError(null);
-    
+
     if (!isNetworkConnected) {
       console.log("Cannot fetch trainers - offline");
       loadTrainersFromLocalStorage();
       return;
     }
-    
+
     try {
       console.log("Fetching trainers...");
       // Use requireAuth with fallback data for better offline experience
@@ -158,7 +240,7 @@ const ClassSchedulePage = () => {
         { id: 3, name: "Mike Wilson" },
         { id: 4, name: "Lisa Brown" },
       ];
-      
+
       const data = await requireAuth(async () => {
         const { data, error } = await supabase
           .from("trainers")
@@ -169,36 +251,39 @@ const ClassSchedulePage = () => {
           console.error("Error fetching trainers:", error);
           throw error;
         }
-        
+
         console.log("Trainers fetched from database:", data);
-        
+
         // If no trainers found, create some test trainers
         if (!data || data.length === 0) {
           console.log("No trainers found, creating test trainers");
           await createTestTrainers();
-          
+
           // Fetch trainers again after creating test trainers
           const { data: refreshedData, error: refreshError } = await supabase
             .from("trainers")
             .select("id, name")
             .eq("status", "Active");
-            
+
           if (refreshError) {
-            console.error("Error fetching trainers after creation:", refreshError);
+            console.error(
+              "Error fetching trainers after creation:",
+              refreshError
+            );
             return defaultTrainers;
           }
-          
+
           return refreshedData || defaultTrainers;
         }
-        
+
         // Cache successful data for offline use
         if (data && data.length > 0) {
           cacheDataForOffline("trainers", data);
         }
-        
+
         return data || [];
       }, defaultTrainers);
-      
+
       console.log("Trainers fetched:", data);
       setTrainers(data || defaultTrainers);
     } catch (error: any) {
@@ -221,7 +306,7 @@ const ClassSchedulePage = () => {
   const createTestTrainers = async () => {
     try {
       console.log("Creating test trainers...");
-      
+
       const testTrainers = [
         {
           name: "John Fitness",
@@ -229,7 +314,7 @@ const ClassSchedulePage = () => {
           phone: "123-456-7890",
           specialization: "Weight Training",
           status: "Active",
-          gender: "Male"
+          gender: "Male",
         },
         {
           name: "Sarah Yoga",
@@ -237,7 +322,7 @@ const ClassSchedulePage = () => {
           phone: "987-654-3210",
           specialization: "Yoga",
           status: "Active",
-          gender: "Female"
+          gender: "Female",
         },
         {
           name: "Mike Running",
@@ -245,20 +330,20 @@ const ClassSchedulePage = () => {
           phone: "555-123-4567",
           specialization: "Cardio",
           status: "Active",
-          gender: "Male"
-        }
+          gender: "Male",
+        },
       ];
-      
+
       const { data, error } = await supabase
         .from("trainers")
         .insert(testTrainers)
         .select();
-        
+
       if (error) {
         console.error("Error creating test trainers:", error);
         return false;
       }
-      
+
       console.log("Test trainers created successfully:", data);
       return true;
     } catch (err) {
@@ -283,7 +368,7 @@ const ClassSchedulePage = () => {
           console.warn("Error parsing cached trainers:", e);
         }
       }
-      
+
       // Fall back to older storage methods
       const legacyTrainers = [
         { id: 1, name: "John Smith" },
@@ -291,7 +376,7 @@ const ClassSchedulePage = () => {
         { id: 3, name: "Mike Wilson" },
         { id: 4, name: "Lisa Brown" },
       ];
-      
+
       // Use fallback trainers if nothing else works
       const fallbackTrainers = [
         { id: 1, name: "John Smith" },
@@ -320,14 +405,14 @@ const ClassSchedulePage = () => {
   const fetchClasses = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
+
     if (!isNetworkConnected) {
       console.log("Cannot fetch classes - offline");
       setError("You are currently offline. Reconnect to load data.");
       setIsLoading(false);
       return;
     }
-    
+
     try {
       // Use requireAuth with empty array fallback data for offline scenarios
       const data = await requireAuth(async () => {
@@ -339,7 +424,7 @@ const ClassSchedulePage = () => {
         if (error) throw error;
         return data;
       }, []);
-      
+
       const formattedClasses: ClassModel[] = data.map((cls: any) => ({
         id: cls.id,
         name: cls.name,
@@ -356,12 +441,14 @@ const ClassSchedulePage = () => {
         location: cls.location,
         difficulty: cls.difficulty,
       }));
-      
+
       setClasses(formattedClasses);
       console.log("Successfully loaded classes:", formattedClasses.length);
     } catch (error: any) {
       console.error("Error fetching classes:", error);
-      setError(error.message || "Failed to load classes. Please try again later.");
+      setError(
+        error.message || "Failed to load classes. Please try again later."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -375,13 +462,12 @@ const ClassSchedulePage = () => {
   const handleRetry = () => {
     setIsRetrying(true);
     setError(null);
-    
-    Promise.all([fetchTrainers(), fetchClasses()])
-      .finally(() => {
-        setTimeout(() => {
-          setIsRetrying(false);
-        }, 1000);
-      });
+
+    Promise.all([fetchTrainers(), fetchClasses()]).finally(() => {
+      setTimeout(() => {
+        setIsRetrying(false);
+      }, 1000);
+    });
   };
 
   const handleOpen = () => {
@@ -390,48 +476,50 @@ const ClassSchedulePage = () => {
   };
 
   const generateRecurringDates = (
-    startDate: Date, 
-    endDate: Date, 
-    frequency: "Weekly" | "Monthly", 
+    startDate: Date,
+    endDate: Date,
+    frequency: "Weekly" | "Monthly",
     days: string[]
   ) => {
     const dates: Date[] = [];
     const daysMap: Record<string, number> = {
-      "Sunday": 0,
-      "Monday": 1,
-      "Tuesday": 2,
-      "Wednesday": 3,
-      "Thursday": 4,
-      "Friday": 5,
-      "Saturday": 6
+      Sunday: 0,
+      Monday: 1,
+      Tuesday: 2,
+      Wednesday: 3,
+      Thursday: 4,
+      Friday: 5,
+      Saturday: 6,
     };
-    
+
     if (frequency === "Weekly") {
       let currentWeek = new Date(startDate);
-      
+
       while (currentWeek <= endDate) {
         for (const day of days) {
           const dayNumber = daysMap[day];
           const classDate = new Date(currentWeek);
-          classDate.setDate(classDate.getDate() - classDate.getDay() + dayNumber);
-          
+          classDate.setDate(
+            classDate.getDate() - classDate.getDay() + dayNumber
+          );
+
           if (classDate >= startDate && classDate <= endDate) {
             dates.push(new Date(classDate));
           }
         }
-        
+
         currentWeek = addWeeks(currentWeek, 1);
       }
     } else if (frequency === "Monthly") {
       let currentMonth = new Date(startDate);
       const dayOfMonth = startDate.getDate();
-      
+
       while (currentMonth <= endDate) {
         dates.push(new Date(currentMonth));
         currentMonth = addMonths(currentMonth, 1);
       }
     }
-    
+
     return dates;
   };
 
@@ -444,7 +532,7 @@ const ClassSchedulePage = () => {
       });
       return;
     }
-    
+
     try {
       setIsSubmitting(true);
       console.log("Form values:", values);
@@ -458,7 +546,7 @@ const ClassSchedulePage = () => {
         setIsSubmitting(false);
         return;
       }
-      
+
       // For recurring classes, generate all dates
       if (values.isRecurring && values.endDate) {
         const today = new Date();
@@ -468,7 +556,7 @@ const ClassSchedulePage = () => {
           values.recurringFrequency || "Weekly",
           values.selectedDays || []
         );
-        
+
         if (dates.length === 0) {
           toast({
             title: "No dates generated",
@@ -478,9 +566,9 @@ const ClassSchedulePage = () => {
           setIsSubmitting(false);
           return;
         }
-        
+
         // Create multiple class entries
-        const classesToCreate = dates.map(date => ({
+        const classesToCreate = dates.map((date) => ({
           name: values.name,
           trainer: values.trainer,
           trainers: [values.trainer],
@@ -495,32 +583,32 @@ const ClassSchedulePage = () => {
           location: values.location || null,
           difficulty: values.difficulty || "Beginner",
         }));
-        
+
         console.log("Creating multiple classes:", classesToCreate);
-        
+
         const { data, error } = await supabase
           .from("classes")
           .insert(classesToCreate)
           .select();
-          
+
         if (error) {
           console.error("Error creating classes:", error);
           throw error;
         }
-        
+
         console.log("Classes created successfully:", data);
-        
+
         toast({
           title: "Classes created",
           description: `Created ${dates.length} recurring classes`,
         });
-        
+
         // Refresh classes
         fetchClasses();
       } else {
         // Create a single class
         console.log("Creating a single class with trainer:", values.trainer);
-        
+
         const classData = {
           name: values.name,
           trainer: values.trainer,
@@ -536,30 +624,30 @@ const ClassSchedulePage = () => {
           location: values.location || null,
           difficulty: values.difficulty || "Beginner",
         };
-        
+
         console.log("Class data to insert:", classData);
-        
+
         const { data, error } = await supabase
           .from("classes")
           .insert(classData)
           .select();
-          
+
         if (error) {
           console.error("Error creating class:", error);
           throw error;
         }
-        
+
         console.log("Class created successfully:", data);
-        
+
         toast({
           title: "Class created",
           description: "New class has been created successfully",
         });
-        
+
         // Refresh classes
         fetchClasses();
       }
-      
+
       setIsOpen(false); // Close form early for better UX
       form.reset(); // Reset form after successful submission
     } catch (error: any) {
@@ -581,20 +669,20 @@ const ClassSchedulePage = () => {
 
   const confirmDelete = async () => {
     if (!classToDelete) return;
-    
+
     try {
       const { error } = await supabase
         .from("classes")
         .delete()
         .eq("id", classToDelete);
-        
+
       if (error) throw error;
-      
+
       toast({
         title: "Class deleted",
         description: "Class has been removed successfully",
       });
-      
+
       fetchClasses();
     } catch (error) {
       console.error("Error deleting class:", error);
@@ -611,20 +699,20 @@ const ClassSchedulePage = () => {
 
   const toggleClassStatus = async (id: number, currentStatus: string) => {
     const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
-    
+
     try {
       const { error } = await supabase
         .from("classes")
         .update({ status: newStatus })
         .eq("id", id);
-        
+
       if (error) throw error;
-      
+
       toast({
         title: "Status updated",
         description: `Class is now ${newStatus}`,
       });
-      
+
       fetchClasses();
     } catch (error) {
       console.error("Error updating class status:", error);
@@ -650,10 +738,12 @@ const ClassSchedulePage = () => {
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Class Schedule Management</h2>
-          <p className="text-gray-500">Create and manage recurring class schedules</p>
+          <p className="text-gray-500">
+            Create and manage recurring class schedules
+          </p>
         </div>
-        <Button 
-          className="bg-gym-blue hover:bg-gym-dark-blue" 
+        <Button
+          className="bg-gym-blue hover:bg-gym-dark-blue"
           onClick={handleOpen}
           disabled={!isNetworkConnected}
         >
@@ -662,27 +752,34 @@ const ClassSchedulePage = () => {
       </div>
 
       {error && (
-        <Alert variant={!isNetworkConnected ? "default" : "destructive"} className="mb-4">
+        <Alert
+          variant={!isNetworkConnected ? "default" : "destructive"}
+          className="mb-4"
+        >
           {!isNetworkConnected ? (
             <WifiOff className="h-4 w-4" />
           ) : (
             <AlertCircle className="h-4 w-4" />
           )}
-          <AlertTitle>{!isNetworkConnected ? "You're offline" : "Error"}</AlertTitle>
+          <AlertTitle>
+            {!isNetworkConnected ? "You're offline" : "Error"}
+          </AlertTitle>
           <AlertDescription className="flex justify-between items-center">
             <span>
-              {!isNetworkConnected 
+              {!isNetworkConnected
                 ? "You're currently offline. Limited functionality is available. Some data is cached for offline use."
                 : error}
             </span>
-            <Button 
+            <Button
               variant="outline"
               size="sm"
               onClick={handleRetry}
               className="ml-4"
               disabled={isRetrying || !isNetworkConnected}
             >
-              <RefreshCw className={cn("h-3 w-3 mr-1", isRetrying && "animate-spin")} />
+              <RefreshCw
+                className={cn("h-3 w-3 mr-1", isRetrying && "animate-spin")}
+              />
               Retry
             </Button>
           </AlertDescription>
@@ -691,21 +788,28 @@ const ClassSchedulePage = () => {
 
       {/* Show an offline banner if we're offline but there's no other error */}
       {!isNetworkConnected && !error && (
-        <Alert variant="default" className="mb-4 bg-yellow-50 border-yellow-200">
+        <Alert
+          variant="default"
+          className="mb-4 bg-yellow-50 border-yellow-200"
+        >
           <WifiOff className="h-4 w-4" />
           <AlertTitle>You're offline</AlertTitle>
           <AlertDescription>
-            You're currently working in offline mode. Some features will be limited.
+            You're currently working in offline mode. Some features will be
+            limited.
           </AlertDescription>
         </Alert>
       )}
 
       {/* Class Creation Form Dialog */}
-      <Dialog open={isOpen} onOpenChange={(open) => {
-        if (!isSubmitting) {
-          setIsOpen(open);
-        }
-      }}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!isSubmitting) {
+            setIsOpen(open);
+          }
+        }}
+      >
         <DialogContent className="max-w-md overflow-y-auto max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Create New Class</DialogTitle>
@@ -713,7 +817,7 @@ const ClassSchedulePage = () => {
               Fill in the details to schedule a new class
             </DialogDescription>
           </DialogHeader>
-          
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
@@ -730,15 +834,15 @@ const ClassSchedulePage = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="trainer"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Trainer*</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -748,7 +852,9 @@ const ClassSchedulePage = () => {
                         </FormControl>
                         <SelectContent>
                           {trainers.length === 0 ? (
-                            <SelectItem value="no-trainers" disabled>No trainers available</SelectItem>
+                            <SelectItem value="no-trainers" disabled>
+                              No trainers available
+                            </SelectItem>
                           ) : (
                             trainers.map((trainer) => (
                               <SelectItem key={trainer.id} value={trainer.name}>
@@ -763,7 +869,7 @@ const ClassSchedulePage = () => {
                   )}
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -772,10 +878,12 @@ const ClassSchedulePage = () => {
                     <FormItem>
                       <FormLabel>Capacity*</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value))} 
+                        <Input
+                          type="number"
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(parseInt(e.target.value))
+                          }
                           min={1}
                         />
                       </FormControl>
@@ -783,15 +891,15 @@ const ClassSchedulePage = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="gender"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gender</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -810,7 +918,7 @@ const ClassSchedulePage = () => {
                   )}
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -818,8 +926,8 @@ const ClassSchedulePage = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Start Time*</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -828,7 +936,7 @@ const ClassSchedulePage = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {timeOptions.map(time => (
+                          {timeOptions.map((time) => (
                             <SelectItem key={time} value={time}>
                               {formatTime(time)}
                             </SelectItem>
@@ -839,15 +947,15 @@ const ClassSchedulePage = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="endTime"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>End Time*</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -856,7 +964,7 @@ const ClassSchedulePage = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {timeOptions.map(time => (
+                          {timeOptions.map((time) => (
                             <SelectItem key={time} value={time}>
                               {formatTime(time)}
                             </SelectItem>
@@ -868,7 +976,7 @@ const ClassSchedulePage = () => {
                   )}
                 />
               </div>
-              
+
               <FormField
                 control={form.control}
                 name="isRecurring"
@@ -880,11 +988,13 @@ const ClassSchedulePage = () => {
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
-                    <FormLabel className="!mt-0">This is a recurring class</FormLabel>
+                    <FormLabel className="!mt-0">
+                      This is a recurring class
+                    </FormLabel>
                   </FormItem>
                 )}
               />
-              
+
               {form.watch("isRecurring") && (
                 <div className="space-y-4 border p-4 rounded-lg">
                   <FormField
@@ -893,8 +1003,8 @@ const ClassSchedulePage = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Frequency</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
+                        <Select
+                          onValueChange={field.onChange}
                           defaultValue={field.value}
                         >
                           <FormControl>
@@ -911,7 +1021,7 @@ const ClassSchedulePage = () => {
                       </FormItem>
                     )}
                   />
-                  
+
                   {form.watch("recurringFrequency") === "Weekly" && (
                     <FormField
                       control={form.control}
@@ -921,17 +1031,24 @@ const ClassSchedulePage = () => {
                           <FormLabel>Days of the Week</FormLabel>
                           <div className="grid grid-cols-2 gap-2">
                             {weekdays.map((day) => (
-                              <div key={day.id} className="flex items-center space-x-2">
+                              <div
+                                key={day.id}
+                                className="flex items-center space-x-2"
+                              >
                                 <Checkbox
                                   id={day.id}
                                   checked={field.value?.includes(day.id)}
                                   onCheckedChange={(checked) => {
-                                    const currentDays = [...(field.value || [])];
+                                    const currentDays = [
+                                      ...(field.value || []),
+                                    ];
                                     if (checked) {
                                       field.onChange([...currentDays, day.id]);
                                     } else {
                                       field.onChange(
-                                        currentDays.filter((value) => value !== day.id)
+                                        currentDays.filter(
+                                          (value) => value !== day.id
+                                        )
                                       );
                                     }
                                   }}
@@ -945,7 +1062,7 @@ const ClassSchedulePage = () => {
                       )}
                     />
                   )}
-                  
+
                   <FormField
                     control={form.control}
                     name="endDate"
@@ -987,7 +1104,7 @@ const ClassSchedulePage = () => {
                   />
                 </div>
               )}
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -995,8 +1112,8 @@ const ClassSchedulePage = () => {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Difficulty</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
@@ -1006,7 +1123,9 @@ const ClassSchedulePage = () => {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="Beginner">Beginner</SelectItem>
-                          <SelectItem value="Intermediate">Intermediate</SelectItem>
+                          <SelectItem value="Intermediate">
+                            Intermediate
+                          </SelectItem>
                           <SelectItem value="Advanced">Advanced</SelectItem>
                         </SelectContent>
                       </Select>
@@ -1014,7 +1133,7 @@ const ClassSchedulePage = () => {
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="location"
@@ -1029,7 +1148,7 @@ const ClassSchedulePage = () => {
                   )}
                 />
               </div>
-              
+
               <FormField
                 control={form.control}
                 name="description"
@@ -1047,10 +1166,10 @@ const ClassSchedulePage = () => {
                   </FormItem>
                 )}
               />
-              
+
               <DialogFooter>
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="bg-gym-blue hover:bg-gym-dark-blue"
                   disabled={isSubmitting}
                 >
@@ -1075,20 +1194,18 @@ const ClassSchedulePage = () => {
           <DialogHeader>
             <DialogTitle>Delete Class</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this class? This action cannot be undone.
+              Are you sure you want to delete this class? This action cannot be
+              undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowDeleteConfirm(false)}
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={confirmDelete}
-            >
+            <Button variant="destructive" onClick={confirmDelete}>
               Delete
             </Button>
           </DialogFooter>
@@ -1104,8 +1221,10 @@ const ClassSchedulePage = () => {
           </div>
         ) : classes.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-gray-500 mb-4">No classes found. Create your first class to get started.</p>
-            <Button 
+            <p className="text-gray-500 mb-4">
+              No classes found. Create your first class to get started.
+            </p>
+            <Button
               onClick={handleOpen}
               className="bg-gym-blue hover:bg-gym-dark-blue"
               disabled={!isNetworkConnected}
@@ -1145,7 +1264,9 @@ const ClassSchedulePage = () => {
                 {classes.map((cls) => (
                   <tr key={cls.id} className="hover:bg-gray-50">
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{cls.name}</div>
+                      <div className="font-medium text-gray-900">
+                        {cls.name}
+                      </div>
                       {cls.description && (
                         <div className="text-sm text-gray-500 truncate max-w-xs">
                           {cls.description}
@@ -1156,11 +1277,14 @@ const ClassSchedulePage = () => {
                       <div className="text-sm text-gray-900">{cls.trainer}</div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{cls.schedule}</div>
+                      <div className="text-sm text-gray-900">
+                        {cls.schedule}
+                      </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {formatTime(cls.startTime || "")} - {formatTime(cls.endTime || "")}
+                        {formatTime(cls.startTime || "")} -{" "}
+                        {formatTime(cls.endTime || "")}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
@@ -1169,26 +1293,34 @@ const ClassSchedulePage = () => {
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        cls.status === "Active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}>
+                      <span
+                        className={`px-2 py-1 text-xs rounded-full ${
+                          cls.status === "Active"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                      >
                         {cls.status}
                       </span>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="sm"
-                          onClick={() => toggleClassStatus(cls.id, cls.status || "Active")}
-                          className={cls.status === "Active" ? "text-amber-600" : "text-green-600"}
+                          onClick={() =>
+                            toggleClassStatus(cls.id, cls.status || "Active")
+                          }
+                          className={
+                            cls.status === "Active"
+                              ? "text-amber-600"
+                              : "text-green-600"
+                          }
                         >
                           {cls.status === "Active" ? "Deactivate" : "Activate"}
                         </Button>
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteClass(cls.id)}
                           className="text-red-600"
