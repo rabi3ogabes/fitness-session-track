@@ -211,7 +211,7 @@ const Settings = () => {
       console.error('Test email error:', error);
       toast({
         title: "Test failed",
-        description: "Failed to send test email. Please check your SMTP settings.",
+        description: `Failed to send test email: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
