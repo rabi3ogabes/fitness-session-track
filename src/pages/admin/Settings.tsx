@@ -221,12 +221,19 @@ const Settings = () => {
 
   const loadEmailLogs = async () => {
     try {
-      const { data } = await supabase.functions.invoke('send-smtp-notification', {
-        method: 'GET'
+      const response = await fetch(`https://wlawjupusugrhojbywyq.supabase.co/functions/v1/send-smtp-notification`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsYXdqdXB1c3VncmhvamJ5d3lxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMTIxOTYsImV4cCI6MjA2MTU4ODE5Nn0.-TMflVxBkU4MTTxRWd0jrSiNBCLhxnl8R4EqsrWrSlg'
+        }
       });
       
-      if (data?.logs) {
-        setEmailLogs(data.logs);
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.logs) {
+          setEmailLogs(data.logs);
+        }
       }
     } catch (error) {
       console.error('Failed to load email logs:', error);
