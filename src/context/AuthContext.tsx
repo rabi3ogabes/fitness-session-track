@@ -549,24 +549,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      // Send SMTP notification to admin email
-      try {
-        const adminNotificationEmail = localStorage.getItem('adminNotificationEmail');
-        const smtpSettings = JSON.parse(localStorage.getItem('smtpSettings') || '{}');
-        
-        if (adminNotificationEmail && smtpSettings.host) {
-          await supabase.functions.invoke('send-smtp-notification', {
-            body: {
-              userEmail: email,
-              userName: name,
-              notificationEmail: adminNotificationEmail,
-              smtpSettings: smtpSettings
-            }
-          });
+      // Send notification to admin about new signup
+      const adminNotificationEmail = localStorage.getItem('adminNotificationEmail');
+      const smtpSettings = localStorage.getItem('smtpSettings');
+      
+      if (adminNotificationEmail && smtpSettings) {
+        try {
+          const parsedSmtpSettings = JSON.parse(smtpSettings);
+          
+          // Only send if SMTP settings are properly configured
+          if (parsedSmtpSettings.host && parsedSmtpSettings.username && parsedSmtpSettings.password && parsedSmtpSettings.fromEmail) {
+            await supabase.functions.invoke('send-smtp-notification', {
+              body: {
+                userEmail: email,
+                userName: name,
+                userPhone: phone,
+                notificationEmail: adminNotificationEmail,
+                smtpSettings: {
+                  ...parsedSmtpSettings,
+                  useSsl: true
+                }
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Failed to send admin notification:', error);
         }
-      } catch (notificationError) {
-        console.error('Failed to send SMTP notification:', notificationError);
-        // Don't fail the signup process if notification fails
       }
 
       toast({
