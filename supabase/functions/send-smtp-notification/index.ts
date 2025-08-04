@@ -12,26 +12,98 @@ interface SMTPNotificationRequest {
   userPhone?: string;
   notificationEmail: string;
   smtpSettings: {
-    host: string;
-    port: string;
-    username: string;
-    password: string;
+    smtpHost: string;
+    smtpPort: string;
+    smtpUsername: string;
+    smtpPassword: string;
     fromEmail: string;
     fromName: string;
     useSsl?: boolean;
   };
 }
 
-const emailLogs: Array<{
+interface EmailLogEntry {
   timestamp: string;
   to: string;
   subject: string;
   status: 'success' | 'failed';
   error?: string;
-}> = [];
+}
+
+const emailLogs: EmailLogEntry[] = [];
+
+async function sendEmail(settings: SMTPNotificationRequest['smtpSettings'], to: string, subject: string, body: string): Promise<void> {
+  const encoder = new TextEncoder();
+  
+  try {
+    console.log(`Attempting to send email to: ${to} via ${settings.smtpHost}:${settings.smtpPort}`);
+    
+    // Create email content in SMTP format
+    const emailContent = [
+      `From: ${settings.fromName} <${settings.fromEmail}>`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      `MIME-Version: 1.0`,
+      `Content-Type: text/html; charset=UTF-8`,
+      `Content-Transfer-Encoding: 8bit`,
+      ``,
+      body
+    ].join('\r\n');
+
+    // Connect to SMTP server
+    const conn = await Deno.connect({
+      hostname: settings.smtpHost,
+      port: parseInt(settings.smtpPort)
+    });
+
+    const reader = new ReadableStreamDefaultReader(conn.readable.getReader());
+    const writer = conn.writable.getWriter();
+
+    // Helper function to read SMTP response
+    const readResponse = async (): Promise<string> => {
+      const { value } = await reader.read();
+      return new TextDecoder().decode(value);
+    };
+
+    // Helper function to send SMTP command
+    const sendCommand = async (command: string): Promise<string> => {
+      await writer.write(encoder.encode(command + '\r\n'));
+      return await readResponse();
+    };
+
+    // SMTP conversation
+    await readResponse(); // Read initial greeting
+    
+    await sendCommand(`EHLO ${settings.smtpHost}`);
+    
+    if (settings.useSsl !== false) {
+      await sendCommand('STARTTLS');
+    }
+    
+    await sendCommand('AUTH LOGIN');
+    await sendCommand(btoa(settings.smtpUsername));
+    await sendCommand(btoa(settings.smtpPassword));
+    
+    await sendCommand(`MAIL FROM:<${settings.fromEmail}>`);
+    await sendCommand(`RCPT TO:<${to}>`);
+    await sendCommand('DATA');
+    
+    await writer.write(encoder.encode(emailContent + '\r\n.\r\n'));
+    await readResponse();
+    
+    await sendCommand('QUIT');
+    
+    conn.close();
+    
+    console.log(`Email sent successfully to: ${to}`);
+  } catch (error) {
+    console.error(`Failed to send email to ${to}:`, error);
+    throw new Error(`SMTP Error: ${error.message}`);
+  }
+}
 
 serve(async (req: Request): Promise<Response> => {
-  console.log("Function called:", req.method, req.url);
+  console.log("SMTP Notification function called:", req.method, req.url);
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -63,7 +135,7 @@ serve(async (req: Request): Promise<Response> => {
       console.log('Processing SMTP notification request');
       
       const body = await req.text();
-      console.log('Raw request body:', body);
+      console.log('Raw request body received');
       
       let requestBody: SMTPNotificationRequest;
       try {
@@ -91,6 +163,15 @@ serve(async (req: Request): Promise<Response> => {
       // Validate required fields
       if (!notificationEmail) {
         console.error('Missing notification email');
+        const logEntry: EmailLogEntry = {
+          timestamp: new Date().toISOString(),
+          to: 'unknown',
+          subject: 'Validation Failed',
+          status: 'failed',
+          error: 'Notification email is required'
+        };
+        emailLogs.push(logEntry);
+        
         return new Response(
           JSON.stringify({ error: 'Notification email is required' }),
           { 
@@ -100,10 +181,19 @@ serve(async (req: Request): Promise<Response> => {
         );
       }
 
-      if (!smtpSettings) {
-        console.error('Missing SMTP settings');
+      if (!smtpSettings || !smtpSettings.smtpHost || !smtpSettings.smtpUsername || !smtpSettings.smtpPassword) {
+        console.error('Missing or incomplete SMTP settings');
+        const logEntry: EmailLogEntry = {
+          timestamp: new Date().toISOString(),
+          to: notificationEmail,
+          subject: 'Configuration Error',
+          status: 'failed',
+          error: 'SMTP settings are incomplete'
+        };
+        emailLogs.push(logEntry);
+        
         return new Response(
-          JSON.stringify({ error: 'SMTP settings are required' }),
+          JSON.stringify({ error: 'Complete SMTP settings are required' }),
           { 
             status: 400, 
             headers: { 'Content-Type': 'application/json', ...corsHeaders } 
@@ -111,45 +201,122 @@ serve(async (req: Request): Promise<Response> => {
         );
       }
 
-      console.log('Validation passed, creating email log entry...');
+      console.log('Validation passed, preparing to send email...');
 
       const emailSubject = userEmail === 'test@example.com' 
         ? 'SMTP Test Email - Configuration Successful'
         : `New User Registration: ${userName}`;
 
-      // Log the email attempt
-      const logEntry = {
-        timestamp: new Date().toISOString(),
-        to: notificationEmail,
-        subject: emailSubject,
-        status: 'success' as const
-      };
-      emailLogs.push(logEntry);
-      
-      // Keep only last 100 logs
-      if (emailLogs.length > 100) {
-        emailLogs.splice(0, emailLogs.length - 100);
-      }
+      const emailBody = userEmail === 'test@example.com' 
+        ? `
+          <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+              <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #2563eb;">SMTP Configuration Test Successful!</h2>
+                <p>This is a test email to verify your SMTP configuration is working correctly.</p>
+                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                  <h3 style="margin-top: 0;">Configuration Details:</h3>
+                  <ul>
+                    <li><strong>SMTP Host:</strong> ${smtpSettings.smtpHost}</li>
+                    <li><strong>SMTP Port:</strong> ${smtpSettings.smtpPort}</li>
+                    <li><strong>From Email:</strong> ${smtpSettings.fromEmail}</li>
+                    <li><strong>SSL/TLS:</strong> ${smtpSettings.useSsl !== false ? 'Enabled' : 'Disabled'}</li>
+                  </ul>
+                </div>
+                <p>Your email notification system is now ready to send notifications for new user registrations.</p>
+                <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+                  This email was sent automatically by your gym management system.
+                </p>
+              </div>
+            </body>
+          </html>
+        `
+        : `
+          <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+              <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #2563eb;">New User Registration</h2>
+                <p>A new user has registered for your gym management system.</p>
+                <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                  <h3 style="margin-top: 0;">User Details:</h3>
+                  <ul>
+                    <li><strong>Name:</strong> ${userName}</li>
+                    <li><strong>Email:</strong> ${userEmail}</li>
+                    ${userPhone ? `<li><strong>Phone:</strong> ${userPhone}</li>` : ''}
+                    <li><strong>Registration Date:</strong> ${new Date().toLocaleString()}</li>
+                  </ul>
+                </div>
+                <p>Please review the new user registration and take any necessary actions in your admin dashboard.</p>
+                <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+                  This email was sent automatically by your gym management system.
+                </p>
+              </div>
+            </body>
+          </html>
+        `;
 
-      console.log('Email logged successfully, returning response');
-
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Email notification processed successfully! SMTP configuration validated.',
-          emailDetails: {
-            to: notificationEmail,
-            subject: emailSubject,
-            timestamp: new Date().toISOString(),
-            smtpHost: smtpSettings.host,
-            fromEmail: smtpSettings.fromEmail
-          }
-        }),
-        { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+      try {
+        await sendEmail(smtpSettings, notificationEmail, emailSubject, emailBody);
+        
+        // Log successful email
+        const logEntry: EmailLogEntry = {
+          timestamp: new Date().toISOString(),
+          to: notificationEmail,
+          subject: emailSubject,
+          status: 'success'
+        };
+        emailLogs.push(logEntry);
+        
+        // Keep only last 100 logs
+        if (emailLogs.length > 100) {
+          emailLogs.splice(0, emailLogs.length - 100);
         }
-      );
+
+        console.log('Email sent successfully');
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: userEmail === 'test@example.com' 
+              ? 'Test email sent successfully! SMTP configuration is working.'
+              : 'New user registration notification sent successfully.',
+            emailDetails: {
+              to: notificationEmail,
+              subject: emailSubject,
+              timestamp: new Date().toISOString(),
+              smtpHost: smtpSettings.smtpHost,
+              fromEmail: smtpSettings.fromEmail
+            }
+          }),
+          { 
+            status: 200, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+          }
+        );
+      } catch (emailError) {
+        console.error('Failed to send email:', emailError);
+        
+        // Log failed email
+        const logEntry: EmailLogEntry = {
+          timestamp: new Date().toISOString(),
+          to: notificationEmail,
+          subject: emailSubject,
+          status: 'failed',
+          error: emailError instanceof Error ? emailError.message : 'Unknown error'
+        };
+        emailLogs.push(logEntry);
+        
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to send email notification',
+            details: emailError instanceof Error ? emailError.message : 'Unknown error'
+          }),
+          { 
+            status: 500, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+          }
+        );
+      }
     }
 
     // Method not allowed
@@ -165,12 +332,12 @@ serve(async (req: Request): Promise<Response> => {
   } catch (error) {
     console.error('Unexpected error in function:', error);
     
-    // Log the failed email
-    const logEntry = {
+    // Log the failed request
+    const logEntry: EmailLogEntry = {
       timestamp: new Date().toISOString(),
       to: 'unknown',
-      subject: 'Failed Request',
-      status: 'failed' as const,
+      subject: 'Server Error',
+      status: 'failed',
       error: error instanceof Error ? error.message : 'Unknown error'
     };
     emailLogs.push(logEntry);
