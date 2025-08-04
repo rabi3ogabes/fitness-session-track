@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, Mail, Clock, Image, Trash, Palette, LayoutDashboard, Type, Plus, Send } from "lucide-react";
+import { Settings as SettingsIcon, MessageCircle, Clock, Image, Trash, Palette, LayoutDashboard, Type, Plus, Send } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,24 +24,13 @@ import {
 
 const Settings = () => {
   const [cancellationHours, setCancellationHours] = useState(4);
-  const [adminNotificationEmail, setAdminNotificationEmail] = useState("");
-  const [smtpSettings, setSmtpSettings] = useState({
-    host: "",
-    port: "587",
-    username: "",
-    password: "",
-    fromEmail: "",
-    fromName: "Gym System"
+  const [whatsappSettings, setWhatsappSettings] = useState({
+    phoneNumbers: [""],
+    apiToken: "",
+    instanceId: ""
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [isTestingSmtp, setIsTestingSmtp] = useState(false);
-  const [emailLogs, setEmailLogs] = useState<Array<{
-    timestamp: string;
-    to: string;
-    subject: string;
-    status: 'success' | 'failed';
-    error?: string;
-  }>>([]);
+  const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [headerColor, setHeaderColor] = useState<string>("#ffffff");
@@ -93,16 +82,10 @@ const Settings = () => {
       setFooterColor(savedFooterColor);
     }
     
-    // Load admin notification email from local storage
-    const savedAdminEmail = localStorage.getItem("adminNotificationEmail");
-    if (savedAdminEmail) {
-      setAdminNotificationEmail(savedAdminEmail);
-    }
-    
-    // Load SMTP settings from local storage
-    const savedSmtpSettings = localStorage.getItem("smtpSettings");
-    if (savedSmtpSettings) {
-      setSmtpSettings(JSON.parse(savedSmtpSettings));
+    // Load WhatsApp settings from local storage
+    const savedWhatsappSettings = localStorage.getItem("whatsappSettings");
+    if (savedWhatsappSettings) {
+      setWhatsappSettings(JSON.parse(savedWhatsappSettings));
     }
     
     // Load main page content from local storage
@@ -110,9 +93,6 @@ const Settings = () => {
     if (savedMainPageContent) {
       setMainPageContent(JSON.parse(savedMainPageContent));
     }
-
-    // Load email logs
-    loadEmailLogs();
   }, []);
 
   const handleSaveSettings = () => {
@@ -142,11 +122,8 @@ const Settings = () => {
     // Save main page content to localStorage
     localStorage.setItem("mainPageContent", JSON.stringify(mainPageContent));
 
-    // Save admin notification email to localStorage
-    localStorage.setItem("adminNotificationEmail", adminNotificationEmail);
-    
-    // Save SMTP settings to localStorage
-    localStorage.setItem("smtpSettings", JSON.stringify(smtpSettings));
+    // Save WhatsApp settings to localStorage
+    localStorage.setItem("whatsappSettings", JSON.stringify(whatsappSettings));
 
     // Save other settings to localStorage
     localStorage.setItem("cancellationHours", cancellationHours.toString());
@@ -162,37 +139,35 @@ const Settings = () => {
     }, 500);
   };
 
-  const handleTestSmtp = async () => {
-    if (!adminNotificationEmail) {
+  const handleTestWhatsapp = async () => {
+    if (!whatsappSettings.apiToken || !whatsappSettings.instanceId) {
       toast({
         title: "Error",
-        description: "Please enter admin notification email first.",
+        description: "Please configure WhatsApp API token and instance ID first.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!smtpSettings.host || !smtpSettings.username || !smtpSettings.password || !smtpSettings.fromEmail) {
+    if (whatsappSettings.phoneNumbers.filter(num => num.trim()).length === 0) {
       toast({
         title: "Error", 
-        description: "Please configure all SMTP settings first.",
+        description: "Please add at least one phone number.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsTestingSmtp(true);
+    setIsTestingWhatsapp(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('send-smtp-notification', {
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-notification', {
         body: {
-          userEmail: "test@example.com",
           userName: "Test User",
-          notificationEmail: adminNotificationEmail,
-          smtpSettings: {
-            ...smtpSettings,
-            useSsl: true
-          }
+          userEmail: "test@example.com",
+          phoneNumbers: whatsappSettings.phoneNumbers.filter(num => num.trim()),
+          apiToken: whatsappSettings.apiToken,
+          instanceId: whatsappSettings.instanceId
         }
       });
 
@@ -201,56 +176,49 @@ const Settings = () => {
       }
 
       toast({
-        title: "Test email sent",
-        description: "A test notification was sent to your admin email.",
+        title: "Test WhatsApp sent",
+        description: "A test notification was sent to your WhatsApp numbers.",
       });
-
-      // Refresh logs after test
-      loadEmailLogs();
     } catch (error) {
-      console.error('Test email error:', error);
+      console.error('Test WhatsApp error:', error);
       toast({
         title: "Test failed",
-        description: `Failed to send test email: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: `Failed to send test WhatsApp: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
-      setIsTestingSmtp(false);
+      setIsTestingWhatsapp(false);
     }
   };
 
-  const loadEmailLogs = async () => {
-    try {
-      const response = await fetch(`https://wlawjupusugrhojbywyq.supabase.co/functions/v1/send-smtp-notification`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsYXdqdXB1c3VncmhvamJ5d3lxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMTIxOTYsImV4cCI6MjA2MTU4ODE5Nn0.-TMflVxBkU4MTTxRWd0jrSiNBCLhxnl8R4EqsrWrSlg'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data?.logs) {
-          setEmailLogs(data.logs);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load email logs:', error);
-    }
-  };
-
-  const handleSaveSmtpSettings = () => {
-    // Save admin notification email to localStorage
-    localStorage.setItem("adminNotificationEmail", adminNotificationEmail);
-    
-    // Save SMTP settings to localStorage
-    localStorage.setItem("smtpSettings", JSON.stringify(smtpSettings));
+  const handleSaveWhatsappSettings = () => {
+    localStorage.setItem("whatsappSettings", JSON.stringify(whatsappSettings));
 
     toast({
-      title: "SMTP settings saved",
-      description: "Your SMTP configuration has been saved successfully.",
+      title: "WhatsApp settings saved",
+      description: "Your WhatsApp configuration has been saved successfully.",
     });
+  };
+
+  const addPhoneNumber = () => {
+    setWhatsappSettings(prev => ({
+      ...prev,
+      phoneNumbers: [...prev.phoneNumbers, ""]
+    }));
+  };
+
+  const removePhoneNumber = (index: number) => {
+    setWhatsappSettings(prev => ({
+      ...prev,
+      phoneNumbers: prev.phoneNumbers.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updatePhoneNumber = (index: number, value: string) => {
+    setWhatsappSettings(prev => ({
+      ...prev,
+      phoneNumbers: prev.phoneNumbers.map((num, i) => i === index ? value : num)
+    }));
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -476,107 +444,96 @@ const Settings = () => {
             <Card>
               <CardHeader>
                 <div className="flex items-center space-x-2">
-                  <Mail className="h-5 w-5 text-gym-blue" />
-                  <CardTitle>Email Notification System</CardTitle>
+                  <MessageCircle className="h-5 w-5 text-gym-blue" />
+                  <CardTitle>WhatsApp Notification System</CardTitle>
                 </div>
                 <CardDescription>
-                  Configure admin email and SMTP settings for new user registration notifications
+                  Configure WhatsApp settings for new user registration notifications
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="admin-notification-email">Admin Notification Email</Label>
+                    <Label htmlFor="whatsapp-api-token">WhatsApp API Token</Label>
                     <Input
-                      id="admin-notification-email"
-                      type="email"
-                      placeholder="admin@example.com"
-                      value={adminNotificationEmail}
-                      onChange={(e) => setAdminNotificationEmail(e.target.value)}
+                      id="whatsapp-api-token"
+                      type="password"
+                      placeholder="Enter your WhatsApp API token"
+                      value={whatsappSettings.apiToken}
+                      onChange={(e) => setWhatsappSettings(prev => ({ ...prev, apiToken: e.target.value }))}
                     />
                     <p className="text-sm text-muted-foreground mt-1">
-                      This email will receive notifications when new users register
+                      Your WhatsApp Business API token
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="whatsapp-instance-id">Instance ID</Label>
+                    <Input
+                      id="whatsapp-instance-id"
+                      type="text"
+                      placeholder="Enter your WhatsApp instance ID"
+                      value={whatsappSettings.instanceId}
+                      onChange={(e) => setWhatsappSettings(prev => ({ ...prev, instanceId: e.target.value }))}
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Your WhatsApp Business API instance ID
                     </p>
                   </div>
 
                   <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3">SMTP Configuration</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="smtp-host">SMTP Host</Label>
-                        <Input
-                          id="smtp-host"
-                          type="text"
-                          placeholder="smtp.gmail.com"
-                          value={smtpSettings.host}
-                          onChange={(e) => setSmtpSettings(prev => ({ ...prev, host: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="smtp-port">SMTP Port</Label>
-                        <Input
-                          id="smtp-port"
-                          type="number"
-                          placeholder="587"
-                          value={smtpSettings.port}
-                          onChange={(e) => setSmtpSettings(prev => ({ ...prev, port: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="smtp-username">SMTP Username</Label>
-                        <Input
-                          id="smtp-username"
-                          type="text"
-                          placeholder="your-email@gmail.com"
-                          value={smtpSettings.username}
-                          onChange={(e) => setSmtpSettings(prev => ({ ...prev, username: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="smtp-password">SMTP Password</Label>
-                        <Input
-                          id="smtp-password"
-                          type="password"
-                          placeholder="your-app-password"
-                          value={smtpSettings.password}
-                          onChange={(e) => setSmtpSettings(prev => ({ ...prev, password: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="from-email">From Email</Label>
-                        <Input
-                          id="from-email"
-                          type="email"
-                          placeholder="noreply@yourgym.com"
-                          value={smtpSettings.fromEmail}
-                          onChange={(e) => setSmtpSettings(prev => ({ ...prev, fromEmail: e.target.value }))}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="from-name">From Name</Label>
-                        <Input
-                          id="from-name"
-                          type="text"
-                          placeholder="Gym System"
-                          value={smtpSettings.fromName}
-                          onChange={(e) => setSmtpSettings(prev => ({ ...prev, fromName: e.target.value }))}
-                        />
-                      </div>
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="font-semibold">Admin Phone Numbers</h4>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={addPhoneNumber}
+                        className="flex items-center gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Number
+                      </Button>
                     </div>
+                    <div className="space-y-3">
+                      {whatsappSettings.phoneNumbers.map((phoneNumber, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            type="tel"
+                            placeholder="+1234567890"
+                            value={phoneNumber}
+                            onChange={(e) => updatePhoneNumber(index, e.target.value)}
+                            className="flex-1"
+                          />
+                          {whatsappSettings.phoneNumbers.length > 1 && (
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              onClick={() => removePhoneNumber(index)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      These phone numbers will receive notifications when new users register
+                    </p>
                   </div>
 
                   <div className="flex gap-3 pt-4">
                     <Button 
                       variant="outline" 
-                      onClick={handleTestSmtp}
-                      disabled={isTestingSmtp}
+                      onClick={handleTestWhatsapp}
+                      disabled={isTestingWhatsapp}
                       className="flex-1"
                     >
                       <Send className="h-4 w-4 mr-2" />
-                      {isTestingSmtp ? "Testing..." : "Test Email"}
+                      {isTestingWhatsapp ? "Testing..." : "Test WhatsApp"}
                     </Button>
                     <Button 
-                      onClick={handleSaveSmtpSettings}
+                      onClick={handleSaveWhatsappSettings}
                       className="flex-1"
                     >
                       Save Configuration
@@ -586,38 +543,13 @@ const Settings = () => {
                   <div className="bg-muted p-4 rounded-lg">
                     <h5 className="font-medium mb-2">How it works:</h5>
                     <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• Configure your admin email and SMTP settings above</li>
-                      <li>• Test the configuration to ensure emails can be sent</li>
-                      <li>• When new users register, you'll receive a notification email with their details</li>
+                      <li>• Configure your WhatsApp API token and instance ID above</li>
+                      <li>• Add admin phone numbers to receive notifications</li>
+                      <li>• Test the configuration to ensure messages can be sent</li>
+                      <li>• When new users register, you'll receive a WhatsApp notification with their details</li>
                       <li>• The notification includes: name, email, and phone number</li>
                     </ul>
                   </div>
-
-                  {emailLogs.length > 0 && (
-                    <div className="border-t pt-4">
-                      <h5 className="font-medium mb-3">Email Logs (Last 20)</h5>
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {emailLogs.map((log, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-background border rounded-lg">
-                            <div className="flex-1">
-                              <div className="font-medium text-sm">{log.subject}</div>
-                              <div className="text-xs text-muted-foreground">To: {log.to}</div>
-                              <div className="text-xs text-muted-foreground">
-                                {new Date(log.timestamp).toLocaleString()}
-                              </div>
-                            </div>
-                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              log.status === 'success' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {log.status}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
