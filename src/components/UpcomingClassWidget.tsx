@@ -132,14 +132,22 @@ const UpcomingClassWidget = () => {
         <div className="bg-primary/5 p-4 rounded-lg">
           <h3 className="font-semibold text-lg">{upcomingClass.name}</h3>
           <p className="text-sm text-muted-foreground">
-            {new Date(upcomingClass.start_time).toLocaleDateString()} • {upcomingClass.start_time} - {upcomingClass.end_time}
+            {new Date(upcomingClass.start_time).toLocaleDateString()} • {new Date(upcomingClass.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(upcomingClass.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
           </p>
           <p className="text-sm text-muted-foreground">Trainer: {upcomingClass.trainer}</p>
-          <div className="flex items-center gap-2 mt-2">
-            <Users className="h-4 w-4" />
-            <span className="text-sm">
-              {upcomingClass.enrolled}/{upcomingClass.capacity} enrolled
-            </span>
+          <div className="flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span className="text-sm">
+                {bookings.length}/{upcomingClass.capacity} enrolled
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <UserMinus className="h-4 w-4 text-red-600" />
+              <span className="text-sm text-red-600">
+                {cancelledBookings.length} cancelled
+              </span>
+            </div>
           </div>
         </div>
 

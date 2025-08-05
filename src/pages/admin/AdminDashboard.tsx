@@ -5,6 +5,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import StatsCard from "@/components/StatsCard";
 import UpcomingClassWidget from "@/components/UpcomingClassWidget";
 import RecentPaymentsWidget from "@/components/RecentPaymentsWidget";
+import RecentMembersWidget from "@/components/RecentMembersWidget";
 import { Users, User, Calendar, CreditCard } from "lucide-react";
 
 // Mock admin data
@@ -84,54 +85,7 @@ const AdminDashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Recent Members</h2>
-                <a href="/admin/members" className="text-sm text-gym-blue hover:underline">
-                  View All
-                </a>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Joined
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Membership
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {adminData.recentMembers.map((member) => (
-                      <tr key={member.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="font-medium text-gray-900">{member.name}</div>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                          {member.email}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                          {member.date}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-                            {member.membership}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <RecentMembersWidget />
           </div>
 
           <div className="lg:col-span-1 space-y-6">

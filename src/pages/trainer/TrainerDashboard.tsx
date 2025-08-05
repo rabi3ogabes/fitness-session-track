@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import UpcomingClassWidget from "@/components/UpcomingClassWidget";
 import RecentPaymentsWidget from "@/components/RecentPaymentsWidget";
+import RecentMembersWidget from "@/components/RecentMembersWidget";
 import { ClassDetailsDialog } from "./components/ClassDetailsDialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -89,6 +90,10 @@ const TrainerDashboard = () => {
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <UpcomingClassWidget />
+        <RecentMembersWidget />
+      </div>
+      
+      <div className="mb-6">
         <RecentPaymentsWidget />
       </div>
 
