@@ -52,7 +52,7 @@ const AdminDashboard = () => {
   return (
     <DashboardLayout title="Admin Dashboard">
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatsCard
             title="Total Members"
             value={adminData.stats.members}
@@ -72,13 +72,6 @@ const AdminDashboard = () => {
             value={adminData.stats.classes}
             icon={<Calendar className="h-6 w-6 text-gym-blue" />}
             change="3"
-            positive={true}
-          />
-          <StatsCard
-            title="Monthly Payments"
-            value={`QAR ${adminData.stats.payments * 85}`}
-            icon={<CreditCard className="h-6 w-6 text-gym-blue" />}
-            change="15%"
             positive={true}
           />
         </div>
