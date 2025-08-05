@@ -522,7 +522,9 @@ const handleApproveRequest = async (id: number) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {membershipRequests.map((request) => {
+                  {membershipRequests
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map((request) => {
                     const membershipType = membershipTypes.find(m => m.name === request.type);
                     const sessionCount = membershipType ? membershipType.sessions : 'N/A';
                     
