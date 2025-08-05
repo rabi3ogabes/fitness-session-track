@@ -3,12 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import StatsCard from "@/components/StatsCard";
-import { Users, User, Calendar, CreditCard, Bell } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
+import UpcomingClassWidget from "@/components/UpcomingClassWidget";
+import RecentPaymentsWidget from "@/components/RecentPaymentsWidget";
+import { Users, User, Calendar, CreditCard } from "lucide-react";
 
 // Mock admin data
 const adminData = {
@@ -44,44 +41,6 @@ const adminData = {
 const AdminDashboard = () => {
   const { isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  
-  // Filter classes for the selected date
-  const classesForSelectedDate = adminData.classSchedule.filter(cls => 
-    cls.date.getDate() === selectedDate.getDate() &&
-    cls.date.getMonth() === selectedDate.getMonth() &&
-    cls.date.getFullYear() === selectedDate.getFullYear()
-  );
-
-  // Function to highlight dates with classes
-  const isDayWithClass = (date: Date) => {
-    return adminData.classSchedule.some(cls => 
-      cls.date.getDate() === date.getDate() &&
-      cls.date.getMonth() === date.getMonth() &&
-      cls.date.getFullYear() === date.getFullYear()
-    );
-  };
-
-  // Custom day content renderer for the calendar
-  const DayContent = (props: any) => {
-    const { date, ...otherProps } = props;
-    
-    // Check if there are classes on this day
-    const hasClasses = adminData.classSchedule.some(cls => 
-      cls.date.getDate() === date.getDate() &&
-      cls.date.getMonth() === date.getMonth() &&
-      cls.date.getFullYear() === date.getFullYear()
-    );
-    
-    return (
-      <div className="flex flex-col items-center">
-        <div {...otherProps} />
-        {hasClasses && (
-          <div className="w-1 h-1 bg-gym-blue rounded-full mt-0.5" />
-        )}
-      </div>
-    );
-  };
   
   useEffect(() => {
     if (isAuthenticated && !isAdmin) {
@@ -173,80 +132,16 @@ const AdminDashboard = () => {
                 </table>
               </div>
             </div>
-            
-            {/* Recent Payments (moved below Recent Members) */}
-            <div className="mt-6 bg-white rounded-lg shadow-md p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Recent Payments</h2>
-                <a href="/admin/payments" className="text-sm text-gym-blue hover:underline">
-                  View All
-                </a>
-              </div>
-              <div className="space-y-3">
-                {adminData.recentPayments.map((payment) => (
-                  <div key={payment.id} className="flex justify-between items-center p-3 border border-gray-200 rounded-md">
-                    <div>
-                      <p className="font-medium">{payment.member}</p>
-                      <p className="text-xs text-gray-500">{payment.date}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">QAR {payment.amount}</p>
-                      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-                        {payment.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Class Schedule</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <CalendarComponent
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  className="pointer-events-auto"
-                  modifiers={{
-                    hasClass: isDayWithClass
-                  }}
-                  modifiersClassNames={{
-                    hasClass: "bg-gym-light text-gym-blue font-bold"
-                  }}
-                  components={{
-                    DayContent: DayContent
-                  }}
-                />
-                
-                <div className="mt-4">
-                  <h3 className="font-medium mb-2">
-                    Classes on {format(selectedDate, "MMMM d, yyyy")}
-                  </h3>
-                  
-                  {classesForSelectedDate.length > 0 ? (
-                    <div className="space-y-2">
-                      {classesForSelectedDate.map(cls => (
-                        <div key={cls.id} className="bg-gray-50 p-3 rounded-md">
-                          <div>
-                            <p className="font-medium">{cls.name}</p>
-                            <p className="text-xs text-gray-500">{cls.time}</p>
-                            <p className="text-xs text-gray-500">Trainer: {cls.trainer}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-500 text-center py-2">No classes scheduled</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+          <div className="lg:col-span-1 space-y-6">
+            <UpcomingClassWidget />
           </div>
+        </div>
+        
+        
+        <div className="mt-6">
+          <RecentPaymentsWidget />
         </div>
       </div>
     </DashboardLayout>

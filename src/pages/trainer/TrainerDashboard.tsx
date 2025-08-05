@@ -2,11 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
-import { CalendarSection } from "./components/CalendarSection";
+import UpcomingClassWidget from "@/components/UpcomingClassWidget";
+import RecentPaymentsWidget from "@/components/RecentPaymentsWidget";
 import { ClassDetailsDialog } from "./components/ClassDetailsDialog";
-import NewMemberDialog from "./components/NewMemberDialog";
-import { mockBookings } from "./mockData";
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import AddMemberDialog from "../admin/components/members/AddMemberDialog";
@@ -23,8 +21,6 @@ const TrainerDashboard = () => {
   const { isTrainer, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [bookings, setBookings] = useState(mockBookings);
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
 
   // New member registration dialog
@@ -87,15 +83,14 @@ const TrainerDashboard = () => {
 
   return (
     <DashboardLayout title="Trainer Dashboard">
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end mb-6">
         <NewMemberButton onClick={() => setIsNewMemberDialogOpen(true)} />
       </div>
-      <CalendarSection
-        selectedDate={selectedDate}
-        setSelectedDate={setSelectedDate}
-        bookings={bookings}
-        handleViewClassDetails={handleViewClassDetails}
-      />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <UpcomingClassWidget />
+        <RecentPaymentsWidget />
+      </div>
 
       {/* Class details dialog - moved outside tabs to ensure it renders properly */}
       <ClassDetailsDialog
