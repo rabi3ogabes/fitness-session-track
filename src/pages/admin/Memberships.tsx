@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { Trash2 } from "lucide-react";
 
 const initialMembershipTypes = [
   { id: 1, name: "Basic", sessions: 12, price: 250, active: true, description: "Perfect for trying out our gym facilities and classes" },
@@ -205,6 +206,23 @@ const Memberships = () => {
     });
   };
 
+  const handleDeleteMembership = (id: number) => {
+    const membershipToDelete = membershipTypes.find(m => m.id === id);
+    if (!membershipToDelete) return;
+
+    if (window.confirm(`Are you sure you want to delete the "${membershipToDelete.name}" membership type? This action cannot be undone.`)) {
+      const updatedTypes = membershipTypes.filter(m => m.id !== id);
+      
+      setMembershipTypes(updatedTypes);
+      localStorage.setItem("membershipTypes", JSON.stringify(updatedTypes));
+
+      toast({
+        title: "Membership type deleted",
+        description: `The "${membershipToDelete.name}" membership type has been deleted successfully`,
+      });
+    }
+  };
+
 const handleApproveRequest = async (id: number) => {
   const request = membershipRequests.find(r => r.id === id);
   if (!request) return;
@@ -385,11 +403,18 @@ const handleApproveRequest = async (id: number) => {
                         </button>
                         <button
                           onClick={() => toggleMembershipStatus(type.id)}
-                          className={`${
+                          className={`mr-4 ${
                             type.active ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800"
                           }`}
                         >
                           {type.active ? "Deactivate" : "Activate"}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMembership(type.id)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Delete membership type"
+                        >
+                          <Trash2 size={16} />
                         </button>
                       </td>
                     </tr>
