@@ -82,7 +82,7 @@ const Memberships = () => {
 
     // Set up real-time subscription for membership requests
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel('membership_requests_changes')
       .on(
         'postgres_changes',
         {
@@ -91,7 +91,7 @@ const Memberships = () => {
           table: 'membership_requests'
         },
         (payload) => {
-          console.log('Real-time change:', payload);
+          console.log('Real-time change detected:', payload);
           
           if (payload.eventType === 'INSERT') {
             setMembershipRequests(prev => [...prev, payload.new as any]);
@@ -108,9 +108,12 @@ const Memberships = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Real-time subscription status:', status);
+      });
 
     return () => {
+      console.log('Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
   }, []);
