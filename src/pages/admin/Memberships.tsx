@@ -79,6 +79,40 @@ const Memberships = () => {
     };
     
     loadMembershipRequests();
+
+    // Set up real-time subscription for membership requests
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'membership_requests'
+        },
+        (payload) => {
+          console.log('Real-time change:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            setMembershipRequests(prev => [...prev, payload.new as any]);
+          } else if (payload.eventType === 'UPDATE') {
+            setMembershipRequests(prev => 
+              prev.map(request => 
+                request.id === payload.new.id ? payload.new as any : request
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setMembershipRequests(prev => 
+              prev.filter(request => request.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Check for new membership requests in localStorage whenever the component renders
