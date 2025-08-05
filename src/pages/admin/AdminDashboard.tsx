@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -7,6 +7,7 @@ import UpcomingClassWidget from "@/components/UpcomingClassWidget";
 import RecentPaymentsWidget from "@/components/RecentPaymentsWidget";
 import RecentMembersWidget from "@/components/RecentMembersWidget";
 import { Users, User, Calendar, CreditCard } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 // Mock admin data
 const adminData = {
@@ -42,38 +43,101 @@ const adminData = {
 const AdminDashboard = () => {
   const { isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    members: 0,
+    trainers: 0,
+    classes: 0,
+  });
   
+  const fetchStats = async () => {
+    try {
+      // Fetch members count
+      const { count: membersCount } = await supabase
+        .from('members')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch trainers count  
+      const { count: trainersCount } = await supabase
+        .from('trainers')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch active classes count
+      const { count: classesCount } = await supabase
+        .from('classes')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'Active');
+
+      setStats({
+        members: membersCount || 0,
+        trainers: trainersCount || 0,
+        classes: classesCount || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated && !isAdmin) {
       navigate("/dashboard");
     }
+
+    if (isAuthenticated && isAdmin) {
+      fetchStats();
+    }
   }, [isAuthenticated, isAdmin, navigate]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !isAdmin) return;
+
+    // Set up real-time subscriptions for all tables
+    const membersChannel = supabase
+      .channel('members_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, fetchStats)
+      .subscribe();
+
+    const trainersChannel = supabase
+      .channel('trainers_changes')  
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'trainers' }, fetchStats)
+      .subscribe();
+
+    const classesChannel = supabase
+      .channel('classes_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, fetchStats)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(membersChannel);
+      supabase.removeChannel(trainersChannel);
+      supabase.removeChannel(classesChannel);
+    };
+  }, [isAuthenticated, isAdmin]);
 
   return (
     <DashboardLayout title="Admin Dashboard">
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatsCard
-            title="Total Members"
-            value={adminData.stats.members}
-            icon={<Users className="h-6 w-6 text-gym-blue" />}
-            change="12"
-            positive={true}
-          />
-          <StatsCard
-            title="Trainers"
-            value={adminData.stats.trainers}
-            icon={<User className="h-6 w-6 text-gym-blue" />}
-            change="1"
-            positive={true}
-          />
-          <StatsCard
-            title="Active Classes"
-            value={adminData.stats.classes}
-            icon={<Calendar className="h-6 w-6 text-gym-blue" />}
-            change="3"
-            positive={true}
-          />
+           <StatsCard
+             title="Total Members"
+             value={stats.members}
+             icon={<Users className="h-6 w-6 text-gym-blue" />}
+             change="12"
+             positive={true}
+           />
+           <StatsCard
+             title="Trainers"
+             value={stats.trainers}
+             icon={<User className="h-6 w-6 text-gym-blue" />}
+             change="1"
+             positive={true}
+           />
+           <StatsCard
+             title="Active Classes"
+             value={stats.classes}
+             icon={<Calendar className="h-6 w-6 text-gym-blue" />}
+             change="3"
+             positive={true}
+           />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
