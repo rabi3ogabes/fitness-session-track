@@ -223,6 +223,36 @@ const Memberships = () => {
     }
   };
 
+  const handleDeleteRequest = async (id: number) => {
+    const requestToDelete = membershipRequests.find(r => r.id === id);
+    if (!requestToDelete) return;
+
+    if (window.confirm(`Are you sure you want to delete the membership request from "${requestToDelete.member}"? This action cannot be undone.`)) {
+      try {
+        const { error } = await supabase
+          .from('membership_requests')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        setMembershipRequests(prev => prev.filter(r => r.id !== id));
+
+        toast({
+          title: "Request deleted",
+          description: `The membership request from "${requestToDelete.member}" has been deleted successfully`,
+        });
+      } catch (error) {
+        console.error('Error deleting request:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete the membership request. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
 const handleApproveRequest = async (id: number) => {
   const request = membershipRequests.find(r => r.id === id);
   if (!request) return;
@@ -486,24 +516,31 @@ const handleApproveRequest = async (id: number) => {
                             {request.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {request.status === "Pending" && (
-                            <>
-                              <button
-                                onClick={() => handleApproveRequest(request.id)}
-                                className="text-green-600 hover:text-green-800 mr-4"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleRejectRequest(request.id)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
-                        </td>
+                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                           {request.status === "Pending" && (
+                             <>
+                               <button
+                                 onClick={() => handleApproveRequest(request.id)}
+                                 className="text-green-600 hover:text-green-800 mr-4"
+                               >
+                                 Approve
+                               </button>
+                               <button
+                                 onClick={() => handleRejectRequest(request.id)}
+                                 className="text-red-600 hover:text-red-800 mr-4"
+                               >
+                                 Reject
+                               </button>
+                             </>
+                           )}
+                           <button
+                             onClick={() => handleDeleteRequest(request.id)}
+                             className="text-red-600 hover:text-red-800"
+                             title="Delete request"
+                           >
+                             <Trash2 size={16} />
+                           </button>
+                         </td>
                       </tr>
                     );
                   })}
