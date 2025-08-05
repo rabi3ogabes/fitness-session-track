@@ -11,7 +11,6 @@ const initialMembershipTypes = [
   { id: 1, name: "Basic", sessions: 12, price: 250, active: true, description: "Perfect for trying out our gym facilities and classes" },
   { id: 2, name: "Standard", sessions: 4, price: 95, active: true, description: "Ideal for occasional gym-goers" },
   { id: 3, name: "Premium", sessions: 20, price: 350, active: true, description: "Best value for regular attendees" },
-  { id: 4, name: "Ultimate", sessions: 30, price: 500, active: true, description: "For dedicated gym enthusiasts" },
 ];
 
 const initialMembershipRequests = [
