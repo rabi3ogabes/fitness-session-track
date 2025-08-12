@@ -6,12 +6,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { Trash2 } from "lucide-react";
 
 const initialMembershipTypes = [
   { id: 1, name: "Basic", sessions: 12, price: 250, active: true, description: "Perfect for trying out our gym facilities and classes" },
   { id: 2, name: "Standard", sessions: 4, price: 95, active: true, description: "Ideal for occasional gym-goers" },
   { id: 3, name: "Premium", sessions: 20, price: 350, active: true, description: "Best value for regular attendees" },
-  { id: 4, name: "Ultimate", sessions: 30, price: 500, active: true, description: "For dedicated gym enthusiasts" },
 ];
 
 const initialMembershipRequests = [
@@ -79,6 +79,43 @@ const Memberships = () => {
     };
     
     loadMembershipRequests();
+
+    // Set up real-time subscription for membership requests
+    const channel = supabase
+      .channel('membership_requests_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'membership_requests'
+        },
+        (payload) => {
+          console.log('Real-time change detected:', payload);
+          
+          if (payload.eventType === 'INSERT') {
+            setMembershipRequests(prev => [...prev, payload.new as any]);
+          } else if (payload.eventType === 'UPDATE') {
+            setMembershipRequests(prev => 
+              prev.map(request => 
+                request.id === payload.new.id ? payload.new as any : request
+              )
+            );
+          } else if (payload.eventType === 'DELETE') {
+            setMembershipRequests(prev => 
+              prev.filter(request => request.id !== payload.old.id)
+            );
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Real-time subscription status:', status);
+      });
+
+    return () => {
+      console.log('Cleaning up real-time subscription');
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Check for new membership requests in localStorage whenever the component renders
@@ -204,6 +241,53 @@ const Memberships = () => {
       title: "Membership status updated",
       description: "The membership type's status has been updated successfully",
     });
+  };
+
+  const handleDeleteMembership = (id: number) => {
+    const membershipToDelete = membershipTypes.find(m => m.id === id);
+    if (!membershipToDelete) return;
+
+    if (window.confirm(`Are you sure you want to delete the "${membershipToDelete.name}" membership type? This action cannot be undone.`)) {
+      const updatedTypes = membershipTypes.filter(m => m.id !== id);
+      
+      setMembershipTypes(updatedTypes);
+      localStorage.setItem("membershipTypes", JSON.stringify(updatedTypes));
+
+      toast({
+        title: "Membership type deleted",
+        description: `The "${membershipToDelete.name}" membership type has been deleted successfully`,
+      });
+    }
+  };
+
+  const handleDeleteRequest = async (id: number) => {
+    const requestToDelete = membershipRequests.find(r => r.id === id);
+    if (!requestToDelete) return;
+
+    if (window.confirm(`Are you sure you want to delete the membership request from "${requestToDelete.member}"? This action cannot be undone.`)) {
+      try {
+        const { error } = await supabase
+          .from('membership_requests')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+
+        setMembershipRequests(prev => prev.filter(r => r.id !== id));
+
+        toast({
+          title: "Request deleted",
+          description: `The membership request from "${requestToDelete.member}" has been deleted successfully`,
+        });
+      } catch (error) {
+        console.error('Error deleting request:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete the membership request. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
 const handleApproveRequest = async (id: number) => {
@@ -386,11 +470,18 @@ const handleApproveRequest = async (id: number) => {
                         </button>
                         <button
                           onClick={() => toggleMembershipStatus(type.id)}
-                          className={`${
+                          className={`mr-4 ${
                             type.active ? "text-red-600 hover:text-red-800" : "text-green-600 hover:text-green-800"
                           }`}
                         >
                           {type.active ? "Deactivate" : "Activate"}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMembership(type.id)}
+                          className="text-red-600 hover:text-red-800"
+                          title="Delete membership type"
+                        >
+                          <Trash2 size={16} />
                         </button>
                       </td>
                     </tr>
@@ -431,7 +522,9 @@ const handleApproveRequest = async (id: number) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {membershipRequests.map((request) => {
+                  {membershipRequests
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .map((request) => {
                     const membershipType = membershipTypes.find(m => m.name === request.type);
                     const sessionCount = membershipType ? membershipType.sessions : 'N/A';
                     
@@ -462,24 +555,31 @@ const handleApproveRequest = async (id: number) => {
                             {request.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {request.status === "Pending" && (
-                            <>
-                              <button
-                                onClick={() => handleApproveRequest(request.id)}
-                                className="text-green-600 hover:text-green-800 mr-4"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleRejectRequest(request.id)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
-                        </td>
+                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                           {request.status === "Pending" && (
+                             <>
+                               <button
+                                 onClick={() => handleApproveRequest(request.id)}
+                                 className="text-green-600 hover:text-green-800 mr-4"
+                               >
+                                 Approve
+                               </button>
+                               <button
+                                 onClick={() => handleRejectRequest(request.id)}
+                                 className="text-red-600 hover:text-red-800 mr-4"
+                               >
+                                 Reject
+                               </button>
+                             </>
+                           )}
+                           <button
+                             onClick={() => handleDeleteRequest(request.id)}
+                             className="text-red-600 hover:text-red-800"
+                             title="Delete request"
+                           >
+                             <Trash2 size={16} />
+                           </button>
+                         </td>
                       </tr>
                     );
                   })}

@@ -20,55 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-const availablePlans = [
-  {
-    id: 1,
-    name: "Basic",
-    description: "Access to gym facilities and 12 sessions per month",
-    price: 250, // QAR
-    features: [
-      "Full gym access",
-      "12 trainer sessions per month",
-      "Access to basic classes",
-      "Locker usage",
-    ],
-    recommended: false,
-  },
-  {
-    id: 2,
-    name: "Premium",
-    description: "Full access with 20 sessions per month and additional perks",
-    price: 350, // QAR
-    features: [
-      "Full gym access",
-      "20 trainer sessions per month",
-      "Access to all classes",
-      "Towel service",
-      "1 guest pass per month",
-      "Nutritional consultation",
-    ],
-    recommended: true,
-  },
-  {
-    id: 3,
-    name: "Ultimate",
-    description:
-      "Unlimited access with personal training and premium amenities",
-    price: 500, // QAR
-    features: [
-      "Full gym access",
-      "Unlimited trainer sessions",
-      "Access to all classes",
-      "Towel service",
-      "3 guest passes per month",
-      "Nutritional consultation",
-      "Personalized workout plan",
-      "Massage session once a month",
-    ],
-    recommended: false,
-  },
-];
+import { useMembership } from "@/context/membership";
 interface MemberShip {
   name: string;
   type: string;
@@ -81,6 +33,7 @@ interface MemberShip {
 }
 const UserMembership = () => {
   const { toast } = useToast();
+  const { membershipTypes } = useMembership();
   const [currentUser, setCurrentUser] = useState({
     name: "Current User",
     email: "user@example.com",
@@ -147,7 +100,7 @@ const UserMembership = () => {
           sessions: memberData.sessions || 12,
           sessionsRemaining: memberData.remaining_sessions || 0,
           price:
-            availablePlans.find((p) => p.name === memberData.membership)
+            membershipTypes.find((p) => p.name === memberData.membership)
               ?.price || 250,
           automatic: true,
         });
@@ -165,7 +118,7 @@ const UserMembership = () => {
       // Process membership requests
       if (requestsData && requestsData.length > 0) {
         const pendingPayments = requestsData.map((request) => {
-          const plan = availablePlans.find((p) => p.name === request.type);
+          const plan = membershipTypes.find((p) => p.name === request.type);
           return {
             id: `request-${request.id}`,
             type: request.type,
@@ -205,7 +158,7 @@ const UserMembership = () => {
               type: req.type,
               date: req.date,
               amount:
-                availablePlans.find((p) => p.name === req.type)?.price || 0,
+                membershipTypes.find((p) => p.name === req.type)?.price || 0,
               status: "Pending",
               isRequest: true,
               local: true, 
@@ -244,7 +197,7 @@ const UserMembership = () => {
 
   const handleBookPlan = async (planName) => {
     // Get the plan details
-    const plan = availablePlans.find((p) => p.name === planName);
+    const plan = membershipTypes.find((p) => p.name === planName);
     if (!plan) return;
 
     // Show toast
@@ -413,14 +366,14 @@ const UserMembership = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {availablePlans.map((plan) => (
+            {membershipTypes.filter(type => type.active).map((plan) => (
               <Card
                 key={plan.id}
                 className={`${
-                  plan.recommended ? "border-2 border-gym-blue relative" : ""
+                  plan.name === "Premium" ? "border-2 border-gym-blue relative" : ""
                 } flex flex-col h-full`}
               >
-                {plan.recommended && (
+                {plan.name === "Premium" && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gym-blue text-white px-3 py-1 rounded-full text-xs font-medium">
                     Recommended
                   </div>
@@ -434,14 +387,20 @@ const UserMembership = () => {
                     <p className="text-3xl font-bold">QAR {plan.price}</p>
                   </div>
 
-                  <ul className="space-y-2">
-                    {plan.features.map((feature, index) => (
-                      <li key={index} className="flex items-center">
-                        <Check className="h-4 w-4 text-gym-blue mr-2" />
-                        <span className="text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <Check className="h-4 w-4 text-gym-blue mr-2" />
+                      <span className="text-sm">{plan.sessions} sessions included</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Check className="h-4 w-4 text-gym-blue mr-2" />
+                      <span className="text-sm">Full gym access</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Check className="h-4 w-4 text-gym-blue mr-2" />
+                      <span className="text-sm">Access to all classes</span>
+                    </div>
+                  </div>
                 </CardContent>
                 <CardFooter className="mt-auto">
                   <Button

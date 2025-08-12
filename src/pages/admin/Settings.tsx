@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, Mail, Clock, Image, Trash, Palette, LayoutDashboard, Type, Plus, Send } from "lucide-react";
+import { Settings as SettingsIcon, MessageCircle, Clock, Image, Trash, Palette, LayoutDashboard, Type, Plus, Send } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,17 +24,25 @@ import {
 
 const Settings = () => {
   const [cancellationHours, setCancellationHours] = useState(4);
-  const [adminNotificationEmail, setAdminNotificationEmail] = useState("");
-  const [smtpSettings, setSmtpSettings] = useState({
-    host: "",
-    port: "587",
-    username: "",
-    password: "",
+  const [emailSettings, setEmailSettings] = useState({
+    smtpHost: "",
+    smtpPort: "587",
+    smtpUsername: "",
+    smtpPassword: "",
     fromEmail: "",
-    fromName: "Gym System"
+    fromName: "",
+    useSsl: true,
+    notificationEmail: ""
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [isTestingSmtp, setIsTestingSmtp] = useState(false);
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [emailLogs, setEmailLogs] = useState<Array<{
+    timestamp: string;
+    to: string;
+    subject: string;
+    status: 'success' | 'failed';
+    error?: string;
+  }>>([]);
   const [logo, setLogo] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [headerColor, setHeaderColor] = useState<string>("#ffffff");
@@ -86,17 +94,14 @@ const Settings = () => {
       setFooterColor(savedFooterColor);
     }
     
-    // Load admin notification email from local storage
-    const savedAdminEmail = localStorage.getItem("adminNotificationEmail");
-    if (savedAdminEmail) {
-      setAdminNotificationEmail(savedAdminEmail);
+    // Load email settings from local storage
+    const savedEmailSettings = localStorage.getItem("emailSettings");
+    if (savedEmailSettings) {
+      setEmailSettings(JSON.parse(savedEmailSettings));
     }
     
-    // Load SMTP settings from local storage
-    const savedSmtpSettings = localStorage.getItem("smtpSettings");
-    if (savedSmtpSettings) {
-      setSmtpSettings(JSON.parse(savedSmtpSettings));
-    }
+    // Load email logs on component mount
+    loadEmailLogs();
     
     // Load main page content from local storage
     const savedMainPageContent = localStorage.getItem("mainPageContent");
@@ -132,11 +137,8 @@ const Settings = () => {
     // Save main page content to localStorage
     localStorage.setItem("mainPageContent", JSON.stringify(mainPageContent));
 
-    // Save admin notification email to localStorage
-    localStorage.setItem("adminNotificationEmail", adminNotificationEmail);
-    
-    // Save SMTP settings to localStorage
-    localStorage.setItem("smtpSettings", JSON.stringify(smtpSettings));
+    // Save email settings to localStorage
+    localStorage.setItem("emailSettings", JSON.stringify(emailSettings));
 
     // Save other settings to localStorage
     localStorage.setItem("cancellationHours", cancellationHours.toString());
@@ -152,37 +154,54 @@ const Settings = () => {
     }, 500);
   };
 
-  const handleTestSmtp = async () => {
-    if (!adminNotificationEmail) {
+  const loadEmailLogs = async () => {
+    try {
+      const response = await fetch(`https://wlawjupusugrhojbywyq.supabase.co/functions/v1/send-smtp-notification`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndsYXdqdXB1c3VncmhvamJ5d3lxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMTIxOTYsImV4cCI6MjA2MTU4ODE5Nn0.-TMflVxBkU4MTTxRWd0jrSiNBCLhxnl8R4EqsrWrSlg`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setEmailLogs(result.logs || []);
+      }
+    } catch (error) {
+      console.error('Failed to load email logs:', error);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    // Validate required fields
+    if (!emailSettings.smtpHost || !emailSettings.smtpUsername || !emailSettings.smtpPassword) {
       toast({
         title: "Error",
-        description: "Please enter admin notification email first.",
+        description: "Please fill in all SMTP configuration fields.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!smtpSettings.host || !smtpSettings.username || !smtpSettings.password || !smtpSettings.fromEmail) {
+    if (!emailSettings.notificationEmail) {
       toast({
-        title: "Error", 
-        description: "Please configure all SMTP settings first.",
+        title: "Error",
+        description: "Please enter a notification email address.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsTestingSmtp(true);
+    setIsTestingEmail(true);
     
     try {
       const { data, error } = await supabase.functions.invoke('send-smtp-notification', {
         body: {
           userEmail: "test@example.com",
           userName: "Test User",
-          notificationEmail: adminNotificationEmail,
-          smtpSettings: {
-            ...smtpSettings,
-            useSsl: true
-          }
+          notificationEmail: emailSettings.notificationEmail,
+          smtpSettings: emailSettings
         }
       });
 
@@ -192,30 +211,29 @@ const Settings = () => {
 
       toast({
         title: "Test email sent",
-        description: "A test notification was sent to your admin email.",
+        description: data?.message || "A test notification was sent successfully!",
       });
+
+      // Reload logs after successful test
+      await loadEmailLogs();
     } catch (error) {
       console.error('Test email error:', error);
       toast({
         title: "Test failed",
-        description: "Failed to send test email. Please check your SMTP settings.",
+        description: `Failed to send test email: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
-      setIsTestingSmtp(false);
+      setIsTestingEmail(false);
     }
   };
 
-  const handleSaveSmtpSettings = () => {
-    // Save admin notification email to localStorage
-    localStorage.setItem("adminNotificationEmail", adminNotificationEmail);
-    
-    // Save SMTP settings to localStorage
-    localStorage.setItem("smtpSettings", JSON.stringify(smtpSettings));
+  const handleSaveEmailSettings = () => {
+    localStorage.setItem("emailSettings", JSON.stringify(emailSettings));
 
     toast({
-      title: "SMTP settings saved",
-      description: "Your SMTP configuration has been saved successfully.",
+      title: "Email settings saved",
+      description: "Your email configuration has been saved successfully.",
     });
   };
 
@@ -442,149 +460,145 @@ const Settings = () => {
             <Card>
               <CardHeader>
                 <div className="flex items-center space-x-2">
-                  <Mail className="h-5 w-5 text-gym-blue" />
-                  <CardTitle>Notification Settings</CardTitle>
+                  <MessageCircle className="h-5 w-5 text-gym-blue" />
+                  <CardTitle>Email Notification System</CardTitle>
                 </div>
                 <CardDescription>
-                  Configure email notifications for new user registrations
+                  Configure SMTP settings for new user registration notifications
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="font-medium mb-2">Admin Notification Email</p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      This email will receive notifications when new users register
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="admin-notification-email">Admin Email</Label>
+                    <Label htmlFor="smtp-host">SMTP Host</Label>
                     <Input
-                      id="admin-notification-email"
-                      type="email"
-                      placeholder="admin@example.com"
-                      value={adminNotificationEmail}
-                      onChange={(e) => setAdminNotificationEmail(e.target.value)}
+                      id="smtp-host"
+                      type="text"
+                      placeholder="smtp.gmail.com"
+                      value={emailSettings.smtpHost}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, smtpHost: e.target.value }))}
                     />
                   </div>
-                </div>
-                
-                <div className="border-t pt-6 space-y-4">
+
                   <div>
-                    <p className="font-medium mb-2">SMTP Configuration</p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Configure SMTP settings to send email notifications
-                    </p>
+                    <Label htmlFor="smtp-port">SMTP Port</Label>
+                    <Input
+                      id="smtp-port"
+                      type="number"
+                      placeholder="587"
+                      value={emailSettings.smtpPort}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, smtpPort: e.target.value }))}
+                    />
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="smtp-host">SMTP Host</Label>
-                      <Input
-                        id="smtp-host"
-                        type="text"
-                        placeholder="smtp.gmail.com"
-                        value={smtpSettings.host}
-                        onChange={(e) => setSmtpSettings({
-                          ...smtpSettings,
-                          host: e.target.value
-                        })}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="smtp-port">SMTP Port</Label>
-                      <Input
-                        id="smtp-port"
-                        type="text"
-                        placeholder="587"
-                        value={smtpSettings.port}
-                        onChange={(e) => setSmtpSettings({
-                          ...smtpSettings,
-                          port: e.target.value
-                        })}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
+
+                  <div>
                     <Label htmlFor="smtp-username">SMTP Username</Label>
                     <Input
                       id="smtp-username"
-                      type="text"
-                      placeholder="your@email.com"
-                      value={smtpSettings.username}
-                      onChange={(e) => setSmtpSettings({
-                        ...smtpSettings,
-                        username: e.target.value
-                      })}
+                      type="email"
+                      placeholder="your-email@gmail.com"
+                      value={emailSettings.smtpUsername}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, smtpUsername: e.target.value }))}
                     />
                   </div>
-                  
-                  <div className="space-y-2">
+
+                  <div>
                     <Label htmlFor="smtp-password">SMTP Password</Label>
                     <Input
                       id="smtp-password"
                       type="password"
                       placeholder="Your app password"
-                      value={smtpSettings.password}
-                      onChange={(e) => setSmtpSettings({
-                        ...smtpSettings,
-                        password: e.target.value
-                      })}
+                      value={emailSettings.smtpPassword}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, smtpPassword: e.target.value }))}
                     />
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="smtp-from-email">From Email</Label>
-                      <Input
-                        id="smtp-from-email"
-                        type="email"
-                        placeholder="noreply@yourgym.com"
-                        value={smtpSettings.fromEmail}
-                        onChange={(e) => setSmtpSettings({
-                          ...smtpSettings,
-                          fromEmail: e.target.value
-                        })}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="smtp-from-name">From Name</Label>
-                      <Input
-                        id="smtp-from-name"
-                        type="text"
-                        placeholder="Your Gym Name"
-                        value={smtpSettings.fromName}
-                        onChange={(e) => setSmtpSettings({
-                          ...smtpSettings,
-                          fromName: e.target.value
-                        })}
-                      />
-                    </div>
+
+                  <div>
+                    <Label htmlFor="from-email">From Email</Label>
+                    <Input
+                      id="from-email"
+                      type="email"
+                      placeholder="noreply@yourgym.com"
+                      value={emailSettings.fromEmail}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, fromEmail: e.target.value }))}
+                    />
                   </div>
-                  
-                  <div className="flex space-x-2 mt-6">
-                    <Button 
-                      variant="outline" 
-                      onClick={handleTestSmtp}
-                      disabled={isTestingSmtp}
-                      className="flex-1"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      {isTestingSmtp ? "Testing..." : "Test SMTP Configuration"}
-                    </Button>
-                    <Button 
-                      onClick={handleSaveSmtpSettings}
-                      className="flex-1"
-                    >
-                      <SettingsIcon className="h-4 w-4 mr-2" />
-                      Save SMTP Configuration
-                    </Button>
+
+                  <div>
+                    <Label htmlFor="from-name">From Name</Label>
+                    <Input
+                      id="from-name"
+                      type="text"
+                      placeholder="Your Gym Name"
+                      value={emailSettings.fromName}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, fromName: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2">
+                    <Label htmlFor="notification-email">Notification Email</Label>
+                    <Input
+                      id="notification-email"
+                      type="email"
+                      placeholder="admin@yourgym.com"
+                      value={emailSettings.notificationEmail}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, notificationEmail: e.target.value }))}
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Email address to receive new user registration notifications
+                    </p>
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="use-ssl"
+                        checked={emailSettings.useSsl}
+                        onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, useSsl: checked }))}
+                      />
+                      <Label htmlFor="use-ssl">Use SSL/TLS</Label>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Enable SSL/TLS encryption for secure email transmission
+                    </p>
                   </div>
                 </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button onClick={handleSaveEmailSettings} className="flex-1">
+                    Save Email Settings
+                  </Button>
+                  <Button 
+                    onClick={handleTestEmail} 
+                    variant="outline" 
+                    disabled={isTestingEmail}
+                    className="flex items-center gap-2"
+                  >
+                    <Send className="h-4 w-4" />
+                    {isTestingEmail ? "Testing..." : "Test Email"}
+                  </Button>
+                </div>
+
+                {emailLogs.length > 0 && (
+                  <div className="mt-6">
+                    <Label className="text-sm font-medium">Recent Email Logs</Label>
+                    <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
+                      {emailLogs.map((log, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-2 h-2 rounded-full ${log.status === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
+                            <span>To: {log.to}</span>
+                            <span className="text-muted-foreground">|</span>
+                            <span>{log.subject}</span>
+                          </div>
+                          <span className="text-muted-foreground text-xs">
+                            {new Date(log.timestamp).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
