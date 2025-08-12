@@ -255,7 +255,7 @@ const EditMemberDialog = ({
       setIsLoading(false);
     }
   };
-  console.log(editedMember,"editedMember")
+  console.log(editedMember, "editedMember");
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md p-0 max-h-[90vh]">
@@ -388,24 +388,24 @@ const EditMemberDialog = ({
 
               <TabsContent value="membership" className="mt-4">
                 <div className="grid gap-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label className="text-right text-sm font-medium col-span-1">
+                  {/* <div className="grid grid-cols-4 items-center gap-4"> */}
+                  {/* <label className="text-right text-sm font-medium col-span-1">
                       Membership
-                    </label>
-                    {/* <select
+                    </label> */}
+                  {/* <select
                       value={editedMember.membership}
                       onChange={handleMembershipChange}
                       className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent"
                     > */}
-                    <span className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent">
+                  {/* <span className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent">
                       Basic (4 sessions)
-                    </span>
+                    </span> */}
 
-                    {/* <option value="Basic">Basic (4 sessions)</option>
+                  {/* <option value="Basic">Basic (4 sessions)</option>
                       <option value="Standard">Standard (8 sessions)</option>
                       <option value="Premium">Premium (12 sessions)</option> */}
-                    {/* </select> */}
-                  </div>
+                  {/* </select> */}
+                  {/* </div> */}
                   <div className="grid grid-cols-4 items-center gap-4">
                     <label className="text-right text-sm font-medium col-span-1">
                       Remaining Sessions
