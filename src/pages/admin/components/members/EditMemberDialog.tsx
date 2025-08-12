@@ -255,7 +255,7 @@ const EditMemberDialog = ({
       setIsLoading(false);
     }
   };
-
+  console.log(editedMember,"editedMember")
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md p-0 max-h-[90vh]">
@@ -392,15 +392,19 @@ const EditMemberDialog = ({
                     <label className="text-right text-sm font-medium col-span-1">
                       Membership
                     </label>
-                    <select
+                    {/* <select
                       value={editedMember.membership}
                       onChange={handleMembershipChange}
                       className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent"
-                    >
-                      <option value="Basic">Basic (4 sessions)</option>
+                    > */}
+                    <span className="col-span-3 border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-gym-blue focus:border-transparent">
+                      Basic (4 sessions)
+                    </span>
+
+                    {/* <option value="Basic">Basic (4 sessions)</option>
                       <option value="Standard">Standard (8 sessions)</option>
-                      <option value="Premium">Premium (12 sessions)</option>
-                    </select>
+                      <option value="Premium">Premium (12 sessions)</option> */}
+                    {/* </select> */}
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <label className="text-right text-sm font-medium col-span-1">
@@ -410,21 +414,18 @@ const EditMemberDialog = ({
                       id="edit-remaining-sessions"
                       type="number"
                       min="0"
-                      max={editedMember.sessions}
                       value={editedMember.remainingSessions}
                       onChange={(e) =>
                         setEditedMember({
                           ...editedMember,
                           remainingSessions: Math.max(
                             0,
-                            Math.min(
-                              editedMember.sessions,
-                              parseInt(e.target.value) || 0
-                            )
+                            parseInt(e.target.value) || 0
                           ),
                         })
                       }
                       className="col-span-3"
+                      placeholder="Enter number of remaining sessions"
                     />
                   </div>
                   {isAdmin && (
