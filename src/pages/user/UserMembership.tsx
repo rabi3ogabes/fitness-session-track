@@ -400,7 +400,7 @@ const UserMembership = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {(dbMembershipTypes.length > 0 ? dbMembershipTypes : membershipTypes.filter(type => type.active)).map((plan) => (
+            {dbMembershipTypes.map((plan) => (
               <Card
                 key={plan.id}
                 className={`${
@@ -418,6 +418,14 @@ const UserMembership = () => {
                 <CardContent className="flex-grow">
                   <div className="mt-1 mb-4">
                     <p className="text-3xl font-bold">QAR {plan.price}</p>
+                    <p className="text-sm text-gray-600 mt-2">
+                      {plan.sessions} Sessions
+                    </p>
+                    {plan.description && (
+                      <p className="text-sm text-gray-500 mt-2">
+                        {plan.description}
+                      </p>
+                    )}
                   </div>
                 </CardContent>
                 <CardFooter className="mt-auto">
