@@ -63,6 +63,7 @@ const Index = () => {
   const [logo, setLogo] = useState<string | null>(null);
   const [headerColor, setHeaderColor] = useState<string>("#ffffff");
   const [footerColor, setFooterColor] = useState<string>("#000000");
+  const [showTestimonials, setShowTestimonials] = useState(true);
   const closeDialogRef = useRef<HTMLButtonElement>(null);
   const [content, setContent] = useState<MainPageContent>({
     heroTitle: "FitTrack Pro",
@@ -371,36 +372,38 @@ const Index = () => {
       </section>
 
       {/* Testimonial Slider Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">{content.testimonialsSection}</h2>
-          
-          <Carousel className="max-w-4xl mx-auto">
-            <CarouselContent>
-              {testimonials.map((testimonial, index) => (
-                <CarouselItem key={index}>
-                  <div className="p-6 bg-white rounded-lg shadow-lg flex flex-col md:flex-row gap-6 items-center">
-                    <img 
-                      src={testimonial.image} 
-                      alt={testimonial.name}
-                      className="w-24 h-24 rounded-full object-cover"
-                    />
-                    <div>
-                      <p className="text-lg italic mb-4">{testimonial.comment}</p>
+      {showTestimonials && (
+        <section className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">{content.testimonialsSection}</h2>
+            
+            <Carousel className="max-w-4xl mx-auto">
+              <CarouselContent>
+                {testimonials.map((testimonial, index) => (
+                  <CarouselItem key={index}>
+                    <div className="p-6 bg-white rounded-lg shadow-lg flex flex-col md:flex-row gap-6 items-center">
+                      <img 
+                        src={testimonial.image} 
+                        alt={testimonial.name}
+                        className="w-24 h-24 rounded-full object-cover"
+                      />
                       <div>
-                        <h4 className="font-bold">{testimonial.name}</h4>
-                        <p className="text-gray-600">{testimonial.role}</p>
+                        <p className="text-lg italic mb-4">{testimonial.comment}</p>
+                        <div>
+                          <h4 className="font-bold">{testimonial.name}</h4>
+                          <p className="text-gray-600">{testimonial.role}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="-left-4 md:-left-12" />
-            <CarouselNext className="-right-4 md:-right-12" />
-          </Carousel>
-        </div>
-      </section>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="-left-4 md:-left-12" />
+              <CarouselNext className="-right-4 md:-right-12" />
+            </Carousel>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-16 bg-gym-blue text-white">

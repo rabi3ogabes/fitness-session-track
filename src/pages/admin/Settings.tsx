@@ -52,6 +52,7 @@ const Settings = () => {
     standard: 60, // days
     premium: 90  // days
   });
+  const [showTestimonials, setShowTestimonials] = useState(true);
   const [mainPageContent, setMainPageContent] = useState({
     heroTitle: "Streamlined Gym Management System",
     heroDescription: "A complete solution for gym owners and members. Manage memberships, book sessions, track attendance, and more.",
@@ -108,6 +109,12 @@ const Settings = () => {
     if (savedMainPageContent) {
       setMainPageContent(JSON.parse(savedMainPageContent));
     }
+    
+    // Load testimonials visibility setting
+    const savedShowTestimonials = localStorage.getItem("showTestimonials");
+    if (savedShowTestimonials !== null) {
+      setShowTestimonials(JSON.parse(savedShowTestimonials));
+    }
   }, []);
 
   const handleSaveSettings = () => {
@@ -143,6 +150,7 @@ const Settings = () => {
     // Save other settings to localStorage
     localStorage.setItem("cancellationHours", cancellationHours.toString());
     localStorage.setItem("membershipExpiry", JSON.stringify(membershipExpiry));
+    localStorage.setItem("showTestimonials", JSON.stringify(showTestimonials));
 
     // Simulate API call
     setTimeout(() => {
@@ -665,6 +673,33 @@ const Settings = () => {
                   <p className="text-sm text-gray-500 mt-2">
                     Unused sessions will expire after the specified number of days.
                   </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <LayoutDashboard className="h-5 w-5 text-gym-blue" />
+                  <CardTitle>Page Sections</CardTitle>
+                </div>
+                <CardDescription>
+                  Show or hide sections on the main page
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="show-testimonials">Testimonials Section</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Show "What Our Members Say" section on the main page
+                    </p>
+                  </div>
+                  <Switch
+                    id="show-testimonials"
+                    checked={showTestimonials}
+                    onCheckedChange={setShowTestimonials}
+                  />
                 </div>
               </CardContent>
             </Card>
