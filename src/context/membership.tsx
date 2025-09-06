@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 export interface MembershipType {
   id: number;
   name: string;
@@ -33,51 +34,123 @@ const MembershipContext = createContext<MembershipContextType | undefined>(undef
 export const MembershipProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [membershipTypes, setMembershipTypes] = useState<MembershipType[]>([]);
 
-  // Load membership types from localStorage on component mount
+  // Load membership types from database on component mount
   useEffect(() => {
-    const storedTypes = localStorage.getItem("membershipTypes");
-    if (storedTypes) {
-      setMembershipTypes(JSON.parse(storedTypes));
-    } else {
-      setMembershipTypes(initialMembershipTypes);
-      // Initialize localStorage with mock data if empty
-      localStorage.setItem("membershipTypes", JSON.stringify(initialMembershipTypes));
-    }
+    const fetchMembershipTypes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('membership_types')
+          .select('*')
+          .order('id');
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setMembershipTypes(data);
+        }
+      } catch (error) {
+        console.error('Error fetching membership types:', error);
+        // Fallback to localStorage if database fails
+        const storedTypes = localStorage.getItem("membershipTypes");
+        if (storedTypes) {
+          setMembershipTypes(JSON.parse(storedTypes));
+        } else {
+          setMembershipTypes(initialMembershipTypes);
+        }
+      }
+    };
+
+    fetchMembershipTypes();
   }, []);
 
-  // Update localStorage whenever membership types change
-  useEffect(() => {
-    if (membershipTypes.length > 0) {
-      localStorage.setItem("membershipTypes", JSON.stringify(membershipTypes));
-    }
-  }, [membershipTypes]);
-
   // Function to update a membership type
-  const updateMembershipType = (updatedType: MembershipType) => {
-    const updatedTypes = membershipTypes.map((m) =>
-      m.id === updatedType.id ? updatedType : m
-    );
-    
-    setMembershipTypes(updatedTypes);
+  const updateMembershipType = async (updatedType: MembershipType) => {
+    try {
+      const { error } = await supabase
+        .from('membership_types')
+        .update({
+          name: updatedType.name,
+          sessions: updatedType.sessions,
+          price: updatedType.price,
+          description: updatedType.description,
+          active: updatedType.active
+        })
+        .eq('id', updatedType.id);
+
+      if (error) throw error;
+
+      const updatedTypes = membershipTypes.map((m) =>
+        m.id === updatedType.id ? updatedType : m
+      );
+      
+      setMembershipTypes(updatedTypes);
+    } catch (error) {
+      console.error('Error updating membership type:', error);
+      // Fallback to local update
+      const updatedTypes = membershipTypes.map((m) =>
+        m.id === updatedType.id ? updatedType : m
+      );
+      setMembershipTypes(updatedTypes);
+    }
   };
 
   // Function to add a new membership type
-  const addMembershipType = (newType: Omit<MembershipType, "id">) => {
-    const id = membershipTypes.length > 0 
-      ? Math.max(...membershipTypes.map((m) => m.id)) + 1 
-      : 1;
-    
-    const updatedTypes = [...membershipTypes, { ...newType, id }];
-    setMembershipTypes(updatedTypes);
+  const addMembershipType = async (newType: Omit<MembershipType, "id">) => {
+    try {
+      const { data, error } = await supabase
+        .from('membership_types')
+        .insert([{
+          name: newType.name,
+          sessions: newType.sessions,
+          price: newType.price,
+          description: newType.description,
+          active: newType.active
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const updatedTypes = [...membershipTypes, data];
+      setMembershipTypes(updatedTypes);
+    } catch (error) {
+      console.error('Error adding membership type:', error);
+      // Fallback to local addition
+      const id = membershipTypes.length > 0 
+        ? Math.max(...membershipTypes.map((m) => m.id)) + 1 
+        : 1;
+      
+      const updatedTypes = [...membershipTypes, { ...newType, id }];
+      setMembershipTypes(updatedTypes);
+    }
   };
 
   // Function to toggle membership status
-  const toggleMembershipstatus = (id: number) => {
-    const updatedTypes = membershipTypes.map((m) =>
-      m.id === id ? { ...m, active: !m.active } : m
-    );
-    
-    setMembershipTypes(updatedTypes);
+  const toggleMembershipstatus = async (id: number) => {
+    try {
+      const currentType = membershipTypes.find(m => m.id === id);
+      if (!currentType) return;
+
+      const { error } = await supabase
+        .from('membership_types')
+        .update({ active: !currentType.active })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      const updatedTypes = membershipTypes.map((m) =>
+        m.id === id ? { ...m, active: !m.active } : m
+      );
+      
+      setMembershipTypes(updatedTypes);
+    } catch (error) {
+      console.error('Error toggling membership status:', error);
+      // Fallback to local update
+      const updatedTypes = membershipTypes.map((m) =>
+        m.id === id ? { ...m, active: !m.active } : m
+      );
+      setMembershipTypes(updatedTypes);
+    }
   };
 
   return (
