@@ -34,6 +34,7 @@ interface MemberShip {
 const UserMembership = () => {
   const { toast } = useToast();
   const { membershipTypes } = useMembership();
+  const [dbMembershipTypes, setDbMembershipTypes] = useState([]);
   const [currentUser, setCurrentUser] = useState({
     name: "Current User",
     email: "user@example.com",
@@ -50,6 +51,27 @@ const UserMembership = () => {
   });
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Fetch membership types from database
+  const fetchMembershipTypes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('membership_types')
+        .select('*')
+        .eq('active', true)
+        .order('id');
+      
+      if (error) throw error;
+      
+      if (data) {
+        setDbMembershipTypes(data);
+      }
+    } catch (error) {
+      console.error('Error fetching membership types:', error);
+      // Fallback to context data
+      setDbMembershipTypes(membershipTypes.filter(type => type.active));
+    }
+  };
 
   const fetchAllData = async (user) => {
     setLoading(true);
@@ -100,7 +122,8 @@ const UserMembership = () => {
           sessions: memberData.sessions || 12,
           sessionsRemaining: memberData.remaining_sessions || 0,
           price:
-            membershipTypes.find((p) => p.name === memberData.membership)
+            dbMembershipTypes.find((p) => p.name === memberData.membership)
+              ?.price || membershipTypes.find((p) => p.name === memberData.membership)
               ?.price || 250,
           automatic: true,
         });
@@ -118,7 +141,8 @@ const UserMembership = () => {
       // Process membership requests
       if (requestsData && requestsData.length > 0) {
         const pendingPayments = requestsData.map((request) => {
-          const plan = membershipTypes.find((p) => p.name === request.type);
+          const plan = dbMembershipTypes.find((p) => p.name === request.type) ||
+                      membershipTypes.find((p) => p.name === request.type);
           return {
             id: `request-${request.id}`,
             type: request.type,
@@ -158,6 +182,7 @@ const UserMembership = () => {
               type: req.type,
               date: req.date,
               amount:
+                dbMembershipTypes.find((p) => p.name === req.type)?.price ||
                 membershipTypes.find((p) => p.name === req.type)?.price || 0,
               status: "Pending",
               isRequest: true,
@@ -182,6 +207,9 @@ const UserMembership = () => {
   // Fetch user information and payment history when component mounts
   useEffect(() => {
     const initializeData = async () => {
+      // First fetch membership types
+      await fetchMembershipTypes();
+      
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -195,9 +223,15 @@ const UserMembership = () => {
     initializeData();
   }, []);
 
+  // Refresh membership types when membershipTypes context changes
+  useEffect(() => {
+    fetchMembershipTypes();
+  }, [membershipTypes]);
+
   const handleBookPlan = async (planName) => {
-    // Get the plan details
-    const plan = membershipTypes.find((p) => p.name === planName);
+    // Get the plan details from database first, then fallback to context
+    const plan = dbMembershipTypes.find((p) => p.name === planName) ||
+                 membershipTypes.find((p) => p.name === planName);
     if (!plan) return;
 
     // Show toast
@@ -366,7 +400,7 @@ const UserMembership = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {membershipTypes.filter(type => type.active).map((plan) => (
+            {(dbMembershipTypes.length > 0 ? dbMembershipTypes : membershipTypes.filter(type => type.active)).map((plan) => (
               <Card
                 key={plan.id}
                 className={`${
