@@ -380,26 +380,10 @@ const UserMembership = () => {
                 )}
                 <CardHeader>
                   <CardTitle>{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow">
                   <div className="mt-1 mb-4">
                     <p className="text-3xl font-bold">QAR {plan.price}</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <Check className="h-4 w-4 text-gym-blue mr-2" />
-                      <span className="text-sm">{plan.sessions} sessions included</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Check className="h-4 w-4 text-gym-blue mr-2" />
-                      <span className="text-sm">Full gym access</span>
-                    </div>
-                    <div className="flex items-center">
-                      <Check className="h-4 w-4 text-gym-blue mr-2" />
-                      <span className="text-sm">Access to all classes</span>
-                    </div>
                   </div>
                 </CardContent>
                 <CardFooter className="mt-auto">
