@@ -147,6 +147,12 @@ const Index = () => {
       setFooterColor(savedFooterColor);
     }
     
+    // Load testimonials visibility setting
+    const savedShowTestimonials = localStorage.getItem("showTestimonials");
+    if (savedShowTestimonials !== null) {
+      setShowTestimonials(JSON.parse(savedShowTestimonials));
+    }
+    
     // Load main page content from localStorage
     const savedMainPageContent = localStorage.getItem("mainPageContent");
     if (savedMainPageContent) {
