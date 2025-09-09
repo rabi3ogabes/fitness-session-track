@@ -57,31 +57,31 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 // Class type colors using semantic tokens
 const classTypeColors = {
   "upper body": {
-    bg: "bg-class-type-upper-body/10",
-    text: "text-class-type-upper-body",
-    border: "border-class-type-upper-body/20",
-    dot: "bg-class-type-upper-body",
-    badge: "bg-class-type-upper-body/10 text-class-type-upper-body",
-    card: "bg-class-type-upper-body/5 hover:bg-class-type-upper-body/10",
-    ring: "ring-class-type-upper-body/20",
+    bg: "bg-teal-100 dark:bg-teal-900/20",
+    text: "text-teal-700 dark:text-teal-300",
+    border: "border-teal-200 dark:border-teal-800",
+    dot: "bg-teal-500",
+    badge: "bg-teal-100 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300",
+    card: "bg-teal-50/50 hover:bg-teal-100/50 dark:bg-teal-900/10 dark:hover:bg-teal-900/20",
+    ring: "ring-teal-200 dark:ring-teal-800",
   },
   "lower body": {
-    bg: "bg-class-type-lower-body/10",
-    text: "text-class-type-lower-body",
-    border: "border-class-type-lower-body/20",
-    dot: "bg-class-type-lower-body",
-    badge: "bg-class-type-lower-body/10 text-class-type-lower-body",
-    card: "bg-class-type-lower-body/5 hover:bg-class-type-lower-body/10",
-    ring: "ring-class-type-lower-body/20",
+    bg: "bg-purple-100 dark:bg-purple-900/20",
+    text: "text-purple-700 dark:text-purple-300",
+    border: "border-purple-200 dark:border-purple-800",
+    dot: "bg-purple-500",
+    badge: "bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300",
+    card: "bg-purple-50/50 hover:bg-purple-100/50 dark:bg-purple-900/10 dark:hover:bg-purple-900/20",
+    ring: "ring-purple-200 dark:ring-purple-800",
   },
   "bands": {
-    bg: "bg-class-type-bands/10",
-    text: "text-class-type-bands",
-    border: "border-class-type-bands/20",
-    dot: "bg-class-type-bands",
-    badge: "bg-class-type-bands/10 text-class-type-bands",
-    card: "bg-class-type-bands/5 hover:bg-class-type-bands/10",
-    ring: "ring-class-type-bands/20",
+    bg: "bg-orange-100 dark:bg-orange-900/20",
+    text: "text-orange-700 dark:text-orange-300",
+    border: "border-orange-200 dark:border-orange-800",
+    dot: "bg-orange-500",
+    badge: "bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-300",
+    card: "bg-orange-50/50 hover:bg-orange-100/50 dark:bg-orange-900/10 dark:hover:bg-orange-900/20",
+    ring: "ring-orange-200 dark:ring-orange-800",
   },
   yoga: {
     bg: "bg-primary/10",
@@ -288,13 +288,15 @@ const ClassCalendar = () => {
           // Transform and add type property based on class name
           const classesWithType = data.map((cls: ClassModel) => {
             let type = "default";
-            const name = cls.name.toLowerCase();
+            const name = cls.name.toLowerCase().trim();
+            
+            console.log('Processing class:', cls.name, 'normalized:', name);
 
-            if (name.includes("upper body") || name.includes("upper-body")) {
+            if (name.includes("upper body") || name.includes("upper-body") || name === "upper body") {
               type = "upper body";
-            } else if (name.includes("lower body") || name.includes("lower-body")) {
+            } else if (name.includes("lower body") || name.includes("lower-body") || name === "lower body") {
               type = "lower body";
-            } else if (name.includes("bands") || name.includes("band")) {
+            } else if (name.includes("bands") || name.includes("band") || name === "bands") {
               type = "bands";
             } else if (name.includes("yoga") || name.includes("pilates")) {
               type = "yoga";
@@ -305,6 +307,8 @@ const ClassCalendar = () => {
             } else if (name.includes("workout") || name.includes("training") || name.includes("hiit") || name.includes("cardio") || name.includes("strength")) {
               type = "workout";
             }
+            
+            console.log('Assigned type:', type, 'to class:', cls.name);
 
             return { ...cls, type, isBooked: false };
           });
@@ -759,6 +763,7 @@ const ClassCalendar = () => {
                                 {dayClasses.slice(0, 3).map((cls) => {
                                   const typeKey = (cls.type || "default") as keyof typeof classTypeColors;
                                   const typeColor = classTypeColors[typeKey] || classTypeColors.default;
+                                  console.log('Class type:', cls.type, 'Color:', typeColor.dot, 'Class name:', cls.name);
                                   return (
                                     <div
                                       key={cls.id}
