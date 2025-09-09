@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Eye, EyeOff, Power } from "lucide-react";
 import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -125,6 +125,9 @@ const Classes = () => {
   const [selectedColor, setSelectedColor] = useState<string>('#7dd3fc'); // Default color
   const [isScheduleConflict, setIsScheduleConflict] = useState(false);
   const [conflictMessage, setConflictMessage] = useState<string>('');
+  const [showDeleteButtons, setShowDeleteButtons] = useState(false);
+  const [isBookedMembersDialogOpen, setIsBookedMembersDialogOpen] = useState(false);
+  const [selectedClassBookings, setSelectedClassBookings] = useState<any[]>([]);
 
   // Form schema using Zod
   const formSchema = z.object({
@@ -200,8 +203,8 @@ const Classes = () => {
           const { data, error } = await supabase
             .from('classes')
             .select('*')
-            .order('schedule', { ascending: false })
-            .order('start_time', { ascending: false });
+            .order('schedule', { ascending: true })
+            .order('start_time', { ascending: true });
 
           if (error) {
             console.error("Error fetching classes:", error);
@@ -353,7 +356,7 @@ const Classes = () => {
         });
 
         // Refresh classes
-        const { data } = await supabase.from('classes').select('*').order('schedule', { ascending: false }).order('start_time', { ascending: false });
+        const { data } = await supabase.from('classes').select('*').order('schedule', { ascending: true }).order('start_time', { ascending: true });
         if (data) {
           const formattedClasses: ClassModel[] = data.map((classData: any) => ({
             id: classData.id,
@@ -568,12 +571,52 @@ const Classes = () => {
     });
   };
 
+  // Function to fetch booked members for a class
+  const fetchBookedMembers = async (classId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('class_id', classId);
+
+      if (error) {
+        console.error("Error fetching bookings:", error);
+        toast({
+          title: "Failed to load bookings",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSelectedClassBookings(data || []);
+      setIsBookedMembersDialogOpen(true);
+    } catch (err: any) {
+      console.error("Error fetching bookings:", err);
+      toast({
+        title: "Failed to load bookings",
+        description: err.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <DashboardLayout title="Class Management">
       <Card>
         <CardHeader>
           <CardTitle>Classes</CardTitle>
           <CardDescription>Manage your gym's classes here.</CardDescription>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDeleteButtons(!showDeleteButtons)}
+            >
+              {showDeleteButtons ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showDeleteButtons ? "Hide" : "Show"} Delete Buttons
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -599,22 +642,28 @@ const Classes = () => {
                 </TableRow>
               ) : (
                 classes.map((cls) => (
-                  <TableRow key={cls.id}>
+                  <TableRow 
+                    key={cls.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => fetchBookedMembers(cls.id)}
+                  >
                     <TableCell>{cls.name}</TableCell>
                     <TableCell>{cls.trainer}</TableCell>
                     <TableCell>{cls.schedule} ({formatClassTime(cls.startTime || "09:00", cls.endTime || "10:00")})</TableCell>
                     <TableCell>{cls.capacity}</TableCell>
                     <TableCell>{cls.enrolled}</TableCell>
                     <TableCell>{cls.status}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <Button variant="secondary" size="sm" onClick={() => openEditDialog(cls)}>
                         Edit
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(cls.id)}>
-                        Delete
-                      </Button>
+                      {showDeleteButtons && (
+                        <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(cls.id)}>
+                          Delete
+                        </Button>
+                      )}
                       <Button variant="outline" size="sm" onClick={() => toggleClassStatus(cls.id)}>
-                        {cls.status === "Active" ? "Deactivate" : "Activate"}
+                        <Power className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -1022,6 +1071,54 @@ const Classes = () => {
           </Form>
         </DrawerContent>
       </Drawer>
+
+      {/* Booked Members Dialog */}
+      <Dialog open={isBookedMembersDialogOpen} onOpenChange={setIsBookedMembersDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Booked Members</DialogTitle>
+            <DialogDescription>
+              Members who have booked this class session.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto">
+            {selectedClassBookings.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No members have booked this class yet.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Member Name</TableHead>
+                    <TableHead>Booking Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Attendance</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedClassBookings.map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell>{booking.user_name || "Unknown"}</TableCell>
+                      <TableCell>{new Date(booking.booking_date).toLocaleDateString()}</TableCell>
+                      <TableCell>{booking.status}</TableCell>
+                      <TableCell>
+                        {booking.attendance === null ? "Not marked" : 
+                         booking.attendance ? "Present" : "Absent"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsBookedMembersDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
