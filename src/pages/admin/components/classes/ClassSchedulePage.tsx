@@ -51,6 +51,8 @@ import {
   RefreshCw,
   WifiOff,
   Power,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -173,6 +175,7 @@ const ClassSchedulePage = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [classToDelete, setClassToDelete] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDeleteButtons, setShowDeleteButtons] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -1286,6 +1289,19 @@ const ClassSchedulePage = () => {
 
       {/* Classes List */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-medium text-gray-900">Classes Schedule</h2>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDeleteButtons(!showDeleteButtons)}
+            >
+              {showDeleteButtons ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showDeleteButtons ? "Hide" : "Show"} Delete Buttons
+            </Button>
+          </div>
+        </div>
         {isLoading ? (
           <div className="p-8 text-center flex flex-col items-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gym-blue mb-2"></div>
@@ -1396,14 +1412,16 @@ const ClassSchedulePage = () => {
                         >
                           <Power className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteClass(cls.id)}
-                          className="text-red-600"
-                        >
-                          Delete
-                        </Button>
+                        {showDeleteButtons && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClass(cls.id)}
+                            className="text-red-600"
+                          >
+                            Delete
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
