@@ -257,6 +257,7 @@ const UserMembership = () => {
       member: currentUser.name,
       email: currentUser.email,
       type: planName,
+      sessions: plan.sessions, // Store the actual session count at request time
       date: formattedDate,
       status: "Pending",
     };
@@ -307,6 +308,7 @@ const UserMembership = () => {
           member: currentUser.name,
           email: currentUser.email,
           type: planName,
+          sessions: plan.sessions, // Store the actual session count
           date: formattedDate,
           status: "Pending",
         },

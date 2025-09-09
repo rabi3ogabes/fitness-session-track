@@ -486,8 +486,11 @@ const handleApproveRequest = async (id: number) => {
                   {membershipRequests
                     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                     .map((request) => {
-                    const membershipType = membershipTypes.find(m => m.name === request.type);
-                    const sessionCount = membershipType ? membershipType.sessions : 'N/A';
+                    // Use sessions from request if available, otherwise fallback to membership type lookup
+                    const sessionCount = request.sessions || (() => {
+                      const membershipType = membershipTypes.find(m => m.name === request.type);
+                      return membershipType ? membershipType.sessions : 'N/A';
+                    })();
                     
                     return (
                       <tr key={request.id} className="hover:bg-gray-50">
