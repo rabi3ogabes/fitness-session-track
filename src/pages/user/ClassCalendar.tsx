@@ -126,6 +126,7 @@ const ClassCalendar = () => {
   const [bookedClasses, setBookedClasses] = useState<number[]>([]);
   const [selectedClass, setSelectedClass] = useState<ClassWithBooking | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [bookingDialogOpen, setBookingDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isBookingInProgress, setIsBookingInProgress] = useState(false);
   const [userData, setUserData] = useState<UserData>({
@@ -361,7 +362,11 @@ const ClassCalendar = () => {
 
   const handleSelectClass = (cls: ClassWithBooking) => {
     setSelectedClass(cls);
-    setConfirmDialogOpen(true);
+    if (cls.isBooked) {
+      setConfirmDialogOpen(true); // For cancellation
+    } else {
+      setBookingDialogOpen(true); // For booking
+    }
   };
 
   const handleBooking = async () => {
@@ -453,6 +458,7 @@ const ClassCalendar = () => {
 
       setSelectedClass(null);
       setConfirmDialogOpen(false);
+      setBookingDialogOpen(false);
     } catch (err) {
       console.error("Error booking class:", err);
       toast({
@@ -941,6 +947,124 @@ const ClassCalendar = () => {
                   {isBookingInProgress ? "Booking..." : "Confirm Booking"}
                 </Button>
               )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* New Booking Dialog */}
+        <Dialog open={bookingDialogOpen} onOpenChange={setBookingDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5 text-primary" />
+                Book Class
+              </DialogTitle>
+              <DialogDescription>
+                Confirm your class booking details below.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedClass && (
+              <div className="space-y-4">
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-lg">{selectedClass.name}</h3>
+                      <p className="text-sm text-muted-foreground">{selectedClass.trainer}</p>
+                    </div>
+                    <Badge 
+                      variant="secondary" 
+                      className={cn(
+                        "text-xs",
+                        classTypeColors[selectedClass.type as keyof typeof classTypeColors]?.badge || 
+                        classTypeColors.default.badge
+                      )}
+                    >
+                      {selectedClass.type?.toUpperCase() || 'CLASS'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                      <span>{format(new Date(selectedClass.schedule), "MMM d, yyyy")}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span>{selectedClass.start_time} - {selectedClass.end_time}</span>
+                    </div>
+                    {selectedClass.location && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span>{selectedClass.location}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span>{selectedClass.capacity - (selectedClass.enrolled || 0)} spots left</span>
+                    </div>
+                  </div>
+                  
+                  {selectedClass.description && (
+                    <p className="text-sm text-muted-foreground border-t pt-3">
+                      {selectedClass.description}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Sessions remaining:</span>
+                  </div>
+                  <Badge variant={userData.remainingSessions > 0 ? "default" : "destructive"}>
+                    {userData.remainingSessions}
+                  </Badge>
+                </div>
+
+                {userData.remainingSessions < 1 && (
+                  <Alert>
+                    <AlertDescription>
+                      You don't have enough sessions to book this class. Please purchase a membership to continue.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {sessionsLow && userData.remainingSessions > 0 && (
+                  <Alert>
+                    <AlertDescription>
+                      You're running low on sessions! Consider purchasing more sessions soon.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+            
+            <DialogFooter className="gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setBookingDialogOpen(false)}
+                disabled={isBookingInProgress}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBooking}
+                disabled={isBookingInProgress || userData.remainingSessions < 1}
+                className="min-w-[100px]"
+              >
+                {isBookingInProgress ? (
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Booking...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Book Class
+                  </div>
+                )}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
