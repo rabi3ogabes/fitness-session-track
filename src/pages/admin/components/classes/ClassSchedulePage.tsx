@@ -163,6 +163,9 @@ const ClassSchedulePage = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [trainers, setTrainers] = useState<{ id: number; name: string }[]>([]);
   const [classes, setClasses] = useState<ClassModel[]>([]);
+  const [isBookedMembersDialogOpen, setIsBookedMembersDialogOpen] = useState(false);
+  const [selectedClassBookings, setSelectedClassBookings] = useState<any[]>([]);
+  const [currentClass, setCurrentClass] = useState<ClassModel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -695,6 +698,74 @@ const ClassSchedulePage = () => {
     } finally {
       setShowDeleteConfirm(false);
       setClassToDelete(null);
+    }
+  };
+
+  // Function to fetch booked members for a class
+  const fetchBookedMembers = async (classId: number) => {
+    try {
+      console.log("fetchBookedMembers called with classId:", classId);
+      const selectedClass = classes.find(cls => cls.id === classId);
+      console.log("Selected class found:", selectedClass);
+      
+      if (!selectedClass) {
+        console.error("No class found with ID:", classId);
+        toast({
+          title: "Error",
+          description: "Class not found",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log("Querying bookings for class_id:", classId);
+      
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('class_id', classId);
+
+      console.log("Supabase query completed");
+      console.log("Bookings data received:", data);
+      console.log("Bookings error:", error);
+
+      if (error) {
+        console.error("Error fetching bookings:", error);
+        toast({
+          title: "Failed to load bookings",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log("Setting dialog state...");
+      setSelectedClassBookings(data || []);
+      setCurrentClass(selectedClass);
+      console.log("Opening dialog...");
+      setIsBookedMembersDialogOpen(true);
+      console.log("Dialog state should be true now");
+      
+      // Show success message
+      if (data && data.length > 0) {
+        toast({
+          title: "Class Details",
+          description: `Found ${data.length} registered member(s) for ${selectedClass.name}`,
+        });
+      } else {
+        toast({
+          title: "Class Details",
+          description: `No members have registered for ${selectedClass.name} yet`,
+        });
+      }
+      
+    } catch (err: any) {
+      console.error("Catch block error:", err);
+      toast({
+        title: "Failed to load bookings",
+        description: err.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1265,7 +1336,11 @@ const ClassSchedulePage = () => {
                 {classes.map((cls) => (
                   <tr key={cls.id} className="hover:bg-gray-50">
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">
+                      <div 
+                        className="font-medium text-gray-900 cursor-pointer hover:text-blue-600 hover:underline transition-colors duration-200"
+                        onClick={() => fetchBookedMembers(cls.id)}
+                        title="Click to view registered members"
+                      >
                         {cls.name}
                       </div>
                       {cls.description && (
@@ -1338,6 +1413,102 @@ const ClassSchedulePage = () => {
           </div>
         )}
       </div>
+
+      {/* Booked Members Dialog */}
+      <Dialog open={isBookedMembersDialogOpen} onOpenChange={setIsBookedMembersDialogOpen}>
+        <DialogContent className="sm:max-w-[700px]">
+          <DialogHeader>
+            <DialogTitle>Class Registration Details</DialogTitle>
+            <DialogDescription>
+              {currentClass && (
+                <div className="mt-2 p-3 bg-gray-100 rounded-lg">
+                  <div className="font-semibold text-gray-900">{currentClass.name}</div>
+                  <div className="text-sm">
+                    <span className="font-medium">Schedule:</span> {currentClass.schedule}
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Trainer:</span> {currentClass.trainer}
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Capacity:</span> {selectedClassBookings.length}/{currentClass.capacity}
+                  </div>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto">
+            {selectedClassBookings.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <div className="text-lg font-medium mb-2">No registrations yet</div>
+                <div className="text-sm">No members have registered for this class session.</div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Member Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Registration Date
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Attendance
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Notes
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {selectedClassBookings.map((booking) => (
+                      <tr key={booking.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {booking.user_name || "Unknown Member"}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(booking.booking_date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : 
+                            booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {booking.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            booking.attendance === true ? 'bg-green-100 text-green-800' :
+                            booking.attendance === false ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {booking.attendance === null ? "Not marked" : 
+                             booking.attendance ? "Present" : "Absent"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {booking.notes || "-"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsBookedMembersDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
