@@ -804,6 +804,9 @@ const ClassCalendar = () => {
                   <CalendarIcon className="h-5 w-5" />
                   {format(selectedDate, "EEEE, MMM d")}
                 </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Click here to book/cancel the session
+                </p>
               </CardHeader>
               
               <CardContent className="space-y-3">
