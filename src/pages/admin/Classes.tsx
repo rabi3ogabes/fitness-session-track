@@ -623,6 +623,19 @@ const Classes = () => {
       setIsBookedMembersDialogOpen(true);
       console.log("Dialog state should be true now");
       
+      // Show success message
+      if (data && data.length > 0) {
+        toast({
+          title: "Class Details",
+          description: `Found ${data.length} registered member(s) for ${selectedClass.name}`,
+        });
+      } else {
+        toast({
+          title: "Class Details",
+          description: `No members have registered for ${selectedClass.name} yet`,
+        });
+      }
+      
     } catch (err: any) {
       console.error("Catch block error:", err);
       toast({
@@ -647,16 +660,6 @@ const Classes = () => {
             >
               {showDeleteButtons ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {showDeleteButtons ? "Hide" : "Show"} Delete Buttons
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                console.log("Test dialog button clicked");
-                setIsBookedMembersDialogOpen(true);
-              }}
-            >
-              Test Dialog
             </Button>
           </div>
         </CardHeader>
@@ -686,7 +689,7 @@ const Classes = () => {
                 classes.map((cls) => (
                   <TableRow key={cls.id}>
                     <TableCell 
-                      className="cursor-pointer hover:bg-muted/50 hover:underline font-medium text-primary"
+                      className="cursor-pointer hover:bg-blue-50 hover:text-blue-600 font-medium transition-colors duration-200"
                       onClick={(e) => {
                         console.log("Class name clicked:", cls.name, "ID:", cls.id);
                         e.preventDefault();
@@ -694,6 +697,17 @@ const Classes = () => {
                         fetchBookedMembers(cls.id);
                       }}
                       title="Click to view registered members"
+                      style={{ 
+                        textDecoration: 'underline',
+                        textDecorationColor: 'transparent',
+                        transition: 'text-decoration-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.textDecorationColor = 'currentColor';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.textDecorationColor = 'transparent';
+                      }}
                     >
                       {cls.name}
                     </TableCell>
