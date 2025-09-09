@@ -56,6 +56,33 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Class type colors using semantic tokens
 const classTypeColors = {
+  "upper body": {
+    bg: "bg-class-type-upper-body/10",
+    text: "text-class-type-upper-body",
+    border: "border-class-type-upper-body/20",
+    dot: "bg-class-type-upper-body",
+    badge: "bg-class-type-upper-body/10 text-class-type-upper-body",
+    card: "bg-class-type-upper-body/5 hover:bg-class-type-upper-body/10",
+    ring: "ring-class-type-upper-body/20",
+  },
+  "lower body": {
+    bg: "bg-class-type-lower-body/10",
+    text: "text-class-type-lower-body",
+    border: "border-class-type-lower-body/20",
+    dot: "bg-class-type-lower-body",
+    badge: "bg-class-type-lower-body/10 text-class-type-lower-body",
+    card: "bg-class-type-lower-body/5 hover:bg-class-type-lower-body/10",
+    ring: "ring-class-type-lower-body/20",
+  },
+  "bands": {
+    bg: "bg-class-type-bands/10",
+    text: "text-class-type-bands",
+    border: "border-class-type-bands/20",
+    dot: "bg-class-type-bands",
+    badge: "bg-class-type-bands/10 text-class-type-bands",
+    card: "bg-class-type-bands/5 hover:bg-class-type-bands/10",
+    ring: "ring-class-type-bands/20",
+  },
   yoga: {
     bg: "bg-primary/10",
     text: "text-primary",

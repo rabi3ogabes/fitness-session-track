@@ -70,6 +70,11 @@ export default {
 					'gray': '#6b7280',
 					'dark': '#1f2937',
 					'light': '#f3f4f6'
+				},
+				'class-type': {
+					'upper-body': 'hsl(var(--upper-body))',
+					'lower-body': 'hsl(var(--lower-body))',
+					'bands': 'hsl(var(--bands))'
 				}
 			},
 			borderRadius: {
