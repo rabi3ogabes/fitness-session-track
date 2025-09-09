@@ -46,7 +46,7 @@ const Members = () => {
       try {
         setIsLoading(true);
         await requireAuth(async () => {
-          const { data, error } = await supabase.from("members").select("*");
+          const { data, error } = await supabase.from("members").select("*").order("created_at", { ascending: false });
 
           if (error) {
             console.error("Error fetching members:", error);
