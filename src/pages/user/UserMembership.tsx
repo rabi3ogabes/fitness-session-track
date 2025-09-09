@@ -21,6 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useMembership } from "@/context/membership";
+import { format, parseISO } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 interface MemberShip {
   name: string;
   type: string;
@@ -51,6 +53,29 @@ const UserMembership = () => {
   });
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Function to format date/time in Qatar timezone
+  const formatQatarDateTime = (dateString: string) => {
+    try {
+      // If it's a simple date string like "2025-09-09", treat it as a date
+      if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Add time component and parse as UTC, then convert to Qatar time
+        const dateWithTime = new Date(`${dateString}T12:00:00Z`);
+        return formatInTimeZone(dateWithTime, 'Asia/Qatar', 'MMM dd, yyyy h:mm a');
+      }
+      
+      // If it's already a datetime string, parse and convert
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return dateString; // Return original if can't parse
+      }
+      
+      return formatInTimeZone(date, 'Asia/Qatar', 'MMM dd, yyyy h:mm a');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString; // Return original if error
+    }
+  };
 
   // Fetch membership types from database
   const fetchMembershipTypes = async () => {
@@ -493,7 +518,7 @@ const UserMembership = () => {
                   {paymentHistory && paymentHistory.length > 0 ? (
                     paymentHistory.map((payment) => (
                       <TableRow key={payment.id}>
-                        <TableCell>{payment.date}</TableCell>
+                        <TableCell>{formatQatarDateTime(payment.date)}</TableCell>
                         <TableCell className="font-medium">
                           {payment.type || payment.membership}
                         </TableCell>
