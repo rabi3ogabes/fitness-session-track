@@ -738,12 +738,17 @@ const ClassCalendar = () => {
 
                     {/* Calendar grid */}
                     <div className="grid grid-cols-7 gap-2">
-                      {calendarDays.map((day) => {
+                       {calendarDays.map((day) => {
                         const dayClasses = getClassesForDate(day);
                         const isCurrentMonth = isSameMonth(day, currentMonth);
                         const isSelected = isSameDay(day, selectedDate);
                         const isCurrentDay = isToday(day);
                         const isPastDay = isBefore(day, new Date()) && !isToday(day);
+                        
+                        // Check if user has booked classes on this day
+                        const hasBookedClasses = dayClasses.some(cls => 
+                          cls.isBooked === true || bookedClasses.includes(cls.id)
+                        );
 
                         return (
                           <Button
@@ -754,7 +759,8 @@ const ClassCalendar = () => {
                               !isCurrentMonth && "text-muted-foreground opacity-50",
                               isCurrentDay && !isSelected && "ring-2 ring-primary/20",
                               isPastDay && "opacity-50",
-                              dayClasses.length > 0 && "font-medium"
+                              dayClasses.length > 0 && "font-medium",
+                              hasBookedClasses && "bg-green-100 hover:bg-green-200 border-2 border-green-300 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:border-green-600"
                             )}
                             onClick={() => setSelectedDate(day)}
                           >
@@ -784,9 +790,16 @@ const ClassCalendar = () => {
                                 {dayClasses.length > 3 && (
                                   <span className="text-xs text-muted-foreground">+{dayClasses.length - 3}</span>
                                 )}
-                              </div>
-                            )}
-                          </Button>
+                               </div>
+                             )}
+                             
+                             {/* Booked session indicator */}
+                             {hasBookedClasses && (
+                               <div className="absolute top-1 right-1">
+                                 <CheckCircle2 className="w-3 h-3 text-green-600 dark:text-green-400" />
+                               </div>
+                             )}
+                           </Button>
                         );
                       })}
                     </div>
