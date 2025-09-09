@@ -574,13 +574,22 @@ const Classes = () => {
   // Function to fetch booked members for a class
   const fetchBookedMembers = async (classId: number) => {
     try {
+      console.log("fetchBookedMembers called with classId:", classId);
       const selectedClass = classes.find(cls => cls.id === classId);
-      if (!selectedClass) return;
+      console.log("Selected class found:", selectedClass);
+      
+      if (!selectedClass) {
+        console.error("No class found with ID:", classId);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
         .eq('class_id', classId);
+
+      console.log("Bookings data received:", data);
+      console.log("Bookings error:", error);
 
       if (error) {
         console.error("Error fetching bookings:", error);
@@ -595,6 +604,7 @@ const Classes = () => {
       setSelectedClassBookings(data || []);
       setCurrentClass(selectedClass);
       setIsBookedMembersDialogOpen(true);
+      console.log("Dialog should open now");
     } catch (err: any) {
       console.error("Error fetching bookings:", err);
       toast({
@@ -649,7 +659,12 @@ const Classes = () => {
                   <TableRow key={cls.id}>
                     <TableCell 
                       className="cursor-pointer hover:bg-muted/50 hover:underline font-medium text-primary"
-                      onClick={() => fetchBookedMembers(cls.id)}
+                      onClick={(e) => {
+                        console.log("Class name clicked:", cls.name, "ID:", cls.id);
+                        e.preventDefault();
+                        e.stopPropagation();
+                        fetchBookedMembers(cls.id);
+                      }}
                       title="Click to view registered members"
                     >
                       {cls.name}
@@ -670,10 +685,11 @@ const Classes = () => {
                           </Button>
                         )}
                         <Button 
-                          variant="outline" 
+                          variant="ghost" 
                           size="sm" 
                           onClick={() => toggleClassStatus(cls.id)}
                           title={cls.status === "Active" ? "Deactivate class" : "Activate class"}
+                          className="p-2"
                         >
                           <Power className="h-4 w-4" />
                         </Button>
