@@ -50,6 +50,7 @@ import {
   AlertCircle,
   RefreshCw,
   WifiOff,
+  Power,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -1313,11 +1314,12 @@ const ClassSchedulePage = () => {
                           }
                           className={
                             cls.status === "Active"
-                              ? "text-amber-600"
-                              : "text-green-600"
+                              ? "text-amber-600 p-2"
+                              : "text-green-600 p-2"
                           }
+                          title={cls.status === "Active" ? "Deactivate class" : "Activate class"}
                         >
-                          {cls.status === "Active" ? "Deactivate" : "Activate"}
+                          <Power className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
