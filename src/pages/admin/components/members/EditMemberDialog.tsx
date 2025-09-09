@@ -102,25 +102,35 @@ const EditMemberDialog = ({
   const fetchAllData = async (currentMember) => {
     let allPayments = [];
     console.log(allPayments, "aa");
+    
+    // First, get membership types to map names to prices
+    const { data: membershipTypesData } = await supabase
+      .from("membership_types")
+      .select("*");
+    
     const { data: requestsData } = await supabase
       .from("membership_requests")
       .select("*")
       .eq("email", currentMember.email)
       .order("date", { ascending: false });
+      
     if (requestsData && requestsData.length > 0) {
       const pendingPayments = requestsData.map((request) => {
-        const plan = availablePlans.find((p) => p.name === request.type);
+        // Use the price from membership_types if available, otherwise fall back to availablePlans
+        const membershipType = membershipTypesData?.find((mt) => mt.name === request.type);
+        const fallbackPlan = availablePlans.find((p) => p.name === request.type);
         return {
           id: `request-${request.id}`,
           type: request.type,
           date: request.date,
-          amount: plan?.price || 0,
+          amount: membershipType?.price || fallbackPlan?.price || 0,
           status: request.status,
           isRequest: true,
         };
       });
       allPayments = [...pendingPayments];
     }
+    
     const { data: paymentsData } = await supabase
       .from("payments")
       .select("*")
@@ -131,10 +141,20 @@ const EditMemberDialog = ({
           "Current User"
       )
       .order("date", { ascending: false });
-    // Process confirmed payments
+      
+    // Process confirmed payments - use actual amount from payments table
     if (paymentsData && paymentsData.length > 0) {
-      allPayments = [...allPayments, ...paymentsData];
+      const confirmedPayments = paymentsData.map((payment) => ({
+        id: payment.id,
+        type: payment.membership,
+        date: payment.date,
+        amount: payment.amount, // Use actual amount from payments table
+        status: payment.status,
+        isRequest: false,
+      }));
+      allPayments = [...allPayments, ...confirmedPayments];
     }
+    
     try {
       const localRequests = localStorage.getItem("localMembershipRequests");
       if (localRequests) {
@@ -144,15 +164,19 @@ const EditMemberDialog = ({
         );
 
         if (userRequests.length > 0) {
-          const localPayments = userRequests.map((req) => ({
-            id: `local-${req.id}`,
-            type: req.type,
-            date: req.date,
-            amount: availablePlans.find((p) => p.name === req.type)?.price || 0,
-            status: "Pending",
-            isRequest: true,
-            local: true,
-          }));
+          const localPayments = userRequests.map((req) => {
+            const membershipType = membershipTypesData?.find((mt) => mt.name === req.type);
+            const fallbackPlan = availablePlans.find((p) => p.name === req.type);
+            return {
+              id: `local-${req.id}`,
+              type: req.type,
+              date: req.date,
+              amount: membershipType?.price || fallbackPlan?.price || 0,
+              status: "Pending",
+              isRequest: true,
+              local: true,
+            };
+          });
 
           allPayments = [...localPayments, ...allPayments];
         }
