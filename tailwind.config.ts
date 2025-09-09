@@ -72,9 +72,9 @@ export default {
 					'light': '#f3f4f6'
 				},
 				'class-type': {
-					'upper-body': 'hsl(var(--upper-body))',
-					'lower-body': 'hsl(var(--lower-body))',
-					'bands': 'hsl(var(--bands))'
+					'upper-body': '168 76% 42%',
+					'lower-body': '290 84% 60%',
+					'bands': '25 95% 53%'
 				}
 			},
 			borderRadius: {

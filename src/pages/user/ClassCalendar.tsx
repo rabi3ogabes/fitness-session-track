@@ -290,7 +290,13 @@ const ClassCalendar = () => {
             let type = "default";
             const name = cls.name.toLowerCase();
 
-            if (name.includes("yoga") || name.includes("pilates")) {
+            if (name.includes("upper body") || name.includes("upper-body")) {
+              type = "upper body";
+            } else if (name.includes("lower body") || name.includes("lower-body")) {
+              type = "lower body";
+            } else if (name.includes("bands") || name.includes("band")) {
+              type = "bands";
+            } else if (name.includes("yoga") || name.includes("pilates")) {
               type = "yoga";
             } else if (name.includes("boxing") || name.includes("mma") || name.includes("martial")) {
               type = "combat";
