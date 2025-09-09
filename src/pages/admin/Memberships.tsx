@@ -45,16 +45,26 @@ const Memberships = () => {
   const { toast } = useToast();
   const {isAdmin} =useAuth()
   useEffect(() => {
-    const storedTypes = localStorage.getItem("membershipTypes");
-    if (storedTypes) {
-      setMembershipTypes(JSON.parse(storedTypes));
-    } else {
-      setMembershipTypes(initialMembershipTypes);
-      // Initialize localStorage with mock data if empty
-      localStorage.setItem("membershipTypes", JSON.stringify(initialMembershipTypes));
-    }
+    // Load membership types from database
+    const loadMembershipTypes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('membership_types')
+          .select('*')
+          .order('id', { ascending: true });
+        
+        if (error) {
+          console.error("Error loading membership types:", error);
+          return;
+        }
+        
+        setMembershipTypes(data || []);
+      } catch (err) {
+        console.error("Exception when loading membership types:", err);
+      }
+    };
 
-  // Load membership requests from database only
+    // Load membership requests from database only
     const loadMembershipRequests = async () => {
       try {
         const { data, error } = await supabase
@@ -76,6 +86,7 @@ const Memberships = () => {
       }
     };
     
+    loadMembershipTypes();
     loadMembershipRequests();
 
     // Set up real-time subscription for membership requests
@@ -117,15 +128,7 @@ const Memberships = () => {
   }, []);
 
 
-  // Update localStorage whenever membership types or requests change
-  useEffect(() => {
-    if (membershipTypes.length > 0) {
-      localStorage.setItem("membershipTypes", JSON.stringify(membershipTypes));
-    }
-  }, [membershipTypes]);
-
-
-  const handleAddMembership = () => {
+  const handleAddMembership = async () => {
     if (!newMembership.name || newMembership.sessions <= 0 || newMembership.price <= 0) {
       toast({
         title: "Required fields missing",
@@ -135,74 +138,171 @@ const Memberships = () => {
       return;
     }
 
-    const id = membershipTypes.length > 0 ? Math.max(...membershipTypes.map((m) => m.id)) + 1 : 1;
-    const updatedTypes = [...membershipTypes, { ...newMembership, id }];
-    
-    setMembershipTypes(updatedTypes);
-    localStorage.setItem("membershipTypes", JSON.stringify(updatedTypes));
-    
-    setIsAddDialogOpen(false);
-    setNewMembership({
-      name: "",
-      sessions: 0,
-      price: 0,
-      active: true,
-      description: "",
-    });
+    try {
+      const { data, error } = await supabase
+        .from('membership_types')
+        .insert([{
+          name: newMembership.name,
+          sessions: newMembership.sessions,
+          price: newMembership.price,
+          active: newMembership.active,
+          description: newMembership.description
+        }])
+        .select()
+        .single();
 
-    toast({
-      title: "Membership type added",
-      description: `${newMembership.name} membership type has been added successfully`,
-    });
+      if (error) {
+        console.error("Error adding membership type:", error);
+        toast({
+          title: "Error",
+          description: "Failed to add membership type",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setMembershipTypes(prev => [...prev, data]);
+      setIsAddDialogOpen(false);
+      setNewMembership({
+        name: "",
+        sessions: 0,
+        price: 0,
+        active: true,
+        description: "",
+      });
+
+      toast({
+        title: "Membership type added",
+        description: `${newMembership.name} membership type has been added successfully`,
+      });
+    } catch (err) {
+      console.error("Exception when adding membership type:", err);
+      toast({
+        title: "Error",
+        description: "Failed to add membership type",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleEditMembership = () => {
+  const handleEditMembership = async () => {
     if (!editMembership) return;
 
-    const updatedTypes = membershipTypes.map((m) =>
-      m.id === editMembership.id ? editMembership : m
-    );
-    
-    setMembershipTypes(updatedTypes);
-    localStorage.setItem("membershipTypes", JSON.stringify(updatedTypes));
-    
-    setIsEditDialogOpen(false);
-    setEditMembership(null);
+    try {
+      const { data, error } = await supabase
+        .from('membership_types')
+        .update({
+          name: editMembership.name,
+          sessions: editMembership.sessions,
+          price: editMembership.price,
+          active: editMembership.active,
+          description: editMembership.description
+        })
+        .eq('id', editMembership.id)
+        .select()
+        .single();
 
-    toast({
-      title: "Membership type updated",
-      description: "The membership type has been updated successfully",
-    });
+      if (error) {
+        console.error("Error updating membership type:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update membership type",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setMembershipTypes(prev => prev.map(m => m.id === editMembership.id ? data : m));
+      setIsEditDialogOpen(false);
+      setEditMembership(null);
+
+      toast({
+        title: "Membership type updated",
+        description: "The membership type has been updated successfully",
+      });
+    } catch (err) {
+      console.error("Exception when updating membership type:", err);
+      toast({
+        title: "Error",
+        description: "Failed to update membership type",
+        variant: "destructive",
+      });
+    }
   };
 
-  const toggleMembershipStatus = (id: number) => {
-    const updatedTypes = membershipTypes.map((m) =>
-      m.id === id ? { ...m, active: !m.active } : m
-    );
-    
-    setMembershipTypes(updatedTypes);
-    localStorage.setItem("membershipTypes", JSON.stringify(updatedTypes));
+  const toggleMembershipStatus = async (id: number) => {
+    const membership = membershipTypes.find(m => m.id === id);
+    if (!membership) return;
 
-    toast({
-      title: "Membership status updated",
-      description: "The membership type's status has been updated successfully",
-    });
+    try {
+      const { data, error } = await supabase
+        .from('membership_types')
+        .update({ active: !membership.active })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating membership status:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update membership status",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setMembershipTypes(prev => prev.map(m => m.id === id ? data : m));
+
+      toast({
+        title: "Membership status updated",
+        description: "The membership type's status has been updated successfully",
+      });
+    } catch (err) {
+      console.error("Exception when updating membership status:", err);
+      toast({
+        title: "Error",
+        description: "Failed to update membership status",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteMembership = (id: number) => {
+  const handleDeleteMembership = async (id: number) => {
     const membershipToDelete = membershipTypes.find(m => m.id === id);
     if (!membershipToDelete) return;
 
     if (window.confirm(`Are you sure you want to delete the "${membershipToDelete.name}" membership type? This action cannot be undone.`)) {
-      const updatedTypes = membershipTypes.filter(m => m.id !== id);
-      
-      setMembershipTypes(updatedTypes);
-      localStorage.setItem("membershipTypes", JSON.stringify(updatedTypes));
+      try {
+        const { error } = await supabase
+          .from('membership_types')
+          .delete()
+          .eq('id', id);
 
-      toast({
-        title: "Membership type deleted",
-        description: `The "${membershipToDelete.name}" membership type has been deleted successfully`,
-      });
+        if (error) {
+          console.error("Error deleting membership type:", error);
+          toast({
+            title: "Error",
+            description: "Failed to delete membership type",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setMembershipTypes(prev => prev.filter(m => m.id !== id));
+
+        toast({
+          title: "Membership type deleted",
+          description: `The "${membershipToDelete.name}" membership type has been deleted successfully`,
+        });
+      } catch (err) {
+        console.error("Exception when deleting membership type:", err);
+        toast({
+          title: "Error",
+          description: "Failed to delete membership type",
+          variant: "destructive",
+        });
+      }
     }
   };
 
