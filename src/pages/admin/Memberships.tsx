@@ -104,7 +104,7 @@ const Memberships = () => {
           console.log('Real-time change detected:', payload);
           
           if (payload.eventType === 'INSERT') {
-            setMembershipRequests(prev => [...prev, payload.new as any]);
+            setMembershipRequests(prev => [payload.new as any, ...prev]);
           } else if (payload.eventType === 'UPDATE') {
             setMembershipRequests(prev => 
               prev.map(request => 
