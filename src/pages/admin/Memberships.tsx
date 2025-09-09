@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -721,11 +722,12 @@ const handleApproveRequest = async (id: number) => {
               <label className="text-right text-sm font-medium col-span-1">
                 Description
               </label>
-              <Input
+              <Textarea
                 id="description"
                 value={newMembership.description}
                 onChange={(e) => setNewMembership({ ...newMembership, description: e.target.value })}
                 className="col-span-3"
+                rows={3}
               />
             </div>
           </div>
@@ -793,13 +795,14 @@ const handleApproveRequest = async (id: number) => {
                 <label className="text-right text-sm font-medium col-span-1">
                   Description
                 </label>
-                <Input
+                <Textarea
                   id="edit-description"
                   value={editMembership.description}
                   onChange={(e) =>
                     setEditMembership({ ...editMembership, description: e.target.value })
                   }
                   className="col-span-3"
+                  rows={3}
                 />
               </div>
             </div>
