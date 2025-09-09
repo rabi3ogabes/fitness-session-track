@@ -128,6 +128,10 @@ const Classes = () => {
   const [showDeleteButtons, setShowDeleteButtons] = useState(false);
   const [isBookedMembersDialogOpen, setIsBookedMembersDialogOpen] = useState(false);
   const [selectedClassBookings, setSelectedClassBookings] = useState<any[]>([]);
+  
+  // Debug the dialog state
+  console.log("Dialog state - isBookedMembersDialogOpen:", isBookedMembersDialogOpen);
+  console.log("Selected class bookings:", selectedClassBookings);
 
   // Form schema using Zod
   const formSchema = z.object({
@@ -574,20 +578,31 @@ const Classes = () => {
   // Function to fetch booked members for a class
   const fetchBookedMembers = async (classId: number) => {
     try {
-      console.log("fetchBookedMembers called with classId:", classId);
+      console.log("=== fetchBookedMembers called ===");
+      console.log("Class ID:", classId);
+      console.log("Current classes array:", classes);
+      
       const selectedClass = classes.find(cls => cls.id === classId);
       console.log("Selected class found:", selectedClass);
       
       if (!selectedClass) {
         console.error("No class found with ID:", classId);
+        toast({
+          title: "Error",
+          description: "Class not found",
+          variant: "destructive",
+        });
         return;
       }
 
+      console.log("Querying bookings for class_id:", classId);
+      
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
         .eq('class_id', classId);
 
+      console.log("Supabase query completed");
       console.log("Bookings data received:", data);
       console.log("Bookings error:", error);
 
@@ -601,12 +616,15 @@ const Classes = () => {
         return;
       }
 
+      console.log("Setting dialog state...");
       setSelectedClassBookings(data || []);
       setCurrentClass(selectedClass);
+      console.log("Opening dialog...");
       setIsBookedMembersDialogOpen(true);
-      console.log("Dialog should open now");
+      console.log("Dialog state should be true now");
+      
     } catch (err: any) {
-      console.error("Error fetching bookings:", err);
+      console.error("Catch block error:", err);
       toast({
         title: "Failed to load bookings",
         description: err.message || "An unexpected error occurred",
@@ -629,6 +647,16 @@ const Classes = () => {
             >
               {showDeleteButtons ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {showDeleteButtons ? "Hide" : "Show"} Delete Buttons
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                console.log("Test dialog button clicked");
+                setIsBookedMembersDialogOpen(true);
+              }}
+            >
+              Test Dialog
             </Button>
           </div>
         </CardHeader>
@@ -679,7 +707,12 @@ const Classes = () => {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          onClick={() => fetchBookedMembers(cls.id)}
+                          onClick={(e) => {
+                            console.log("Users icon clicked for class:", cls.name, "ID:", cls.id);
+                            e.preventDefault();
+                            e.stopPropagation();
+                            fetchBookedMembers(cls.id);
+                          }}
                           title="View registered members"
                           className="p-2"
                         >
