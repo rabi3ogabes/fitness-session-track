@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Carousel, 
   CarouselContent, 
@@ -201,22 +202,62 @@ const Index = () => {
     setIsProcessing(true);
     
     try {
-      // In a real app, this would make an API call to register the user
-      // For now, we'll just simulate a successful registration
-      
-      // Store membership request in localStorage to show in admin/trainer interface
-      const existingRequests = JSON.parse(localStorage.getItem("membershipRequests") || "[]");
-      const newRequest = {
-        id: Date.now(),
-        name: newMember.name,
-        email: newMember.email,
-        phone: newMember.phone,
-        membership: newMember.membership,
-        requestDate: new Date().toISOString(),
-        status: "Pending"
-      };
-      
-      localStorage.setItem("membershipRequests", JSON.stringify([...existingRequests, newRequest]));
+      // Check if user already has 2 requests
+      const { data: existingRequests, error: checkError } = await supabase
+        .from("membership_requests")
+        .select("*")
+        .eq("email", newMember.email);
+
+      if (checkError) {
+        console.error("Error checking existing requests:", checkError);
+        // Fall back to localStorage check
+        const localRequests = JSON.parse(localStorage.getItem("membershipRequests") || "[]");
+        const userLocalRequests = localRequests.filter((req: any) => req.email === newMember.email);
+        if (userLocalRequests.length >= 2) {
+          toast({
+            title: "Request Limit Reached",
+            description: "Maximum 2 membership requests allowed per user.",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return;
+        }
+      } else if (existingRequests && existingRequests.length >= 2) {
+        toast({
+          title: "Request Limit Reached", 
+          description: "Maximum 2 membership requests allowed per user.",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      // Try to add to Supabase first
+      const formattedDate = new Date().toISOString().split('T')[0];
+      const { error: insertError } = await supabase.from("membership_requests").insert([
+        {
+          member: newMember.name,
+          email: newMember.email,
+          type: newMember.membership,
+          date: formattedDate,
+          status: "Pending",
+        },
+      ]);
+
+      if (insertError) {
+        console.error("Error inserting to Supabase:", insertError);
+        // Fall back to localStorage
+        const existingLocalRequests = JSON.parse(localStorage.getItem("membershipRequests") || "[]");
+        const newRequest = {
+          id: Date.now(),
+          member: newMember.name,
+          email: newMember.email,
+          type: newMember.membership,
+          date: formattedDate,
+          status: "Pending"
+        };
+        localStorage.setItem("membershipRequests", JSON.stringify([...existingLocalRequests, newRequest]));
+      }
       
       // Show success message
       toast({

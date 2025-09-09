@@ -276,6 +276,31 @@ const UserMembership = () => {
     setPaymentHistory((prevHistory) => [newPayment, ...prevHistory]);
 
     try {
+      // Check if user already has 2 requests
+      const { data: existingRequests, error: checkError } = await supabase
+        .from("membership_requests")
+        .select("*")
+        .eq("email", currentUser.email);
+
+      if (checkError) {
+        console.error("Error checking existing requests:", checkError);
+        throw checkError;
+      }
+
+      if (existingRequests && existingRequests.length >= 2) {
+        // Remove the payment from UI since request was rejected
+        setPaymentHistory((prevHistory) => 
+          prevHistory.filter(payment => payment.id !== newPayment.id)
+        );
+        
+        toast({
+          title: "Request Limit Reached",
+          description: "Maximum 2 membership requests allowed per user.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Try to add to Supabase
       const { error } = await supabase.from("membership_requests").insert([
         {

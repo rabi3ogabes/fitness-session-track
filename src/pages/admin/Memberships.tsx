@@ -532,6 +532,9 @@ const handleApproveRequest = async (id: number) => {
                       <tr key={request.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="font-medium text-gray-900">{request.member}</div>
+                          <div className="text-xs text-gray-500">
+                            {membershipRequests.filter(r => r.email === request.email).length}/2 requests
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-500">
                           {request.email}
