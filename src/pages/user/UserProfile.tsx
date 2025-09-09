@@ -1,28 +1,74 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const UserProfile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // Mock user profile data
   const [profile, setProfile] = useState({
-    name: user?.name || "John Doe",
-    email: user?.email || "john@example.com",
-    phone: "(555) 123-4567",
-    address: "123 Main St",
-    city: "Anytown",
-    emergencyContact: "Jane Doe",
-    emergencyPhone: "(555) 987-6543",
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    emergencyContact: "",
+    emergencyPhone: "",
   });
   
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState(profile);
+  const [loading, setLoading] = useState(true);
+
+  // Load profile data from database
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error loading profile:', error);
+          return;
+        }
+
+        if (data) {
+          setProfile({
+            name: data.name || "",
+            email: data.email || user.email || "",
+            phone: data.phone_number || "",
+            address: "", // Not in profiles table yet
+            city: "", // Not in profiles table yet
+            emergencyContact: data.emergency_contact_name || "",
+            emergencyPhone: data.emergency_contact_phone || "",
+          });
+        } else {
+          // Set basic info from auth user if no profile exists
+          setProfile(prev => ({
+            ...prev,
+            name: user.name || "",
+            email: user.email || "",
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [user]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -33,20 +79,68 @@ const UserProfile = () => {
     setIsEditing(false);
   };
 
-  const handleSave = () => {
-    setProfile(editedProfile);
-    setIsEditing(false);
+  const handleSave = async () => {
+    if (!user?.id) return;
     
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been updated successfully",
-    });
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: editedProfile.name,
+          phone_number: editedProfile.phone,
+          emergency_contact_name: editedProfile.emergencyContact,
+          emergency_contact_phone: editedProfile.emergencyPhone,
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update profile. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setProfile(editedProfile);
+      setIsEditing(false);
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully",
+      });
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEditedProfile((prev) => ({ ...prev, [name]: value }));
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout title="My Profile">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+              <div className="space-y-3">
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="My Profile">

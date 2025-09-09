@@ -159,6 +159,7 @@ export type Database = {
           email: string
           id: number
           member: string
+          sessions: number | null
           status: string | null
           type: string
         }
@@ -168,6 +169,7 @@ export type Database = {
           email: string
           id?: number
           member: string
+          sessions?: number | null
           status?: string | null
           type: string
         }
@@ -177,6 +179,7 @@ export type Database = {
           email?: string
           id?: number
           member?: string
+          sessions?: number | null
           status?: string | null
           type?: string
         }
@@ -249,6 +252,8 @@ export type Database = {
         Row: {
           created_at: string | null
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           id: string
           membership_type: string | null
           name: string | null
@@ -260,6 +265,8 @@ export type Database = {
         Insert: {
           created_at?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           id: string
           membership_type?: string | null
           name?: string | null
@@ -271,6 +278,8 @@ export type Database = {
         Update: {
           created_at?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           id?: string
           membership_type?: string | null
           name?: string | null
