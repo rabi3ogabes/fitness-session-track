@@ -44,37 +44,25 @@ const Memberships = () => {
       localStorage.setItem("membershipTypes", JSON.stringify(initialMembershipTypes));
     }
 
-    // Load membership requests
+  // Load membership requests from database only
     const loadMembershipRequests = async () => {
-      // Try to load from Supabase first
       try {
         const { data, error } = await supabase
           .from('membership_requests')
-          .select('*');
-        if (data && data.length > 0) {
-          console.log("Loaded membership requests from Supabase:", data);
-          setMembershipRequests(data);
-          return;
-        } else if (error) {
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) {
           console.error("Error loading from Supabase:", error);
+          setMembershipRequests([]);
+          return;
         }
+        
+        console.log("Loaded membership requests from Supabase:", data);
+        setMembershipRequests(data || []);
       } catch (err) {
         console.error("Exception when loading from Supabase:", err);
-      }
-      
-      // Fall back to localStorage
-      const storedRequests = localStorage.getItem("membershipRequests");
-      if (storedRequests) {
-        try {
-          setMembershipRequests(JSON.parse(storedRequests));
-        } catch (error) {
-          console.error("Error parsing membership requests:", error);
-          setMembershipRequests(initialMembershipRequests);
-          localStorage.setItem("membershipRequests", JSON.stringify(initialMembershipRequests));
-        }
-      } else {
-        setMembershipRequests(initialMembershipRequests);
-        localStorage.setItem("membershipRequests", JSON.stringify(initialMembershipRequests));
+        setMembershipRequests([]);
       }
     };
     
@@ -118,53 +106,6 @@ const Memberships = () => {
     };
   }, []);
 
-  // Check for new membership requests in localStorage whenever the component renders
-  useEffect(() => {
-    const storedRequests = localStorage.getItem("membershipRequests");
-    if (storedRequests) {
-      try {
-        const parsedRequests = JSON.parse(storedRequests);
-        // Add any new requests to the existing ones
-        const updatedRequests = [...membershipRequests];
-        let hasNewRequests = false;
-        
-        parsedRequests.forEach((newRequest) => {
-          const existingRequestIndex = updatedRequests.findIndex(r => 
-            r.member === newRequest.member && 
-            r.email === newRequest.email &&
-            r.type === newRequest.type &&
-            r.date === newRequest.date
-          );
-          
-          if (existingRequestIndex === -1) {
-            // Generate a new ID for the request
-            const newId = updatedRequests.length > 0 
-              ? Math.max(...updatedRequests.map(r => r.id)) + 1 
-              : 1;
-            
-            updatedRequests.push({
-              ...newRequest,
-              id: newId,
-              status: "Pending"
-            });
-            hasNewRequests = true;
-          }
-        });
-        
-        if (hasNewRequests) {
-          setMembershipRequests(updatedRequests);
-          localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
-          
-          toast({
-            title: "New membership requests",
-            description: "You have new membership requests to review",
-          });
-        }
-      } catch (error) {
-        console.error("Error parsing pending membership requests:", error);
-      }
-    }
-  }, [membershipRequests, toast]);
 
   // Update localStorage whenever membership types or requests change
   useEffect(() => {
@@ -173,11 +114,6 @@ const Memberships = () => {
     }
   }, [membershipTypes]);
 
-  useEffect(() => {
-    if (membershipRequests.length > 0) {
-      localStorage.setItem("membershipRequests", JSON.stringify(membershipRequests));
-    }
-  }, [membershipRequests]);
 
   const handleAddMembership = () => {
     if (!newMembership.name || newMembership.sessions <= 0 || newMembership.price <= 0) {
@@ -262,17 +198,29 @@ const Memberships = () => {
 
   const handleDeleteRequest = async (id: number) => {
     const requestToDelete = membershipRequests.find(r => r.id === id);
-    if (!requestToDelete) return;
+    if (!requestToDelete) {
+      toast({
+        title: "Error",
+        description: "Request not found",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (window.confirm(`Are you sure you want to delete the membership request from "${requestToDelete.member}"? This action cannot be undone.`)) {
       try {
+        console.log('Deleting request with ID:', id);
         const { error } = await supabase
           .from('membership_requests')
           .delete()
           .eq('id', id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase delete error:', error);
+          throw error;
+        }
 
+        // Remove from local state
         setMembershipRequests(prev => prev.filter(r => r.id !== id));
 
         toast({
@@ -303,20 +251,28 @@ const handleApproveRequest = async (id: number) => {
     });
     return;
   }
-  const updatedRequests = membershipRequests.map((r) =>
-    r.id === id ? { ...r, status: "Approved" } : r
-  );
-  
-  setMembershipRequests(updatedRequests);
-  localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
   
   try {
-    await supabase
+    // Update status in database first
+    const { error } = await supabase
       .from('membership_requests')
       .update({ status: "Approved" })
       .eq('id', id);
+      
+    if (error) throw error;
+    
+    // Update local state
+    setMembershipRequests(prev => prev.map((r) =>
+      r.id === id ? { ...r, status: "Approved" } : r
+    ));
   } catch (err) {
     console.error("Error updating request in Supabase:", err);
+    toast({
+      title: "Error",
+      description: "Failed to approve the request. Please try again.",
+      variant: "destructive",
+    });
+    return;
   }
   
   try {
@@ -374,27 +330,32 @@ const handleApproveRequest = async (id: number) => {
 };
 
   const handleRejectRequest = async (id: number) => {
-    const updatedRequests = membershipRequests.map((r) =>
-      r.id === id ? { ...r, status: "Rejected" } : r
-    );
-    
-    setMembershipRequests(updatedRequests);
-    localStorage.setItem("membershipRequests", JSON.stringify(updatedRequests));
-    
-    // Try to update in Supabase if possible
     try {
-      await supabase
+      // Update status in database first
+      const { error } = await supabase
         .from('membership_requests')
         .update({ status: "Rejected" })
         .eq('id', id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setMembershipRequests(prev => prev.map((r) =>
+        r.id === id ? { ...r, status: "Rejected" } : r
+      ));
+
+      toast({
+        title: "Request rejected",
+        description: "The membership request has been rejected",
+      });
     } catch (err) {
       console.error("Error updating request in Supabase:", err);
+      toast({
+        title: "Error",
+        description: "Failed to reject the request. Please try again.",
+        variant: "destructive",
+      });
     }
-
-    toast({
-      title: "Request rejected",
-      description: "The membership request has been rejected",
-    });
   };
   return (
     <DashboardLayout title="Membership Management">
