@@ -32,6 +32,9 @@ import {
   WifiOff,
   Calendar as CalendarIcon,
   User,
+  Dumbbell,
+  Activity,
+  Zap,
 } from "lucide-react";
 import {
   Card,
@@ -764,10 +767,17 @@ const ClassCalendar = () => {
                                   const typeKey = (cls.type || "default") as keyof typeof classTypeColors;
                                   const typeColor = classTypeColors[typeKey] || classTypeColors.default;
                                   console.log('Class type:', cls.type, 'Color:', typeColor.dot, 'Class name:', cls.name);
+                                  
+                                  // Choose icon based on class type
+                                  const IconComponent = cls.type === "upper body" ? Dumbbell :
+                                                      cls.type === "lower body" ? Activity :
+                                                      cls.type === "bands" ? Zap :
+                                                      Dumbbell;
+                                  
                                   return (
-                                    <div
+                                    <IconComponent
                                       key={cls.id}
-                                      className={cn("w-1.5 h-1.5 rounded-full", typeColor.dot)}
+                                      className={cn("w-3 h-3", typeColor.text)}
                                     />
                                   );
                                 })}
