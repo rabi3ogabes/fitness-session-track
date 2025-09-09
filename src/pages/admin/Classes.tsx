@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Eye, EyeOff, Power } from "lucide-react";
+import { CalendarIcon, Eye, EyeOff, Power, Users } from "lucide-react";
 import { format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -676,6 +676,15 @@ const Classes = () => {
                     <TableCell>{cls.status}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center gap-2 justify-end">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => fetchBookedMembers(cls.id)}
+                          title="View registered members"
+                          className="p-2"
+                        >
+                          <Users className="h-4 w-4" />
+                        </Button>
                         <Button variant="secondary" size="sm" onClick={() => openEditDialog(cls)}>
                           Edit
                         </Button>
