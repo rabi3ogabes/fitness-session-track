@@ -574,6 +574,9 @@ const Classes = () => {
   // Function to fetch booked members for a class
   const fetchBookedMembers = async (classId: number) => {
     try {
+      const selectedClass = classes.find(cls => cls.id === classId);
+      if (!selectedClass) return;
+
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
@@ -590,6 +593,7 @@ const Classes = () => {
       }
 
       setSelectedClassBookings(data || []);
+      setCurrentClass(selectedClass);
       setIsBookedMembersDialogOpen(true);
     } catch (err: any) {
       console.error("Error fetching bookings:", err);
@@ -642,18 +646,20 @@ const Classes = () => {
                 </TableRow>
               ) : (
                 classes.map((cls) => (
-                  <TableRow 
-                    key={cls.id} 
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => fetchBookedMembers(cls.id)}
-                  >
-                    <TableCell>{cls.name}</TableCell>
+                  <TableRow key={cls.id}>
+                    <TableCell 
+                      className="cursor-pointer hover:bg-muted/50 hover:underline font-medium text-primary"
+                      onClick={() => fetchBookedMembers(cls.id)}
+                      title="Click to view registered members"
+                    >
+                      {cls.name}
+                    </TableCell>
                     <TableCell>{cls.trainer}</TableCell>
                     <TableCell>{cls.schedule} ({formatClassTime(cls.startTime || "09:00", cls.endTime || "10:00")})</TableCell>
                     <TableCell>{cls.capacity}</TableCell>
                     <TableCell>{cls.enrolled}</TableCell>
                     <TableCell>{cls.status}</TableCell>
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <TableCell className="text-right">
                       <div className="flex items-center gap-2 justify-end">
                         <Button variant="secondary" size="sm" onClick={() => openEditDialog(cls)}>
                           Edit
@@ -1081,38 +1087,68 @@ const Classes = () => {
 
       {/* Booked Members Dialog */}
       <Dialog open={isBookedMembersDialogOpen} onOpenChange={setIsBookedMembersDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
-            <DialogTitle>Booked Members</DialogTitle>
+            <DialogTitle>Class Registration Details</DialogTitle>
             <DialogDescription>
-              Members who have booked this class session.
+              {currentClass && (
+                <div className="mt-2 p-3 bg-muted rounded-lg">
+                  <div className="font-semibold text-foreground">{currentClass.name}</div>
+                  <div className="text-sm">
+                    <span className="font-medium">Schedule:</span> {currentClass.schedule} at {formatClassTime(currentClass.startTime || "09:00", currentClass.endTime || "10:00")}
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Trainer:</span> {currentClass.trainer}
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-medium">Capacity:</span> {selectedClassBookings.length}/{currentClass.capacity}
+                  </div>
+                </div>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[400px] overflow-y-auto">
             {selectedClassBookings.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No members have booked this class yet.
+                <div className="text-lg font-medium mb-2">No registrations yet</div>
+                <div className="text-sm">No members have registered for this class session.</div>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Member Name</TableHead>
-                    <TableHead>Booking Date</TableHead>
+                    <TableHead>Registration Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Attendance</TableHead>
+                    <TableHead>Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {selectedClassBookings.map((booking) => (
                     <TableRow key={booking.id}>
-                      <TableCell>{booking.user_name || "Unknown"}</TableCell>
+                      <TableCell className="font-medium">{booking.user_name || "Unknown Member"}</TableCell>
                       <TableCell>{new Date(booking.booking_date).toLocaleDateString()}</TableCell>
-                      <TableCell>{booking.status}</TableCell>
                       <TableCell>
-                        {booking.attendance === null ? "Not marked" : 
-                         booking.attendance ? "Present" : "Absent"}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : 
+                          booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {booking.status}
+                        </span>
                       </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          booking.attendance === true ? 'bg-green-100 text-green-800' :
+                          booking.attendance === false ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {booking.attendance === null ? "Not marked" : 
+                           booking.attendance ? "Present" : "Absent"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{booking.notes || "-"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
