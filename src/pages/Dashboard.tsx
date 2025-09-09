@@ -64,6 +64,7 @@ const Dashboard = () => {
 
   const [loadingUserData, setLoadingUserData] = useState(true);
   const [userMembership, setUserMembership] = useState("Basic");
+  const [showLowSessionWarning, setShowLowSessionWarning] = useState(true);
   //   console.log(user, "user");
   // console.log(unbookedClasses, "unbookedClasses");
   // console.log(userData, "userData");
@@ -120,6 +121,12 @@ const Dashboard = () => {
       navigate("/admin");
     } else {
       fetchUserData();
+    }
+    
+    // Load admin setting for low session warning visibility
+    const savedShowLowSessionWarning = localStorage.getItem("showLowSessionWarning");
+    if (savedShowLowSessionWarning !== null) {
+      setShowLowSessionWarning(JSON.parse(savedShowLowSessionWarning));
     }
   }, [isAuthenticated, isAdmin, navigate, user, toast]);
 
@@ -190,7 +197,7 @@ const Dashboard = () => {
             />
           </div>
 
-          {isLowOnSessions && (
+          {isLowOnSessions && showLowSessionWarning && (
             <Alert variant="destructive" className="bg-red-50 border-red-200">
               <AlertTitle className="text-red-500">
                 Low Session Count Warning

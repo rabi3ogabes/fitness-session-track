@@ -53,6 +53,7 @@ const Settings = () => {
     premium: 90  // days
   });
   const [showTestimonials, setShowTestimonials] = useState(true);
+  const [showLowSessionWarning, setShowLowSessionWarning] = useState(true);
   const [mainPageContent, setMainPageContent] = useState({
     heroTitle: "Streamlined Gym Management System",
     heroDescription: "A complete solution for gym owners and members. Manage memberships, book sessions, track attendance, and more.",
@@ -115,6 +116,12 @@ const Settings = () => {
     if (savedShowTestimonials !== null) {
       setShowTestimonials(JSON.parse(savedShowTestimonials));
     }
+    
+    // Load low session warning setting
+    const savedShowLowSessionWarning = localStorage.getItem("showLowSessionWarning");
+    if (savedShowLowSessionWarning !== null) {
+      setShowLowSessionWarning(JSON.parse(savedShowLowSessionWarning));
+    }
   }, []);
 
   const handleSaveSettings = () => {
@@ -151,6 +158,7 @@ const Settings = () => {
     localStorage.setItem("cancellationHours", cancellationHours.toString());
     localStorage.setItem("membershipExpiry", JSON.stringify(membershipExpiry));
     localStorage.setItem("showTestimonials", JSON.stringify(showTestimonials));
+    localStorage.setItem("showLowSessionWarning", JSON.stringify(showLowSessionWarning));
 
     // Simulate API call
     setTimeout(() => {
@@ -699,6 +707,20 @@ const Settings = () => {
                     id="show-testimonials"
                     checked={showTestimonials}
                     onCheckedChange={setShowTestimonials}
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="show-low-session-warning">Low Session Count Warning</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Show warning message to users when they have 2 or fewer sessions remaining
+                    </p>
+                  </div>
+                  <Switch
+                    id="show-low-session-warning"
+                    checked={showLowSessionWarning}
+                    onCheckedChange={setShowLowSessionWarning}
                   />
                 </div>
               </CardContent>
