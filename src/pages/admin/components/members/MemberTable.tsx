@@ -47,7 +47,6 @@ const MemberTable = ({
                 <TableHead className="w-[180px]">Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead className="hidden md:table-cell">Phone</TableHead>
-                <TableHead className="hidden sm:table-cell">Membership</TableHead>
                 <TableHead className="hidden lg:table-cell">Sessions</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -56,7 +55,7 @@ const MemberTable = ({
             <TableBody>
               {filteredMembers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-gray-500">
+                  <TableCell colSpan={6} className="text-center py-10 text-gray-500">
                     {members.length === 0 ? "No members found in the database." : "No members matching your search criteria."}
                   </TableCell>
                 </TableRow>
@@ -66,7 +65,6 @@ const MemberTable = ({
                     <TableCell className="font-medium">{member.name}</TableCell>
                     <TableCell>{member.email}</TableCell>
                     <TableCell className="hidden md:table-cell">{member.phone}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{member.membership}</TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {member.remainingSessions}/{member.sessions}
                     </TableCell>
