@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users } from 'lucide-react';
+import { Users, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +10,8 @@ interface Member {
   email: string;
   created_at: string;
   membership: string;
+  remaining_sessions: number;
+  hasRequest: boolean;
 }
 
 const RecentMembersWidget = () => {
@@ -18,14 +20,33 @@ const RecentMembersWidget = () => {
 
   const fetchRecentMembers = async () => {
     try {
+      // First get recent members with their session data
       const { data: members } = await supabase
         .from('members')
-        .select('id, name, email, created_at, membership')
+        .select('id, name, email, created_at, membership, remaining_sessions')
         .order('created_at', { ascending: false })
         .limit(5);
 
       if (members) {
-        setRecentMembers(members);
+        // For each member, check if they have pending membership requests
+        const membersWithRequests = await Promise.all(
+          members.map(async (member) => {
+            const { data: requests } = await supabase
+              .from('membership_requests')
+              .select('id')
+              .eq('email', member.email)
+              .eq('status', 'Pending')
+              .limit(1);
+
+            return {
+              ...member,
+              remaining_sessions: member.remaining_sessions || 0,
+              hasRequest: (requests && requests.length > 0) || false
+            };
+          })
+        );
+
+        setRecentMembers(membersWithRequests);
       }
     } catch (error) {
       console.error('Error fetching recent members:', error);
@@ -97,7 +118,10 @@ const RecentMembersWidget = () => {
                   Joined
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Membership
+                  Session Balance
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Has Request
                 </th>
               </tr>
             </thead>
@@ -115,15 +139,24 @@ const RecentMembersWidget = () => {
                       {new Date(member.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Badge variant="outline" className="text-green-800 border-green-300">
-                        {member.membership || 'Basic'}
+                      <Badge variant="outline" className="text-blue-800 border-blue-300">
+                        {member.remaining_sessions} sessions
                       </Badge>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {member.hasRequest ? (
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <XCircle className="h-5 w-5 text-gray-400" />
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
                     No recent members found
                   </td>
                 </tr>
