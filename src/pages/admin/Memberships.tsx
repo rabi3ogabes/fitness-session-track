@@ -14,14 +14,24 @@ const initialMembershipTypes = [
   { id: 3, name: "Premium", sessions: 20, price: 350, active: true, description: "Best value for regular attendees" },
 ];
 
-const initialMembershipRequests = [
+interface MembershipRequest {
+  id: number;
+  member: string;
+  email: string;
+  type: string;
+  date: string;
+  status: string;
+  sessions?: number; // Optional to maintain compatibility with existing requests
+}
+
+const initialMembershipRequests: MembershipRequest[] = [
   { id: 1, member: "Sarah Johnson", email: "sarah@example.com", type: "Premium", date: "2025-04-28", status: "Pending" },
   { id: 2, member: "Michael Brown", email: "michael@example.com", type: "Basic", date: "2025-04-27", status: "Pending" },
 ];
 
 const Memberships = () => {
   const [membershipTypes, setMembershipTypes] = useState<typeof initialMembershipTypes>([]);
-  const [membershipRequests, setMembershipRequests] = useState<typeof initialMembershipRequests>([]);
+  const [membershipRequests, setMembershipRequests] = useState<MembershipRequest[]>([]);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [newMembership, setNewMembership] = useState({
