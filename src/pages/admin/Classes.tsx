@@ -654,17 +654,24 @@ const Classes = () => {
                     <TableCell>{cls.enrolled}</TableCell>
                     <TableCell>{cls.status}</TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="secondary" size="sm" onClick={() => openEditDialog(cls)}>
-                        Edit
-                      </Button>
-                      {showDeleteButtons && (
-                        <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(cls.id)}>
-                          Delete
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button variant="secondary" size="sm" onClick={() => openEditDialog(cls)}>
+                          Edit
                         </Button>
-                      )}
-                      <Button variant="outline" size="sm" onClick={() => toggleClassStatus(cls.id)}>
-                        <Power className="h-4 w-4" />
-                      </Button>
+                        {showDeleteButtons && (
+                          <Button variant="destructive" size="sm" onClick={() => openDeleteDialog(cls.id)}>
+                            Delete
+                          </Button>
+                        )}
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => toggleClassStatus(cls.id)}
+                          title={cls.status === "Active" ? "Deactivate class" : "Activate class"}
+                        >
+                          <Power className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
