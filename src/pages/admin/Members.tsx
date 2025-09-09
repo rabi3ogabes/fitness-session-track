@@ -25,6 +25,7 @@ import { useAuth } from "@/context/AuthContext";
 
 const Members = () => {
   const [members, setMembers] = useState<Member[]>([]);
+  const [showDeleteIcon, setShowDeleteIcon] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,6 +40,14 @@ const Members = () => {
   const { toast } = useToast();
 
   const [refreshTrigger, setRefreshTrigger] = useState(0); // Add a refresh trigger
+
+  // Load settings on component mount
+  useEffect(() => {
+    const savedShowDeleteIcon = localStorage.getItem("showMemberDeleteIcon");
+    if (savedShowDeleteIcon !== null) {
+      setShowDeleteIcon(JSON.parse(savedShowDeleteIcon));
+    }
+  }, []);
 
   // Fetch members data from Supabase
   useEffect(() => {
@@ -336,6 +345,7 @@ const Members = () => {
         resetPassword={(id) => openResetPasswordDialog(id)}
         deleteMember={deleteMember}
         isLoading={isLoading}
+        showDeleteIcon={showDeleteIcon}
       />
 
       <AddMemberDialog

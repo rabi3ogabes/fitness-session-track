@@ -14,6 +14,7 @@ interface MemberTableProps {
   resetPassword: (id: number) => void;
   deleteMember: (id: number) => void;
   isLoading?: boolean;
+  showDeleteIcon?: boolean;
 }
 
 const MemberTable = ({
@@ -24,7 +25,8 @@ const MemberTable = ({
   openEditDialog,
   resetPassword,
   deleteMember,
-  isLoading = false
+  isLoading = false,
+  showDeleteIcon = true
 }: MemberTableProps) => {
 
   if (isLoading) {
@@ -146,27 +148,29 @@ const MemberTable = ({
                             <TooltipContent>
                               <p>Reset Password</p>
                             </TooltipContent>
-                          </Tooltip>
-                          
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  if (window.confirm(`Are you sure you want to delete ${member.name}? This action cannot be undone.`)) {
-                                    deleteMember(member.id);
-                                  }
-                                }}
-                                className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Delete Member</p>
-                            </TooltipContent>
-                          </Tooltip>
+                           </Tooltip>
+                           
+                           {showDeleteIcon && (
+                             <Tooltip>
+                               <TooltipTrigger asChild>
+                                 <Button
+                                   variant="ghost"
+                                   size="icon"
+                                   onClick={() => {
+                                     if (window.confirm(`Are you sure you want to delete ${member.name}? This action cannot be undone.`)) {
+                                       deleteMember(member.id);
+                                     }
+                                   }}
+                                   className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                                 >
+                                   <Trash2 className="h-4 w-4" />
+                                 </Button>
+                               </TooltipTrigger>
+                               <TooltipContent>
+                                 <p>Delete Member</p>
+                               </TooltipContent>
+                             </Tooltip>
+                           )}
                         </div>
                       </TooltipProvider>
                     </TableCell>

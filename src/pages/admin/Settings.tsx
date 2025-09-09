@@ -54,6 +54,7 @@ const Settings = () => {
   });
   const [showTestimonials, setShowTestimonials] = useState(true);
   const [showLowSessionWarning, setShowLowSessionWarning] = useState(true);
+  const [showMemberDeleteIcon, setShowMemberDeleteIcon] = useState(true);
   const [mainPageContent, setMainPageContent] = useState({
     heroTitle: "Streamlined Gym Management System",
     heroDescription: "A complete solution for gym owners and members. Manage memberships, book sessions, track attendance, and more.",
@@ -122,6 +123,12 @@ const Settings = () => {
     if (savedShowLowSessionWarning !== null) {
       setShowLowSessionWarning(JSON.parse(savedShowLowSessionWarning));
     }
+    
+    // Load member delete icon visibility setting
+    const savedShowMemberDeleteIcon = localStorage.getItem("showMemberDeleteIcon");
+    if (savedShowMemberDeleteIcon !== null) {
+      setShowMemberDeleteIcon(JSON.parse(savedShowMemberDeleteIcon));
+    }
   }, []);
 
   const handleSaveSettings = () => {
@@ -159,6 +166,7 @@ const Settings = () => {
     localStorage.setItem("membershipExpiry", JSON.stringify(membershipExpiry));
     localStorage.setItem("showTestimonials", JSON.stringify(showTestimonials));
     localStorage.setItem("showLowSessionWarning", JSON.stringify(showLowSessionWarning));
+    localStorage.setItem("showMemberDeleteIcon", JSON.stringify(showMemberDeleteIcon));
 
     // Simulate API call
     setTimeout(() => {
@@ -722,8 +730,22 @@ const Settings = () => {
                     checked={showLowSessionWarning}
                     onCheckedChange={setShowLowSessionWarning}
                   />
-                </div>
-              </CardContent>
+                 </div>
+                 
+                 <div className="flex items-center justify-between">
+                   <div className="space-y-0.5">
+                     <Label htmlFor="show-member-delete-icon">Member Delete Icon</Label>
+                     <p className="text-sm text-muted-foreground">
+                       Show delete icon for members in the member management page
+                     </p>
+                   </div>
+                   <Switch
+                     id="show-member-delete-icon"
+                     checked={showMemberDeleteIcon}
+                     onCheckedChange={setShowMemberDeleteIcon}
+                   />
+                 </div>
+               </CardContent>
             </Card>
           </div>
         </TabsContent>
