@@ -199,7 +199,9 @@ const Classes = () => {
         await requireAuth(async () => {
           const { data, error } = await supabase
             .from('classes')
-            .select('*');
+            .select('*')
+            .order('schedule', { ascending: false })
+            .order('start_time', { ascending: false });
 
           if (error) {
             console.error("Error fetching classes:", error);
@@ -351,7 +353,7 @@ const Classes = () => {
         });
 
         // Refresh classes
-        const { data } = await supabase.from('classes').select('*');
+        const { data } = await supabase.from('classes').select('*').order('schedule', { ascending: false }).order('start_time', { ascending: false });
         if (data) {
           const formattedClasses: ClassModel[] = data.map((classData: any) => ({
             id: classData.id,
