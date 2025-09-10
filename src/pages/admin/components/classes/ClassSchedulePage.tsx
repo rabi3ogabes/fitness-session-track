@@ -432,14 +432,32 @@ const ClassSchedulePage = () => {
         return data;
       }, []);
 
-      const formattedClasses: ClassModel[] = data.map((cls: any) => ({
+      // Fetch booking counts for each class (excluding cancelled bookings)
+      const classesWithBookingCounts = await Promise.all(
+        data.map(async (cls: any) => {
+          const { data: bookings, error } = await supabase
+            .from("bookings")
+            .select("id")
+            .eq("class_id", cls.id)
+            .neq("status", "cancelled");
+          
+          if (error) {
+            console.error("Error fetching bookings for class", cls.id, error);
+            return { ...cls, actualEnrolled: 0 };
+          }
+          
+          return { ...cls, actualEnrolled: bookings?.length || 0 };
+        })
+      );
+
+      const formattedClasses: ClassModel[] = classesWithBookingCounts.map((cls: any) => ({
         id: cls.id,
         name: cls.name,
         trainer: cls.trainer || "",
         trainers: cls.trainers || [],
         schedule: cls.schedule,
         capacity: cls.capacity,
-        enrolled: cls.enrolled || 0,
+        enrolled: cls.actualEnrolled,
         status: cls.status || "Active",
         gender: cls.gender || "All",
         startTime: cls.start_time || "",
@@ -726,7 +744,8 @@ const ClassSchedulePage = () => {
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
-        .eq('class_id', classId);
+        .eq('class_id', classId)
+        .neq('status', 'cancelled');
 
       console.log("Supabase query completed");
       console.log("Bookings data received:", data);
