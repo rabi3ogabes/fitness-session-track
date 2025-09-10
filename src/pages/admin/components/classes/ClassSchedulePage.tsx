@@ -1457,8 +1457,19 @@ const ClassSchedulePage = () => {
       {/* Booked Members Dialog */}
       <Dialog open={isBookedMembersDialogOpen} onOpenChange={setIsBookedMembersDialogOpen}>
         <DialogContent className="sm:max-w-[700px]">
-          <DialogHeader>
+          <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle>Class Registration Details</DialogTitle>
+            <Button
+              variant="outline"
+              onClick={() => {
+                // TODO: Implement add member functionality
+                console.log("Add member to class");
+              }}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Members
+            </Button>
             <DialogDescription>
               {currentClass && (
                 <div className="mt-2 p-3 bg-gray-100 rounded-lg">
@@ -1523,18 +1534,7 @@ const ClassSchedulePage = () => {
               </div>
             )}
           </div>
-          <DialogFooter className="flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => {
-                // TODO: Implement add member functionality
-                console.log("Add member to class");
-              }}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Members
-            </Button>
+          <DialogFooter>
             <Button onClick={() => setIsBookedMembersDialogOpen(false)}>
               Close
             </Button>
