@@ -749,7 +749,14 @@ const ClassSchedulePage = () => {
       
       const { data, error } = await supabase
         .from('bookings')
-        .select('*')
+        .select(`
+          *,
+          members!member_id (
+            remaining_sessions,
+            name,
+            gender
+          )
+        `)
         .eq('class_id', classId);
 
       console.log("Supabase query completed");
@@ -1640,7 +1647,10 @@ const ClassSchedulePage = () => {
                             )}
                           </div>
                           <span className="mt-2 text-sm text-center font-medium text-gray-900">
-                            {booking.user_name || "Unknown"}
+                            {booking.user_name || booking.members?.name || "Unknown"}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {booking.members?.remaining_sessions ? `${booking.members.remaining_sessions} sessions left` : 'No session data'}
                           </span>
                           <span className="text-xs text-green-600">
                             confirmed
@@ -1675,7 +1685,10 @@ const ClassSchedulePage = () => {
                             )}
                           </div>
                           <span className="mt-2 text-sm text-center font-medium text-gray-400 line-through">
-                            {booking.user_name || "Unknown"}
+                            {booking.user_name || booking.members?.name || "Unknown"}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {booking.members?.remaining_sessions ? `${booking.members.remaining_sessions} sessions left` : 'No session data'}
                           </span>
                           <span className="text-xs text-red-600">
                             cancelled
@@ -1710,7 +1723,10 @@ const ClassSchedulePage = () => {
                             )}
                           </div>
                           <span className="mt-2 text-sm text-center font-medium text-gray-900">
-                            {booking.user_name || "Unknown"}
+                            {booking.user_name || booking.members?.name || "Unknown"}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {booking.members?.remaining_sessions ? `${booking.members.remaining_sessions} sessions left` : 'No session data'}
                           </span>
                           <span className="text-xs text-yellow-600">
                             pending
