@@ -1792,13 +1792,16 @@ const ClassSchedulePage = () => {
                         <span className="ml-1">{cls.enrolled || 0}/{cls.capacity}</span>
                       </div>
                       
-                      {cls.gender && cls.gender !== "All" && (
-                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          cls.gender === "Male" 
-                            ? "bg-blue-100 text-blue-800" 
-                            : "bg-pink-100 text-pink-800"
-                        }`}>
-                          {cls.gender}
+                      {cls.gender && cls.gender !== "All" ? (
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
+                          <UserRound className="h-3 w-3" />
+                          <span>Ladies Only</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          <UserRound className="h-3 w-3" />
+                          <User className="h-3 w-3" />
+                          <span>Mixed</span>
                         </div>
                       )}
                     </div>
