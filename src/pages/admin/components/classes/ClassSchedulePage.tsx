@@ -880,12 +880,12 @@ const ClassSchedulePage = () => {
 
       if (!member) throw new Error("Member not found");
 
-      // Create booking - using member_id for the new field and a placeholder for user_id
+      // Create booking - generate a proper UUID for user_id or use a default UUID
       const { error: bookingError } = await supabase
         .from("bookings")
         .insert({
           member_id: memberId,
-          user_id: `member-${memberId}`, // Temporary placeholder since user_id is still required
+          user_id: crypto.randomUUID(), // Generate a proper UUID for the user_id field
           class_id: currentClass.id,
           user_name: member.name,
           status: "confirmed"
