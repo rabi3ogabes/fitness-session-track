@@ -24,6 +24,8 @@ export interface ClassModel {
   color?: string;
   // Add a difficulty level
   difficulty?: "Beginner" | "Intermediate" | "Advanced" | string;
+  // Add cancellation count
+  cancelledCount?: number;
 }
 
 export interface RecurringPattern {

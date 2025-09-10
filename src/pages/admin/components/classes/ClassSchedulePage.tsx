@@ -56,6 +56,7 @@ import {
   User,
   UserPlus,
   UserRound,
+  UserX,
   X,
   Grid3X3,
   List,
@@ -441,21 +442,31 @@ const ClassSchedulePage = () => {
         return data;
       }, []);
 
-      // Fetch booking counts for each class (excluding cancelled bookings)
+      // Fetch booking counts for each class (including cancelled bookings)
       const classesWithBookingCounts = await Promise.all(
         data.map(async (cls: any) => {
-          const { data: bookings, error } = await supabase
+          const { data: confirmedBookings, error: confirmedError } = await supabase
             .from("bookings")
             .select("id")
             .eq("class_id", cls.id)
             .neq("status", "cancelled");
           
-          if (error) {
-            console.error("Error fetching bookings for class", cls.id, error);
-            return { ...cls, actualEnrolled: 0 };
+          const { data: cancelledBookings, error: cancelledError } = await supabase
+            .from("bookings")
+            .select("id")
+            .eq("class_id", cls.id)
+            .eq("status", "cancelled");
+          
+          if (confirmedError || cancelledError) {
+            console.error("Error fetching bookings for class", cls.id, confirmedError || cancelledError);
+            return { ...cls, actualEnrolled: 0, cancelledCount: 0 };
           }
           
-          return { ...cls, actualEnrolled: bookings?.length || 0 };
+          return { 
+            ...cls, 
+            actualEnrolled: confirmedBookings?.length || 0,
+            cancelledCount: cancelledBookings?.length || 0
+          };
         })
       );
 
@@ -474,6 +485,7 @@ const ClassSchedulePage = () => {
         description: cls.description,
         location: cls.location,
         difficulty: cls.difficulty,
+        cancelledCount: cls.cancelledCount || 0,
       }));
 
       setClasses(formattedClasses);
@@ -1661,6 +1673,12 @@ const ClassSchedulePage = () => {
                   
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center text-gray-600">
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      <span className="font-medium">Date:</span>
+                      <span className="ml-1">{cls.schedule}</span>
+                    </div>
+                    
+                    <div className="flex items-center text-gray-600">
                       <User className="h-4 w-4 mr-2" />
                       <span className="font-medium">Trainer:</span>
                       <span className="ml-1">{cls.trainer}</span>
@@ -1670,7 +1688,7 @@ const ClassSchedulePage = () => {
                       <Clock className="h-4 w-4 mr-2" />
                       <span className="font-medium">Time:</span>
                       <span className="ml-1">
-                        {formatTime(cls.start_time)} - {formatTime(cls.end_time)}
+                        {formatTime(cls.startTime || "")} - {formatTime(cls.endTime || "")}
                       </span>
                     </div>
                     
@@ -1696,6 +1714,14 @@ const ClassSchedulePage = () => {
                           {cls.gender}
                         </div>
                       )}
+                    </div>
+                    
+                    <div className="flex items-center text-gray-600 pt-1">
+                      <UserX className="h-4 w-4 mr-2" />
+                      <span className="font-medium">Cancellations:</span>
+                      <span className="ml-1 text-red-600">
+                        {cls.cancelledCount || 0}
+                      </span>
                     </div>
                   </div>
                 </div>
