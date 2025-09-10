@@ -288,35 +288,61 @@ const ClassCalendar = () => {
         }
 
         if (data) {
-          // Transform and add type property based on class name
-          const classesWithType = data.map((cls: ClassModel) => {
-            let type = "default";
-            const name = cls.name.toLowerCase().trim();
-            
-            console.log('Processing class:', cls.name, 'normalized:', name);
+          // Fetch real enrollment count for each class
+          const classesWithRealEnrollment = await Promise.all(
+            data.map(async (cls: ClassModel) => {
+              try {
+                const { data: bookings, error: bookingError } = await supabase
+                  .from("bookings")
+                  .select("id")
+                  .eq("class_id", cls.id)
+                  .eq("status", "confirmed");
 
-            if (name.includes("upper body") || name.includes("upper-body") || name === "upper body") {
-              type = "upper body";
-            } else if (name.includes("lower body") || name.includes("lower-body") || name === "lower body") {
-              type = "lower body";
-            } else if (name.includes("bands") || name.includes("band") || name === "bands") {
-              type = "bands";
-            } else if (name.includes("yoga") || name.includes("pilates")) {
-              type = "yoga";
-            } else if (name.includes("boxing") || name.includes("mma") || name.includes("martial")) {
-              type = "combat";
-            } else if (name.includes("zumba") || name.includes("dance")) {
-              type = "dance";
-            } else if (name.includes("workout") || name.includes("training") || name.includes("hiit") || name.includes("cardio") || name.includes("strength")) {
-              type = "workout";
-            }
-            
-            console.log('Assigned type:', type, 'to class:', cls.name);
+                if (bookingError) {
+                  console.error("Error fetching bookings for class", cls.id, bookingError);
+                  return { ...cls, enrolled: 0 };
+                }
 
-            return { ...cls, type, isBooked: false };
-          });
+                const realEnrolled = bookings?.length || 0;
+                
+                // Transform and add type property based on class name
+                let type = "default";
+                const name = cls.name.toLowerCase().trim();
+                
+                console.log('Processing class:', cls.name, 'normalized:', name, 'real enrolled:', realEnrolled);
 
-          setClasses(classesWithType);
+                if (name.includes("upper body") || name.includes("upper-body") || name === "upper body") {
+                  type = "upper body";
+                } else if (name.includes("lower body") || name.includes("lower-body") || name === "lower body") {
+                  type = "lower body";
+                } else if (name.includes("bands") || name.includes("band") || name === "bands") {
+                  type = "bands";
+                } else if (name.includes("yoga") || name.includes("pilates")) {
+                  type = "yoga";
+                } else if (name.includes("boxing") || name.includes("mma") || name.includes("martial")) {
+                  type = "combat";
+                } else if (name.includes("zumba") || name.includes("dance")) {
+                  type = "dance";
+                } else if (name.includes("workout") || name.includes("training") || name.includes("hiit") || name.includes("cardio") || name.includes("strength")) {
+                  type = "workout";
+                }
+                
+                console.log('Assigned type:', type, 'to class:', cls.name);
+
+                return { 
+                  ...cls, 
+                  type, 
+                  isBooked: false, 
+                  enrolled: realEnrolled 
+                };
+              } catch (err) {
+                console.error("Error processing class:", cls.id, err);
+                return { ...cls, type: "default", isBooked: false, enrolled: 0 };
+              }
+            })
+          );
+
+          setClasses(classesWithRealEnrollment);
         }
       } catch (err) {
         console.error("Error fetching classes:", err);
