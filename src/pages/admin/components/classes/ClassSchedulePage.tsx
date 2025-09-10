@@ -1936,7 +1936,7 @@ const ClassSchedulePage = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddMemberDialogOpen(false)}>
-              Cancel
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
