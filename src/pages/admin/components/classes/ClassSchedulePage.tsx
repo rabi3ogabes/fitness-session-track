@@ -1908,8 +1908,21 @@ const ClassSchedulePage = () => {
                     <div className="grid grid-cols-4 gap-6">
                       {selectedClassBookings
                         .filter(booking => booking.status === 'cancelled')
+                        .reduce((uniqueBookings, booking) => {
+                          // Only add if this user hasn't been added yet
+                          const userId = booking.user_id || booking.member_id;
+                          const userName = booking.user_name || booking.members?.name || "Unknown";
+                          
+                          if (!uniqueBookings.find(ub => 
+                            (ub.user_id === userId && userId) || 
+                            (ub.user_name === userName && userName !== "Unknown")
+                          )) {
+                            uniqueBookings.push(booking);
+                          }
+                          return uniqueBookings;
+                        }, [] as typeof selectedClassBookings)
                         .map((booking) => (
-                        <div key={booking.id} className="flex flex-col items-center group bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-shadow p-4">
+                        <div key={`cancelled-${booking.user_id || booking.member_id || booking.id}`} className="flex flex-col items-center group bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-shadow p-4">
                           <div className="p-4 rounded-full bg-red-100 border-2 border-red-300 opacity-50 transition-all">
                             {booking.gender === 'Female' ? (
                               <UserRound className="h-8 w-8 text-pink-400" />
