@@ -516,6 +516,70 @@ const ClassSchedulePage = () => {
     fetchClasses();
   }, [fetchTrainers, fetchClasses]);
 
+  // Real-time subscriptions for automatic updates
+  useEffect(() => {
+    // Subscribe to classes table changes
+    const classesChannel = supabase
+      .channel('classes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'classes'
+        },
+        (payload) => {
+          console.log('Real-time classes update:', payload);
+          fetchClasses(); // Refetch classes when changes occur
+        }
+      )
+      .subscribe();
+
+    // Subscribe to bookings table changes
+    const bookingsChannel = supabase
+      .channel('bookings-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings'
+        },
+        (payload) => {
+          console.log('Real-time bookings update:', payload);
+          fetchClasses(); // Refetch classes to update enrollment counts
+        }
+      )
+      .subscribe();
+
+    // Subscribe to members table changes
+    const membersChannel = supabase
+      .channel('members-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'members'
+        },
+        (payload) => {
+          console.log('Real-time members update:', payload);
+          // Only refetch if we have dialogs open that show member data
+          if (isBookedMembersDialogOpen || isAddMemberDialogOpen) {
+            fetchClasses();
+          }
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      supabase.removeChannel(classesChannel);
+      supabase.removeChannel(bookingsChannel);
+      supabase.removeChannel(membersChannel);
+    };
+  }, [fetchClasses, isBookedMembersDialogOpen, isAddMemberDialogOpen]);
+
   const handleRetry = () => {
     setIsRetrying(true);
     setError(null);
