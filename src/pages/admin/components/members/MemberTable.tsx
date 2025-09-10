@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, PowerIcon, UserMinusIcon, Lock, Trash2 } from "lucide-react";
+import { PencilIcon, PowerIcon, UserMinusIcon, Lock, Trash2, User, UserRound } from "lucide-react";
 import { Member } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -64,7 +64,17 @@ const MemberTable = ({
               ) : (
                 filteredMembers.map((member) => (
                   <TableRow key={member.id}>
-                    <TableCell className="font-medium">{member.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {member.gender === "Male" && (
+                          <User className="h-4 w-4 text-blue-600" />
+                        )}
+                        {member.gender === "Female" && (
+                          <UserRound className="h-4 w-4 text-pink-600" />
+                        )}
+                        <span>{member.name}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>{member.email}</TableCell>
                     <TableCell className="hidden md:table-cell">{member.phone}</TableCell>
                     <TableCell className="hidden lg:table-cell">
