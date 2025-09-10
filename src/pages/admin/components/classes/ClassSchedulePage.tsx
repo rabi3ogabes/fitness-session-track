@@ -55,6 +55,7 @@ import {
   EyeOff,
   User,
   UserPlus,
+  UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -1590,43 +1591,90 @@ const ClassSchedulePage = () => {
                 <div className="text-sm">No members have registered for this class session.</div>
               </div>
             ) : (
-              <div className="grid grid-cols-4 gap-6 p-4">
-                {selectedClassBookings.map((booking) => (
-                  <div key={booking.id} className="flex flex-col items-center">
-                    <div className={`p-4 rounded-full transition-all ${
-                      booking.status === 'confirmed' 
-                        ? 'bg-green-100 border-2 border-green-500 shadow-lg' 
-                        : booking.status === 'cancelled'
-                        ? 'bg-red-100 border-2 border-red-300 opacity-50'
-                        : 'bg-gray-100 border-2 border-gray-300'
-                    }`}>
-                      {booking.gender === 'Female' ? (
-                        <User className={`h-8 w-8 ${
-                          booking.status === 'confirmed' ? 'text-green-600' : 
-                          booking.status === 'cancelled' ? 'text-red-400' : 'text-gray-600'
-                        }`} />
-                      ) : (
-                        <User className={`h-8 w-8 ${
-                          booking.status === 'confirmed' ? 'text-blue-600' : 
-                          booking.status === 'cancelled' ? 'text-red-400' : 'text-gray-600'
-                        }`} />
-                      )}
+              <div className="space-y-6">
+                {/* Confirmed Members */}
+                {selectedClassBookings.filter(booking => booking.status === 'confirmed').length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Confirmed Members</h4>
+                    <div className="grid grid-cols-4 gap-6">
+                      {selectedClassBookings
+                        .filter(booking => booking.status === 'confirmed')
+                        .map((booking) => (
+                        <div key={booking.id} className="flex flex-col items-center">
+                          <div className="p-4 rounded-full bg-green-100 border-2 border-green-500 shadow-lg transition-all">
+                            {booking.gender === 'Female' ? (
+                              <UserRound className="h-8 w-8 text-pink-600" />
+                            ) : (
+                              <User className="h-8 w-8 text-blue-600" />
+                            )}
+                          </div>
+                          <span className="mt-2 text-sm text-center font-medium text-gray-900">
+                            {booking.user_name || "Unknown"}
+                          </span>
+                          <span className="text-xs text-green-600">
+                            confirmed
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <span className={`mt-2 text-sm text-center font-medium ${
-                      booking.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'
-                    }`}>
-                      {booking.user_name || "Unknown"}
-                    </span>
-                    <span className={`text-xs ${
-                      booking.status === 'confirmed' ? 'text-green-600' : 
-                      booking.status === 'pending' ? 'text-yellow-600' :
-                      booking.status === 'cancelled' ? 'text-red-600' :
-                      'text-gray-500'
-                    }`}>
-                      {booking.status}
-                    </span>
                   </div>
-                ))}
+                )}
+
+                {/* Cancelled Members */}
+                {selectedClassBookings.filter(booking => booking.status === 'cancelled').length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Cancelled Members</h4>
+                    <div className="grid grid-cols-4 gap-6">
+                      {selectedClassBookings
+                        .filter(booking => booking.status === 'cancelled')
+                        .map((booking) => (
+                        <div key={booking.id} className="flex flex-col items-center">
+                          <div className="p-4 rounded-full bg-red-100 border-2 border-red-300 opacity-50 transition-all">
+                            {booking.gender === 'Female' ? (
+                              <UserRound className="h-8 w-8 text-pink-400" />
+                            ) : (
+                              <User className="h-8 w-8 text-blue-400" />
+                            )}
+                          </div>
+                          <span className="mt-2 text-sm text-center font-medium text-gray-400 line-through">
+                            {booking.user_name || "Unknown"}
+                          </span>
+                          <span className="text-xs text-red-600">
+                            cancelled
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pending Members */}
+                {selectedClassBookings.filter(booking => booking.status === 'pending').length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Pending Members</h4>
+                    <div className="grid grid-cols-4 gap-6">
+                      {selectedClassBookings
+                        .filter(booking => booking.status === 'pending')
+                        .map((booking) => (
+                        <div key={booking.id} className="flex flex-col items-center">
+                          <div className="p-4 rounded-full bg-gray-100 border-2 border-gray-300 transition-all">
+                            {booking.gender === 'Female' ? (
+                              <UserRound className="h-8 w-8 text-pink-600" />
+                            ) : (
+                              <User className="h-8 w-8 text-blue-600" />
+                            )}
+                          </div>
+                          <span className="mt-2 text-sm text-center font-medium text-gray-900">
+                            {booking.user_name || "Unknown"}
+                          </span>
+                          <span className="text-xs text-yellow-600">
+                            pending
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
