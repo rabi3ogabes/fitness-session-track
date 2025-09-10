@@ -1450,6 +1450,7 @@ const ClassSchedulePage = () => {
               variant="outline"
               size="sm"
               onClick={() => setShowDeleteButtons(!showDeleteButtons)}
+              className="hidden"
             >
               {showDeleteButtons ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {showDeleteButtons ? "Hide" : "Show"} Delete Buttons
