@@ -744,8 +744,7 @@ const ClassSchedulePage = () => {
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
-        .eq('class_id', classId)
-        .neq('status', 'cancelled');
+        .eq('class_id', classId);
 
       console.log("Supabase query completed");
       console.log("Bookings data received:", data);
@@ -1467,7 +1466,7 @@ const ClassSchedulePage = () => {
                     <span className="font-medium">Trainer:</span> {currentClass.trainer}
                   </div>
                   <div className="text-sm">
-                    <span className="font-medium">Capacity:</span> {selectedClassBookings.length}/{currentClass.capacity}
+                    <span className="font-medium">Capacity:</span> {selectedClassBookings.filter(booking => booking.status !== 'cancelled').length}/{currentClass.capacity}
                   </div>
                 </div>
               )}
@@ -1514,6 +1513,7 @@ const ClassSchedulePage = () => {
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                             booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : 
                             booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
                             {booking.status}
