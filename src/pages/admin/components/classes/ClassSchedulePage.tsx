@@ -1639,7 +1639,7 @@ const ClassSchedulePage = () => {
                       {selectedClassBookings
                         .filter(booking => booking.status === 'confirmed')
                         .map((booking) => (
-                        <div key={booking.id} className="flex flex-col items-center group">
+                        <div key={booking.id} className="flex flex-col items-center group bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-shadow p-4">
                           <div className="p-4 rounded-full bg-green-100 border-2 border-green-500 shadow-lg transition-all">
                             {booking.gender === 'Female' ? (
                               <UserRound className="h-8 w-8 text-pink-600" />
@@ -1677,7 +1677,7 @@ const ClassSchedulePage = () => {
                       {selectedClassBookings
                         .filter(booking => booking.status === 'cancelled')
                         .map((booking) => (
-                        <div key={booking.id} className="flex flex-col items-center group">
+                        <div key={booking.id} className="flex flex-col items-center group bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-shadow p-4">
                           <div className="p-4 rounded-full bg-red-100 border-2 border-red-300 opacity-50 transition-all">
                             {booking.gender === 'Female' ? (
                               <UserRound className="h-8 w-8 text-pink-400" />
@@ -1715,7 +1715,7 @@ const ClassSchedulePage = () => {
                       {selectedClassBookings
                         .filter(booking => booking.status === 'pending')
                         .map((booking) => (
-                        <div key={booking.id} className="flex flex-col items-center group">
+                        <div key={booking.id} className="flex flex-col items-center group bg-white rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-shadow p-4">
                           <div className="p-4 rounded-full bg-gray-100 border-2 border-gray-300 transition-all">
                             {booking.gender === 'Female' ? (
                               <UserRound className="h-8 w-8 text-pink-600" />
