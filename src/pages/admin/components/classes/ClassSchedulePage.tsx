@@ -783,10 +783,11 @@ const ClassSchedulePage = () => {
             gender
           )
         `)
-        .eq('class_id', classId);
+        .eq('class_id', classId)
+        .order('booking_date', { ascending: false });
 
       console.log("Supabase query completed");
-      console.log("Bookings data received:", data);
+      console.log("All bookings data received (including cancelled):", data);
       console.log("Bookings error:", error);
 
       if (error) {
@@ -1931,8 +1932,8 @@ const ClassSchedulePage = () => {
           <div className="max-h-[400px] overflow-y-auto">
             {availableMembers.filter(member => 
               !selectedClassBookings.some(booking => 
-                booking.member_id === member.id || 
-                booking.user_name === member.name
+                (booking.member_id === member.id || booking.user_name === member.name) && 
+                booking.status === 'confirmed'
               )
             ).length === 0 ? (
               <div className="text-center py-8 text-gray-500">
@@ -1941,6 +1942,54 @@ const ClassSchedulePage = () => {
               </div>
             ) : (
               <div className="space-y-2">
+                {/* Show previously cancelled members first */}
+                {availableMembers
+                  .filter(member => 
+                    selectedClassBookings.some(booking => 
+                      (booking.member_id === member.id || booking.user_name === member.name) && 
+                      booking.status === 'cancelled'
+                    ) &&
+                    !selectedClassBookings.some(booking => 
+                      (booking.member_id === member.id || booking.user_name === member.name) && 
+                      booking.status === 'confirmed'
+                    )
+                  )
+                  .map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between p-3 border rounded-lg bg-orange-50 border-orange-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full bg-orange-100">
+                        {member.gender === 'Female' ? (
+                          <User className="h-4 w-4 text-pink-600" />
+                        ) : (
+                          <User className="h-4 w-4 text-blue-600" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium">{member.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {member.remaining_sessions} sessions remaining
+                        </div>
+                        <div className="text-xs text-orange-600 font-medium">
+                          Previously cancelled from this class
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        addMemberToClass(member.id);
+                      }}
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      Re-add
+                    </Button>
+                  </div>
+                ))}
+                
+                {/* Show other available members */}
                 {availableMembers
                   .filter(member => 
                     !selectedClassBookings.some(booking => 
