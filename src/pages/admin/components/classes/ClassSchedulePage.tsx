@@ -54,6 +54,7 @@ import {
   Eye,
   EyeOff,
   User,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -1522,7 +1523,18 @@ const ClassSchedulePage = () => {
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={() => {
+                // TODO: Implement add member functionality
+                console.log("Add member to class");
+              }}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Members
+            </Button>
             <Button onClick={() => setIsBookedMembersDialogOpen(false)}>
               Close
             </Button>
