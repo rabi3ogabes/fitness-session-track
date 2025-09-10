@@ -1748,14 +1748,26 @@ const ClassSchedulePage = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[400px] overflow-y-auto">
-            {availableMembers.length === 0 ? (
+            {availableMembers.filter(member => 
+              !selectedClassBookings.some(booking => 
+                booking.member_id === member.id || 
+                booking.user_name === member.name
+              )
+            ).length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <div className="text-lg font-medium mb-2">No available members</div>
-                <div className="text-sm">No members with remaining sessions found.</div>
+                <div className="text-sm">All members with remaining sessions are already registered for this class.</div>
               </div>
             ) : (
               <div className="space-y-2">
-                {availableMembers.map((member) => (
+                {availableMembers
+                  .filter(member => 
+                    !selectedClassBookings.some(booking => 
+                      booking.member_id === member.id || 
+                      booking.user_name === member.name
+                    )
+                  )
+                  .map((member) => (
                   <div
                     key={member.id}
                     className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
