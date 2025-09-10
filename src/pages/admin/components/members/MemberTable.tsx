@@ -67,10 +67,16 @@ const MemberTable = ({
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {member.gender === "Male" && (
-                          <User className="h-4 w-4 text-blue-600" />
+                          <User className="h-4 w-4 text-blue-600 drop-shadow-md filter hover-scale" style={{
+                            filter: 'drop-shadow(2px 2px 4px rgba(37, 99, 235, 0.3))',
+                            textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
+                          }} />
                         )}
                         {member.gender === "Female" && (
-                          <UserRound className="h-4 w-4 text-pink-600" />
+                          <UserRound className="h-4 w-4 text-pink-600 drop-shadow-md filter hover-scale" style={{
+                            filter: 'drop-shadow(2px 2px 4px rgba(219, 39, 119, 0.3))',
+                            textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
+                          }} />
                         )}
                         <span>{member.name}</span>
                       </div>
