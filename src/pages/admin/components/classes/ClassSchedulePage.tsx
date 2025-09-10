@@ -57,6 +57,8 @@ import {
   UserPlus,
   UserRound,
   X,
+  Grid3X3,
+  List,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -182,6 +184,7 @@ const ClassSchedulePage = () => {
   const [classToDelete, setClassToDelete] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteButtons, setShowDeleteButtons] = useState(false);
+  const [viewType, setViewType] = useState<'table' | 'boxes'>('boxes'); // Default to boxes
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -1446,6 +1449,26 @@ const ClassSchedulePage = () => {
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">Classes Schedule</h2>
           <div className="flex items-center space-x-2">
+            <div className="flex items-center border rounded-lg p-1">
+              <Button
+                variant={viewType === 'boxes' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewType('boxes')}
+                className="px-3 py-1"
+              >
+                <Grid3X3 className="h-4 w-4 mr-1" />
+                Boxes
+              </Button>
+              <Button
+                variant={viewType === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewType('table')}
+                className="px-3 py-1"
+              >
+                <List className="h-4 w-4 mr-1" />
+                Table
+              </Button>
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -1475,7 +1498,7 @@ const ClassSchedulePage = () => {
               Create New Class
             </Button>
           </div>
-        ) : (
+        ) : viewType === 'table' ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -1585,6 +1608,99 @@ const ClassSchedulePage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : (
+          // Box View
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {classes.map((cls) => (
+                <div
+                  key={cls.id}
+                  className="bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 cursor-pointer"
+                  onClick={() => fetchBookedMembers(cls.id)}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg text-gray-900 mb-1 hover:text-blue-600 transition-colors">
+                        {cls.name}
+                      </h3>
+                      {cls.description && (
+                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                          {cls.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleClassStatus(cls.id, cls.status);
+                        }}
+                        className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                          cls.status === "Active"
+                            ? "bg-green-100 text-green-800 hover:bg-green-200"
+                            : "bg-red-100 text-red-800 hover:bg-red-200"
+                        }`}
+                      >
+                        {cls.status}
+                      </button>
+                      {showDeleteButtons && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setClassToDelete(cls.id);
+                            setShowDeleteConfirm(true);
+                          }}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center text-gray-600">
+                      <User className="h-4 w-4 mr-2" />
+                      <span className="font-medium">Trainer:</span>
+                      <span className="ml-1">{cls.trainer}</span>
+                    </div>
+                    
+                    <div className="flex items-center text-gray-600">
+                      <Clock className="h-4 w-4 mr-2" />
+                      <span className="font-medium">Time:</span>
+                      <span className="ml-1">
+                        {formatTime(cls.start_time)} - {formatTime(cls.end_time)}
+                      </span>
+                    </div>
+                    
+                    {cls.location && (
+                      <div className="flex items-center text-gray-600">
+                        <span className="font-medium">Location:</span>
+                        <span className="ml-1">{cls.location}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                      <div className="text-gray-600">
+                        <span className="font-medium">Capacity:</span>
+                        <span className="ml-1">{cls.enrolled || 0}/{cls.capacity}</span>
+                      </div>
+                      
+                      {cls.gender && cls.gender !== "All" && (
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          cls.gender === "Male" 
+                            ? "bg-blue-100 text-blue-800" 
+                            : "bg-pink-100 text-pink-800"
+                        }`}>
+                          {cls.gender}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
