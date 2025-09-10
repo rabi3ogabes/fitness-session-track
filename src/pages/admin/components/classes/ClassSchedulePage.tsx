@@ -468,7 +468,33 @@ const ClassSchedulePage = () => {
         difficulty: cls.difficulty,
       }));
 
-      setClasses(formattedClasses);
+      // Sort classes by date and time, with upcoming classes first
+      const sortedClasses = formattedClasses.sort((a, b) => {
+        const now = new Date();
+        const dateTimeA = new Date(`${a.schedule} ${a.startTime}`);
+        const dateTimeB = new Date(`${b.schedule} ${b.startTime}`);
+        
+        // Check if dates are valid
+        const isValidA = !isNaN(dateTimeA.getTime());
+        const isValidB = !isNaN(dateTimeB.getTime());
+        
+        // If both dates are invalid, sort by creation order
+        if (!isValidA && !isValidB) return 0;
+        if (!isValidA) return 1;
+        if (!isValidB) return -1;
+        
+        // Upcoming classes (future) should come first
+        const isUpcomingA = dateTimeA >= now;
+        const isUpcomingB = dateTimeB >= now;
+        
+        if (isUpcomingA && !isUpcomingB) return -1;
+        if (!isUpcomingA && isUpcomingB) return 1;
+        
+        // Within the same category (upcoming or past), sort by date/time
+        return dateTimeA.getTime() - dateTimeB.getTime();
+      });
+
+      setClasses(sortedClasses);
       console.log("Successfully loaded classes:", formattedClasses.length);
     } catch (error: any) {
       console.error("Error fetching classes:", error);
