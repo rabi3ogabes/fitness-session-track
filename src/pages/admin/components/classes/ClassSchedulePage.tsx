@@ -1791,7 +1791,6 @@ const ClassSchedulePage = () => {
                       size="sm"
                       onClick={() => {
                         addMemberToClass(member.id);
-                        setIsAddMemberDialogOpen(false);
                       }}
                       className="bg-primary hover:bg-primary/90"
                     >
