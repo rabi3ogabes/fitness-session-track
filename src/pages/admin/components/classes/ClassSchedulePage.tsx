@@ -53,6 +53,7 @@ import {
   Power,
   Eye,
   EyeOff,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -1479,63 +1480,43 @@ const ClassSchedulePage = () => {
                 <div className="text-sm">No members have registered for this class session.</div>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Member Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Registration Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Attendance
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Notes
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {selectedClassBookings.map((booking) => (
-                      <tr key={booking.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {booking.user_name || "Unknown Member"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(booking.booking_date).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            booking.status === 'confirmed' ? 'bg-green-100 text-green-800' : 
-                            booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {booking.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            booking.attendance === true ? 'bg-green-100 text-green-800' :
-                            booking.attendance === false ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {booking.attendance === null ? "Not marked" : 
-                             booking.attendance ? "Present" : "Absent"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {booking.notes || "-"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="grid grid-cols-4 gap-6 p-4">
+                {selectedClassBookings.map((booking) => (
+                  <div key={booking.id} className="flex flex-col items-center">
+                    <div className={`p-4 rounded-full transition-all ${
+                      booking.status === 'confirmed' 
+                        ? 'bg-green-100 border-2 border-green-500 shadow-lg' 
+                        : booking.status === 'cancelled'
+                        ? 'bg-red-100 border-2 border-red-300 opacity-50'
+                        : 'bg-gray-100 border-2 border-gray-300'
+                    }`}>
+                      {booking.gender === 'Female' ? (
+                        <User className={`h-8 w-8 ${
+                          booking.status === 'confirmed' ? 'text-green-600' : 
+                          booking.status === 'cancelled' ? 'text-red-400' : 'text-gray-600'
+                        }`} />
+                      ) : (
+                        <User className={`h-8 w-8 ${
+                          booking.status === 'confirmed' ? 'text-blue-600' : 
+                          booking.status === 'cancelled' ? 'text-red-400' : 'text-gray-600'
+                        }`} />
+                      )}
+                    </div>
+                    <span className={`mt-2 text-sm text-center font-medium ${
+                      booking.status === 'cancelled' ? 'text-gray-400 line-through' : 'text-gray-900'
+                    }`}>
+                      {booking.user_name || "Unknown"}
+                    </span>
+                    <span className={`text-xs ${
+                      booking.status === 'confirmed' ? 'text-green-600' : 
+                      booking.status === 'pending' ? 'text-yellow-600' :
+                      booking.status === 'cancelled' ? 'text-red-600' :
+                      'text-gray-500'
+                    }`}>
+                      {booking.status}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
