@@ -56,6 +56,7 @@ import {
   User,
   UserPlus,
   UserRound,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -924,6 +925,36 @@ const ClassSchedulePage = () => {
     }
   };
 
+  const removeMemberFromClass = async (bookingId: string) => {
+    try {
+      // Delete the booking
+      const { error } = await supabase
+        .from("bookings")
+        .delete()
+        .eq("id", bookingId);
+
+      if (error) throw error;
+
+      // Refresh the bookings list
+      if (currentClass) {
+        await fetchBookedMembers(currentClass.id);
+      }
+
+      toast({
+        title: "Success",
+        description: "Member removed from class successfully",
+      });
+
+    } catch (error) {
+      console.error("Error removing member from class:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove member from class",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <DashboardLayout title="Class Schedule">
       <div className="mb-6 flex justify-between items-center">
@@ -1600,7 +1631,14 @@ const ClassSchedulePage = () => {
                       {selectedClassBookings
                         .filter(booking => booking.status === 'confirmed')
                         .map((booking) => (
-                        <div key={booking.id} className="flex flex-col items-center">
+                        <div key={booking.id} className="flex flex-col items-center relative group">
+                          <button
+                            onClick={() => removeMemberFromClass(booking.id)}
+                            className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            title="Remove member from class"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
                           <div className="p-4 rounded-full bg-green-100 border-2 border-green-500 shadow-lg transition-all">
                             {booking.gender === 'Female' ? (
                               <UserRound className="h-8 w-8 text-pink-600" />
@@ -1628,7 +1666,14 @@ const ClassSchedulePage = () => {
                       {selectedClassBookings
                         .filter(booking => booking.status === 'cancelled')
                         .map((booking) => (
-                        <div key={booking.id} className="flex flex-col items-center">
+                        <div key={booking.id} className="flex flex-col items-center relative group">
+                          <button
+                            onClick={() => removeMemberFromClass(booking.id)}
+                            className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            title="Remove member from class"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
                           <div className="p-4 rounded-full bg-red-100 border-2 border-red-300 opacity-50 transition-all">
                             {booking.gender === 'Female' ? (
                               <UserRound className="h-8 w-8 text-pink-400" />
@@ -1656,7 +1701,14 @@ const ClassSchedulePage = () => {
                       {selectedClassBookings
                         .filter(booking => booking.status === 'pending')
                         .map((booking) => (
-                        <div key={booking.id} className="flex flex-col items-center">
+                        <div key={booking.id} className="flex flex-col items-center relative group">
+                          <button
+                            onClick={() => removeMemberFromClass(booking.id)}
+                            className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            title="Remove member from class"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
                           <div className="p-4 rounded-full bg-gray-100 border-2 border-gray-300 transition-all">
                             {booking.gender === 'Female' ? (
                               <UserRound className="h-8 w-8 text-pink-600" />
