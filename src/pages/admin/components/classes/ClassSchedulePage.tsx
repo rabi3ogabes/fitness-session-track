@@ -1787,10 +1787,10 @@ const ClassSchedulePage = () => {
                     )}
                     
                     <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                      <div className="text-gray-600">
-                        <span className="font-medium">Capacity:</span>
-                        <span className="ml-1">{cls.enrolled || 0}/{cls.capacity}</span>
-                      </div>
+                       <div className="text-gray-600">
+                         <span className="font-medium">Capacity:</span>
+                         <span className="ml-1">{cls.enrolled || 0}/{cls.capacity}</span>
+                       </div>
                       
                       {cls.gender && cls.gender !== "All" ? (
                         <div className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
