@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
+import { CalendarWithClasses } from "@/components/ui/calendar-with-classes";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths } from "date-fns";
@@ -195,11 +195,12 @@ const Reports = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Calendar
+              <CalendarWithClasses
                 mode="single"
                 selected={selectedDate}
                 onSelect={(date) => date && setSelectedDate(date)}
                 className="rounded-md border"
+                showClassIndicators={true}
               />
             </CardContent>
           </Card>
