@@ -29,14 +29,24 @@ const UpcomingClassWidget = () => {
 
   const fetchUpcomingClass = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      const { data: classes } = await supabase
+      // First try to get upcoming classes
+      let { data: classes } = await supabase
         .from('classes')
         .select('*')
         .gte('start_time', new Date().toISOString())
         .order('start_time', { ascending: true })
         .limit(1);
+
+      // If no upcoming classes, get the most recent classes for demo purposes
+      if (!classes || classes.length === 0) {
+        const { data: recentClasses } = await supabase
+          .from('classes')
+          .select('*')
+          .order('start_time', { ascending: false })
+          .limit(1);
+        
+        classes = recentClasses;
+      }
 
       if (classes && classes.length > 0) {
         setUpcomingClass(classes[0]);
