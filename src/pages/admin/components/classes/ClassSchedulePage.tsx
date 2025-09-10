@@ -186,6 +186,7 @@ const ClassSchedulePage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteButtons, setShowDeleteButtons] = useState(false);
   const [viewType, setViewType] = useState<'table' | 'boxes'>('boxes'); // Default to boxes
+  const [showPreviousClasses, setShowPreviousClasses] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -433,10 +434,20 @@ const ClassSchedulePage = () => {
     try {
       // Use requireAuth with empty array fallback data for offline scenarios
       const data = await requireAuth(async () => {
-        const { data, error } = await supabase
+        const currentDate = format(new Date(), "yyyy-MM-dd");
+        
+        let query = supabase
           .from("classes")
-          .select("*")
-          .order("created_at", { ascending: false });
+          .select("*");
+          
+        // Filter based on whether we're showing previous or current/future classes
+        if (showPreviousClasses) {
+          query = query.lt("schedule", currentDate);
+        } else {
+          query = query.gte("schedule", currentDate);
+        }
+        
+        const { data, error } = await query.order("schedule", { ascending: showPreviousClasses ? false : true });
 
         if (error) throw error;
         return data;
@@ -498,7 +509,7 @@ const ClassSchedulePage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isNetworkConnected]);
+  }, [isNetworkConnected, showPreviousClasses]);
 
   useEffect(() => {
     fetchTrainers();
@@ -1459,8 +1470,19 @@ const ClassSchedulePage = () => {
       {/* Classes List */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Classes Schedule</h2>
+          <h2 className="text-lg font-medium text-gray-900">
+            {showPreviousClasses ? "Previous Classes" : "Current & Upcoming Classes"}
+          </h2>
           <div className="flex items-center space-x-2">
+            <Button
+              variant={showPreviousClasses ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowPreviousClasses(!showPreviousClasses)}
+              className="mr-2"
+            >
+              <Clock className="h-4 w-4 mr-1" />
+              {showPreviousClasses ? "Show Current" : "Show Previous"}
+            </Button>
             <div className="flex items-center border rounded-lg p-1">
               <Button
                 variant={viewType === 'boxes' ? 'default' : 'ghost'}
