@@ -1631,14 +1631,7 @@ const ClassSchedulePage = () => {
                       {selectedClassBookings
                         .filter(booking => booking.status === 'confirmed')
                         .map((booking) => (
-                        <div key={booking.id} className="flex flex-col items-center relative group">
-                          <button
-                            onClick={() => removeMemberFromClass(booking.id)}
-                            className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                            title="Remove member from class"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
+                        <div key={booking.id} className="flex flex-col items-center group">
                           <div className="p-4 rounded-full bg-green-100 border-2 border-green-500 shadow-lg transition-all">
                             {booking.gender === 'Female' ? (
                               <UserRound className="h-8 w-8 text-pink-600" />
@@ -1652,6 +1645,13 @@ const ClassSchedulePage = () => {
                           <span className="text-xs text-green-600">
                             confirmed
                           </span>
+                          <button
+                            onClick={() => removeMemberFromClass(booking.id)}
+                            className="mt-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove member from class"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -1666,14 +1666,7 @@ const ClassSchedulePage = () => {
                       {selectedClassBookings
                         .filter(booking => booking.status === 'cancelled')
                         .map((booking) => (
-                        <div key={booking.id} className="flex flex-col items-center relative group">
-                          <button
-                            onClick={() => removeMemberFromClass(booking.id)}
-                            className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                            title="Remove member from class"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
+                        <div key={booking.id} className="flex flex-col items-center group">
                           <div className="p-4 rounded-full bg-red-100 border-2 border-red-300 opacity-50 transition-all">
                             {booking.gender === 'Female' ? (
                               <UserRound className="h-8 w-8 text-pink-400" />
@@ -1687,6 +1680,13 @@ const ClassSchedulePage = () => {
                           <span className="text-xs text-red-600">
                             cancelled
                           </span>
+                          <button
+                            onClick={() => removeMemberFromClass(booking.id)}
+                            className="mt-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove member from class"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -1701,14 +1701,7 @@ const ClassSchedulePage = () => {
                       {selectedClassBookings
                         .filter(booking => booking.status === 'pending')
                         .map((booking) => (
-                        <div key={booking.id} className="flex flex-col items-center relative group">
-                          <button
-                            onClick={() => removeMemberFromClass(booking.id)}
-                            className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                            title="Remove member from class"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
+                        <div key={booking.id} className="flex flex-col items-center group">
                           <div className="p-4 rounded-full bg-gray-100 border-2 border-gray-300 transition-all">
                             {booking.gender === 'Female' ? (
                               <UserRound className="h-8 w-8 text-pink-600" />
@@ -1722,6 +1715,13 @@ const ClassSchedulePage = () => {
                           <span className="text-xs text-yellow-600">
                             pending
                           </span>
+                          <button
+                            onClick={() => removeMemberFromClass(booking.id)}
+                            className="mt-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove member from class"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
                         </div>
                       ))}
                     </div>
