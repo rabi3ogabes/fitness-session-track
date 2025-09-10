@@ -23,6 +23,7 @@ interface MembershipRequest {
   date: string;
   status: string;
   sessions?: number; // Optional to maintain compatibility with existing requests
+  created_at?: string; // Database timestamp field
 }
 
 const initialMembershipRequests: MembershipRequest[] = [
@@ -618,7 +619,10 @@ const handleApproveRequest = async (id: number) => {
                           {sessionCount}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                          {request.date}
+                          <div>{request.date}</div>
+                          <div className="text-xs text-gray-400">
+                            {request.created_at ? new Date(request.created_at).toLocaleTimeString() : ""}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
