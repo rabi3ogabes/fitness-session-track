@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -25,6 +26,7 @@ const Login = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [gender, setGender] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [yearView, setYearView] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -257,6 +259,18 @@ const Login = () => {
         return;
       }
 
+      // Check if gender is selected
+      if (!gender) {
+        toast({
+          title: "Gender is required",
+          description: "Please select your gender",
+          variant: "destructive",
+        });
+        setError("Please select your gender");
+        setIsLoading(false);
+        return;
+      }
+
       console.log("Signup attempt for:", email);
       
       const success = await signup(
@@ -264,7 +278,8 @@ const Login = () => {
         signupPassword, 
         name, 
         phone, 
-        selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined
+        selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined,
+        gender
       );
       
       if (success === true) {
@@ -618,6 +633,20 @@ const Login = () => {
                     onChange={(e) => setPhone(e.target.value)}
                     required
                   />
+                </div>
+                
+                <div className="space-y-3">
+                  <Label>Gender</Label>
+                  <RadioGroup value={gender} onValueChange={setGender} className="flex space-x-6">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="Male" id="male" />
+                      <Label htmlFor="male">Male</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="Female" id="female" />
+                      <Label htmlFor="female">Female</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
                 
                 <div className="space-y-2">

@@ -38,7 +38,8 @@ interface AuthContextType {
     password: string,
     name: string,
     phone?: string,
-    dob?: string
+    dob?: string,
+    gender?: string
   ) => Promise<boolean>;
   loading: boolean;
 }
@@ -490,7 +491,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     password: string,
     name: string,
     phone?: string,
-    dob?: string
+    dob?: string,
+    gender?: string
   ) => {
     try {
       console.log("Signup attempt for:", email);
@@ -531,6 +533,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           email: email,
           name: name,
           phone_number: phone || "",
+          gender: gender || null,
         });
 
         // Also add to members table for admin view
@@ -545,7 +548,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           sessions: 0,
           remaining_sessions: 0,
           status: "Active",
-          gender: "Not specified",
+          gender: gender || "Not specified",
         });
       }
 

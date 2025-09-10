@@ -254,6 +254,7 @@ export type Database = {
           email: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
+          gender: string | null
           id: string
           membership_type: string | null
           name: string | null
@@ -267,6 +268,7 @@ export type Database = {
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
+          gender?: string | null
           id: string
           membership_type?: string | null
           name?: string | null
@@ -280,6 +282,7 @@ export type Database = {
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
+          gender?: string | null
           id?: string
           membership_type?: string | null
           name?: string | null
