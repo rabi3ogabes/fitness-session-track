@@ -16,6 +16,7 @@ interface ClassData {
   id: number;
   schedule: string;
   name: string;
+  gender: string;
 }
 
 function CalendarWithClasses({
@@ -37,7 +38,7 @@ function CalendarWithClasses({
     try {
       const { data: classes, error } = await supabase
         .from("classes")
-        .select("id, schedule, name")
+        .select("id, schedule, name, gender")
         .eq("status", "Active");
 
       if (error) {
@@ -48,6 +49,17 @@ function CalendarWithClasses({
       setClassesData(classes || []);
     } catch (error) {
       console.error("Error fetching classes:", error);
+    }
+  };
+
+  const getClassColor = (gender: string) => {
+    switch (gender) {
+      case "Female":
+        return "fill-pink-500 text-pink-500";
+      case "Male":
+        return "fill-blue-500 text-blue-500";
+      default:
+        return "fill-purple-500 text-purple-500";
     }
   };
 
@@ -128,14 +140,15 @@ function CalendarWithClasses({
               {hasClasses && showClassIndicators && (
                 <div className="absolute -bottom-0.5 left-1/2 transform -translate-x-1/2">
                   {classesOnDate.length === 1 ? (
-                    <Circle className="h-1.5 w-1.5 fill-purple-500 text-purple-500" />
+                    <Circle className={cn("h-1 w-1", getClassColor(classesOnDate[0].gender))} />
                   ) : (
                     <div className="flex gap-0.5">
-                      <Circle className="h-1 w-1 fill-purple-500 text-purple-500" />
-                      <Circle className="h-1 w-1 fill-purple-500 text-purple-500" />
-                      {classesOnDate.length > 2 && (
-                        <Circle className="h-1 w-1 fill-purple-500 text-purple-500" />
-                      )}
+                      {classesOnDate.slice(0, 3).map((cls, index) => (
+                        <Circle 
+                          key={cls.id} 
+                          className={cn("h-0.5 w-0.5", getClassColor(cls.gender))} 
+                        />
+                      ))}
                     </div>
                   )}
                 </div>
