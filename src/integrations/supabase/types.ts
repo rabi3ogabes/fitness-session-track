@@ -20,6 +20,7 @@ export type Database = {
           booking_date: string
           class_id: number
           id: string
+          member_id: number | null
           notes: string | null
           status: string
           user_id: string
@@ -30,6 +31,7 @@ export type Database = {
           booking_date?: string
           class_id: number
           id?: string
+          member_id?: number | null
           notes?: string | null
           status?: string
           user_id: string
@@ -40,12 +42,21 @@ export type Database = {
           booking_date?: string
           class_id?: number
           id?: string
+          member_id?: number | null
           notes?: string | null
           status?: string
           user_id?: string
           user_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_bookings_member"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       classes: {
         Row: {

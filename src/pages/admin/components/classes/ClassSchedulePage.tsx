@@ -859,7 +859,7 @@ const ClassSchedulePage = () => {
         .from("bookings")
         .select("*")
         .eq("class_id", currentClass.id)
-        .eq("user_id", memberId.toString())
+        .eq("member_id", memberId)
         .single();
 
       if (existingBooking) {
@@ -880,11 +880,12 @@ const ClassSchedulePage = () => {
 
       if (!member) throw new Error("Member not found");
 
-      // Create booking
+      // Create booking - using member_id for the new field and a placeholder for user_id
       const { error: bookingError } = await supabase
         .from("bookings")
         .insert({
-          user_id: memberId.toString(),
+          member_id: memberId,
+          user_id: `member-${memberId}`, // Temporary placeholder since user_id is still required
           class_id: currentClass.id,
           user_name: member.name,
           status: "confirmed"
