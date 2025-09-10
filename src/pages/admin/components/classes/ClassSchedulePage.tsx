@@ -464,7 +464,7 @@ const ClassSchedulePage = () => {
           
           const { data: cancelledBookings, error: cancelledError } = await supabase
             .from("bookings")
-            .select("id")
+            .select("id, user_id, member_id, user_name")
             .eq("class_id", cls.id)
             .eq("status", "cancelled");
           
@@ -473,10 +473,19 @@ const ClassSchedulePage = () => {
             return { ...cls, actualEnrolled: 0, cancelledCount: 0 };
           }
           
+          // Count unique cancelled users
+          const uniqueCancelledUsers = cancelledBookings?.reduce((unique, booking) => {
+            const userId = booking.user_id?.toString() || booking.member_id?.toString() || booking.user_name;
+            if (userId && !unique.includes(userId)) {
+              unique.push(userId);
+            }
+            return unique;
+          }, [] as string[]) || [];
+          
           return { 
             ...cls, 
             actualEnrolled: confirmedBookings?.length || 0,
-            cancelledCount: cancelledBookings?.length || 0
+            cancelledCount: uniqueCancelledUsers.length
           };
         })
       );
