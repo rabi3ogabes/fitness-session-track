@@ -304,6 +304,7 @@ const ClassCalendar = () => {
                 }
 
                 const realEnrolled = bookings?.length || 0;
+                console.log(`Class ${cls.id} (${cls.name}): DB enrolled=${cls.enrolled}, Real enrolled=${realEnrolled}`);
                 
                 // Transform and add type property based on class name
                 let type = "default";
@@ -484,10 +485,17 @@ const ClassCalendar = () => {
 
       if (error) throw error;
 
-      // Update enrolled count
+      // Update enrolled count with real count from bookings
+      const { data: currentBookings } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("class_id", selectedClass.id)
+        .eq("status", "confirmed");
+      
+      const realEnrolledCount = (currentBookings?.length || 0) + 1; // +1 for the new booking
       const { error: updateError } = await supabase
         .from("classes")
-        .update({ enrolled: (selectedClass.enrolled || 0) + 1 })
+        .update({ enrolled: realEnrolledCount })
         .eq("id", selectedClass.id);
 
       if (updateError) {
