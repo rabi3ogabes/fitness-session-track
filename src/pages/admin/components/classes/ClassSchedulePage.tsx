@@ -168,6 +168,8 @@ const ClassSchedulePage = () => {
   const [trainers, setTrainers] = useState<{ id: number; name: string }[]>([]);
   const [classes, setClasses] = useState<ClassModel[]>([]);
   const [isBookedMembersDialogOpen, setIsBookedMembersDialogOpen] = useState(false);
+  const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
+  const [availableMembers, setAvailableMembers] = useState<any[]>([]);
   const [selectedClassBookings, setSelectedClassBookings] = useState<any[]>([]);
   const [currentClass, setCurrentClass] = useState<ClassModel | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -828,6 +830,97 @@ const ClassSchedulePage = () => {
     return `${displayHour}:${minutes} ${period}`;
   };
 
+  const fetchAvailableMembers = async () => {
+    try {
+      const { data: members, error } = await supabase
+        .from("members")
+        .select("*")
+        .gte("remaining_sessions", 1)
+        .eq("status", "Active");
+
+      if (error) throw error;
+      setAvailableMembers(members || []);
+    } catch (error) {
+      console.error("Error fetching available members:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch available members",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const addMemberToClass = async (memberId: number) => {
+    if (!currentClass) return;
+
+    try {
+      // Check if member is already booked for this class
+      const { data: existingBooking } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("class_id", currentClass.id)
+        .eq("user_id", memberId.toString())
+        .single();
+
+      if (existingBooking) {
+        toast({
+          title: "Member Already Registered",
+          description: "This member is already registered for this class",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get member details
+      const { data: member } = await supabase
+        .from("members")
+        .select("*")
+        .eq("id", memberId)
+        .single();
+
+      if (!member) throw new Error("Member not found");
+
+      // Create booking
+      const { error: bookingError } = await supabase
+        .from("bookings")
+        .insert({
+          user_id: memberId.toString(),
+          class_id: currentClass.id,
+          user_name: member.name,
+          status: "confirmed"
+        });
+
+      if (bookingError) throw bookingError;
+
+      // Update member's remaining sessions
+      const { error: updateError } = await supabase
+        .from("members")
+        .update({ remaining_sessions: member.remaining_sessions - 1 })
+        .eq("id", memberId);
+
+      if (updateError) throw updateError;
+
+      // Refresh the bookings list
+      await fetchBookedMembers(currentClass.id);
+      
+      // Refresh available members
+      await fetchAvailableMembers();
+
+      toast({
+        title: "Success",
+        description: "Member added to class successfully",
+      });
+
+    } catch (error) {
+      console.error("Error adding member to class:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add member to class",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <DashboardLayout title="Class Schedule">
       <div className="mb-6 flex justify-between items-center">
@@ -1461,14 +1554,15 @@ const ClassSchedulePage = () => {
             <DialogTitle>Class Registration Details</DialogTitle>
             <Button
               variant="outline"
-              onClick={() => {
-                // TODO: Implement add member functionality
-                console.log("Add member to class");
+              size="icon"
+              onClick={async () => {
+                await fetchAvailableMembers();
+                setIsAddMemberDialogOpen(true);
               }}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              title="Add Members to Class"
             >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Members
+              <UserPlus className="h-4 w-4" />
             </Button>
             <DialogDescription>
               {currentClass && (
@@ -1537,6 +1631,66 @@ const ClassSchedulePage = () => {
           <DialogFooter>
             <Button onClick={() => setIsBookedMembersDialogOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Member Dialog */}
+      <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Members to Class</DialogTitle>
+            <DialogDescription>
+              Select members with remaining sessions to add to this class
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto">
+            {availableMembers.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <div className="text-lg font-medium mb-2">No available members</div>
+                <div className="text-sm">No members with remaining sessions found.</div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {availableMembers.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full bg-blue-100">
+                        {member.gender === 'Female' ? (
+                          <User className="h-4 w-4 text-pink-600" />
+                        ) : (
+                          <User className="h-4 w-4 text-blue-600" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium">{member.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {member.remaining_sessions} sessions remaining
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        addMemberToClass(member.id);
+                        setIsAddMemberDialogOpen(false);
+                      }}
+                      className="bg-primary hover:bg-primary/90"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddMemberDialogOpen(false)}>
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
