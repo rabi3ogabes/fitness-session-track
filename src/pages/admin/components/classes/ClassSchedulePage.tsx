@@ -1354,6 +1354,9 @@ const ClassSchedulePage = () => {
                     Schedule
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Capacity
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1390,6 +1393,11 @@ const ClassSchedulePage = () => {
                       </div>
                       <div className="text-xs text-gray-500">
                         {formatTime(cls.startTime || "")} - {formatTime(cls.endTime || "")}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {cls.location || "Not specified"}
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
