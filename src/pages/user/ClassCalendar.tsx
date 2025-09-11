@@ -556,14 +556,11 @@ const ClassCalendar = () => {
 
       const hoursDifference = (classDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-      // Allow cancellation for past classes (within 24 hours) or future classes outside the cancellation window
-      const isRecentPastClass = hoursDifference < 0 && Math.abs(hoursDifference) <= 24;
-      const isFutureClassWithinLimit = hoursDifference >= 0 && hoursDifference < systemSettings.cancellationTimeLimit;
-
-      if (isFutureClassWithinLimit) {
+      // Users can only cancel classes that are 4+ hours in the future
+      if (hoursDifference < systemSettings.cancellationTimeLimit) {
         toast({
           title: "Cannot cancel class",
-          description: `You can only cancel future classes ${systemSettings.cancellationTimeLimit} hours or more before they start.`,
+          description: `You can only cancel classes ${systemSettings.cancellationTimeLimit} hours or more before they start.`,
           variant: "destructive",
         });
         return;
@@ -950,11 +947,8 @@ const ClassCalendar = () => {
                       classDate.setHours(classHour, classMinute, 0, 0);
                       const hoursDifference = (classDate.getTime() - now.getTime()) / (1000 * 60 * 60);
                       
-                      // Allow cancellation for recent past classes (within 24 hours) or future classes outside the limit
-                      const isRecentPastClass = hoursDifference < 0 && Math.abs(hoursDifference) <= 24;
-                      const isFutureClass = hoursDifference >= systemSettings.cancellationTimeLimit;
-                      
-                      return isRecentPastClass || isFutureClass;
+                      // Users can only cancel classes that are 4+ hours in the future
+                      return hoursDifference >= systemSettings.cancellationTimeLimit;
                     })();
 
                     return (
