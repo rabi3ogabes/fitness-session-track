@@ -556,10 +556,14 @@ const ClassCalendar = () => {
 
       const hoursDifference = (classDate.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-      if (hoursDifference < systemSettings.cancellationTimeLimit) {
+      // Allow cancellation for past classes (within 24 hours) or future classes outside the cancellation window
+      const isRecentPastClass = hoursDifference < 0 && Math.abs(hoursDifference) <= 24;
+      const isFutureClassWithinLimit = hoursDifference >= 0 && hoursDifference < systemSettings.cancellationTimeLimit;
+
+      if (isFutureClassWithinLimit) {
         toast({
           title: "Cannot cancel class",
-          description: `You can only cancel classes ${systemSettings.cancellationTimeLimit} hours or more before they start.`,
+          description: `You can only cancel future classes ${systemSettings.cancellationTimeLimit} hours or more before they start.`,
           variant: "destructive",
         });
         return;
@@ -938,14 +942,19 @@ const ClassCalendar = () => {
                 <CardContent className="space-y-3">
                   {myBookedClasses.slice(0, 3).map((cls) => {
                     const isPast = isClassInPast(new Date(cls.schedule), cls.start_time);
-                    const canCancel = !isPast && cls.start_time && (() => {
+                    const canCancel = cls.start_time && (() => {
                       const classHour = parseInt(cls.start_time.split(":")[0]);
                       const classMinute = parseInt(cls.start_time.split(":")[1] || "0");
                       const now = new Date();
                       const classDate = new Date(cls.schedule);
                       classDate.setHours(classHour, classMinute, 0, 0);
                       const hoursDifference = (classDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-                      return hoursDifference >= systemSettings.cancellationTimeLimit;
+                      
+                      // Allow cancellation for recent past classes (within 24 hours) or future classes outside the limit
+                      const isRecentPastClass = hoursDifference < 0 && Math.abs(hoursDifference) <= 24;
+                      const isFutureClass = hoursDifference >= systemSettings.cancellationTimeLimit;
+                      
+                      return isRecentPastClass || isFutureClass;
                     })();
 
                     return (
