@@ -218,49 +218,47 @@ const ClassCalendar = () => {
   const sessionsLow = userData.remainingSessions <= Math.max(1, userData.totalSessions * 0.25);
 
   // Fetch user data from Supabase
-  useEffect(() => {
-    const fetchUserData = async () => {
-      if (!user) return;
+  const fetchUserData = async () => {
+    if (!user) return;
 
-      try {
-        if (!isNetworkConnected) {
-          setError("You are currently offline. Reconnect to load your profile data.");
+    try {
+      if (!isNetworkConnected) {
+        setError("You are currently offline. Reconnect to load your profile data.");
+        return;
+      }
+
+      setError(null);
+      const { data, error: profileError } = await supabase
+        .from("members")
+        .select("name, total_sessions, remaining_sessions, sessions")
+        .eq("email", user.email)
+        .single();
+
+      if (profileError) {
+        if (profileError.code === "PGRST116") {
+          // Profile not found, use default values
+          setUserData({
+            name: user.email || "User",
+            remainingSessions: 10,
+            totalSessions: 20,
+          });
           return;
         }
-
-        setError(null);
-        const { data, error: profileError } = await supabase
-          .from("members")
-          .select("name, total_sessions, remaining_sessions, sessions")
-          .eq("email", user.email)
-          .single();
-
-        if (profileError) {
-          if (profileError.code === "PGRST116") {
-            // Profile not found, use default values
-            setUserData({
-              name: user.email || "User",
-              remainingSessions: 10,
-              totalSessions: 20,
-            });
-            return;
-          }
-          throw profileError;
-        }
-
-        if (data) {
-          setUserData({
-            name: data.name || "User",
-            remainingSessions: data.remaining_sessions || 0,
-            totalSessions: data.sessions || 0,
-          });
-        }
-      } catch (err) {
-        console.error("Error fetching user data:", err);
-        setError("Failed to load user data");
+        throw profileError;
       }
-    };
 
+      setUserData({
+        name: data.name || user.email || "User",
+        remainingSessions: data.remaining_sessions || 0,
+        totalSessions: data.total_sessions || data.sessions || 0,
+      });
+    } catch (err) {
+      console.error("Error fetching user data:", err);
+      setError("Unable to load your profile data. Please try again.");
+    }
+  };
+
+  useEffect(() => {
     fetchUserData();
   }, [user, isNetworkConnected]);
 
@@ -512,7 +510,8 @@ const ClassCalendar = () => {
         }))
       );
 
-      // Sessions are now automatically managed by database triggers
+      // Refresh user data to update session balance
+      await fetchUserData();
 
       toast({
         title: "Class booked successfully!",
@@ -596,7 +595,8 @@ const ClassCalendar = () => {
         }))
       );
 
-      // Sessions are now automatically managed by database triggers
+      // Refresh user data to update session balance
+      await fetchUserData();
 
       toast({
         title: "Class cancelled",
