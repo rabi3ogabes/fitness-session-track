@@ -142,6 +142,36 @@ const BookingForm = ({
       });
 
       if (error) throw error;
+
+      // Decrement user's remaining sessions
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("sessions_remaining")
+        .eq("id", user.id)
+        .single();
+
+      if (profileData && !profileError) {
+        const newSessionsRemaining = Math.max(0, (profileData.sessions_remaining || 0) - 1);
+        await supabase
+          .from("profiles")
+          .update({ sessions_remaining: newSessionsRemaining })
+          .eq("id", user.id);
+      } else {
+        // Fallback: try to update members table using email
+        const { data: memberData, error: memberError } = await supabase
+          .from("members")
+          .select("remaining_sessions")
+          .eq("email", user.email)
+          .single();
+
+        if (memberData && !memberError) {
+          const newRemainingSession = Math.max(0, (memberData.remaining_sessions || 0) - 1);
+          await supabase
+            .from("members")
+            .update({ remaining_sessions: newRemainingSession })
+            .eq("email", user.email);
+        }
+      }
       setAvailableClasses((prevClasses) =>
         prevClasses.map((cls) =>
           cls.id === selectedClass ? { ...cls, isBooked: true } : cls
