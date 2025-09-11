@@ -512,18 +512,7 @@ const ClassCalendar = () => {
         }))
       );
 
-      // Update user sessions
-      const newRemainingSession = userData.remainingSessions - 1;
-      const { error: profileError } = await supabase
-        .from("members")
-        .update({ remaining_sessions: newRemainingSession })
-        .eq("email", user.email);
-
-      if (profileError) {
-        console.error("Error updating user sessions:", profileError);
-      } else {
-        setUserData({ ...userData, remainingSessions: newRemainingSession });
-      }
+      // Sessions are now automatically managed by database triggers
 
       toast({
         title: "Class booked successfully!",
@@ -607,18 +596,7 @@ const ClassCalendar = () => {
         }))
       );
 
-      // Update user sessions
-      const newRemainingSession = userData.remainingSessions + 1;
-      const { error: profileError } = await supabase
-        .from("members")
-        .update({ remaining_sessions: newRemainingSession })
-        .eq("email", user.email);
-
-      if (profileError) {
-        console.error("Error updating user sessions:", profileError);
-      } else {
-        setUserData({ ...userData, remainingSessions: newRemainingSession });
-      }
+      // Sessions are now automatically managed by database triggers
 
       toast({
         title: "Class cancelled",

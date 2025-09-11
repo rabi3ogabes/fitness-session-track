@@ -163,32 +163,7 @@ export const BulkAttendanceDialog = ({
         console.error("Error updating class enrollment:", classUpdateError);
       }
 
-      // Update the member's remaining sessions
-      try {
-        const { data: memberData, error: memberError } = await supabase
-          .from("members")
-          .select("email, name, remaining_sessions")
-          .eq("name", bookingDetails.user_name)
-          .single();
-
-        if (memberError) {
-          console.error("Error fetching member data:", memberError);
-        } else if (memberData) {
-          // Increment the remaining sessions by 1
-          const newRemainingSession = (memberData.remaining_sessions || 0) + 1;
-
-          const { error: updateError } = await supabase
-            .from("members")
-            .update({ remaining_sessions: newRemainingSession })
-            .eq("email", memberData.email);
-
-          if (updateError) {
-            console.error("Error updating member sessions:", updateError);
-          }
-        }
-      } catch (err) {
-        console.error("Error updating member sessions:", err);
-      }
+      // Sessions are now automatically managed by database triggers
 
       // Update attendees list in UI by removing the cancelled booking
       setAttendees((prevAttendees) =>

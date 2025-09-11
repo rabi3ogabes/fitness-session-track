@@ -1003,13 +1003,7 @@ const ClassSchedulePage = () => {
 
       if (bookingError) throw bookingError;
 
-      // Update member's remaining sessions
-      const { error: updateError } = await supabase
-        .from("members")
-        .update({ remaining_sessions: member.remaining_sessions - 1 })
-        .eq("id", memberId);
-
-      if (updateError) throw updateError;
+      // Sessions are now automatically managed by database triggers
 
       // Refresh the bookings list
       await fetchBookedMembers(currentClass.id);

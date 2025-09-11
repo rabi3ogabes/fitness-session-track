@@ -381,39 +381,7 @@ export const CalendarSection = ({
         }))
       );
 
-      // Get the member data to update their remaining sessions
-      try {
-        const { data: memberData, error: memberError } = await supabase
-          .from("members")
-          .select("email, name, remaining_sessions")
-          .eq("name", user_name)
-          .single();
-
-        console.log(memberData, "memberData");
-
-        if (memberError) {
-          console.error("Error fetching member data:", memberError);
-        } else if (memberData) {
-          // Increment the remaining sessions by 1
-          const newRemainingSession = (memberData.remaining_sessions || 0) + 1;
-
-          // Use the email from memberData instead of user_name
-          const { error: updateError } = await supabase
-            .from("members")
-            .update({ remaining_sessions: newRemainingSession })
-            .eq("email", memberData.email);
-
-          if (updateError) {
-            console.error("Error updating member sessions:", updateError);
-          } else {
-            console.log(
-              `Updated ${memberData.email}'s remaining sessions to ${newRemainingSession}`
-            );
-          }
-        }
-      } catch (err) {
-        console.error("Error updating member sessions:", err);
-      }
+      // Sessions are now automatically managed by database triggers
 
       // Update local state for UI
       const updatedBooked = [...bookedClasses.filter((id) => id !== classId)];
