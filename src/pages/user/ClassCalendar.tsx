@@ -472,10 +472,22 @@ const ClassCalendar = () => {
         return;
       }
 
-      // Insert booking
+      // Get member record first to link the booking
+      const { data: memberData, error: memberError } = await supabase
+        .from("members")
+        .select("id, name")
+        .eq("email", user.email)
+        .single();
+
+      if (memberError) {
+        throw new Error("Member record not found. Please contact support.");
+      }
+
+      // Insert booking with proper member linkage
       const { error } = await supabase.from("bookings").insert({
-        user_name: user.name,
+        user_name: memberData.name,
         user_id: user.id,
+        member_id: memberData.id,
         class_id: selectedClass.id,
         status: "confirmed",
         booking_date: new Date().toISOString(),
