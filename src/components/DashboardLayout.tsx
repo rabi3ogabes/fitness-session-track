@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "./Sidebar";
 import LoadingIndicator from "./LoadingIndicator";
+import SessionBalance from "./SessionBalance";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -64,7 +65,8 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
       <div className="flex-1">
         <header className="bg-white shadow-sm p-4 flex flex-wrap justify-between items-center">
           <h1 className="text-xl md:text-2xl font-bold text-gray-800">{title}</h1>
-          <div className="mt-2 md:mt-0">
+          <div className="mt-2 md:mt-0 flex items-center gap-4">
+            <SessionBalance />
             <button
               onClick={handleLogout}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors"

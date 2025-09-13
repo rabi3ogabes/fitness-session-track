@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import SessionBalance from "./SessionBalance";
 import {
   Home,
   User,
@@ -187,6 +188,11 @@ const Sidebar = () => {
                 <span className="text-xs mt-1">Main Page</span>
               </a>
             )}
+            
+            {/* Session Balance Display */}
+            <div className="flex flex-col items-center">
+              <SessionBalance compact={true} className="mb-1" />
+            </div>
             
             <button
               onClick={handleLogout}
