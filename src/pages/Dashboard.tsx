@@ -6,7 +6,10 @@ import DashboardLayout from "@/components/DashboardLayout";
 import StatsCard from "@/components/StatsCard";
 import BookingForm from "@/components/BookingForm";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { Calendar, Clock, Bell } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Calendar, Clock, Bell, Settings } from "lucide-react";
 import { supabase, requireAuth } from "@/integrations/supabase/client";
 import useComingClass from "@/hooks/useComingClass";
 
@@ -58,13 +61,12 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { unbookedClasses } = useComingClass();
-  const [sessionsRemaining, setSessionsRemaining] = useState<number | string>(
-    0
-  );
-
+  const [sessionsRemaining, setSessionsRemaining] = useState<number | string>(0);
   const [loadingUserData, setLoadingUserData] = useState(true);
   const [userMembership, setUserMembership] = useState("Basic");
   const [showLowSessionWarning, setShowLowSessionWarning] = useState(true);
+  const [loginBalanceNotification, setLoginBalanceNotification] = useState(true);
+  const [loadingNotificationSettings, setLoadingNotificationSettings] = useState(true);
   //   console.log(user, "user");
   // console.log(unbookedClasses, "unbookedClasses");
   // console.log(userData, "userData");
@@ -116,11 +118,77 @@ const Dashboard = () => {
     }
   };
 
+  const fetchNotificationSettings = async () => {
+    if (!isAuthenticated || !user?.id) return;
+
+    try {
+      setLoadingNotificationSettings(true);
+      const { data, error } = await supabase
+        .from("notification_settings")
+        .select("login_balance_notification")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error && error.code !== "PGRST116") {
+        throw error;
+      }
+
+      if (data) {
+        setLoginBalanceNotification(data.login_balance_notification);
+      } else {
+        // Create default settings if none exist
+        const { error: insertError } = await supabase
+          .from("notification_settings")
+          .insert({
+            user_id: user.id,
+            login_balance_notification: true,
+          });
+
+        if (insertError) {
+          console.error("Error creating notification settings:", insertError);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching notification settings:", error);
+    } finally {
+      setLoadingNotificationSettings(false);
+    }
+  };
+
+  const updateNotificationSetting = async (enabled: boolean) => {
+    if (!user?.id) return;
+
+    try {
+      const { error } = await supabase
+        .from("notification_settings")
+        .upsert({
+          user_id: user.id,
+          login_balance_notification: enabled,
+        });
+
+      if (error) throw error;
+
+      setLoginBalanceNotification(enabled);
+      toast({
+        title: "Settings updated",
+        description: `Login balance notification ${enabled ? "enabled" : "disabled"}`,
+      });
+    } catch (error) {
+      console.error("Error updating notification settings:", error);
+      toast({
+        title: "Error updating settings",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated && isAdmin) {
       navigate("/admin");
     } else {
       fetchUserData();
+      fetchNotificationSettings();
     }
     
     // Load admin setting for low session warning visibility
@@ -271,7 +339,38 @@ const Dashboard = () => {
           </div> */}
         </div>
 
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-6">
+          {/* Notification Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Notification Settings
+              </CardTitle>
+              <CardDescription>
+                Manage your notification preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="login-notification" className="text-sm font-medium">
+                    Login Balance Notification
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Show session balance when you log in
+                  </p>
+                </div>
+                <Switch
+                  id="login-notification"
+                  checked={loginBalanceNotification}
+                  onCheckedChange={updateNotificationSetting}
+                  disabled={loadingNotificationSettings}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           <BookingForm remainingSessions={Number(sessionsRemaining)} />
         </div>
       </div>

@@ -449,6 +449,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("Role (fallback) set to:", userRole);
       }
 
+      // Show login balance notification if enabled
+      setTimeout(async () => {
+        try {
+          if (result.data?.user) {
+            // Check if user has login balance notification enabled
+            const { data: notificationSettings } = await supabase
+              .from("notification_settings")
+              .select("login_balance_notification")
+              .eq("user_id", result.data.user.id)
+              .maybeSingle();
+
+            if (notificationSettings?.login_balance_notification !== false) {
+              // Get user's session balance
+              const { data: memberData } = await supabase
+                .from("members")
+                .select("remaining_sessions, name")
+                .eq("email", result.data.user.email)
+                .maybeSingle();
+
+              if (memberData) {
+                const sessions = memberData.remaining_sessions || 0;
+                const sessionText = sessions === 1 ? "session" : "sessions";
+                
+                toast({
+                  title: `Welcome back, ${memberData.name}!`,
+                  description: `You have ${sessions} ${sessionText} remaining in your account.`,
+                  duration: 5000,
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error showing login notification:", error);
+        }
+      }, 1000);
+
       toast({
         title: "Login successful",
         description: "You have been logged in successfully.",
