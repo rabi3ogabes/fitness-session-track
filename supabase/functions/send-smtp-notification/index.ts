@@ -26,8 +26,8 @@ interface EmailLogEntry {
   timestamp: string;
   to: string;
   subject: string;
-  status: 'success' | 'failed';
-  error?: string;
+  success: boolean;
+  error?: string | null;
 }
 
 const emailLogs: EmailLogEntry[] = [];
@@ -167,7 +167,7 @@ serve(async (req: Request): Promise<Response> => {
           timestamp: new Date().toISOString(),
           to: 'unknown',
           subject: 'Validation Failed',
-          status: 'failed',
+          success: false,
           error: 'Notification email is required'
         };
         emailLogs.push(logEntry);
@@ -187,7 +187,7 @@ serve(async (req: Request): Promise<Response> => {
           timestamp: new Date().toISOString(),
           to: notificationEmail,
           subject: 'Configuration Error',
-          status: 'failed',
+          success: false,
           error: 'SMTP settings are incomplete'
         };
         emailLogs.push(logEntry);
@@ -263,7 +263,8 @@ serve(async (req: Request): Promise<Response> => {
           timestamp: new Date().toISOString(),
           to: notificationEmail,
           subject: emailSubject,
-          status: 'success'
+          success: true,
+          error: null
         };
         emailLogs.push(logEntry);
         
@@ -301,7 +302,7 @@ serve(async (req: Request): Promise<Response> => {
           timestamp: new Date().toISOString(),
           to: notificationEmail,
           subject: emailSubject,
-          status: 'failed',
+          success: false,
           error: emailError instanceof Error ? emailError.message : 'Unknown error'
         };
         emailLogs.push(logEntry);
@@ -337,7 +338,7 @@ serve(async (req: Request): Promise<Response> => {
       timestamp: new Date().toISOString(),
       to: 'unknown',
       subject: 'Server Error',
-      status: 'failed',
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
     };
     emailLogs.push(logEntry);
