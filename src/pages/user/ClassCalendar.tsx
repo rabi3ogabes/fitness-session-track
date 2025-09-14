@@ -1084,6 +1084,19 @@ const ClassCalendar = () => {
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span>{selectedClass.start_time} - {selectedClass.end_time}</span>
                     </div>
+                    <div className="flex items-center gap-2">
+                      {selectedClass.gender === "Female" ? (
+                        <>
+                          <Users className="h-4 w-4 text-pink-500" />
+                          <span className="text-pink-600 font-medium">Women Only</span>
+                        </>
+                      ) : (
+                        <>
+                          <Users className="h-4 w-4 text-blue-500" />
+                          <span className="text-blue-600 font-medium">Mixed Class</span>
+                        </>
+                      )}
+                    </div>
                     {selectedClass.location && (
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
