@@ -131,7 +131,7 @@ const BookingForm = ({
       return;
     }
 
-    // Check gender restrictions
+    // Check gender restrictions - only restrict men from women-only classes
     const selectedClassData = unbookedClasses.find(cls => cls.id === selectedClass);
     if (selectedClassData) {
       // Get user profile to check gender
@@ -141,12 +141,12 @@ const BookingForm = ({
         .eq("id", user.id)
         .single();
 
-      if (profile?.gender && selectedClassData.gender && 
-          selectedClassData.gender !== "All" && 
-          profile.gender !== selectedClassData.gender) {
+      // Only restrict men from women-only classes
+      if (profile?.gender === "Male" && 
+          selectedClassData.gender === "Female") {
         toast({
           title: "Class not available",
-          description: `This class is for ${selectedClassData.gender} members only.`,
+          description: "This class is for women only.",
           variant: "destructive",
         });
         return;
