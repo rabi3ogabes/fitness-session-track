@@ -62,6 +62,16 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { unbookedClasses } = useComingClass();
   const [sessionsRemaining, setSessionsRemaining] = useState<number | string>(0);
+  
+  // Calculate upcoming classes for next 7 days
+  const upcomingClassesNext7Days = unbookedClasses.filter(cls => {
+    const classDate = new Date(cls.schedule);
+    const today = new Date();
+    const next7Days = new Date();
+    next7Days.setDate(today.getDate() + 7);
+    
+    return classDate >= today && classDate <= next7Days;
+  });
   const [loadingUserData, setLoadingUserData] = useState(true);
   const [userMembership, setUserMembership] = useState("Basic");
   const [showLowSessionWarning, setShowLowSessionWarning] = useState(true);
@@ -250,8 +260,8 @@ const Dashboard = () => {
         <div className="lg:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <StatsCard
-              title="Upcoming Classes"
-              value={unbookedClasses.length}
+              title="Upcoming Classes on the next 7 days"
+              value={upcomingClassesNext7Days.length}
               icon={<Calendar className="h-6 w-6 text-gym-blue" />}
             />
             <StatsCard
