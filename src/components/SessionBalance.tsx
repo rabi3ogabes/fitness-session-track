@@ -10,7 +10,7 @@ interface SessionBalanceProps {
 }
 
 const SessionBalance = ({ className = "", showIcon = true, compact = false }: SessionBalanceProps) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isAdmin } = useAuth();
   const [sessionBalance, setSessionBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
@@ -109,7 +109,7 @@ const SessionBalance = ({ className = "", showIcon = true, compact = false }: Se
     };
   }, [isAuthenticated, user]);
 
-  if (!isAuthenticated || loading) {
+  if (!isAuthenticated || loading || isAdmin) {
     return null;
   }
 
