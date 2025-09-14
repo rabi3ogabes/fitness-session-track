@@ -457,6 +457,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      send_admin_notification: {
+        Args: {
+          details?: string
+          notification_type: string
+          user_email: string
+          user_name: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
