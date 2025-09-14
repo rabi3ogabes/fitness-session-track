@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notification_settings: {
+        Row: {
+          created_at: string
+          from_email: string
+          from_name: string
+          id: string
+          notification_email: string
+          notify_booking: boolean
+          notify_session_request: boolean
+          notify_signup: boolean
+          smtp_host: string
+          smtp_password: string
+          smtp_port: number
+          smtp_username: string
+          updated_at: string
+          use_ssl: boolean
+        }
+        Insert: {
+          created_at?: string
+          from_email: string
+          from_name?: string
+          id?: string
+          notification_email: string
+          notify_booking?: boolean
+          notify_session_request?: boolean
+          notify_signup?: boolean
+          smtp_host: string
+          smtp_password: string
+          smtp_port?: number
+          smtp_username: string
+          updated_at?: string
+          use_ssl?: boolean
+        }
+        Update: {
+          created_at?: string
+          from_email?: string
+          from_name?: string
+          id?: string
+          notification_email?: string
+          notify_booking?: boolean
+          notify_session_request?: boolean
+          notify_signup?: boolean
+          smtp_host?: string
+          smtp_password?: string
+          smtp_port?: number
+          smtp_username?: string
+          updated_at?: string
+          use_ssl?: boolean
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           attendance: boolean | null
@@ -226,6 +277,42 @@ export type Database = {
           price?: number
           sessions?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      notification_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          notification_type: string
+          recipient_email: string
+          status: string
+          subject: string
+          user_email: string | null
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          notification_type: string
+          recipient_email: string
+          status: string
+          subject: string
+          user_email?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          notification_type?: string
+          recipient_email?: string
+          status?: string
+          subject?: string
+          user_email?: string | null
+          user_name?: string | null
         }
         Relationships: []
       }

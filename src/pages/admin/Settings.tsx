@@ -32,7 +32,10 @@ const Settings = () => {
     fromEmail: "",
     fromName: "",
     useSsl: true,
-    notificationEmail: ""
+    notificationEmail: "",
+    notifySignup: true,
+    notifyBooking: true,
+    notifySessionRequest: true
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
@@ -97,11 +100,8 @@ const Settings = () => {
       setFooterColor(savedFooterColor);
     }
     
-    // Load email settings from local storage
-    const savedEmailSettings = localStorage.getItem("emailSettings");
-    if (savedEmailSettings) {
-      setEmailSettings(JSON.parse(savedEmailSettings));
-    }
+    // Load email settings from database and fallback to local storage
+    loadEmailSettings();
     
     // Load email logs on component mount
     loadEmailLogs();
@@ -252,13 +252,115 @@ const Settings = () => {
     }
   };
 
-  const handleSaveEmailSettings = () => {
-    localStorage.setItem("emailSettings", JSON.stringify(emailSettings));
+  const loadEmailSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_notification_settings')
+        .select('*')
+        .single();
 
-    toast({
-      title: "Email settings saved",
-      description: "Your email configuration has been saved successfully.",
-    });
+      if (data && !error) {
+        setEmailSettings({
+          smtpHost: data.smtp_host || "",
+          smtpPort: data.smtp_port?.toString() || "587",
+          smtpUsername: data.smtp_username || "",
+          smtpPassword: data.smtp_password || "",
+          fromEmail: data.from_email || "",
+          fromName: data.from_name || "",
+          useSsl: data.use_ssl ?? true,
+          notificationEmail: data.notification_email || "",
+          notifySignup: data.notify_signup ?? true,
+          notifyBooking: data.notify_booking ?? true,
+          notifySessionRequest: data.notify_session_request ?? true
+        });
+      } else {
+        // Fallback to local storage if no database settings
+        const savedEmailSettings = localStorage.getItem("emailSettings");
+        if (savedEmailSettings) {
+          const parsed = JSON.parse(savedEmailSettings);
+          setEmailSettings({
+            ...parsed,
+            notifySignup: parsed.notifySignup ?? true,
+            notifyBooking: parsed.notifyBooking ?? true,
+            notifySessionRequest: parsed.notifySessionRequest ?? true
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load email settings:', error);
+      // Fallback to local storage
+      const savedEmailSettings = localStorage.getItem("emailSettings");
+      if (savedEmailSettings) {
+        const parsed = JSON.parse(savedEmailSettings);
+        setEmailSettings({
+          ...parsed,
+          notifySignup: parsed.notifySignup ?? true,
+          notifyBooking: parsed.notifyBooking ?? true,
+          notifySessionRequest: parsed.notifySessionRequest ?? true
+        });
+      }
+    }
+  };
+
+  const handleSaveEmailSettings = async () => {
+    try {
+      // First try to update existing settings
+      const { data: existingData } = await supabase
+        .from('admin_notification_settings')
+        .select('id')
+        .single();
+
+      const settingsData = {
+        notification_email: emailSettings.notificationEmail,
+        smtp_host: emailSettings.smtpHost,
+        smtp_port: parseInt(emailSettings.smtpPort) || 587,
+        smtp_username: emailSettings.smtpUsername,
+        smtp_password: emailSettings.smtpPassword,
+        from_email: emailSettings.fromEmail,
+        from_name: emailSettings.fromName || 'Gym System',
+        use_ssl: emailSettings.useSsl,
+        notify_signup: emailSettings.notifySignup,
+        notify_booking: emailSettings.notifyBooking,
+        notify_session_request: emailSettings.notifySessionRequest
+      };
+
+      let result;
+      if (existingData) {
+        // Update existing record
+        result = await supabase
+          .from('admin_notification_settings')
+          .update(settingsData)
+          .eq('id', existingData.id);
+      } else {
+        // Insert new record
+        result = await supabase
+          .from('admin_notification_settings')
+          .insert(settingsData);
+      }
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      // Also save to local storage as backup
+      localStorage.setItem("emailSettings", JSON.stringify(emailSettings));
+
+      toast({
+        title: "Email settings saved",
+        description: "Your email configuration has been saved successfully.",
+      });
+    } catch (error) {
+      console.error('Failed to save email settings:', error);
+      
+      // Fallback to local storage only
+      localStorage.setItem("emailSettings", JSON.stringify(emailSettings));
+      
+      toast({
+        title: "Settings saved locally",
+        description: "Email settings saved to local storage. Database save failed.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -569,8 +671,49 @@ const Settings = () => {
                       onChange={(e) => setEmailSettings(prev => ({ ...prev, notificationEmail: e.target.value }))}
                     />
                     <p className="text-sm text-muted-foreground mt-1">
-                      Email address to receive new user registration notifications
+                      Email address to receive system notifications
                     </p>
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2">
+                    <Label className="text-base font-medium">Notification Types</Label>
+                    <div className="space-y-4 mt-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="notify-signup">New Member Signup</Label>
+                          <p className="text-sm text-muted-foreground">Get notified when new members register</p>
+                        </div>
+                        <Switch
+                          id="notify-signup"
+                          checked={emailSettings.notifySignup}
+                          onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, notifySignup: checked }))}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="notify-booking">Class Bookings</Label>
+                          <p className="text-sm text-muted-foreground">Get notified when members book classes</p>
+                        </div>
+                        <Switch
+                          id="notify-booking"
+                          checked={emailSettings.notifyBooking}
+                          onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, notifyBooking: checked }))}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="notify-session-request">Session Balance Requests</Label>
+                          <p className="text-sm text-muted-foreground">Get notified when members request additional sessions</p>
+                        </div>
+                        <Switch
+                          id="notify-session-request"
+                          checked={emailSettings.notifySessionRequest}
+                          onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, notifySessionRequest: checked }))}
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="col-span-1 md:col-span-2">
