@@ -45,7 +45,9 @@ const DEMO_CLASSES: ClassWithBooking[] = [
     id: 3,
     name: "Boxing Fundamentals",
     status: "Active",
-    schedule: new Date().toISOString(),
+    schedule: new Date(
+      new Date().setDate(new Date().getDate() + 2)
+    ).toISOString(),
     start_time: "14:00",
     end_time: "15:30",
     capacity: 10,
@@ -53,14 +55,14 @@ const DEMO_CLASSES: ClassWithBooking[] = [
     trainer: "Mike Tyson",
     location: "Boxing Ring",
     type: "combat",
-    isBooked: true,
+    isBooked: false,
   },
   {
     id: 4,
     name: "Zumba Dance",
     status: "Active",
     schedule: new Date(
-      new Date().setDate(new Date().getDate() + 2)
+      new Date().setDate(new Date().getDate() + 3)
     ).toISOString(),
     start_time: "16:00",
     end_time: "17:00",
@@ -69,6 +71,55 @@ const DEMO_CLASSES: ClassWithBooking[] = [
     trainer: "Maria Lopez",
     location: "Dance Studio",
     type: "dance",
+    isBooked: false,
+  },
+  {
+    id: 5,
+    name: "Pilates Morning",
+    status: "Active",
+    schedule: new Date(
+      new Date().setDate(new Date().getDate() + 4)
+    ).toISOString(),
+    start_time: "08:00",
+    end_time: "09:00",
+    capacity: 15,
+    enrolled: 6,
+    trainer: "Sarah Wilson",
+    location: "Studio 2",
+    type: "yoga",
+    isBooked: false,
+  },
+  {
+    id: 6,
+    name: "Cardio Blast",
+    status: "Active",
+    schedule: new Date(
+      new Date().setDate(new Date().getDate() + 5)
+    ).toISOString(),
+    start_time: "18:00",
+    end_time: "19:00",
+    capacity: 20,
+    enrolled: 12,
+    trainer: "Alex Johnson",
+    location: "Gym Floor",
+    type: "workout",
+    isBooked: false,
+  },
+  {
+    id: 7,
+    name: "Women Only Strength Training",
+    status: "Active",
+    schedule: new Date(
+      new Date().setDate(new Date().getDate() + 6)
+    ).toISOString(),
+    start_time: "17:00",
+    end_time: "18:00",
+    capacity: 12,
+    enrolled: 8,
+    trainer: "Emma Davis",
+    location: "Weight Room",
+    type: "workout",
+    gender: "Female",
     isBooked: false,
   },
 ];
