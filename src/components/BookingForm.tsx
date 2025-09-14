@@ -131,6 +131,28 @@ const BookingForm = ({
       return;
     }
 
+    // Check gender restrictions
+    const selectedClassData = unbookedClasses.find(cls => cls.id === selectedClass);
+    if (selectedClassData) {
+      // Get user profile to check gender
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("gender")
+        .eq("id", user.id)
+        .single();
+
+      if (profile?.gender && selectedClassData.gender && 
+          selectedClassData.gender !== "All" && 
+          profile.gender !== selectedClassData.gender) {
+        toast({
+          title: "Class not available",
+          description: `This class is for ${selectedClassData.gender} members only.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     try {
       setIsLoading(true);
 

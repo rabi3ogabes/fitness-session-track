@@ -948,7 +948,16 @@ const ClassSchedulePage = () => {
         .eq("status", "Active");
 
       if (error) throw error;
-      setAvailableMembers(members || []);
+      
+      // Filter members based on class gender restrictions
+      let filteredMembers = members || [];
+      if (currentClass?.gender && currentClass.gender !== "All") {
+        filteredMembers = filteredMembers.filter(member => 
+          member.gender === currentClass.gender || !member.gender
+        );
+      }
+      
+      setAvailableMembers(filteredMembers);
     } catch (error) {
       console.error("Error fetching available members:", error);
       toast({
