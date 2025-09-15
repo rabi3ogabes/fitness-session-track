@@ -340,6 +340,44 @@ const UserMembership = () => {
         },
       ]);
 
+      // Send WhatsApp notification if enabled and successful
+      if (!error) {
+        try {
+          const whatsappSettings = localStorage.getItem("whatsappSettings");
+          if (whatsappSettings) {
+            const settings = JSON.parse(whatsappSettings);
+            if (settings.enabled && settings.session_request_notifications && 
+                settings.instance_id && settings.api_token && settings.phone_numbers) {
+              
+              const phoneNumbers = settings.phone_numbers.split(',').map(num => num.trim());
+              let sessionMessage = settings.templates?.session_request || 
+                '📋 Session balance request!\n\nMember: {userName}\nRequested Sessions: {requestedSessions}\nSession Type: {sessionType}\n\nPlease review and approve. 💪';
+              
+              // Replace template variables
+              sessionMessage = sessionMessage
+                .replace(/{userName}/g, currentUser.name)
+                .replace(/{requestedSessions}/g, plan.sessions.toString())
+                .replace(/{sessionType}/g, planName);
+              
+              console.log('Sending session request WhatsApp notification...');
+              await supabase.functions.invoke('send-whatsapp-notification', {
+                body: {
+                  userName: currentUser.name,
+                  userEmail: currentUser.email,
+                  phoneNumbers: phoneNumbers,
+                  apiToken: settings.api_token,
+                  instanceId: settings.instance_id,
+                  customMessage: sessionMessage
+                }
+              });
+            }
+          }
+        } catch (whatsappError) {
+          console.error("Failed to send session request WhatsApp notification:", whatsappError);
+          // Don't fail the request if WhatsApp fails
+        }
+      }
+
       if (error) {
         storeRequestLocally(newRequest);
       }

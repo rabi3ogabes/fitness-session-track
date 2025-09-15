@@ -616,6 +616,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
+      // Send WhatsApp notification if enabled
+      try {
+        const whatsappSettings = localStorage.getItem("whatsappSettings");
+        if (whatsappSettings) {
+          const settings = JSON.parse(whatsappSettings);
+          if (settings.enabled && settings.signup_notifications && 
+              settings.instance_id && settings.api_token && settings.phone_numbers) {
+            
+            const phoneNumbers = settings.phone_numbers.split(',').map(num => num.trim());
+            const joinDate = new Date().toLocaleDateString();
+            
+            let signupMessage = settings.templates?.signup || 
+              '🎉 New member signup!\n\nName: {userName}\nEmail: {userEmail}\nPhone: {userPhone}\nJoined: {joinDate}\n\nWelcome to our gym family! 💪';
+            
+            // Replace template variables
+            signupMessage = signupMessage
+              .replace(/{userName}/g, name)
+              .replace(/{userEmail}/g, email)
+              .replace(/{userPhone}/g, phone || 'Not provided')
+              .replace(/{joinDate}/g, joinDate);
+            
+            console.log('Sending signup WhatsApp notification...');
+            await supabase.functions.invoke('send-whatsapp-notification', {
+              body: {
+                userName: name,
+                userEmail: email,
+                phoneNumbers: phoneNumbers,
+                apiToken: settings.api_token,
+                instanceId: settings.instance_id,
+                customMessage: signupMessage
+              }
+            });
+          }
+        }
+      } catch (whatsappError) {
+        console.error("Failed to send signup WhatsApp notification:", whatsappError);
+        // Don't fail the signup if WhatsApp fails
+      }
+
       toast({
         title: "Sign up successful",
         description:
