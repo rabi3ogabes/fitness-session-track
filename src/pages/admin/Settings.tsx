@@ -180,7 +180,7 @@ const Settings = () => {
 
   const loadEmailLogs = async () => {
     try {
-      const { data: response, error } = await supabase.functions.invoke('send-smtp-notification', {
+      const { data: response, error } = await supabase.functions.invoke('send-email-notification', {
         method: 'GET'
       });
       
@@ -218,12 +218,13 @@ const Settings = () => {
     setIsTestingEmail(true);
     
     try {
-      const { data, error } = await supabase.functions.invoke('send-smtp-notification', {
+      const { data, error } = await supabase.functions.invoke('send-email-notification', {
         body: {
           userEmail: "test@example.com",
           userName: "Test User",
           notificationEmail: emailSettings.notificationEmail,
-          smtpSettings: emailSettings
+          fromEmail: emailSettings.fromEmail,
+          fromName: emailSettings.fromName
         }
       });
 
