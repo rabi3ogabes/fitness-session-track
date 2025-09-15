@@ -660,36 +660,40 @@ const ClassCalendar = () => {
 
       // Send WhatsApp notification to admin about cancellation
       try {
-        if (systemSettings.whatsappSettings?.enabled && 
-            systemSettings.whatsappSettings?.api_token && 
-            systemSettings.whatsappSettings?.instance_id && 
-            systemSettings.whatsappSettings?.phone_numbers) {
-          
-          const trainerName = classToCancel.trainer || 'TBD';
-          const classDate = new Date(classToCancel.schedule).toLocaleDateString();
-          const classTimeFormatted = `${classTime}`;
-          
-          let cancelMessage = systemSettings.whatsappSettings?.templates?.cancel || 
-            '❌ Class booking cancelled!\n\nMember: {memberName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nBooking has been cancelled.';
-          
-          // Replace template variables
-          cancelMessage = cancelMessage
-            .replace(/{memberName}/g, userData?.name || 'Unknown')
-            .replace(/{className}/g, className)
-            .replace(/{classDate}/g, classDate)
-            .replace(/{classTime}/g, classTimeFormatted)
-            .replace(/{trainerName}/g, trainerName);
-          
-          await supabase.functions.invoke('send-whatsapp-notification', {
-            body: {
-              userName: userData?.name || 'Unknown',
-              userEmail: userData?.email || user.email || 'unknown@example.com',
-              phoneNumbers: systemSettings.whatsappSettings.phone_numbers.split(',').map(num => num.trim()),
-              apiToken: systemSettings.whatsappSettings.api_token,
-              instanceId: systemSettings.whatsappSettings.instance_id,
-              customMessage: cancelMessage
-            }
-          });
+        const whatsappSettings = localStorage.getItem("whatsappSettings");
+        if (whatsappSettings) {
+          const settings = JSON.parse(whatsappSettings);
+          if (settings.enabled && settings.instance_id && 
+              settings.api_token && settings.phone_numbers) {
+            
+            const phoneNumbers = settings.phone_numbers.split(',').map(num => num.trim());
+            const trainerName = classToCancel.trainer || 'TBD';
+            const classDate = format(new Date(classToCancel.schedule), 'MMM d, yyyy');
+            const classTimeFormatted = `${classTime}`;
+            
+            let cancelMessage = settings.templates?.cancel || 
+              '❌ Class booking cancelled!\n\nMember: {memberName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nBooking has been cancelled.';
+            
+            // Replace template variables
+            cancelMessage = cancelMessage
+              .replace(/{memberName}/g, userData?.name || 'Unknown')
+              .replace(/{className}/g, className)
+              .replace(/{classDate}/g, classDate)
+              .replace(/{classTime}/g, classTimeFormatted)
+              .replace(/{trainerName}/g, trainerName);
+            
+            console.log('Sending cancellation WhatsApp notification...');
+            await supabase.functions.invoke('send-whatsapp-notification', {
+              body: {
+                userName: userData?.name || 'Unknown',
+                userEmail: userData?.email || user.email || 'unknown@example.com',
+                phoneNumbers: phoneNumbers,
+                apiToken: settings.api_token,
+                instanceId: settings.instance_id,
+                customMessage: cancelMessage
+              }
+            });
+          }
         }
       } catch (whatsappError) {
         console.error('Error sending WhatsApp cancellation notification:', whatsappError);
