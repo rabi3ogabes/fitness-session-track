@@ -36,25 +36,11 @@ async function sendEmail(settings: SMTPNotificationRequest['smtpSettings'], to: 
   try {
     console.log(`Attempting to send email to: ${to} via ${settings.smtpHost}:${settings.smtpPort}`);
     
-    // Use fetch API to send via a simple HTTP email service
-    // This is a simplified approach that works better in Deno edge functions
-    const emailData = {
-      to,
-      subject,
-      html: body,
-      from: `${settings.fromName} <${settings.fromEmail}>`,
-      smtpHost: settings.smtpHost,
-      smtpPort: settings.smtpPort,
-      smtpUsername: settings.smtpUsername,
-      smtpPassword: settings.smtpPassword,
-      useSsl: settings.useSsl
-    };
-
     // For now, let's simulate the email sending and log the attempt
     console.log('Email configuration:', {
       to,
       subject,
-      from: emailData.from,
+      from: `${settings.fromName} <${settings.fromEmail}>`,
       smtpHost: settings.smtpHost,
       smtpPort: settings.smtpPort,
       smtpUsername: settings.smtpUsername,
@@ -201,10 +187,10 @@ serve(async (req: Request): Promise<Response> => {
                 <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
                   <h3 style="margin-top: 0;">Configuration Details:</h3>
                   <ul>
-                    <li><strong>SMTP Host:</strong> ${smtpSettings.smtpHost}</li>
-                    <li><strong>SMTP Port:</strong> ${smtpSettings.smtpPort}</li>
-                    <li><strong>From Email:</strong> ${smtpSettings.fromEmail}</li>
-                    <li><strong>SSL/TLS:</strong> ${smtpSettings.useSsl !== false ? 'Enabled' : 'Disabled'}</li>
+                    <li><strong>SMTP Host:</strong> ${finalSmtpSettings.smtpHost}</li>
+                    <li><strong>SMTP Port:</strong> ${finalSmtpSettings.smtpPort}</li>
+                    <li><strong>From Email:</strong> ${finalSmtpSettings.fromEmail}</li>
+                    <li><strong>SSL/TLS:</strong> ${finalSmtpSettings.useSsl !== false ? 'Enabled' : 'Disabled'}</li>
                   </ul>
                 </div>
                 <p>Your email notification system is now ready to send notifications for new user registrations.</p>
