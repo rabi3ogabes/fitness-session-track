@@ -302,11 +302,12 @@ const UserMembership = () => {
     setPaymentHistory((prevHistory) => [newPayment, ...prevHistory]);
 
     try {
-      // Check if user already has 2 requests
+      // Check if user already has 2 pending requests
       const { data: existingRequests, error: checkError } = await supabase
         .from("membership_requests")
         .select("*")
-        .eq("email", currentUser.email);
+        .eq("email", currentUser.email)
+        .eq("status", "Pending"); // Only count pending requests
 
       if (checkError) {
         console.error("Error checking existing requests:", checkError);
@@ -321,7 +322,7 @@ const UserMembership = () => {
         
         toast({
           title: "Request Limit Reached",
-          description: "Maximum 2 membership requests allowed per user.",
+          description: "Maximum 2 pending membership requests allowed per user. Please wait for current requests to be processed.",
           variant: "destructive",
         });
         return;

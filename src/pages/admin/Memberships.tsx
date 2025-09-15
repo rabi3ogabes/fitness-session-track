@@ -604,12 +604,28 @@ const handleApproveRequest = async (id: number) => {
                       return membershipType ? membershipType.sessions : 'N/A';
                     })();
                     
+                    // Count only pending requests for this user
+                    const pendingRequestsCount = membershipRequests.filter(r => 
+                      r.email === request.email && r.status === 'Pending'
+                    ).length;
+                    
+                    // Count total requests (all statuses) for display
+                    const totalRequestsCount = membershipRequests.filter(r => 
+                      r.email === request.email
+                    ).length;
+                    
                     return (
                       <tr key={request.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="font-medium text-gray-900">{request.member}</div>
-                          <div className="text-xs text-gray-500">
-                            {membershipRequests.filter(r => r.email === request.email).length}/2 requests
+                          <div className={`text-xs ${pendingRequestsCount >= 2 ? 'text-orange-600 font-medium' : 'text-gray-500'}`}>
+                            {pendingRequestsCount}/2 pending requests
+                            {pendingRequestsCount >= 2 && (
+                              <span className="ml-1 text-orange-500">⚠️ Max reached</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {totalRequestsCount} total requests
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-500">

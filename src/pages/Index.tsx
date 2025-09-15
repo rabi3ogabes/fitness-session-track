@@ -202,21 +202,24 @@ const Index = () => {
     setIsProcessing(true);
     
     try {
-      // Check if user already has 2 requests
+      // Check if user already has 2 pending requests
       const { data: existingRequests, error: checkError } = await supabase
         .from("membership_requests")
         .select("*")
-        .eq("email", newMember.email);
+        .eq("email", newMember.email)
+        .eq("status", "Pending"); // Only count pending requests
 
       if (checkError) {
         console.error("Error checking existing requests:", checkError);
         // Fall back to localStorage check
         const localRequests = JSON.parse(localStorage.getItem("membershipRequests") || "[]");
-        const userLocalRequests = localRequests.filter((req: any) => req.email === newMember.email);
-        if (userLocalRequests.length >= 2) {
+        const userPendingRequests = localRequests.filter((req: any) => 
+          req.email === newMember.email && (req.status === "Pending" || !req.status)
+        );
+        if (userPendingRequests.length >= 2) {
           toast({
             title: "Request Limit Reached",
-            description: "Maximum 2 membership requests allowed per user.",
+            description: "Maximum 2 pending membership requests allowed per user. Please wait for current requests to be processed.",
             variant: "destructive",
           });
           setIsProcessing(false);
@@ -225,7 +228,7 @@ const Index = () => {
       } else if (existingRequests && existingRequests.length >= 2) {
         toast({
           title: "Request Limit Reached", 
-          description: "Maximum 2 membership requests allowed per user.",
+          description: "Maximum 2 pending membership requests allowed per user. Please wait for current requests to be processed.",
           variant: "destructive",
         });
         setIsProcessing(false);
