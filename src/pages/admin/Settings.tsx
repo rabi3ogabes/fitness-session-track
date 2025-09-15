@@ -42,6 +42,7 @@ const Settings = () => {
     session_request_notifications: true
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [emailLogs, setEmailLogs] = useState<Array<{
     timestamp: string;
@@ -406,9 +407,25 @@ const Settings = () => {
       return;
     }
 
+    setIsTestingWhatsapp(true);
+
     try {
+      console.log('Testing WhatsApp with settings:', {
+        instanceId: whatsappSettings.instance_id,
+        hasToken: !!whatsappSettings.api_token,
+        phoneNumbers: whatsappSettings.phone_numbers
+      });
+
       const phoneNumbers = whatsappSettings.phone_numbers.split(',').map(num => num.trim());
       
+      console.log('Calling supabase function with data:', {
+        userName: "Test User",
+        userEmail: "test@example.com",
+        phoneNumbers: phoneNumbers,
+        apiToken: whatsappSettings.api_token,
+        instanceId: whatsappSettings.instance_id
+      });
+
       const { data, error } = await supabase.functions.invoke('send-whatsapp-notification', {
         body: {
           userName: "Test User",
@@ -419,21 +436,40 @@ const Settings = () => {
         }
       });
 
+      console.log('Supabase function response:', { data, error });
+
       if (error) {
+        console.error('Supabase function error:', error);
         throw error;
       }
 
       toast({
         title: "Test WhatsApp sent",
-        description: "Test WhatsApp notification sent successfully!",
+        description: data?.message || "Test WhatsApp notification sent successfully!",
       });
     } catch (error) {
       console.error('Test WhatsApp error:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // Check for specific error types
+      if (errorMessage.includes('NetworkError') || errorMessage.includes('Failed to send a request')) {
+        errorMessage = 'Network connection issue. Please check your internet connection and try again.';
+      } else if (errorMessage.includes('CORS')) {
+        errorMessage = 'CORS error. The WhatsApp service may be temporarily unavailable.';
+      }
+      
       toast({
         title: "Test failed",
-        description: `Failed to send test WhatsApp: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: `Failed to send test WhatsApp: ${errorMessage}`,
         variant: "destructive",
       });
+    } finally {
+      setIsTestingWhatsapp(false);
     }
   };
 
@@ -790,10 +826,11 @@ const Settings = () => {
                     <Button 
                       onClick={handleTestWhatsapp} 
                       variant="outline" 
+                      disabled={isTestingWhatsapp}
                       className="flex items-center gap-2"
                     >
                       <Send className="h-4 w-4" />
-                      Test WhatsApp
+                      {isTestingWhatsapp ? "Testing..." : "Test WhatsApp"}
                     </Button>
                   </div>
                 )}
