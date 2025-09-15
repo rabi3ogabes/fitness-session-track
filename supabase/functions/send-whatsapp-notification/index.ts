@@ -14,24 +14,40 @@ interface WhatsAppRequest {
 }
 
 serve(async (req) => {
+  console.log('=== WhatsApp notification function called ===');
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('WhatsApp notification function called');
+    console.log('Processing POST request for WhatsApp notification');
     
     if (req.method === 'POST') {
-      const { userName, userEmail, phoneNumbers, apiToken, instanceId }: WhatsAppRequest = await req.json();
+      const requestBody = await req.json();
+      console.log('Request body received:', requestBody);
       
-      console.log('Processing WhatsApp notification for:', { userName, userEmail, phoneCount: phoneNumbers.length });
+      const { userName, userEmail, phoneNumbers, apiToken, instanceId }: WhatsAppRequest = requestBody;
+      
+      console.log('Processing WhatsApp notification for:', { 
+        userName, 
+        userEmail, 
+        phoneCount: phoneNumbers?.length || 0,
+        hasApiToken: !!apiToken,
+        hasInstanceId: !!instanceId
+      });
 
       if (!apiToken || !instanceId) {
+        console.error('Missing API credentials');
         throw new Error('WhatsApp API token and instance ID are required');
       }
 
       if (!phoneNumbers || phoneNumbers.length === 0) {
+        console.error('Missing phone numbers');
         throw new Error('At least one phone number is required');
       }
 
@@ -42,6 +58,7 @@ serve(async (req) => {
                     `📅 Date: ${new Date().toLocaleString()}\n\n` +
                     `Please welcome our new member! 💪`;
 
+      console.log('Prepared message:', message);
       const results = [];
 
       // Send message to each phone number using Green API
@@ -53,17 +70,26 @@ serve(async (req) => {
           const cleanPhoneNumber = phoneNumber.replace(/[^0-9]/g, ''); // Remove any formatting
           const apiUrl = `https://api.green-api.com/waInstance${instanceId}/sendMessage/${apiToken}`;
           
+          console.log(`API URL: ${apiUrl}`);
+          console.log(`Clean phone number: ${cleanPhoneNumber}`);
+          
+          const requestData = {
+            chatId: `${cleanPhoneNumber}@c.us`,
+            message: message
+          };
+          
+          console.log('Sending request data:', requestData);
+          
           const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              chatId: `${cleanPhoneNumber}@c.us`,
-              message: message
-            })
+            body: JSON.stringify(requestData)
           });
 
+          console.log(`Response status: ${response.status}`);
+          
           if (response.ok) {
             const result = await response.json();
             console.log(`WhatsApp sent successfully to ${phoneNumber}:`, result);
@@ -91,6 +117,8 @@ serve(async (req) => {
         }
       }
 
+      console.log('Final results:', results);
+
       return new Response(
         JSON.stringify({
           success: true,
@@ -104,6 +132,7 @@ serve(async (req) => {
       );
     }
 
+    console.log('Method not allowed:', req.method);
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
       {
