@@ -510,6 +510,7 @@ const UserMembership = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Date</TableHead>
+                    <TableHead>Sessions</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
@@ -520,6 +521,17 @@ const UserMembership = () => {
                     paymentHistory.map((payment) => (
                       <TableRow key={payment.id}>
                         <TableCell>{formatQatarDateTime(payment.date)}</TableCell>
+                        <TableCell className="font-medium">
+                          {(() => {
+                            // Get sessions from payment data or lookup from membership types
+                            if (payment.sessions) {
+                              return payment.sessions;
+                            }
+                            const membershipType = dbMembershipTypes.find(m => m.name === (payment.type || payment.membership)) ||
+                                                   membershipTypes.find(m => m.name === (payment.type || payment.membership));
+                            return membershipType ? membershipType.sessions : 'N/A';
+                          })()}
+                        </TableCell>
                         <TableCell className="font-medium">
                           {payment.type || payment.membership}
                         </TableCell>
