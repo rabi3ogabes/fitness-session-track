@@ -39,7 +39,12 @@ const Settings = () => {
     phone_numbers: "",
     signup_notifications: true,
     booking_notifications: true,
-    session_request_notifications: true
+    session_request_notifications: true,
+    templates: {
+      signup: "🎉 New member signup!\n\nName: {userName}\nEmail: {userEmail}\nMembership: {membershipType}\nJoined: {joinDate}\n\nWelcome to our gym family! 💪",
+      booking: "📅 New class booking!\n\nMember: {userName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nSee you at the gym! 🏋️‍♂️",
+      session_request: "🔔 Session balance request!\n\nMember: {userName}\nCurrent Balance: {currentSessions}\nRequested: {requestedSessions}\nReason: {reason}\n\nPlease review and approve."
+    }
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
@@ -319,7 +324,12 @@ const Settings = () => {
         phone_numbers: parsed.phone_numbers || "",
         signup_notifications: parsed.signup_notifications ?? true,
         booking_notifications: parsed.booking_notifications ?? true,
-        session_request_notifications: parsed.session_request_notifications ?? true
+        session_request_notifications: parsed.session_request_notifications ?? true,
+        templates: parsed.templates || {
+          signup: "🎉 New member signup!\n\nName: {userName}\nEmail: {userEmail}\nMembership: {membershipType}\nJoined: {joinDate}\n\nWelcome to our gym family! 💪",
+          booking: "📅 New class booking!\n\nMember: {userName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nSee you at the gym! 🏋️‍♂️",
+          session_request: "🔔 Session balance request!\n\nMember: {userName}\nCurrent Balance: {currentSessions}\nRequested: {requestedSessions}\nReason: {reason}\n\nPlease review and approve."
+        }
       });
     }
   };
@@ -811,6 +821,81 @@ const Settings = () => {
                               checked={whatsappSettings.session_request_notifications}
                               onCheckedChange={(checked) => setWhatsappSettings(prev => ({ ...prev, session_request_notifications: checked }))}
                             />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-base font-medium">Message Templates</Label>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Customize the WhatsApp message templates. Available variables: {"{userName}"}, {"{userEmail}"}, {"{membershipType}"}, {"{joinDate}"}, {"{className}"}, {"{classDate}"}, {"{classTime}"}, {"{trainerName}"}, {"{currentSessions}"}, {"{requestedSessions}"}, {"{reason}"}
+                        </p>
+                        
+                        <div className="space-y-6">
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <Label htmlFor="signup-template">New Member Signup Template</Label>
+                              <span className="text-xs text-muted-foreground">
+                                {whatsappSettings.signup_notifications ? "Enabled" : "Disabled"}
+                              </span>
+                            </div>
+                            <Textarea
+                              id="signup-template"
+                              value={whatsappSettings.templates.signup}
+                              onChange={(e) => setWhatsappSettings(prev => ({
+                                ...prev,
+                                templates: { ...prev.templates, signup: e.target.value }
+                              }))}
+                              placeholder="Enter your signup notification template..."
+                              className="min-h-[100px] resize-none"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Variables: {"{userName}"}, {"{userEmail}"}, {"{membershipType}"}, {"{joinDate}"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <Label htmlFor="booking-template">Class Booking Template</Label>
+                              <span className="text-xs text-muted-foreground">
+                                {whatsappSettings.booking_notifications ? "Enabled" : "Disabled"}
+                              </span>
+                            </div>
+                            <Textarea
+                              id="booking-template"
+                              value={whatsappSettings.templates.booking}
+                              onChange={(e) => setWhatsappSettings(prev => ({
+                                ...prev,
+                                templates: { ...prev.templates, booking: e.target.value }
+                              }))}
+                              placeholder="Enter your booking notification template..."
+                              className="min-h-[100px] resize-none"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Variables: {"{userName}"}, {"{className}"}, {"{classDate}"}, {"{classTime}"}, {"{trainerName}"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <Label htmlFor="session-request-template">Session Request Template</Label>
+                              <span className="text-xs text-muted-foreground">
+                                {whatsappSettings.session_request_notifications ? "Enabled" : "Disabled"}
+                              </span>
+                            </div>
+                            <Textarea
+                              id="session-request-template"
+                              value={whatsappSettings.templates.session_request}
+                              onChange={(e) => setWhatsappSettings(prev => ({
+                                ...prev,
+                                templates: { ...prev.templates, session_request: e.target.value }
+                              }))}
+                              placeholder="Enter your session request notification template..."
+                              className="min-h-[100px] resize-none"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Variables: {"{userName}"}, {"{currentSessions}"}, {"{requestedSessions}"}, {"{reason}"}
+                            </p>
                           </div>
                         </div>
                       </div>
