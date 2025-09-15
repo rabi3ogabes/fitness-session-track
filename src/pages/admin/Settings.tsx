@@ -25,12 +25,12 @@ import {
 const Settings = () => {
   const [cancellationHours, setCancellationHours] = useState(4);
   const [emailSettings, setEmailSettings] = useState({
-    notificationEmail: "",
-    fromEmail: "",
-    fromName: "",
-    notifySignup: true,
-    notifyBooking: true,
-    notifySessionRequest: true
+    notification_email: "",
+    from_email: "",
+    from_name: "",
+    signup_notifications: true,
+    booking_notifications: true,
+    session_request_notifications: true
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
@@ -192,7 +192,7 @@ const Settings = () => {
 
   const handleTestEmail = async () => {
     // Validate required fields
-    if (!emailSettings.notificationEmail) {
+    if (!emailSettings.notification_email) {
       toast({
         title: "Error",
         description: "Please enter a notification email address.",
@@ -208,9 +208,9 @@ const Settings = () => {
         body: {
           userEmail: "test@example.com",
           userName: "Test User",
-          notificationEmail: emailSettings.notificationEmail,
-          fromEmail: emailSettings.fromEmail,
-          fromName: emailSettings.fromName
+          notificationEmail: emailSettings.notification_email,
+          fromEmail: emailSettings.from_email,
+          fromName: emailSettings.from_name
         }
       });
 
@@ -242,16 +242,16 @@ const Settings = () => {
       const { data, error } = await supabase
         .from('admin_notification_settings')
         .select('*')
-        .single();
+        .maybeSingle();
 
       if (data && !error) {
         setEmailSettings({
-          fromEmail: data.from_email || "",
-          fromName: data.from_name || "",
-          notificationEmail: data.notification_email || "",
-          notifySignup: data.notify_signup ?? true,
-          notifyBooking: data.notify_booking ?? true,
-          notifySessionRequest: data.notify_session_request ?? true
+          from_email: data.from_email || "",
+          from_name: data.from_name || "",
+          notification_email: data.notification_email || "",
+          signup_notifications: data.signup_notifications ?? true,
+          booking_notifications: data.booking_notifications ?? true,
+          session_request_notifications: data.session_request_notifications ?? true
         });
       } else {
         // Fallback to local storage if no database settings
@@ -259,12 +259,12 @@ const Settings = () => {
         if (savedEmailSettings) {
           const parsed = JSON.parse(savedEmailSettings);
           setEmailSettings({
-            fromEmail: parsed.fromEmail || "",
-            fromName: parsed.fromName || "",
-            notificationEmail: parsed.notificationEmail || "",
-            notifySignup: parsed.notifySignup ?? true,
-            notifyBooking: parsed.notifyBooking ?? true,
-            notifySessionRequest: parsed.notifySessionRequest ?? true
+            from_email: parsed.from_email || parsed.fromEmail || "",
+            from_name: parsed.from_name || parsed.fromName || "",
+            notification_email: parsed.notification_email || parsed.notificationEmail || "",
+            signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
+            booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
+            session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true
           });
         }
       }
@@ -275,12 +275,12 @@ const Settings = () => {
       if (savedEmailSettings) {
         const parsed = JSON.parse(savedEmailSettings);
         setEmailSettings({
-          fromEmail: parsed.fromEmail || "",
-          fromName: parsed.fromName || "",
-          notificationEmail: parsed.notificationEmail || "",
-          notifySignup: parsed.notifySignup ?? true,
-          notifyBooking: parsed.notifyBooking ?? true,
-          notifySessionRequest: parsed.notifySessionRequest ?? true
+          from_email: parsed.from_email || parsed.fromEmail || "",
+          from_name: parsed.from_name || parsed.fromName || "",
+          notification_email: parsed.notification_email || parsed.notificationEmail || "",
+          signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
+          booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
+          session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true
         });
       }
     }
@@ -295,18 +295,12 @@ const Settings = () => {
         .single();
 
       const settingsData = {
-        notification_email: emailSettings.notificationEmail,
-        from_email: emailSettings.fromEmail,
-        from_name: emailSettings.fromName || 'Gym System',
-        notify_signup: emailSettings.notifySignup,
-        notify_booking: emailSettings.notifyBooking,
-        notify_session_request: emailSettings.notifySessionRequest,
-        // Keep legacy SMTP fields for database compatibility but set to null
-        smtp_host: null,
-        smtp_port: null,
-        smtp_username: null,
-        smtp_password: null,
-        use_ssl: null
+        notification_email: emailSettings.notification_email,
+        from_email: emailSettings.from_email,
+        from_name: emailSettings.from_name || 'Gym System',
+        signup_notifications: emailSettings.signup_notifications,
+        booking_notifications: emailSettings.booking_notifications,
+        session_request_notifications: emailSettings.session_request_notifications
       };
 
       let result;
@@ -596,8 +590,8 @@ const Settings = () => {
                       id="notification-email"
                       type="email"
                       placeholder="admin@yourgym.com"
-                      value={emailSettings.notificationEmail}
-                      onChange={(e) => setEmailSettings(prev => ({ ...prev, notificationEmail: e.target.value }))}
+                      value={emailSettings.notification_email}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, notification_email: e.target.value }))}
                     />
                     <p className="text-sm text-muted-foreground mt-1">
                       Email address to receive system notifications
@@ -611,8 +605,8 @@ const Settings = () => {
                         id="from-email"
                         type="email"
                         placeholder="noreply@yourgym.com"
-                        value={emailSettings.fromEmail}
-                        onChange={(e) => setEmailSettings(prev => ({ ...prev, fromEmail: e.target.value }))}
+                        value={emailSettings.from_email}
+                        onChange={(e) => setEmailSettings(prev => ({ ...prev, from_email: e.target.value }))}
                       />
                       <p className="text-sm text-muted-foreground mt-1">
                         Leave empty to use default Resend sender
@@ -625,8 +619,8 @@ const Settings = () => {
                         id="from-name"
                         type="text"
                         placeholder="Your Gym Name"
-                        value={emailSettings.fromName}
-                        onChange={(e) => setEmailSettings(prev => ({ ...prev, fromName: e.target.value }))}
+                        value={emailSettings.from_name}
+                        onChange={(e) => setEmailSettings(prev => ({ ...prev, from_name: e.target.value }))}
                       />
                     </div>
                   </div>
@@ -641,8 +635,8 @@ const Settings = () => {
                         </div>
                         <Switch
                           id="notify-signup"
-                          checked={emailSettings.notifySignup}
-                          onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, notifySignup: checked }))}
+                          checked={emailSettings.signup_notifications}
+                          onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, signup_notifications: checked }))}
                         />
                       </div>
 
@@ -653,8 +647,8 @@ const Settings = () => {
                         </div>
                         <Switch
                           id="notify-booking"
-                          checked={emailSettings.notifyBooking}
-                          onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, notifyBooking: checked }))}
+                          checked={emailSettings.booking_notifications}
+                          onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, booking_notifications: checked }))}
                         />
                       </div>
 
@@ -665,8 +659,8 @@ const Settings = () => {
                         </div>
                         <Switch
                           id="notify-session-request"
-                          checked={emailSettings.notifySessionRequest}
-                          onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, notifySessionRequest: checked }))}
+                          checked={emailSettings.session_request_notifications}
+                          onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, session_request_notifications: checked }))}
                         />
                       </div>
                     </div>

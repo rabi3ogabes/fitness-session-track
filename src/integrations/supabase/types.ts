@@ -16,52 +16,37 @@ export type Database = {
     Tables: {
       admin_notification_settings: {
         Row: {
+          booking_notifications: boolean
           created_at: string
-          from_email: string
-          from_name: string
+          from_email: string | null
+          from_name: string | null
           id: string
           notification_email: string
-          notify_booking: boolean
-          notify_session_request: boolean
-          notify_signup: boolean
-          smtp_host: string
-          smtp_password: string
-          smtp_port: number
-          smtp_username: string
+          session_request_notifications: boolean
+          signup_notifications: boolean
           updated_at: string
-          use_ssl: boolean
         }
         Insert: {
+          booking_notifications?: boolean
           created_at?: string
-          from_email: string
-          from_name?: string
+          from_email?: string | null
+          from_name?: string | null
           id?: string
           notification_email: string
-          notify_booking?: boolean
-          notify_session_request?: boolean
-          notify_signup?: boolean
-          smtp_host: string
-          smtp_password: string
-          smtp_port?: number
-          smtp_username: string
+          session_request_notifications?: boolean
+          signup_notifications?: boolean
           updated_at?: string
-          use_ssl?: boolean
         }
         Update: {
+          booking_notifications?: boolean
           created_at?: string
-          from_email?: string
-          from_name?: string
+          from_email?: string | null
+          from_name?: string | null
           id?: string
           notification_email?: string
-          notify_booking?: boolean
-          notify_session_request?: boolean
-          notify_signup?: boolean
-          smtp_host?: string
-          smtp_password?: string
-          smtp_port?: number
-          smtp_username?: string
+          session_request_notifications?: boolean
+          signup_notifications?: boolean
           updated_at?: string
-          use_ssl?: boolean
         }
         Relationships: []
       }
