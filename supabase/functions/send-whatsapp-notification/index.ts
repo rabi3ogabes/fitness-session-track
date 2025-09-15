@@ -11,6 +11,7 @@ interface WhatsAppRequest {
   phoneNumbers: string[];
   apiToken: string;
   instanceId: string;
+  customMessage?: string; // Optional custom message
 }
 
 serve(async (req) => {
@@ -31,14 +32,15 @@ serve(async (req) => {
       const requestBody = await req.json();
       console.log('Request body received:', requestBody);
       
-      const { userName, userEmail, phoneNumbers, apiToken, instanceId }: WhatsAppRequest = requestBody;
+      const { userName, userEmail, phoneNumbers, apiToken, instanceId, customMessage }: WhatsAppRequest = requestBody;
       
       console.log('Processing WhatsApp notification for:', { 
         userName, 
         userEmail, 
         phoneCount: phoneNumbers?.length || 0,
         hasApiToken: !!apiToken,
-        hasInstanceId: !!instanceId
+        hasInstanceId: !!instanceId,
+        hasCustomMessage: !!customMessage
       });
 
       if (!apiToken || !instanceId) {
@@ -51,8 +53,8 @@ serve(async (req) => {
         throw new Error('At least one phone number is required');
       }
 
-      // Prepare the message
-      const message = `🏋️ New Gym Registration Alert!\n\n` +
+      // Use custom message if provided, otherwise use default
+      const message = customMessage || `🏋️ New Gym Registration Alert!\n\n` +
                     `👤 Name: ${userName}\n` +
                     `📧 Email: ${userEmail}\n` +
                     `📅 Date: ${new Date().toLocaleString()}\n\n` +

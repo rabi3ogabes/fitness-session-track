@@ -525,6 +525,44 @@ const ClassCalendar = () => {
       // Refresh user data to update session balance
       await fetchUserData();
 
+      // Send WhatsApp notification if enabled
+      try {
+        const whatsappSettings = localStorage.getItem("whatsappSettings");
+        if (whatsappSettings) {
+          const settings = JSON.parse(whatsappSettings);
+          if (settings.enabled && settings.booking_notifications && 
+              settings.instance_id && settings.api_token && settings.phone_numbers) {
+            
+            const phoneNumbers = settings.phone_numbers.split(',').map(num => num.trim());
+            const template = settings.templates?.booking || 
+              "📅 New class booking!\n\nMember: {userName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nSee you at the gym! 🏋️‍♂️";
+
+            // Replace template variables
+            const message = template
+              .replace(/{userName}/g, memberData.name || 'Unknown')
+              .replace(/{className}/g, selectedClass.name || 'Unknown Class')
+              .replace(/{classDate}/g, format(new Date(selectedClass.schedule), 'MMM d, yyyy'))
+              .replace(/{classTime}/g, `${selectedClass.start_time} - ${selectedClass.end_time}`)
+              .replace(/{trainerName}/g, selectedClass.trainer || 'TBD');
+
+            console.log('Sending booking WhatsApp notification...');
+            await supabase.functions.invoke('send-whatsapp-notification', {
+              body: {
+                userName: memberData.name,
+                userEmail: user.email,
+                phoneNumbers: phoneNumbers,
+                apiToken: settings.api_token,
+                instanceId: settings.instance_id,
+                customMessage: message
+              }
+            });
+          }
+        }
+      } catch (whatsappError) {
+        console.error("Failed to send booking WhatsApp notification:", whatsappError);
+        // Don't fail the booking if WhatsApp fails
+      }
+
       toast({
         title: "Class booked successfully!",
         description: `You've booked ${selectedClass.name}.`,
