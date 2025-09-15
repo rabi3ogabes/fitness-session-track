@@ -204,6 +204,9 @@ const Settings = () => {
     setIsTestingEmail(true);
     
     try {
+      console.log("About to invoke edge function...");
+      console.log("Email settings:", emailSettings);
+      
       const { data, error } = await supabase.functions.invoke('send-email-notification', {
         body: {
           userEmail: "test@example.com",
@@ -214,7 +217,10 @@ const Settings = () => {
         }
       });
 
+      console.log("Edge function response:", { data, error });
+
       if (error) {
+        console.error("Edge function error details:", error);
         throw error;
       }
 

@@ -8,6 +8,7 @@ console.log("Resend API Key configured:", !!Deno.env.get("RESEND_API_KEY"));
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 interface EmailNotificationRequest {
@@ -30,10 +31,14 @@ interface EmailLogEntry {
 const emailLogs: EmailLogEntry[] = [];
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("Email notification function called:", req.method, req.url);
+  console.log("=== Email notification function called ===");
+  console.log("Method:", req.method);
+  console.log("URL:", req.url);
+  console.log("Headers:", Object.fromEntries(req.headers.entries()));
   
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS request");
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -55,10 +60,28 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Handle POST request for sending emails
     if (req.method === 'POST') {
-      const { userEmail, userName, userPhone, notificationEmail, fromEmail, fromName }: EmailNotificationRequest = await req.json();
+      console.log("Processing POST request for email sending");
+      
+      let requestBody;
+      try {
+        requestBody = await req.json();
+        console.log("Request body received:", requestBody);
+      } catch (parseError) {
+        console.error("Failed to parse request body:", parseError);
+        return new Response(
+          JSON.stringify({ error: 'Invalid JSON in request body' }),
+          { 
+            status: 400, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+          }
+        );
+      }
+
+      const { userEmail, userName, userPhone, notificationEmail, fromEmail, fromName }: EmailNotificationRequest = requestBody;
 
       // Validate required fields
       if (!notificationEmail) {
+        console.error("Validation failed: notificationEmail is required");
         const logEntry: EmailLogEntry = {
           timestamp: new Date().toISOString(),
           to: 'unknown',
@@ -127,7 +150,9 @@ const handler = async (req: Request): Promise<Response> => {
         `;
 
       try {
-        console.log(`Sending email to: ${notificationEmail}`);
+        console.log(`Attempting to send email to: ${notificationEmail}`);
+        console.log(`From: ${fromEmail && fromName ? `${fromName} <${fromEmail}>` : "Gym Management <onboarding@resend.dev>"}`);
+        console.log(`Subject: ${emailSubject}`);
         
         const emailResponse = await resend.emails.send({
           from: fromEmail && fromName ? `${fromName} <${fromEmail}>` : "Gym Management <onboarding@resend.dev>",
@@ -198,6 +223,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Method not allowed
+    console.log(`Method ${req.method} not allowed`);
     return new Response(
       JSON.stringify({ error: `Method ${req.method} not allowed` }),
       { 
@@ -207,7 +233,10 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
   } catch (error: any) {
-    console.error("Unexpected error in email function:", error);
+    console.error("=== UNEXPECTED ERROR ===");
+    console.error("Error details:", error);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
     
     // Log the failed request
     const logEntry: EmailLogEntry = {
@@ -222,7 +251,8 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         error: "Internal server error",
-        details: error.message || 'Unknown error'
+        details: error.message || 'Unknown error',
+        timestamp: new Date().toISOString()
       }),
       {
         status: 500,
