@@ -151,7 +151,18 @@ serve(async (req: Request): Promise<Response> => {
         );
       }
 
-      if (!smtpSettings || !smtpSettings.smtpHost || !smtpSettings.smtpUsername || !smtpSettings.smtpPassword) {
+      // Map frontend field names to expected backend field names
+      const mappedSmtpSettings = {
+        smtpHost: smtpSettings.smtpHost,
+        smtpPort: smtpSettings.smtpPort || '587',
+        smtpUsername: smtpSettings.smtpUsername,
+        smtpPassword: smtpSettings.smtpPassword,
+        fromEmail: smtpSettings.fromEmail || smtpSettings.smtpUsername,
+        fromName: smtpSettings.fromName || 'Gym Management System',
+        useSsl: smtpSettings.useSsl !== false
+      };
+
+      if (!mappedSmtpSettings.smtpHost || !mappedSmtpSettings.smtpUsername || !mappedSmtpSettings.smtpPassword) {
         console.error('Missing or incomplete SMTP settings');
         const logEntry: EmailLogEntry = {
           timestamp: new Date().toISOString(),
@@ -170,6 +181,9 @@ serve(async (req: Request): Promise<Response> => {
           }
         );
       }
+
+      // Use the mapped settings
+      const finalSmtpSettings = mappedSmtpSettings;
 
       console.log('Validation passed, preparing to send email...');
 
@@ -226,7 +240,7 @@ serve(async (req: Request): Promise<Response> => {
         `;
 
       try {
-        await sendEmail(smtpSettings, notificationEmail, emailSubject, emailBody);
+        await sendEmail(finalSmtpSettings, notificationEmail, emailSubject, emailBody);
         
         // Log successful email
         const logEntry: EmailLogEntry = {
@@ -255,8 +269,8 @@ serve(async (req: Request): Promise<Response> => {
               to: notificationEmail,
               subject: emailSubject,
               timestamp: new Date().toISOString(),
-              smtpHost: smtpSettings.smtpHost,
-              fromEmail: smtpSettings.fromEmail
+              smtpHost: finalSmtpSettings.smtpHost,
+              fromEmail: finalSmtpSettings.fromEmail
             }
           }),
           { 
