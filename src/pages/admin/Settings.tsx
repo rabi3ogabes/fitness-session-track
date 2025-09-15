@@ -575,7 +575,7 @@ const Settings = () => {
                   <CardTitle>Email Notification System</CardTitle>
                 </div>
                 <CardDescription>
-                  Configure SMTP settings for new user registration notifications
+                  Configure email notifications powered by Resend - no SMTP setup required
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
