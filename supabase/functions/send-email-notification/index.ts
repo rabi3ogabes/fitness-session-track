@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const sendgridApiKey = Deno.env.get("SENDGRID_API_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -88,7 +87,7 @@ const handler = async (req: Request): Promise<Response> => {
             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
               <h3 style="margin-top: 0;">Test Details:</h3>
               <ul>
-                <li><strong>Service:</strong> Resend Email API</li>
+                <li><strong>Service:</strong> SendGrid Email API</li>
                 <li><strong>Notification Email:</strong> ${notificationEmail}</li>
                 <li><strong>Test Time:</strong> ${new Date().toLocaleString()}</li>
               </ul>
@@ -100,7 +99,7 @@ const handler = async (req: Request): Promise<Response> => {
               <li>Session balance requests</li>
             </ul>
             <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
-              This email was sent automatically by your gym management system using Resend.
+              This email was sent automatically by your gym management system using SendGrid.
             </p>
           </div>
         `
@@ -127,14 +126,36 @@ const handler = async (req: Request): Promise<Response> => {
       try {
         console.log(`Sending email to: ${notificationEmail}`);
         
-        const emailResponse = await resend.emails.send({
-          from: fromEmail && fromName ? `${fromName} <${fromEmail}>` : "Gym Management <onboarding@resend.dev>",
-          to: [notificationEmail],
-          subject: emailSubject,
-          html: emailBody,
+        const emailData = {
+          personalizations: [{
+            to: [{ email: notificationEmail }],
+            subject: emailSubject
+          }],
+          from: {
+            email: fromEmail || "noreply@gym-management.com",
+            name: fromName || "Gym Management"
+          },
+          content: [{
+            type: "text/html",
+            value: emailBody
+          }]
+        };
+
+        const emailResponse = await fetch('https://api.sendgrid.com/v3/mail/send', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${sendgridApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(emailData),
         });
 
-        console.log("Email sent successfully:", emailResponse);
+        if (!emailResponse.ok) {
+          const error = await emailResponse.text();
+          throw new Error(`SendGrid API error: ${emailResponse.status} - ${error}`);
+        }
+
+        console.log("Email sent successfully via SendGrid");
 
         // Log successful email
         const logEntry: EmailLogEntry = {
@@ -155,10 +176,10 @@ const handler = async (req: Request): Promise<Response> => {
           JSON.stringify({ 
             success: true,
             message: isTestEmail 
-              ? 'Test email sent successfully! Email notifications are working.'
-              : 'New user registration notification sent successfully.',
+              ? 'Test email sent successfully via SendGrid! Email notifications are working.'
+              : 'New user registration notification sent successfully via SendGrid.',
             emailDetails: {
-              id: emailResponse.data?.id,
+              id: `sendgrid-${Date.now()}`,
               to: notificationEmail,
               subject: emailSubject,
               timestamp: new Date().toISOString()
