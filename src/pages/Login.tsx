@@ -33,6 +33,7 @@ const Login = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [logo, setLogo] = useState<string | null>(null);
+  const [appName, setAppName] = useState("FitTrack Pro");
   const [activeTab, setActiveTab] = useState("login");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [supabaseConnected, setSupabaseConnected] = useState(true);
@@ -121,11 +122,17 @@ const Login = () => {
     }
   }, [isAuthenticated, isAdmin, isTrainer, navigate]);
 
-  // Load logo from local storage
+  // Load logo and app name from local storage
   useEffect(() => {
     const savedLogo = localStorage.getItem("gymLogo");
     if (savedLogo) {
       setLogo(savedLogo);
+    }
+    
+    const savedMainPageContent = localStorage.getItem("mainPageContent");
+    if (savedMainPageContent) {
+      const content = JSON.parse(savedMainPageContent);
+      setAppName(content.companyName || "FitTrack Pro");
     }
   }, []);
 
@@ -495,7 +502,7 @@ const Login = () => {
             </div>
           ) : (
             <h2 className="text-3xl font-bold text-gym-blue">
-              FitTrack Pro
+              {appName}
             </h2>
           )}
         </Link>
@@ -503,7 +510,7 @@ const Login = () => {
       
       <div className="max-w-md w-full mx-auto space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-2xl font-bold text-gray-900">Welcome to FitTrack Pro</h2>
+          <h2 className="mt-6 text-2xl font-bold text-gray-900">Welcome to {appName}</h2>
           <div className="mt-2 text-sm text-gray-600">
             <p className="mb-2">
               Login with your credentials or create a new account

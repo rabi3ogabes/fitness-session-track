@@ -81,7 +81,7 @@ const Settings = () => {
     featuresSection: "Our Features",
     testimonialsSection: "What Our Members Say",
     ctaTitle: "Ready to Transform Your Fitness Journey?",
-    ctaDescription: "Join FitTrack Pro today and take control of your fitness goals with our comprehensive gym management system.",
+    ctaDescription: "Join us today and take control of your fitness goals with our comprehensive gym management system.",
     ctaButton: "Get Started Now",
     companyName: "FitTrack Pro",
     copyright: "© 2025 All rights reserved",
@@ -516,7 +516,7 @@ const Settings = () => {
 
   const handleResetToDefaults = () => {
     setMainPageContent({
-      heroTitle: "FitTrack Pro",
+      heroTitle: "Streamlined Gym Management System",
       heroDescription: "The ultimate gym management system for trainers, members, and administrators. Track your fitness journey, manage classes, and achieve your goals.",
       heroImage: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       feature1Title: "Class Booking",
@@ -528,7 +528,7 @@ const Settings = () => {
       featuresSection: "Our Features",
       testimonialsSection: "What Our Members Say",
       ctaTitle: "Ready to Transform Your Fitness Journey?",
-      ctaDescription: "Join FitTrack Pro today and take control of your fitness goals with our comprehensive gym management system.",
+      ctaDescription: "Join us today and take control of your fitness goals with our comprehensive gym management system.",
       ctaButton: "Get Started Now",
       companyName: "FitTrack Pro",
       copyright: "© 2025 All rights reserved",
@@ -1075,6 +1075,32 @@ const Settings = () => {
               </AlertDialogContent>
             </AlertDialog>
           </div>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <Type className="h-5 w-5 text-gym-blue" />
+                <CardTitle>Application Name</CardTitle>
+              </div>
+              <CardDescription>
+                Configure the main application name displayed throughout the system
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="app-name">Application Name</Label>
+                <Input
+                  id="app-name"
+                  value={mainPageContent.companyName}
+                  onChange={(e) => handleMainPageContentChange('companyName', e.target.value)}
+                  placeholder="Enter your application name (e.g. FitTrack Pro)"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  This name will appear in the header, login page, and throughout the application
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

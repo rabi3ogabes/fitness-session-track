@@ -27,19 +27,30 @@ const Sidebar = () => {
   const { isAdmin, isTrainer, logout, user } = useAuth();
   const isMobile = useIsMobile();
   const [logo, setLogo] = useState<string | null>(null);
+  const [appName, setAppName] = useState("GYM SYSTEM");
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    // Load logo from local storage
+    // Load logo and app name from local storage
     const savedLogo = localStorage.getItem("gymLogo");
     if (savedLogo) {
       setLogo(savedLogo);
     }
     
-    // Listen for storage changes (in case logo is updated in settings)
+    const savedMainPageContent = localStorage.getItem("mainPageContent");
+    if (savedMainPageContent) {
+      const content = JSON.parse(savedMainPageContent);
+      setAppName(content.companyName || "GYM SYSTEM");
+    }
+    
+    // Listen for storage changes (in case logo or app name is updated in settings)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "gymLogo") {
         setLogo(e.newValue);
+      }
+      if (e.key === "mainPageContent" && e.newValue) {
+        const content = JSON.parse(e.newValue);
+        setAppName(content.companyName || "GYM SYSTEM");
       }
     };
     
@@ -134,7 +145,7 @@ const Sidebar = () => {
               "text-gym-blue font-bold",
               isMobile ? "text-xl" : "text-2xl"
             )}>
-              {isMobile ? "GM" : "GYM SYSTEM"}
+              {isMobile ? appName.substring(0, 2).toUpperCase() : appName}
             </h2>
           )}
           

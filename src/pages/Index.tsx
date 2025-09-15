@@ -67,7 +67,7 @@ const Index = () => {
   const [showTestimonials, setShowTestimonials] = useState(true);
   const closeDialogRef = useRef<HTMLButtonElement>(null);
   const [content, setContent] = useState<MainPageContent>({
-    heroTitle: "FitTrack Pro",
+    heroTitle: "Streamlined Gym Management System",
     heroDescription: "The ultimate gym management system for trainers, members, and administrators. Track your fitness journey, manage classes, and achieve your goals.",
     heroImage: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
     feature1Title: "Class Booking",
@@ -79,7 +79,7 @@ const Index = () => {
     featuresSection: "Our Features",
     testimonialsSection: "What Our Members Say",
     ctaTitle: "Ready to Transform Your Fitness Journey?",
-    ctaDescription: "Join FitTrack Pro today and take control of your fitness goals with our comprehensive gym management system.",
+    ctaDescription: "Join us today and take control of your fitness goals with our comprehensive gym management system.",
     ctaButton: "Get Started Now",
     companyName: "FitTrack Pro",
     copyright: "© 2025 All rights reserved",
@@ -93,7 +93,7 @@ const Index = () => {
     {
       name: "Sarah Johnson",
       role: "Fitness Enthusiast",
-      comment: "FitTrack Pro has completely transformed how I manage my gym routine. The class booking system is so intuitive!",
+      comment: "This gym management system has completely transformed how I manage my gym routine. The class booking system is so intuitive!",
       image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.0.3"
     },
     {
