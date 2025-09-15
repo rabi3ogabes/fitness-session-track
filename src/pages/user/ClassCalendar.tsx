@@ -142,12 +142,21 @@ interface UserData {
   name: string;
   remainingSessions: number;
   totalSessions: number;
+  email?: string;
 }
 
-// System settings
-const systemSettings = {
-  cancellationTimeLimit: 4, // hours before class starts
+// System settings - get from localStorage with fallback
+const getSystemSettings = () => {
+  const saved = localStorage.getItem('systemSettings');
+  if (saved) {
+    return JSON.parse(saved);
+  }
+  return {
+    cancellationTimeLimit: 4, // hours before class starts
+  };
 };
+
+const systemSettings = getSystemSettings();
 
 const ClassCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -648,6 +657,44 @@ const ClassCalendar = () => {
 
       // Refresh user data to update session balance
       await fetchUserData();
+
+      // Send WhatsApp notification to admin about cancellation
+      try {
+        if (systemSettings.whatsappSettings?.enabled && 
+            systemSettings.whatsappSettings?.api_token && 
+            systemSettings.whatsappSettings?.instance_id && 
+            systemSettings.whatsappSettings?.phone_numbers) {
+          
+          const trainerName = classToCancel.trainer || 'TBD';
+          const classDate = new Date(classToCancel.schedule).toLocaleDateString();
+          const classTimeFormatted = `${classTime}`;
+          
+          let cancelMessage = systemSettings.whatsappSettings?.templates?.cancel || 
+            '❌ Class booking cancelled!\n\nMember: {memberName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nBooking has been cancelled.';
+          
+          // Replace template variables
+          cancelMessage = cancelMessage
+            .replace(/{memberName}/g, userData?.name || 'Unknown')
+            .replace(/{className}/g, className)
+            .replace(/{classDate}/g, classDate)
+            .replace(/{classTime}/g, classTimeFormatted)
+            .replace(/{trainerName}/g, trainerName);
+          
+          await supabase.functions.invoke('send-whatsapp-notification', {
+            body: {
+              userName: userData?.name || 'Unknown',
+              userEmail: userData?.email || user.email || 'unknown@example.com',
+              phoneNumbers: systemSettings.whatsappSettings.phone_numbers.split(',').map(num => num.trim()),
+              apiToken: systemSettings.whatsappSettings.api_token,
+              instanceId: systemSettings.whatsappSettings.instance_id,
+              customMessage: cancelMessage
+            }
+          });
+        }
+      } catch (whatsappError) {
+        console.error('Error sending WhatsApp cancellation notification:', whatsappError);
+        // Don't block the cancellation if WhatsApp fails
+      }
 
       toast({
         title: "Class cancelled",

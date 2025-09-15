@@ -43,7 +43,8 @@ const Settings = () => {
     templates: {
       signup: "🎉 New member signup!\n\nName: {userName}\nEmail: {userEmail}\nMembership: {membershipType}\nJoined: {joinDate}\n\nWelcome to our gym family! 💪",
       booking: "📅 New class booking!\n\nMember: {userName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nSee you at the gym! 🏋️‍♂️",
-      session_request: "🔔 Session balance request!\n\nMember: {userName}\nCurrent Balance: {currentSessions}\nRequested: {requestedSessions}\nReason: {reason}\n\nPlease review and approve."
+      session_request: "🔔 Session balance request!\n\nMember: {userName}\nCurrent Balance: {currentSessions}\nRequested: {requestedSessions}\nReason: {reason}\n\nPlease review and approve.",
+      cancel: "❌ Class booking cancelled!\n\nMember: {memberName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nBooking has been cancelled."
     }
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -176,6 +177,13 @@ const Settings = () => {
 
     // Save WhatsApp settings to localStorage
     localStorage.setItem("whatsappSettings", JSON.stringify(whatsappSettings));
+
+    // Save system settings (for component compatibility)
+    const systemSettings = {
+      cancellationTimeLimit: cancellationHours,
+      whatsappSettings: whatsappSettings
+    };
+    localStorage.setItem("systemSettings", JSON.stringify(systemSettings));
 
     // Save other settings to localStorage
     localStorage.setItem("cancellationHours", cancellationHours.toString());
@@ -895,6 +903,28 @@ const Settings = () => {
                             />
                             <p className="text-xs text-muted-foreground mt-1">
                               Variables: {"{userName}"}, {"{currentSessions}"}, {"{requestedSessions}"}, {"{reason}"}
+                            </p>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <Label htmlFor="cancel-template">Cancellation Template</Label>
+                              <span className="text-xs text-muted-foreground">
+                                Always Enabled
+                              </span>
+                            </div>
+                            <Textarea
+                              id="cancel-template"
+                              value={whatsappSettings.templates.cancel}
+                              onChange={(e) => setWhatsappSettings(prev => ({
+                                ...prev,
+                                templates: { ...prev.templates, cancel: e.target.value }
+                              }))}
+                              placeholder="Enter your cancellation notification template..."
+                              className="min-h-[100px] resize-none"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Variables: {"{memberName}"}, {"{className}"}, {"{classDate}"}, {"{classTime}"}, {"{trainerName}"}
                             </p>
                           </div>
                         </div>
