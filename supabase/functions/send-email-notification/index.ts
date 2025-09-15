@@ -18,6 +18,14 @@ interface EmailNotificationRequest {
   notificationEmail: string;
   fromEmail?: string;
   fromName?: string;
+  bookingDetails?: {
+    className: string;
+    schedule: string;
+    startTime: string;
+    endTime: string;
+    trainer: string;
+    location: string;
+  };
 }
 
 interface EmailLogEntry {
@@ -77,7 +85,7 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      const { userEmail, userName, userPhone, notificationEmail, fromEmail, fromName }: EmailNotificationRequest = requestBody;
+      const { userEmail, userName, userPhone, notificationEmail, fromEmail, fromName, bookingDetails }: EmailNotificationRequest = requestBody;
 
       // Validate required fields
       if (!notificationEmail) {
@@ -101,12 +109,14 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       const isTestEmail = userEmail === 'test@example.com';
-      const emailSubject = isTestEmail 
-        ? 'Email Test - Configuration Successful'
-        : `New User Registration: ${userName}`;
+      const isBookingNotification = !!bookingDetails;
+      
+      let emailSubject: string;
+      let emailBody: string;
 
-      const emailBody = isTestEmail 
-        ? `
+      if (isTestEmail) {
+        emailSubject = 'Email Test - Configuration Successful';
+        emailBody = `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
             <h2 style="color: #2563eb;">✅ Email Configuration Test Successful!</h2>
             <p>Congratulations! Your email notification system is working correctly.</p>
@@ -128,8 +138,41 @@ const handler = async (req: Request): Promise<Response> => {
               This email was sent automatically by your gym management system using Resend.
             </p>
           </div>
-        `
-        : `
+        `;
+      } else if (isBookingNotification) {
+        emailSubject = `New Class Booking: ${bookingDetails!.className}`;
+        emailBody = `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #2563eb;">📅 New Class Booking</h2>
+            <p>A member has booked a new class session.</p>
+            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Member Details:</h3>
+              <ul>
+                <li><strong>Name:</strong> ${userName}</li>
+                <li><strong>Email:</strong> ${userEmail}</li>
+                ${userPhone ? `<li><strong>Phone:</strong> ${userPhone}</li>` : ''}
+              </ul>
+            </div>
+            <div style="background-color: #e0f2fe; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Class Details:</h3>
+              <ul>
+                <li><strong>Class:</strong> ${bookingDetails!.className}</li>
+                <li><strong>Date:</strong> ${new Date(bookingDetails!.schedule).toLocaleDateString()}</li>
+                <li><strong>Time:</strong> ${bookingDetails!.startTime} - ${bookingDetails!.endTime}</li>
+                <li><strong>Trainer:</strong> ${bookingDetails!.trainer}</li>
+                <li><strong>Location:</strong> ${bookingDetails!.location}</li>
+                <li><strong>Booking Date:</strong> ${new Date().toLocaleString()}</li>
+              </ul>
+            </div>
+            <p>Please review the new booking in your admin dashboard.</p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              This email was sent automatically by your gym management system.
+            </p>
+          </div>
+        `;
+      } else {
+        emailSubject = `New User Registration: ${userName}`;
+        emailBody = `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
             <h2 style="color: #2563eb;">🎉 New User Registration</h2>
             <p>A new member has registered for your gym management system.</p>
@@ -148,6 +191,7 @@ const handler = async (req: Request): Promise<Response> => {
             </p>
           </div>
         `;
+      }
 
       try {
         console.log(`Attempting to send email to: ${notificationEmail}`);

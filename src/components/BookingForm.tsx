@@ -164,6 +164,53 @@ const BookingForm = ({
       });
 
       if (error) throw error;
+
+      // Send email notification if enabled
+      try {
+        // Get admin notification settings
+        const { data: adminSettings } = await supabase
+          .from("admin_notification_settings")
+          .select("*")
+          .single();
+
+        if (adminSettings?.booking_notifications && adminSettings?.notification_email) {
+          // Get user profile
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("name, email, phone_number")
+            .eq("id", user.id)
+            .single();
+
+          // Get class details
+          const classData = unbookedClasses.find(cls => cls.id === selectedClass);
+
+          if (profile && classData) {
+            console.log("Sending booking notification email...");
+            await supabase.functions.invoke('send-email-notification', {
+              body: {
+                userEmail: profile.email,
+                userName: profile.name,
+                userPhone: profile.phone_number,
+                notificationEmail: adminSettings.notification_email,
+                fromEmail: adminSettings.from_email,
+                fromName: adminSettings.from_name,
+                bookingDetails: {
+                  className: classData.name,
+                  schedule: classData.schedule,
+                  startTime: classData.start_time,
+                  endTime: classData.end_time,
+                  trainer: classData.trainer,
+                  location: classData.location
+                }
+              }
+            });
+          }
+        }
+      } catch (emailError) {
+        console.error("Failed to send booking notification:", emailError);
+        // Don't fail the booking if email fails
+      }
+
       setAvailableClasses((prevClasses) =>
         prevClasses.map((cls) =>
           cls.id === selectedClass ? { ...cls, isBooked: true } : cls
