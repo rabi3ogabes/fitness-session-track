@@ -25,14 +25,9 @@ import {
 const Settings = () => {
   const [cancellationHours, setCancellationHours] = useState(4);
   const [emailSettings, setEmailSettings] = useState({
-    smtpHost: "",
-    smtpPort: "587",
-    smtpUsername: "",
-    smtpPassword: "",
+    notificationEmail: "",
     fromEmail: "",
     fromName: "",
-    useSsl: true,
-    notificationEmail: "",
     notifySignup: true,
     notifyBooking: true,
     notifySessionRequest: true
@@ -197,15 +192,6 @@ const Settings = () => {
 
   const handleTestEmail = async () => {
     // Validate required fields
-    if (!emailSettings.smtpHost || !emailSettings.smtpUsername || !emailSettings.smtpPassword) {
-      toast({
-        title: "Error",
-        description: "Please fill in all SMTP configuration fields.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!emailSettings.notificationEmail) {
       toast({
         title: "Error",
@@ -260,13 +246,8 @@ const Settings = () => {
 
       if (data && !error) {
         setEmailSettings({
-          smtpHost: data.smtp_host || "",
-          smtpPort: data.smtp_port?.toString() || "587",
-          smtpUsername: data.smtp_username || "",
-          smtpPassword: data.smtp_password || "",
           fromEmail: data.from_email || "",
           fromName: data.from_name || "",
-          useSsl: data.use_ssl ?? true,
           notificationEmail: data.notification_email || "",
           notifySignup: data.notify_signup ?? true,
           notifyBooking: data.notify_booking ?? true,
@@ -278,7 +259,9 @@ const Settings = () => {
         if (savedEmailSettings) {
           const parsed = JSON.parse(savedEmailSettings);
           setEmailSettings({
-            ...parsed,
+            fromEmail: parsed.fromEmail || "",
+            fromName: parsed.fromName || "",
+            notificationEmail: parsed.notificationEmail || "",
             notifySignup: parsed.notifySignup ?? true,
             notifyBooking: parsed.notifyBooking ?? true,
             notifySessionRequest: parsed.notifySessionRequest ?? true
@@ -292,7 +275,9 @@ const Settings = () => {
       if (savedEmailSettings) {
         const parsed = JSON.parse(savedEmailSettings);
         setEmailSettings({
-          ...parsed,
+          fromEmail: parsed.fromEmail || "",
+          fromName: parsed.fromName || "",
+          notificationEmail: parsed.notificationEmail || "",
           notifySignup: parsed.notifySignup ?? true,
           notifyBooking: parsed.notifyBooking ?? true,
           notifySessionRequest: parsed.notifySessionRequest ?? true
@@ -311,16 +296,17 @@ const Settings = () => {
 
       const settingsData = {
         notification_email: emailSettings.notificationEmail,
-        smtp_host: emailSettings.smtpHost,
-        smtp_port: parseInt(emailSettings.smtpPort) || 587,
-        smtp_username: emailSettings.smtpUsername,
-        smtp_password: emailSettings.smtpPassword,
         from_email: emailSettings.fromEmail,
         from_name: emailSettings.fromName || 'Gym System',
-        use_ssl: emailSettings.useSsl,
         notify_signup: emailSettings.notifySignup,
         notify_booking: emailSettings.notifyBooking,
-        notify_session_request: emailSettings.notifySessionRequest
+        notify_session_request: emailSettings.notifySessionRequest,
+        // Keep legacy SMTP fields for database compatibility but set to null
+        smtp_host: null,
+        smtp_port: null,
+        smtp_username: null,
+        smtp_password: null,
+        use_ssl: null
       };
 
       let result;
@@ -593,75 +579,19 @@ const Settings = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="smtp-host">SMTP Host</Label>
-                    <Input
-                      id="smtp-host"
-                      type="text"
-                      placeholder="smtp.gmail.com"
-                      value={emailSettings.smtpHost}
-                      onChange={(e) => setEmailSettings(prev => ({ ...prev, smtpHost: e.target.value }))}
-                    />
+                <div className="space-y-6">
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Send className="h-5 w-5 text-blue-600" />
+                      <span className="font-medium text-blue-900">Powered by Resend</span>
+                    </div>
+                    <p className="text-sm text-blue-700">
+                      No SMTP configuration required. Your emails are handled by Resend's reliable delivery service.
+                    </p>
                   </div>
-
+                  
                   <div>
-                    <Label htmlFor="smtp-port">SMTP Port</Label>
-                    <Input
-                      id="smtp-port"
-                      type="number"
-                      placeholder="587"
-                      value={emailSettings.smtpPort}
-                      onChange={(e) => setEmailSettings(prev => ({ ...prev, smtpPort: e.target.value }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="smtp-username">SMTP Username</Label>
-                    <Input
-                      id="smtp-username"
-                      type="email"
-                      placeholder="your-email@gmail.com"
-                      value={emailSettings.smtpUsername}
-                      onChange={(e) => setEmailSettings(prev => ({ ...prev, smtpUsername: e.target.value }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="smtp-password">SMTP Password</Label>
-                    <Input
-                      id="smtp-password"
-                      type="password"
-                      placeholder="Your app password"
-                      value={emailSettings.smtpPassword}
-                      onChange={(e) => setEmailSettings(prev => ({ ...prev, smtpPassword: e.target.value }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="from-email">From Email</Label>
-                    <Input
-                      id="from-email"
-                      type="email"
-                      placeholder="noreply@yourgym.com"
-                      value={emailSettings.fromEmail}
-                      onChange={(e) => setEmailSettings(prev => ({ ...prev, fromEmail: e.target.value }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="from-name">From Name</Label>
-                    <Input
-                      id="from-name"
-                      type="text"
-                      placeholder="Your Gym Name"
-                      value={emailSettings.fromName}
-                      onChange={(e) => setEmailSettings(prev => ({ ...prev, fromName: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="col-span-1 md:col-span-2">
-                    <Label htmlFor="notification-email">Notification Email</Label>
+                    <Label htmlFor="notification-email">Notification Email *</Label>
                     <Input
                       id="notification-email"
                       type="email"
@@ -674,7 +604,34 @@ const Settings = () => {
                     </p>
                   </div>
 
-                  <div className="col-span-1 md:col-span-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="from-email">From Email (Optional)</Label>
+                      <Input
+                        id="from-email"
+                        type="email"
+                        placeholder="noreply@yourgym.com"
+                        value={emailSettings.fromEmail}
+                        onChange={(e) => setEmailSettings(prev => ({ ...prev, fromEmail: e.target.value }))}
+                      />
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Leave empty to use default Resend sender
+                      </p>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="from-name">From Name (Optional)</Label>
+                      <Input
+                        id="from-name"
+                        type="text"
+                        placeholder="Your Gym Name"
+                        value={emailSettings.fromName}
+                        onChange={(e) => setEmailSettings(prev => ({ ...prev, fromName: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
                     <Label className="text-base font-medium">Notification Types</Label>
                     <div className="space-y-4 mt-3">
                       <div className="flex items-center justify-between">
@@ -713,20 +670,6 @@ const Settings = () => {
                         />
                       </div>
                     </div>
-                  </div>
-
-                  <div className="col-span-1 md:col-span-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="use-ssl"
-                        checked={emailSettings.useSsl}
-                        onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, useSsl: checked }))}
-                      />
-                      <Label htmlFor="use-ssl">Use SSL/TLS</Label>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Enable SSL/TLS encryption for secure email transmission
-                    </p>
                   </div>
                 </div>
 
