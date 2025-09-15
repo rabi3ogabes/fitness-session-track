@@ -660,141 +660,140 @@ const Settings = () => {
             <Card>
               <CardHeader>
                 <div className="flex items-center space-x-2">
-                  <MessageCircle className="h-5 w-5 text-gym-blue" />
-                  <CardTitle>Email Notification System</CardTitle>
+                  <MessageCircle className="h-5 w-5 text-green-600" />
+                  <CardTitle>WhatsApp Notification System</CardTitle>
                 </div>
                 <CardDescription>
-                  Configure email notifications powered by Resend - no SMTP setup required
+                  Configure WhatsApp notifications using Green API - 3000 free messages per month
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-6">
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <div className="flex items-center space-x-2 mb-2">
-                      <Send className="h-5 w-5 text-blue-600" />
-                      <span className="font-medium text-blue-900">Powered by Resend</span>
+                      <Send className="h-5 w-5 text-green-600" />
+                      <span className="font-medium text-green-900">Powered by Green API</span>
                     </div>
-                    <p className="text-sm text-blue-700">
-                      No SMTP configuration required. Your emails are handled by Resend's reliable delivery service.
+                    <p className="text-sm text-green-700">
+                      Free tier includes 3000 messages per month. Sign up at green-api.com to get your credentials.
                     </p>
                   </div>
                   
-                  <div>
-                    <Label htmlFor="notification-email">Notification Email *</Label>
-                    <Input
-                      id="notification-email"
-                      type="email"
-                      placeholder="admin@yourgym.com"
-                      value={emailSettings.notification_email}
-                      onChange={(e) => setEmailSettings(prev => ({ ...prev, notification_email: e.target.value }))}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="whatsapp-enabled">Enable WhatsApp Notifications</Label>
+                      <p className="text-sm text-muted-foreground">Turn on WhatsApp notifications for your gym</p>
+                    </div>
+                    <Switch
+                      id="whatsapp-enabled"
+                      checked={whatsappSettings.enabled}
+                      onCheckedChange={(checked) => setWhatsappSettings(prev => ({ ...prev, enabled: checked }))}
                     />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Email address to receive system notifications
-                    </p>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="from-email">From Email (Optional)</Label>
-                      <Input
-                        id="from-email"
-                        type="email"
-                        placeholder="noreply@yourgym.com"
-                        value={emailSettings.from_email}
-                        onChange={(e) => setEmailSettings(prev => ({ ...prev, from_email: e.target.value }))}
-                      />
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Leave empty to use default Resend sender
-                      </p>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="from-name">From Name (Optional)</Label>
-                      <Input
-                        id="from-name"
-                        type="text"
-                        placeholder="Your Gym Name"
-                        value={emailSettings.from_name}
-                        onChange={(e) => setEmailSettings(prev => ({ ...prev, from_name: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-base font-medium">Notification Types</Label>
-                    <div className="space-y-4 mt-3">
-                      <div className="flex items-center justify-between">
+                  {whatsappSettings.enabled && (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="notify-signup">New Member Signup</Label>
-                          <p className="text-sm text-muted-foreground">Get notified when new members register</p>
+                          <Label htmlFor="instance-id">Instance ID *</Label>
+                          <Input
+                            id="instance-id"
+                            type="text"
+                            placeholder="1101234567"
+                            value={whatsappSettings.instance_id}
+                            onChange={(e) => setWhatsappSettings(prev => ({ ...prev, instance_id: e.target.value }))}
+                          />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Your Green API instance ID
+                          </p>
                         </div>
-                        <Switch
-                          id="notify-signup"
-                          checked={emailSettings.signup_notifications}
-                          onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, signup_notifications: checked }))}
-                        />
+
+                        <div>
+                          <Label htmlFor="api-token">API Token *</Label>
+                          <Input
+                            id="api-token"
+                            type="password"
+                            placeholder="Your Green API token"
+                            value={whatsappSettings.api_token}
+                            onChange={(e) => setWhatsappSettings(prev => ({ ...prev, api_token: e.target.value }))}
+                          />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Your Green API access token
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label htmlFor="notify-booking">Class Bookings</Label>
-                          <p className="text-sm text-muted-foreground">Get notified when members book classes</p>
-                        </div>
-                        <Switch
-                          id="notify-booking"
-                          checked={emailSettings.booking_notifications}
-                          onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, booking_notifications: checked }))}
+                      <div>
+                        <Label htmlFor="phone-numbers">Notification Phone Numbers *</Label>
+                        <Input
+                          id="phone-numbers"
+                          type="text"
+                          placeholder="1234567890, 0987654321"
+                          value={whatsappSettings.phone_numbers}
+                          onChange={(e) => setWhatsappSettings(prev => ({ ...prev, phone_numbers: e.target.value }))}
                         />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Phone numbers to receive notifications (comma-separated, without + or country code)
+                        </p>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <Label htmlFor="notify-session-request">Session Balance Requests</Label>
-                          <p className="text-sm text-muted-foreground">Get notified when members request additional sessions</p>
-                        </div>
-                        <Switch
-                          id="notify-session-request"
-                          checked={emailSettings.session_request_notifications}
-                          onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, session_request_notifications: checked }))}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button onClick={handleSaveEmailSettings} className="flex-1">
-                    Save Email Settings
-                  </Button>
-                  <Button 
-                    onClick={handleTestEmail} 
-                    variant="outline" 
-                    disabled={isTestingEmail}
-                    className="flex items-center gap-2"
-                  >
-                    <Send className="h-4 w-4" />
-                    {isTestingEmail ? "Testing..." : "Test Email"}
-                  </Button>
-                </div>
-
-                {emailLogs.length > 0 && (
-                  <div className="mt-6">
-                    <Label className="text-sm font-medium">Recent Email Logs</Label>
-                    <div className="mt-2 space-y-2 max-h-40 overflow-y-auto">
-                      {emailLogs.map((log, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
-                          <div className="flex items-center space-x-2">
-                            <div className={`w-2 h-2 rounded-full ${log.status === 'success' ? 'bg-green-500' : 'bg-red-500'}`} />
-                            <span>To: {log.to}</span>
-                            <span className="text-muted-foreground">|</span>
-                            <span>{log.subject}</span>
+                      <div>
+                        <Label className="text-base font-medium">WhatsApp Notification Types</Label>
+                        <div className="space-y-4 mt-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label htmlFor="whatsapp-notify-signup">New Member Signup</Label>
+                              <p className="text-sm text-muted-foreground">Get WhatsApp notifications when new members register</p>
+                            </div>
+                            <Switch
+                              id="whatsapp-notify-signup"
+                              checked={whatsappSettings.signup_notifications}
+                              onCheckedChange={(checked) => setWhatsappSettings(prev => ({ ...prev, signup_notifications: checked }))}
+                            />
                           </div>
-                          <span className="text-muted-foreground text-xs">
-                            {new Date(log.timestamp).toLocaleString()}
-                          </span>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label htmlFor="whatsapp-notify-booking">Class Bookings</Label>
+                              <p className="text-sm text-muted-foreground">Get WhatsApp notifications when members book classes</p>
+                            </div>
+                            <Switch
+                              id="whatsapp-notify-booking"
+                              checked={whatsappSettings.booking_notifications}
+                              onCheckedChange={(checked) => setWhatsappSettings(prev => ({ ...prev, booking_notifications: checked }))}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label htmlFor="whatsapp-notify-session-request">Session Balance Requests</Label>
+                              <p className="text-sm text-muted-foreground">Get WhatsApp notifications when members request additional sessions</p>
+                            </div>
+                            <Switch
+                              id="whatsapp-notify-session-request"
+                              checked={whatsappSettings.session_request_notifications}
+                              onCheckedChange={(checked) => setWhatsappSettings(prev => ({ ...prev, session_request_notifications: checked }))}
+                            />
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {whatsappSettings.enabled && (
+                  <div className="flex gap-3 pt-4">
+                    <Button onClick={handleSaveWhatsappSettings} className="flex-1">
+                      Save WhatsApp Settings
+                    </Button>
+                    <Button 
+                      onClick={handleTestWhatsapp} 
+                      variant="outline" 
+                      className="flex items-center gap-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      Test WhatsApp
+                    </Button>
                   </div>
                 )}
               </CardContent>
