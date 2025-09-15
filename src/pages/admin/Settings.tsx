@@ -915,7 +915,7 @@ const Settings = () => {
                             </div>
                             <Textarea
                               id="cancel-template"
-                              value={whatsappSettings.templates.cancel}
+                              value={whatsappSettings.templates.cancel || "❌ Class booking cancelled!\n\nMember: {memberName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nBooking has been cancelled."}
                               onChange={(e) => setWhatsappSettings(prev => ({
                                 ...prev,
                                 templates: { ...prev.templates, cancel: e.target.value }
