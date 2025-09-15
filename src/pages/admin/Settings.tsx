@@ -32,6 +32,15 @@ const Settings = () => {
     booking_notifications: true,
     session_request_notifications: true
   });
+  const [whatsappSettings, setWhatsappSettings] = useState({
+    enabled: false,
+    instance_id: "",
+    api_token: "",
+    phone_numbers: "",
+    signup_notifications: true,
+    booking_notifications: true,
+    session_request_notifications: true
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [emailLogs, setEmailLogs] = useState<Array<{
@@ -98,6 +107,9 @@ const Settings = () => {
     // Load email settings from database and fallback to local storage
     loadEmailSettings();
     
+    // Load WhatsApp settings from local storage
+    loadWhatsappSettings();
+    
     // Load email logs on component mount
     loadEmailLogs();
     
@@ -155,6 +167,9 @@ const Settings = () => {
 
     // Save email settings to localStorage
     localStorage.setItem("emailSettings", JSON.stringify(emailSettings));
+
+    // Save WhatsApp settings to localStorage
+    localStorage.setItem("whatsappSettings", JSON.stringify(whatsappSettings));
 
     // Save other settings to localStorage
     localStorage.setItem("cancellationHours", cancellationHours.toString());
@@ -292,6 +307,22 @@ const Settings = () => {
     }
   };
 
+  const loadWhatsappSettings = () => {
+    const savedWhatsappSettings = localStorage.getItem("whatsappSettings");
+    if (savedWhatsappSettings) {
+      const parsed = JSON.parse(savedWhatsappSettings);
+      setWhatsappSettings({
+        enabled: parsed.enabled ?? false,
+        instance_id: parsed.instance_id || "",
+        api_token: parsed.api_token || "",
+        phone_numbers: parsed.phone_numbers || "",
+        signup_notifications: parsed.signup_notifications ?? true,
+        booking_notifications: parsed.booking_notifications ?? true,
+        session_request_notifications: parsed.session_request_notifications ?? true
+      });
+    }
+  };
+
   const handleSaveEmailSettings = async () => {
     try {
       // First try to update existing settings
@@ -344,6 +375,64 @@ const Settings = () => {
         title: "Settings saved locally",
         description: "Email settings saved to local storage. Database save failed.",
         variant: "destructive"
+      });
+    }
+  };
+
+  const handleSaveWhatsappSettings = () => {
+    localStorage.setItem("whatsappSettings", JSON.stringify(whatsappSettings));
+    toast({
+      title: "WhatsApp settings saved",
+      description: "Your WhatsApp configuration has been saved successfully.",
+    });
+  };
+
+  const handleTestWhatsapp = async () => {
+    if (!whatsappSettings.enabled) {
+      toast({
+        title: "Error",
+        description: "Please enable WhatsApp notifications first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!whatsappSettings.instance_id || !whatsappSettings.api_token || !whatsappSettings.phone_numbers) {
+      toast({
+        title: "Error",
+        description: "Please fill in all WhatsApp configuration fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const phoneNumbers = whatsappSettings.phone_numbers.split(',').map(num => num.trim());
+      
+      const { data, error } = await supabase.functions.invoke('send-whatsapp-notification', {
+        body: {
+          userName: "Test User",
+          userEmail: "test@example.com",
+          phoneNumbers: phoneNumbers,
+          apiToken: whatsappSettings.api_token,
+          instanceId: whatsappSettings.instance_id
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Test WhatsApp sent",
+        description: "Test WhatsApp notification sent successfully!",
+      });
+    } catch (error) {
+      console.error('Test WhatsApp error:', error);
+      toast({
+        title: "Test failed",
+        description: `Failed to send test WhatsApp: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
       });
     }
   };
@@ -706,6 +795,148 @@ const Settings = () => {
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <MessageCircle className="h-5 w-5 text-green-600" />
+                  <CardTitle>WhatsApp Notification System</CardTitle>
+                </div>
+                <CardDescription>
+                  Configure WhatsApp notifications using Green API - 3000 free messages per month
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-6">
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Send className="h-5 w-5 text-green-600" />
+                      <span className="font-medium text-green-900">Powered by Green API</span>
+                    </div>
+                    <p className="text-sm text-green-700">
+                      Free tier includes 3000 messages per month. Sign up at green-api.com to get your credentials.
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="whatsapp-enabled">Enable WhatsApp Notifications</Label>
+                      <p className="text-sm text-muted-foreground">Turn on WhatsApp notifications for your gym</p>
+                    </div>
+                    <Switch
+                      id="whatsapp-enabled"
+                      checked={whatsappSettings.enabled}
+                      onCheckedChange={(checked) => setWhatsappSettings(prev => ({ ...prev, enabled: checked }))}
+                    />
+                  </div>
+
+                  {whatsappSettings.enabled && (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="instance-id">Instance ID *</Label>
+                          <Input
+                            id="instance-id"
+                            type="text"
+                            placeholder="1101234567"
+                            value={whatsappSettings.instance_id}
+                            onChange={(e) => setWhatsappSettings(prev => ({ ...prev, instance_id: e.target.value }))}
+                          />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Your Green API instance ID
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="api-token">API Token *</Label>
+                          <Input
+                            id="api-token"
+                            type="password"
+                            placeholder="Your Green API token"
+                            value={whatsappSettings.api_token}
+                            onChange={(e) => setWhatsappSettings(prev => ({ ...prev, api_token: e.target.value }))}
+                          />
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Your Green API access token
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="phone-numbers">Notification Phone Numbers *</Label>
+                        <Input
+                          id="phone-numbers"
+                          type="text"
+                          placeholder="1234567890, 0987654321"
+                          value={whatsappSettings.phone_numbers}
+                          onChange={(e) => setWhatsappSettings(prev => ({ ...prev, phone_numbers: e.target.value }))}
+                        />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Phone numbers to receive notifications (comma-separated, without + or country code)
+                        </p>
+                      </div>
+
+                      <div>
+                        <Label className="text-base font-medium">WhatsApp Notification Types</Label>
+                        <div className="space-y-4 mt-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label htmlFor="whatsapp-notify-signup">New Member Signup</Label>
+                              <p className="text-sm text-muted-foreground">Get WhatsApp notifications when new members register</p>
+                            </div>
+                            <Switch
+                              id="whatsapp-notify-signup"
+                              checked={whatsappSettings.signup_notifications}
+                              onCheckedChange={(checked) => setWhatsappSettings(prev => ({ ...prev, signup_notifications: checked }))}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label htmlFor="whatsapp-notify-booking">Class Bookings</Label>
+                              <p className="text-sm text-muted-foreground">Get WhatsApp notifications when members book classes</p>
+                            </div>
+                            <Switch
+                              id="whatsapp-notify-booking"
+                              checked={whatsappSettings.booking_notifications}
+                              onCheckedChange={(checked) => setWhatsappSettings(prev => ({ ...prev, booking_notifications: checked }))}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label htmlFor="whatsapp-notify-session-request">Session Balance Requests</Label>
+                              <p className="text-sm text-muted-foreground">Get WhatsApp notifications when members request additional sessions</p>
+                            </div>
+                            <Switch
+                              id="whatsapp-notify-session-request"
+                              checked={whatsappSettings.session_request_notifications}
+                              onCheckedChange={(checked) => setWhatsappSettings(prev => ({ ...prev, session_request_notifications: checked }))}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {whatsappSettings.enabled && (
+                  <div className="flex gap-3 pt-4">
+                    <Button onClick={handleSaveWhatsappSettings} className="flex-1">
+                      Save WhatsApp Settings
+                    </Button>
+                    <Button 
+                      onClick={handleTestWhatsapp} 
+                      variant="outline" 
+                      className="flex items-center gap-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      Test WhatsApp
+                    </Button>
                   </div>
                 )}
               </CardContent>

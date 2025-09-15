@@ -44,26 +44,23 @@ serve(async (req) => {
 
       const results = [];
 
-      // Send message to each phone number
+      // Send message to each phone number using Green API
       for (const phoneNumber of phoneNumbers) {
         try {
-          console.log(`Sending WhatsApp to: ${phoneNumber}`);
+          console.log(`Sending WhatsApp to: ${phoneNumber} via Green API`);
           
-          // Using a generic WhatsApp API endpoint structure
-          // You may need to adjust this based on your WhatsApp API provider
-          const response = await fetch(`https://api.whatsapp.com/send`, {
+          // Green API endpoint format
+          const cleanPhoneNumber = phoneNumber.replace(/[^0-9]/g, ''); // Remove any formatting
+          const apiUrl = `https://api.green-api.com/waInstance${instanceId}/sendMessage/${apiToken}`;
+          
+          const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${apiToken}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              messaging_product: "whatsapp",
-              to: phoneNumber.replace(/[^0-9]/g, ''), // Remove any formatting
-              type: "text",
-              text: {
-                body: message
-              }
+              chatId: `${cleanPhoneNumber}@c.us`,
+              message: message
             })
           });
 
@@ -73,7 +70,7 @@ serve(async (req) => {
             results.push({
               phoneNumber,
               status: 'success',
-              messageId: result.messages?.[0]?.id || 'unknown'
+              messageId: result.idMessage || result.id || 'unknown'
             });
           } else {
             const errorText = await response.text();
