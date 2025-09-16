@@ -53,9 +53,22 @@ serve(async (req) => {
   }
 
   try {
-    const { action, sessionId } = await req.json()
+    const url = new URL(req.url)
+    const action = url.searchParams.get('action')
+    let body = {}
+    
+    if (req.method === 'POST') {
+      try {
+        body = await req.json()
+      } catch {
+        // If no body, use query params
+      }
+    }
+    
+    const requestAction = body.action || action
+    const sessionId = body.sessionId || url.searchParams.get('sessionId')
 
-    if (action === 'generate_qr') {
+    if (requestAction === 'generate_qr') {
       // Generate a unique session ID
       const newSessionId = crypto.randomUUID()
       
@@ -100,7 +113,7 @@ serve(async (req) => {
       )
     }
 
-    if (action === 'check_status') {
+    if (requestAction === 'check_status') {
       const session = sessions.get(sessionId)
       
       if (!session) {
@@ -137,7 +150,7 @@ serve(async (req) => {
       )
     }
 
-    if (action === 'disconnect') {
+    if (requestAction === 'disconnect') {
       const session = sessions.get(sessionId)
       
       if (session) {
@@ -155,8 +168,9 @@ serve(async (req) => {
       )
     }
 
-    if (action === 'send_message') {
-      const { phoneNumber, message } = await req.json()
+    if (requestAction === 'send_message') {
+      const phoneNumber = body.phoneNumber || url.searchParams.get('phoneNumber')
+      const message = body.message || url.searchParams.get('message')
       
       // Here you would integrate with actual WhatsApp API
       // For now, we'll simulate sending a message
