@@ -14,6 +14,7 @@ interface BalanceRequest {
   type: string;
   status: string;
   created_at: string;
+  member_gender?: string;
 }
 
 const BalanceRequestsWidget = () => {
@@ -21,17 +22,32 @@ const BalanceRequestsWidget = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const getGenderIconColor = (gender?: string) => {
+    if (gender === "Male") return "text-blue-600";
+    if (gender === "Female") return "text-pink-600";
+    return "text-gray-600"; // default color for unknown gender
+  };
+
   useEffect(() => {
     const fetchBalanceRequests = async () => {
       try {
         const { data, error } = await supabase
           .from("membership_requests")
-          .select("*")
+          .select(`
+            *,
+            members!inner (
+              gender
+            )
+          `)
           .order("created_at", { ascending: false })
           .limit(5);
 
         if (error) throw error;
-        setBalanceRequests(data || []);
+        
+        setBalanceRequests(data?.map((request: any) => ({
+          ...request,
+          member_gender: request.members?.gender
+        })) || []);
       } catch (error) {
         console.error("Error fetching balance requests:", error);
       } finally {
@@ -201,7 +217,7 @@ Balance request has been approved and sessions added to member's account.`;
             >
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-500" />
+                  <User className={`h-4 w-4 ${getGenderIconColor(request.member_gender)}`} />
                   <h3 className="font-semibold text-gray-900">{request.member}</h3>
                 </div>
                 <div className="flex items-center gap-2">
