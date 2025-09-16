@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, MessageCircle, Clock, Image, Trash, Palette, LayoutDashboard, Type, Plus, Send } from "lucide-react";
+import { Settings as SettingsIcon, MessageCircle, Clock, Image, Trash, Palette, LayoutDashboard, Type, Plus, Send, Mail, Key, User, Shield } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -568,9 +568,12 @@ const Settings = () => {
   return (
     <DashboardLayout title="System Settings">
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="general">General Settings</TabsTrigger>
-          <TabsTrigger value="mainpage">Main Page Content</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="auth">Authentication</TabsTrigger>
+          <TabsTrigger value="email">Email</TabsTrigger>
+          <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
+          <TabsTrigger value="mainpage">Main Page</TabsTrigger>
         </TabsList>
         
         <TabsContent value="general" className="space-y-6">
@@ -1074,6 +1077,278 @@ const Settings = () => {
                </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="auth" className="space-y-6">
+          {/* Google OAuth Setup */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <Shield className="h-5 w-5 text-blue-600" />
+                <CardTitle>Admin Authentication Setup</CardTitle>
+              </div>
+              <CardDescription>
+                Set up Google OAuth for secure admin login using your Gmail account
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-800 mb-2">Setup Instructions</h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-blue-700">
+                  <li>Go to Google Cloud Console and create/select a project</li>
+                  <li>Configure OAuth consent screen with domain: <code className="bg-blue-100 px-1 rounded">wlawjupusugrhojbywyq.supabase.co</code></li>
+                  <li>Create OAuth Client ID for web application</li>
+                  <li>Add redirect URL: <code className="bg-blue-100 px-1 rounded">https://wlawjupusugrhojbywyq.supabase.co/auth/v1/callback</code></li>
+                  <li>Configure in Supabase Dashboard → Authentication → Providers</li>
+                </ol>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => window.open('https://console.cloud.google.com/', '_blank')}>
+                  <Key className="h-4 w-4 mr-2" />
+                  Google Cloud Console
+                </Button>
+                <Button variant="outline" onClick={() => window.open('https://supabase.com/dashboard/project/wlawjupusugrhojbywyq/auth/providers', '_blank')}>
+                  <SettingsIcon className="h-4 w-4 mr-2" />
+                  Supabase Auth Settings
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Current Admin Account */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <User className="h-5 w-5 text-green-600" />
+                <CardTitle>Current Admin Account</CardTitle>
+              </div>
+              <CardDescription>
+                Currently logged in admin account
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-green-800">admin@gym.com</p>
+                    <p className="text-sm text-green-600">Administrator Access</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                      Active
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="email" className="space-y-6">
+          {/* Admin Notification Email */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <Mail className="h-5 w-5 text-blue-600" />
+                <CardTitle>Admin Notification Email</CardTitle>
+              </div>
+              <CardDescription>
+                Configure the email account that will receive all admin notifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {emailSettings.notification_email ? (
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-green-800">Current Notification Email</p>
+                      <p className="text-sm text-green-600">{emailSettings.notification_email}</p>
+                      <p className="text-xs text-green-500 mt-1">
+                        Sender: {emailSettings.from_name || 'Gym System'} &lt;{emailSettings.from_email || 'system@gym.com'}&gt;
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleTestEmail}
+                        disabled={isTestingEmail}
+                      >
+                        {isTestingEmail ? "Testing..." : "Test"}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          setEmailSettings(prev => ({
+                            ...prev,
+                            notification_email: "",
+                            from_email: "",
+                            from_name: ""
+                          }));
+                        }}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                    <p className="text-amber-800 font-medium">No notification email configured</p>
+                    <p className="text-amber-600 text-sm">Add your email to receive admin notifications</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="notification_email">Your Email Address *</Label>
+                      <Input
+                        id="notification_email"
+                        type="email"
+                        placeholder="admin@example.com"
+                        value={emailSettings.notification_email}
+                        onChange={(e) => setEmailSettings(prev => ({ ...prev, notification_email: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="from_name">Sender Name</Label>
+                      <Input
+                        id="from_name"
+                        placeholder="Gym Management System"
+                        value={emailSettings.from_name}
+                        onChange={(e) => setEmailSettings(prev => ({ ...prev, from_name: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="from_email">Sender Email (Optional)</Label>
+                    <Input
+                      id="from_email"
+                      type="email"
+                      placeholder="notifications@yourgym.com"
+                      value={emailSettings.from_email}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, from_email: e.target.value }))}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Leave empty to use default sender email
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Notification Types */}
+              <div className="space-y-3">
+                <h4 className="font-medium">Notification Types</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="signup_notifications">New Member Signups</Label>
+                      <p className="text-sm text-gray-500">Get notified when new members register</p>
+                    </div>
+                    <Switch
+                      id="signup_notifications"
+                      checked={emailSettings.signup_notifications}
+                      onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, signup_notifications: checked }))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="booking_notifications">Class Bookings</Label>
+                      <p className="text-sm text-gray-500">Get notified for new class bookings</p>
+                    </div>
+                    <Switch
+                      id="booking_notifications"
+                      checked={emailSettings.booking_notifications}
+                      onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, booking_notifications: checked }))}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="session_request_notifications">Session Requests</Label>
+                      <p className="text-sm text-gray-500">Get notified for membership session requests</p>
+                    </div>
+                    <Switch
+                      id="session_request_notifications"
+                      checked={emailSettings.session_request_notifications}
+                      onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, session_request_notifications: checked }))}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between">
+                <Button onClick={handleSaveEmailSettings} disabled={isLoading}>
+                  <Send className="h-4 w-4 mr-2" />
+                  Save Email Settings
+                </Button>
+                
+                {emailSettings.notification_email && (
+                  <Button 
+                    variant="outline" 
+                    onClick={handleTestEmail}
+                    disabled={isTestingEmail}
+                  >
+                    {isTestingEmail ? "Testing..." : "Send Test Email"}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Email Logs */}
+          {emailLogs.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Email Notifications</CardTitle>
+                <CardDescription>
+                  Last 10 email notifications sent
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {emailLogs.slice(0, 10).map((log, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">{log.subject}</p>
+                        <p className="text-xs text-gray-500">To: {log.to}</p>
+                        <p className="text-xs text-gray-400">{new Date(log.timestamp).toLocaleString()}</p>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        log.status === 'success' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {log.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="whatsapp" className="space-y-6">
+          {/* Move existing WhatsApp content here */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <MessageCircle className="h-5 w-5 text-green-600" />
+                <CardTitle>WhatsApp Notification System</CardTitle>
+              </div>
+              <CardDescription>
+                Configure WhatsApp notifications using Green API - 3000 free messages per month
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                <p className="text-amber-800 font-medium">WhatsApp notifications temporarily disabled</p>
+                <p className="text-amber-600 text-sm">Focus on email notifications for now. WhatsApp can be added later.</p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
         
         <TabsContent value="mainpage" className="space-y-6">
