@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Calendar, Clock, Bell, Settings } from "lucide-react";
 import { supabase, requireAuth } from "@/integrations/supabase/client";
 import useComingClass from "@/hooks/useComingClass";
+import RecentBookingsWidget from "@/components/RecentBookingsWidget";
+import BalanceRequestsWidget from "@/components/BalanceRequestsWidget";
 
 // Mock user data - we will overlay this with real data from Supabase if available
 // const userData = {
@@ -295,33 +297,10 @@ const Dashboard = () => {
             </Alert>
           )}
 
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-4">Upcoming Classes</h2>
-            {unbookedClasses.length > 0 ? (
-              <div className="space-y-3">
-                {unbookedClasses.slice(0, 6).map((cls) => (
-                  <div
-                    key={cls.id}
-                    className="p-4 border border-gray-200 rounded-md hover:bg-gray-50"
-                  >
-                    <div className="flex justify-between">
-                      <h3 className="font-semibold">{cls.name}</h3>
-                      <p className="text-sm text-gray-500">
-                        {cls.start_time} • {cls.end_time}
-                      </p>
-                    </div>
-                    <div className="text-sm text-gray-500 flex justify-between">
-                      <span>Trainer: {cls.trainer}</span>
-                      <div>
-                        <span>{cls.schedule}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">No upcoming classes.</p>
-            )}
+          {/* Recent Bookings and Balance Requests Widgets */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <RecentBookingsWidget />
+            <BalanceRequestsWidget />
           </div>
 
           {/* <div className="bg-white rounded-lg shadow-md p-6">
