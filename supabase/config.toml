@@ -11,6 +11,3 @@ verify_jwt = false
 
 [functions.send-whatsapp-notification]
 verify_jwt = false
-
-[functions.whatsapp-qr-session]
-verify_jwt = false

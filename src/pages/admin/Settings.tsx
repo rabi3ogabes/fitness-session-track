@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, MessageCircle, Clock, Image, Trash, Palette, LayoutDashboard, Type, Plus, Send, Smartphone } from "lucide-react";
-import WhatsAppQRScanner from "@/components/WhatsAppQRScanner";
+import { Settings as SettingsIcon, MessageCircle, Clock, Image, Trash, Palette, LayoutDashboard, Type, Plus, Send } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -712,9 +711,6 @@ const Settings = () => {
                 </div>
               </CardContent>
             </Card>
-
-            {/* WhatsApp QR Scanner */}
-            <WhatsAppQRScanner />
 
             <Card>
               <CardHeader>
