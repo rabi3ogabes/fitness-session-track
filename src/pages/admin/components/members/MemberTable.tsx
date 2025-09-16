@@ -84,7 +84,7 @@ const MemberTable = ({
                     <TableCell>{member.email}</TableCell>
                     <TableCell className="hidden md:table-cell">{member.phone}</TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      {member.remainingSessions}/{member.sessions}
+                      {member.remainingSessions}
                     </TableCell>
                     <TableCell>
                       <span
