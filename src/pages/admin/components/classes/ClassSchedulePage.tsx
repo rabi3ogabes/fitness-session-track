@@ -165,7 +165,7 @@ const formSchema = z.object({
     .optional(),
   description: z.string().optional(),
   location: z.string().optional(),
-  difficulty: z.enum(["Beginner", "Intermediate", "Advanced"]).optional(),
+  
   endDate: z.date().optional(),
 });
 
@@ -206,7 +206,7 @@ const ClassSchedulePage = () => {
       selectedDays: [],
       description: "",
       location: "",
-      difficulty: "Beginner",
+      
     },
   });
 
@@ -508,7 +508,7 @@ const ClassSchedulePage = () => {
         endTime: cls.end_time || "",
         description: cls.description,
         location: cls.location,
-        difficulty: cls.difficulty,
+        
         cancelledCount: cls.cancelledCount || 0,
       }));
 
@@ -715,7 +715,6 @@ const ClassSchedulePage = () => {
           enrolled: 0,
           description: values.description || null,
           location: values.location || null,
-          difficulty: values.difficulty || "Beginner",
         }));
 
         console.log("Creating multiple classes:", classesToCreate);
@@ -756,7 +755,7 @@ const ClassSchedulePage = () => {
           enrolled: 0,
           description: values.description || null,
           location: values.location || null,
-          difficulty: values.difficulty || "Beginner",
+          
         };
 
         console.log("Class data to insert:", classData);
@@ -1441,49 +1440,19 @@ const ClassSchedulePage = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="difficulty"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Difficulty</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Beginner">Beginner</SelectItem>
-                          <SelectItem value="Intermediate">
-                            Intermediate
-                          </SelectItem>
-                          <SelectItem value="Advanced">Advanced</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="location"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Location</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. Main Studio" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Main Studio" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
