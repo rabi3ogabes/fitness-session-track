@@ -336,7 +336,8 @@ const Settings = () => {
         templates: parsed.templates || {
           signup: "🎉 New member signup!\n\nName: {userName}\nEmail: {userEmail}\nMembership: {membershipType}\nJoined: {joinDate}\n\nWelcome to our gym family! 💪",
           booking: "📅 New class booking!\n\nMember: {userName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nSee you at the gym! 🏋️‍♂️",
-          session_request: "🔔 Session balance request!\n\nMember: {userName}\nCurrent Balance: {currentSessions}\nRequested: {requestedSessions}\nReason: {reason}\n\nPlease review and approve."
+          session_request: "🔔 Session balance request!\n\nMember: {userName}\nCurrent Balance: {currentSessions}\nRequested: {requestedSessions}\nReason: {reason}\n\nPlease review and approve.",
+          cancel: "❌ Class booking cancelled!\n\nMember: {memberName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nBooking has been cancelled."
         }
       });
     }
