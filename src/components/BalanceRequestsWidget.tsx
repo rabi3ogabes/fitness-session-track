@@ -220,6 +220,16 @@ Balance request has been approved and sessions added to member's account.`;
 
             // Send WhatsApp notification to the member about their approved request
             if (settings.enabled && settings.instance_id && settings.api_token && memberData.phone) {
+              console.log('=== MEMBER NOTIFICATION START ===');
+              console.log('Checking member notification conditions:', {
+                settingsEnabled: settings.enabled,
+                hasInstanceId: !!settings.instance_id,
+                hasApiToken: !!settings.api_token,
+                memberPhone: memberData.phone,
+                memberName: memberName,
+                memberEmail: memberEmail
+              });
+
               try {
                 // Format phone number for Green API (digits only with country code, no + sign)
                 let formattedPhone = memberData.phone.trim();
@@ -240,15 +250,11 @@ Balance request has been approved and sessions added to member's account.`;
 You can now book your classes. Thank you for choosing our gym!`;
 
                 console.log('Sending approval notification to member...', {
-                  memberPhone: memberData.phone,
+                  originalPhone: memberData.phone,
                   formattedPhone: formattedPhone,
                   memberName: memberName,
                   memberEmail: memberEmail,
-                  settings: {
-                    enabled: settings.enabled,
-                    hasApiToken: !!settings.api_token,
-                    hasInstanceId: !!settings.instance_id
-                  }
+                  messageLength: memberMessage.length
                 });
 
                 const response = await supabase.functions.invoke('send-whatsapp-notification', {
@@ -262,16 +268,27 @@ You can now book your classes. Thank you for choosing our gym!`;
                   }
                 });
 
-                console.log('WhatsApp response:', response);
+                console.log('=== MEMBER NOTIFICATION RESPONSE ===');
+                console.log('Full response:', response);
                 
                 if (response.error) {
-                  console.error('WhatsApp notification failed:', response.error);
+                  console.error('WhatsApp member notification failed:', response.error);
                 } else {
-                  console.log('WhatsApp notification sent successfully');
+                  console.log('WhatsApp member notification sent successfully:', response.data);
                 }
               } catch (error) {
                 console.error('Error sending WhatsApp notification to member:', error);
+                console.error('Error details:', error.message, error.stack);
               }
+              
+              console.log('=== MEMBER NOTIFICATION END ===');
+            } else {
+              console.log('Member notification skipped - conditions not met:', {
+                settingsEnabled: settings.enabled,
+                hasInstanceId: !!settings.instance_id,
+                hasApiToken: !!settings.api_token,
+                memberPhone: memberData?.phone
+              });
             }
           }
         } catch (whatsappError) {
