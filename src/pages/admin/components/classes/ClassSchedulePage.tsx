@@ -63,6 +63,7 @@ import {
   Edit,
   Trash2,
 } from "lucide-react";
+import EditClassDialog from "./EditClassDialog";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -187,6 +188,8 @@ const ClassSchedulePage = () => {
   const [isNetworkConnected, setIsNetworkConnected] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [classToDelete, setClassToDelete] = useState<number | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [classToEdit, setClassToEdit] = useState<ClassModel | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteButtons, setShowDeleteButtons] = useState(false);
   const [viewType, setViewType] = useState<'table' | 'boxes'>('boxes'); // Default to boxes
@@ -792,6 +795,46 @@ const ClassSchedulePage = () => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateClass = async (updatedClass: ClassModel) => {
+    try {
+      const { error } = await supabase
+        .from("classes")
+        .update({
+          name: updatedClass.name,
+          trainer_id: updatedClass.trainer,
+          capacity: updatedClass.capacity,
+          gender: updatedClass.gender,
+          start_time: updatedClass.startTime,
+          end_time: updatedClass.endTime,
+          description: updatedClass.description,
+          location: updatedClass.location,
+        })
+        .eq("id", updatedClass.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setClasses(prev => prev.map(cls => 
+        cls.id === updatedClass.id ? { ...cls, ...updatedClass } : cls
+      ));
+
+      setShowEditDialog(false);
+      setClassToEdit(null);
+
+      toast({
+        title: "Success",
+        description: "Class updated successfully",
+      });
+    } catch (error: any) {
+      console.error("Error updating class:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update class",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1718,8 +1761,8 @@ const ClassSchedulePage = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          // Add edit functionality here - will open edit dialog
-                          console.log('Edit class:', cls.id);
+                          setClassToEdit(cls);
+                          setShowEditDialog(true);
                         }}
                         className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                         title="Edit class"
@@ -2115,6 +2158,16 @@ const ClassSchedulePage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Class Dialog */}
+      <EditClassDialog
+        isOpen={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onUpdateClass={handleUpdateClass}
+        currentClass={classToEdit}
+        trainers={trainers.map(t => t.name)}
+        existingClasses={classes}
+      />
     </DashboardLayout>
   );
 };
