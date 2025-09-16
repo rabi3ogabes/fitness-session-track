@@ -152,7 +152,9 @@ const formSchema = z.object({
   name: z.string().min(2, "Class name must be at least 2 characters"),
   trainer: z.string().min(1, "Trainer is required"),
   capacity: z.number().min(1, "Capacity must be at least 1"),
-  gender: z.enum(["All", "Male", "Female"]),
+  gender: z.enum(["All", "Male", "Female"], {
+    required_error: "Gender selection is required",
+  }),
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().min(1, "End time is required"),
   isRecurring: z.boolean().default(false),
