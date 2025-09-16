@@ -205,7 +205,35 @@ const handler = async (req: Request): Promise<Response> => {
           html: emailBody,
         });
 
-        console.log("Email sent successfully:", emailResponse);
+        console.log("Email API response:", emailResponse);
+
+        // Check if there's an error in the response
+        if (emailResponse.error) {
+          console.error("Email API error:", emailResponse.error);
+          
+          // Log failed email
+          const logEntry: EmailLogEntry = {
+            timestamp: new Date().toISOString(),
+            to: notificationEmail,
+            subject: emailSubject,
+            success: false,
+            error: emailResponse.error.message || JSON.stringify(emailResponse.error)
+          };
+          emailLogs.push(logEntry);
+          
+          return new Response(
+            JSON.stringify({ 
+              error: "Failed to send email",
+              details: emailResponse.error.message || emailResponse.error
+            }),
+            {
+              status: 500,
+              headers: { "Content-Type": "application/json", ...corsHeaders },
+            }
+          );
+        }
+
+        console.log("Email sent successfully!");
 
         // Log successful email
         const logEntry: EmailLogEntry = {
