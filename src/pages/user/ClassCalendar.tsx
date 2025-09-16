@@ -996,6 +996,21 @@ const ClassCalendar = () => {
                                 {isFull && !isBooked && (
                                   <Badge variant="destructive">Full</Badge>
                                 )}
+                                {cls.gender === "Female" && (
+                                  <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-200">
+                                    Women Only
+                                  </Badge>
+                                )}
+                                {cls.gender === "Male" && (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                    Men Only
+                                  </Badge>
+                                )}
+                                {cls.gender === "All" && (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                    Mixed
+                                  </Badge>
+                                )}
                               </div>
                               
                               <div className="space-y-1 text-sm text-muted-foreground">
