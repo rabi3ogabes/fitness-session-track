@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 interface BalanceRequest {
   id: number;
@@ -24,6 +25,7 @@ const BalanceRequestsWidget = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const getGenderIconColor = (gender?: string) => {
     if (gender === "Male") return "text-blue-600";
@@ -33,10 +35,13 @@ const BalanceRequestsWidget = () => {
 
   useEffect(() => {
     const fetchBalanceRequests = async () => {
+      if (!user?.email) return;
+      
       try {
         const { data, error } = await supabase
           .from("membership_requests")
           .select("*")
+          .eq("email", user.email)
           .order("created_at", { ascending: false })
           .limit(5);
 
@@ -69,6 +74,8 @@ const BalanceRequestsWidget = () => {
 
     fetchBalanceRequests();
 
+    if (!user?.email) return;
+
     // Set up real-time subscription for new requests
     const channel = supabase
       .channel("balance-requests")
@@ -88,7 +95,7 @@ const BalanceRequestsWidget = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [user?.email]);
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
@@ -241,7 +248,7 @@ You can now book your classes. Thank you for choosing our gym!`;
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <CreditCard className="h-5 w-5 text-purple-600" />
-          Session Balance Requests
+          My Session Balance Requests
         </h2>
         <Button
           variant="outline"
