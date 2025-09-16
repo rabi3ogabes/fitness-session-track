@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar, Clock, Bell, Settings } from "lucide-react";
 import { supabase, requireAuth } from "@/integrations/supabase/client";
 import useComingClass from "@/hooks/useComingClass";
+import BalanceRequestsWidget from "@/components/BalanceRequestsWidget";
 
 // Mock user data - we will overlay this with real data from Supabase if available
 // const userData = {
@@ -294,6 +295,9 @@ const Dashboard = () => {
               </AlertDescription>
             </Alert>
           )}
+
+          {/* Session Balance Requests */}
+          <BalanceRequestsWidget />
 
           {/* Upcoming Classes */}
           <div className="bg-white rounded-lg shadow-md p-6">
