@@ -190,6 +190,34 @@ Balance request has been approved and sessions added to member's account.`;
               });
             }
 
+            // Update user's profile with the phone number from member data  
+            if (memberData?.phone) {
+              // Find the user by email to get their user ID
+              const { data: userData, error: userError } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('email', memberEmail)
+                .single();
+
+              if (!userError && userData) {
+                const { error: profileUpdateError } = await supabase
+                  .from('profiles')
+                  .update({
+                    phone_number: memberData.phone,
+                    name: memberName,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', userData.id);
+
+                if (profileUpdateError) {
+                  console.log('Profile update error:', profileUpdateError);
+                }
+              } else {
+                // If profile doesn't exist, try to create one if we can get the user ID
+                console.log('Profile not found for email:', memberEmail);
+              }
+            }
+
             // Send WhatsApp notification to the member about their approved request
             if (settings.enabled && settings.instance_id && settings.api_token && memberData.phone) {
               // Format phone number for WhatsApp (ensure 974 prefix for Qatar numbers)
