@@ -83,10 +83,10 @@ const UserProfile = () => {
     if (!user?.id) return;
     
     try {
-      // Format phone number for WhatsApp (add +971 if it's 8 digits)
+      // Format phone number for WhatsApp (add +974 if it's 8 digits)
       let formattedPhone = editedProfile.phone;
       if (editedProfile.phone && /^\d{8}$/.test(editedProfile.phone.trim())) {
-        formattedPhone = `+971${editedProfile.phone.trim()}`;
+        formattedPhone = `+974${editedProfile.phone.trim()}`;
       }
 
       // Update profiles table with original phone number (for display)
@@ -222,12 +222,12 @@ const UserProfile = () => {
                     maxLength={8}
                     pattern="[0-9]{8}"
                   />
-                  <p className="text-xs text-gray-500">
-                    Enter 8-digit UAE mobile number (e.g., 66787778, 55331144).
-                  </p>
-                  {editedProfile.phone && /^\d{8}$/.test(editedProfile.phone.trim()) && (
-                    <p className="text-xs text-green-600">
-                      WhatsApp format: +971{editedProfile.phone}
+                   <p className="text-xs text-gray-500">
+                     Enter 8-digit Qatar mobile number (e.g., 66787778, 55331144).
+                   </p>
+                   {editedProfile.phone && /^\d{8}$/.test(editedProfile.phone.trim()) && (
+                     <p className="text-xs text-green-600">
+                       WhatsApp format: +974{editedProfile.phone}
                     </p>
                   )}
                 </div>
