@@ -83,12 +83,18 @@ const UserProfile = () => {
     if (!user?.id) return;
     
     try {
-      // Update profiles table
+      // Format phone number for WhatsApp (add +971 if it's 8 digits)
+      let formattedPhone = editedProfile.phone;
+      if (editedProfile.phone && /^\d{8}$/.test(editedProfile.phone.trim())) {
+        formattedPhone = `+971${editedProfile.phone.trim()}`;
+      }
+
+      // Update profiles table with original phone number (for display)
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           name: editedProfile.name,
-          phone_number: editedProfile.phone,
+          phone_number: editedProfile.phone, // Store original format for display
           emergency_contact_name: editedProfile.emergencyContact,
           emergency_contact_phone: editedProfile.emergencyPhone,
         })
@@ -103,11 +109,11 @@ const UserProfile = () => {
         return;
       }
 
-      // Also update phone number in members table if the member exists
+      // Update members table with formatted phone number for WhatsApp notifications
       const { error: memberError } = await supabase
         .from('members')
         .update({
-          phone: editedProfile.phone,
+          phone: formattedPhone, // Store formatted version for WhatsApp
           name: editedProfile.name,
         })
         .eq('email', editedProfile.email);
@@ -122,7 +128,7 @@ const UserProfile = () => {
       
       toast({
         title: "Profile updated",
-        description: "Your profile has been updated successfully. Phone number updated for WhatsApp notifications.",
+        description: `Your profile has been updated successfully. Phone number formatted for WhatsApp: ${formattedPhone}`,
       });
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -136,7 +142,14 @@ const UserProfile = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setEditedProfile((prev) => ({ ...prev, [name]: value }));
+    
+    // Special validation for phone number - only allow digits and max 8 characters
+    if (name === 'phone') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 8);
+      setEditedProfile((prev) => ({ ...prev, [name]: digitsOnly }));
+    } else {
+      setEditedProfile((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   if (loading) {
@@ -205,11 +218,18 @@ const UserProfile = () => {
                     name="phone"
                     value={editedProfile.phone}
                     onChange={handleChange}
-                    placeholder="e.g., +971501234567"
+                    placeholder="66787778"
+                    maxLength={8}
+                    pattern="[0-9]{8}"
                   />
                   <p className="text-xs text-gray-500">
-                    Include country code for WhatsApp notifications (e.g., +971 for UAE)
+                    Enter 8-digit UAE mobile number (e.g., 66787778, 55331144).
                   </p>
+                  {editedProfile.phone && /^\d{8}$/.test(editedProfile.phone.trim()) && (
+                    <p className="text-xs text-green-600">
+                      WhatsApp format: +971{editedProfile.phone}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="address" className="block text-sm font-medium text-gray-700">
