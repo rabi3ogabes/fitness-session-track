@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import StatsCard from "@/components/StatsCard";
 import UpcomingClassWidget from "@/components/UpcomingClassWidget";
-import RecentPaymentsWidget from "@/components/RecentPaymentsWidget";
+
 import RecentMembersWidget from "@/components/RecentMembersWidget";
 import RecentBookingsWidget from "@/components/RecentBookingsWidget";
 import BalanceRequestsWidget from "@/components/BalanceRequestsWidget";
@@ -152,11 +152,6 @@ const AdminDashboard = () => {
           </div>
         </div>
         
-        
-        <div className="mt-6">
-          <RecentPaymentsWidget />
-        </div>
-
         {/* Recent Activity Widgets */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           <RecentBookingsWidget />
