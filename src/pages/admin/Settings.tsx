@@ -244,14 +244,31 @@ const Settings = () => {
       console.log("About to invoke edge function...");
       console.log("Email settings:", emailSettings);
       
-      const { data, error } = await supabase.functions.invoke('send-email-notification', {
-        body: {
-          userEmail: "test@example.com",
-          userName: "Test User",
-          notificationEmail: emailSettings.notification_email,
-          fromEmail: emailSettings.from_email,
-          fromName: emailSettings.from_name
+      // Choose the appropriate function based on email provider
+      const functionName = emailSettings.email_provider === 'smtp' ? 'send-smtp-notification' : 'send-email-notification';
+      console.log("Using function:", functionName);
+      
+      const requestBody = emailSettings.email_provider === 'smtp' ? {
+        userEmail: "test@example.com",
+        userName: "Test User",
+        notificationEmail: emailSettings.notification_email,
+        smtpSettings: {
+          host: emailSettings.smtp_host,
+          port: emailSettings.smtp_port,
+          username: emailSettings.smtp_username,
+          password: emailSettings.smtp_password,
+          useTLS: emailSettings.smtp_use_tls
         }
+      } : {
+        userEmail: "test@example.com",
+        userName: "Test User",
+        notificationEmail: emailSettings.notification_email,
+        fromEmail: emailSettings.from_email,
+        fromName: emailSettings.from_name
+      };
+      
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: requestBody
       });
 
       console.log("Edge function response:", { data, error });
