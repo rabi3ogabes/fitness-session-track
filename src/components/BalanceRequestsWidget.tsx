@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { CreditCard, Clock, User, CheckCircle, XCircle } from "lucide-react";
+import { CreditCard, Clock, User, CheckCircle, XCircle, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface BalanceRequest {
   id: number;
@@ -17,6 +19,7 @@ interface BalanceRequest {
 const BalanceRequestsWidget = () => {
   const [balanceRequests, setBalanceRequests] = useState<BalanceRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchBalanceRequests = async () => {
@@ -85,6 +88,51 @@ const BalanceRequestsWidget = () => {
     }
   };
 
+  const handleApproveRequest = async (requestId: number, memberEmail: string, requestedSessions: number) => {
+    try {
+      // Update the request status to approved
+      const { error: updateError } = await supabase
+        .from("membership_requests")
+        .update({ status: "Approved" })
+        .eq("id", requestId);
+
+      if (updateError) throw updateError;
+
+      // Update the member's session balance
+      // First get the current balance
+      const { data: memberData, error: fetchError } = await supabase
+        .from("members")
+        .select("remaining_sessions")
+        .eq("email", memberEmail)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (memberData) {
+        const newBalance = (memberData.remaining_sessions || 0) + requestedSessions;
+        const { error: updateMemberError } = await supabase
+          .from("members")
+          .update({ remaining_sessions: newBalance })
+          .eq("email", memberEmail);
+
+        if (updateMemberError) throw updateMemberError;
+      }
+
+      toast({
+        title: "Request approved",
+        description: `${requestedSessions} sessions added to member's balance`,
+      });
+
+    } catch (error) {
+      console.error("Error approving request:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve request. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -138,8 +186,21 @@ const BalanceRequestsWidget = () => {
                 <strong>Email:</strong> {request.email}
               </div>
               
-              <div className="text-xs text-gray-400">
-                Requested: {format(new Date(request.created_at), 'MMM d, yyyy HH:mm')}
+              <div className="flex justify-between items-center">
+                <div className="text-xs text-gray-400">
+                  Requested: {format(new Date(request.created_at), 'MMM d, yyyy HH:mm')}
+                </div>
+                
+                {request.status.toLowerCase() === "pending" && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleApproveRequest(request.id, request.email, request.sessions)}
+                    className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 text-xs"
+                  >
+                    <Check className="h-3 w-3 mr-1" />
+                    Approve
+                  </Button>
+                )}
               </div>
             </div>
           ))}
