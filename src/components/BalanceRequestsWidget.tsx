@@ -33,21 +33,28 @@ const BalanceRequestsWidget = () => {
       try {
         const { data, error } = await supabase
           .from("membership_requests")
-          .select(`
-            *,
-            members!inner (
-              gender
-            )
-          `)
-          .order("created_at", { ascending: false })
-          .limit(5);
+          .select("*")
+          .order("created_at", { ascending: false });
 
         if (error) throw error;
         
-        setBalanceRequests(data?.map((request: any) => ({
-          ...request,
-          member_gender: request.members?.gender
-        })) || []);
+        // Get member gender separately to avoid filtering out requests
+        const requestsWithGender = await Promise.all(
+          (data || []).map(async (request) => {
+            const { data: memberData } = await supabase
+              .from("members")
+              .select("gender")
+              .eq("email", request.email)
+              .single();
+            
+            return {
+              ...request,
+              member_gender: memberData?.gender
+            };
+          })
+        );
+        
+        setBalanceRequests(requestsWithGender);
       } catch (error) {
         console.error("Error fetching balance requests:", error);
       } finally {
