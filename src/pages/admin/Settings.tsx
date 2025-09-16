@@ -156,72 +156,100 @@ const Settings = () => {
     }
   }, []);
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
     // Clear previous logs
     setOperationLog('');
     setOperationStatus('idle');
     
     setIsLoading(true);
-    setOperationLog('Saving settings...\nUpdating configuration...');
+    setOperationLog('Saving email settings to database...\nUpdating configuration...');
 
-    // Save logo to localStorage
-    if (logo) {
-      localStorage.setItem("gymLogo", logo);
-    } else {
-      localStorage.removeItem("gymLogo");
-    }
-    
-    // Save header color to localStorage
-    if (headerColor) {
-      localStorage.setItem("headerBackgroundColor", headerColor);
-    } else {
-      localStorage.removeItem("headerBackgroundColor");
-    }
-    
-    // Save footer color to localStorage
-    if (footerColor) {
-      localStorage.setItem("footerBackgroundColor", footerColor);
-    } else {
-      localStorage.removeItem("footerBackgroundColor");
-    }
-    
-    // Save main page content to localStorage
-    localStorage.setItem("mainPageContent", JSON.stringify(mainPageContent));
+    try {
+      // Save email settings to Supabase database
+      const { data, error } = await supabase
+        .from('admin_notification_settings')
+        .upsert({
+          from_email: emailSettings.from_email,
+          from_name: emailSettings.from_name,
+          notification_email: emailSettings.notification_email,
+          email_provider: emailSettings.email_provider,
+          smtp_host: emailSettings.smtp_host,
+          smtp_port: emailSettings.smtp_port,
+          smtp_username: emailSettings.smtp_username,
+          smtp_password: emailSettings.smtp_password,
+          smtp_use_tls: emailSettings.smtp_use_tls,
+          signup_notifications: emailSettings.signup_notifications,
+          booking_notifications: emailSettings.booking_notifications,
+          session_request_notifications: emailSettings.session_request_notifications
+        }, {
+          onConflict: 'id'
+        });
 
-    // Save email settings to localStorage
-    localStorage.setItem("emailSettings", JSON.stringify(emailSettings));
+      if (error) {
+        throw error;
+      }
 
-    // Save WhatsApp settings to localStorage
-    localStorage.setItem("whatsappSettings", JSON.stringify(whatsappSettings));
+      setOperationLog('Email settings saved to database...\nUpdating local storage...');
 
-    // Save system settings (for component compatibility)
-    const systemSettings = {
-      cancellationTimeLimit: cancellationHours,
-      whatsappSettings: whatsappSettings
-    };
-    localStorage.setItem("systemSettings", JSON.stringify(systemSettings));
+      // Also save to localStorage for backwards compatibility
+      localStorage.setItem("emailSettings", JSON.stringify(emailSettings));
 
-    // Save other settings to localStorage
-    localStorage.setItem("cancellationHours", cancellationHours.toString());
-    localStorage.setItem("membershipExpiry", JSON.stringify(membershipExpiry));
-    localStorage.setItem("showTestimonials", JSON.stringify(showTestimonials));
-    localStorage.setItem("showLowSessionWarning", JSON.stringify(showLowSessionWarning));
-    localStorage.setItem("showMemberDeleteIcon", JSON.stringify(showMemberDeleteIcon));
+      // Save other settings to localStorage
+      if (logo) {
+        localStorage.setItem("gymLogo", logo);
+      } else {
+        localStorage.removeItem("gymLogo");
+      }
+      
+      if (headerColor) {
+        localStorage.setItem("headerBackgroundColor", headerColor);
+      } else {
+        localStorage.removeItem("headerBackgroundColor");
+      }
+      
+      if (footerColor) {
+        localStorage.setItem("footerBackgroundColor", footerColor);
+      } else {
+        localStorage.removeItem("footerBackgroundColor");
+      }
+      
+      localStorage.setItem("mainPageContent", JSON.stringify(mainPageContent));
+      localStorage.setItem("whatsappSettings", JSON.stringify(whatsappSettings));
+      
+      const systemSettings = {
+        cancellationTimeLimit: cancellationHours,
+        whatsappSettings: whatsappSettings
+      };
+      localStorage.setItem("systemSettings", JSON.stringify(systemSettings));
+      localStorage.setItem("cancellationHours", cancellationHours.toString());
+      localStorage.setItem("membershipExpiry", JSON.stringify(membershipExpiry));
+      localStorage.setItem("showTestimonials", JSON.stringify(showTestimonials));
+      localStorage.setItem("showLowSessionWarning", JSON.stringify(showLowSessionWarning));
+      localStorage.setItem("showMemberDeleteIcon", JSON.stringify(showMemberDeleteIcon));
 
-    setOperationLog('Saving settings...\nFinalizing changes...');
-
-    // Simulate API call
-    setTimeout(() => {
       setIsLoading(false);
-      const successMsg = `✅ Settings saved successfully!\n\nTimestamp: ${new Date().toLocaleString()}\n\nAll configurations have been updated and stored.`;
+      const successMsg = `✅ Email settings saved successfully!\n\nTimestamp: ${new Date().toLocaleString()}\n\nSettings have been saved to the database and will persist across sessions.`;
       setOperationLog(successMsg);
       setOperationStatus('success');
       
       toast({
-        title: "Settings saved",
-        description: "Your settings have been updated successfully.",
+        title: "Email settings saved",
+        description: "Your email configuration has been saved successfully.",
       });
-    }, 500);
+
+    } catch (error) {
+      console.error('Save settings error:', error);
+      setIsLoading(false);
+      const errorMsg = `❌ Failed to save email settings!\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nTimestamp: ${new Date().toLocaleString()}\n\nPlease check your configuration and try again.`;
+      setOperationLog(errorMsg);
+      setOperationStatus('error');
+      
+      toast({
+        title: "Save failed",
+        description: `Failed to save email settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        variant: "destructive",
+      });
+    }
   };
 
   const loadEmailLogs = async () => {
