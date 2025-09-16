@@ -60,6 +60,7 @@ const Settings = () => {
   const [emailSaving, setEmailSaving] = useState(false);
   const [operationLog, setOperationLog] = useState<string>('');
   const [operationStatus, setOperationStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [testEmail, setTestEmail] = useState<string>('');
   const [emailLogs, setEmailLogs] = useState<Array<{
     timestamp: string;
     to: string;
@@ -246,8 +247,8 @@ const Settings = () => {
     setOperationStatus('idle');
     
     // Validate required fields
-    if (!emailSettings.notification_email) {
-      const errorMsg = "Please enter a notification email address.";
+    if (!testEmail) {
+      const errorMsg = "Please enter a test email address.";
       setOperationLog(errorMsg);
       setOperationStatus('error');
       toast({
@@ -275,7 +276,7 @@ const Settings = () => {
       const requestBody = emailSettings.email_provider === 'smtp' ? {
         userEmail: "test@example.com",
         userName: "Test User",
-        notificationEmail: emailSettings.notification_email,
+        notificationEmail: testEmail,
         smtpSettings: {
           smtpHost: emailSettings.smtp_host,
           smtpPort: emailSettings.smtp_port,
@@ -288,12 +289,12 @@ const Settings = () => {
       } : {
         userEmail: "test@example.com",
         userName: "Test User",
-        notificationEmail: emailSettings.notification_email,
+        notificationEmail: testEmail,
         fromEmail: emailSettings.from_email,
         fromName: emailSettings.from_name
       };
       
-      setOperationLog(`Sending request to ${functionName}...\nRecipient: ${emailSettings.notification_email}`);
+      setOperationLog(`Sending request to ${functionName}...\nRecipient: ${testEmail}`);
       
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: requestBody
@@ -309,7 +310,7 @@ const Settings = () => {
         throw error;
       }
 
-      const successMsg = `✅ Test email sent successfully!\n\nRecipient: ${emailSettings.notification_email}\nFunction: ${functionName}\nResponse: ${data?.message || 'Email sent via ' + emailSettings.email_provider}`;
+      const successMsg = `✅ Test email sent successfully!\n\nRecipient: ${testEmail}\nFunction: ${functionName}\nResponse: ${data?.message || 'Email sent via ' + emailSettings.email_provider}`;
       setOperationLog(successMsg);
       setOperationStatus('success');
 
@@ -1444,9 +1445,25 @@ const Settings = () => {
                   {saving ? 'Saving...' : 'Save Email Settings'}
                 </Button>
                 
-                <Button 
+                {/* Test Email Section */}
+                <div className="border-t pt-4">
+                  <Label htmlFor="test-email">Test Email Address</Label>
+                  <Input
+                    id="test-email"
+                    type="email"
+                    placeholder="Enter email for testing"
+                    value={testEmail}
+                    onChange={(e) => setTestEmail(e.target.value)}
+                    className="mt-1"
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Specify an email address to receive the test email
+                  </p>
+                </div>
+                
+                <Button
                   onClick={handleTestEmail}
-                  disabled={!emailSettings.notification_email || emailSaving}
+                  disabled={!testEmail || emailSaving}
                   variant="outline"
                   className="w-full"
                 >
