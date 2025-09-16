@@ -60,6 +60,8 @@ import {
   X,
   Grid3X3,
   List,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -1745,6 +1747,17 @@ const ClassSchedulePage = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          // Add edit functionality here - will open edit dialog
+                          console.log('Edit class:', cls.id);
+                        }}
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="Edit class"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           toggleClassStatus(cls.id, cls.status);
                         }}
                         className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
@@ -1762,9 +1775,10 @@ const ClassSchedulePage = () => {
                             setClassToDelete(cls.id);
                             setShowDeleteConfirm(true);
                           }}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Delete class"
                         >
-                          <X className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       )}
                     </div>
