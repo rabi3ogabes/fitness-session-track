@@ -174,6 +174,28 @@ Balance request has been approved and sessions added to member's account.`;
                 }
               });
             }
+
+            // Send WhatsApp notification to the member about their approved request
+            if (settings.enabled && settings.instance_id && settings.api_token && memberData.phone) {
+              const memberMessage = `🎉 Great news! Your session balance request has been approved!
+
+✅ ${requestedSessions} sessions have been added to your account
+💪 Your new balance: ${newBalance} sessions
+
+You can now book your classes. Thank you for choosing our gym!`;
+
+              console.log('Sending approval notification to member...');
+              await supabase.functions.invoke('send-whatsapp-notification', {
+                body: {
+                  userName: memberName,
+                  userEmail: memberEmail,
+                  phoneNumbers: [memberData.phone],
+                  apiToken: settings.api_token,
+                  instanceId: settings.instance_id,
+                  customMessage: memberMessage
+                }
+              });
+            }
           }
         } catch (whatsappError) {
           console.error("Failed to send approval WhatsApp notification:", whatsappError);
