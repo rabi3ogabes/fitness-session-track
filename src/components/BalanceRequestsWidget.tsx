@@ -25,7 +25,7 @@ const BalanceRequestsWidget = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const getGenderIconColor = (gender?: string) => {
     if (gender === "Male") return "text-blue-600";
@@ -296,7 +296,8 @@ You can now book your classes. Thank you for choosing our gym!`;
                   Requested: {format(new Date(request.created_at), 'MMM d, yyyy HH:mm')}
                 </div>
                 
-                {request.status.toLowerCase() === "pending" && (
+                {/* Only admins can approve requests */}
+                {isAdmin && request.status.toLowerCase() === "pending" && (
                   <Button
                     size="sm"
                     onClick={() => handleApproveRequest(request.id, request.email, request.sessions, request.member)}
