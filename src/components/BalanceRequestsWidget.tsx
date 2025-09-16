@@ -192,10 +192,18 @@ Balance request has been approved and sessions added to member's account.`;
 
             // Send WhatsApp notification to the member about their approved request
             if (settings.enabled && settings.instance_id && settings.api_token && memberData.phone) {
-              // Format phone number for WhatsApp (add 974 prefix for Qatar numbers)
-              const formattedPhone = memberData.phone.startsWith('974') 
-                ? memberData.phone 
-                : `974${memberData.phone}`;
+              // Format phone number for WhatsApp (ensure 974 prefix for Qatar numbers)
+              let formattedPhone = memberData.phone.trim();
+              
+              // Remove any existing country code prefixes
+              if (formattedPhone.startsWith('+974')) {
+                formattedPhone = formattedPhone.substring(4);
+              } else if (formattedPhone.startsWith('974')) {
+                formattedPhone = formattedPhone.substring(3);
+              }
+              
+              // Add 974 prefix for Qatar numbers (should be 8 digits + 974 = 11 digits total)
+              formattedPhone = `974${formattedPhone}`;
               
               const memberMessage = `🎉 Great news! Your session balance request has been approved!
 
@@ -204,7 +212,12 @@ Balance request has been approved and sessions added to member's account.`;
 
 You can now book your classes. Thank you for choosing our gym!`;
 
-              console.log('Sending approval notification to member...');
+              console.log('Sending approval notification to member...', {
+                memberPhone: memberData.phone,
+                formattedPhone: formattedPhone,
+                memberName: memberName,
+                memberEmail: memberEmail
+              });
               await supabase.functions.invoke('send-whatsapp-notification', {
                 body: {
                   userName: memberName,
