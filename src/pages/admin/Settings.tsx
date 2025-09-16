@@ -58,6 +58,8 @@ const Settings = () => {
   const [isTestingEmail, setIsTestingEmail] = useState(false);
   const [saving, setSaving] = useState(false);
   const [emailSaving, setEmailSaving] = useState(false);
+  const [operationLog, setOperationLog] = useState<string>('');
+  const [operationStatus, setOperationStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [emailLogs, setEmailLogs] = useState<Array<{
     timestamp: string;
     to: string;
@@ -154,7 +156,12 @@ const Settings = () => {
   }, []);
 
   const handleSaveSettings = () => {
+    // Clear previous logs
+    setOperationLog('');
+    setOperationStatus('idle');
+    
     setIsLoading(true);
+    setOperationLog('Saving settings...\nUpdating configuration...');
 
     // Save logo to localStorage
     if (logo) {
@@ -200,9 +207,15 @@ const Settings = () => {
     localStorage.setItem("showLowSessionWarning", JSON.stringify(showLowSessionWarning));
     localStorage.setItem("showMemberDeleteIcon", JSON.stringify(showMemberDeleteIcon));
 
+    setOperationLog('Saving settings...\nFinalizing changes...');
+
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
+      const successMsg = `✅ Settings saved successfully!\n\nTimestamp: ${new Date().toLocaleString()}\n\nAll configurations have been updated and stored.`;
+      setOperationLog(successMsg);
+      setOperationStatus('success');
+      
       toast({
         title: "Settings saved",
         description: "Your settings have been updated successfully.",
@@ -228,17 +241,26 @@ const Settings = () => {
   };
 
   const handleTestEmail = async () => {
+    // Clear previous logs
+    setOperationLog('');
+    setOperationStatus('idle');
+    
     // Validate required fields
     if (!emailSettings.notification_email) {
+      const errorMsg = "Please enter a notification email address.";
+      setOperationLog(errorMsg);
+      setOperationStatus('error');
       toast({
         title: "Error",
-        description: "Please enter a notification email address.",
+        description: errorMsg,
         variant: "destructive",
       });
       return;
     }
 
     setIsTestingEmail(true);
+    setOperationLog('Sending test email...\nPlease wait...');
+    setOperationStatus('idle');
     
     try {
       console.log("About to invoke edge function...");
@@ -247,6 +269,8 @@ const Settings = () => {
       // Choose the appropriate function based on email provider
       const functionName = emailSettings.email_provider === 'smtp' ? 'send-smtp-notification' : 'send-email-notification';
       console.log("Using function:", functionName);
+      
+      setOperationLog(`Using ${functionName} function...\nPreparing request...`);
       
       const requestBody = emailSettings.email_provider === 'smtp' ? {
         userEmail: "test@example.com",
@@ -269,6 +293,8 @@ const Settings = () => {
         fromName: emailSettings.from_name
       };
       
+      setOperationLog(`Sending request to ${functionName}...\nRecipient: ${emailSettings.notification_email}`);
+      
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: requestBody
       });
@@ -277,8 +303,15 @@ const Settings = () => {
 
       if (error) {
         console.error("Edge function error details:", error);
+        const errorMsg = `Function Error: ${error.message || 'Unknown error'}\n\nDetails: ${JSON.stringify(error, null, 2)}`;
+        setOperationLog(errorMsg);
+        setOperationStatus('error');
         throw error;
       }
+
+      const successMsg = `✅ Test email sent successfully!\n\nRecipient: ${emailSettings.notification_email}\nFunction: ${functionName}\nResponse: ${data?.message || 'Email sent via ' + emailSettings.email_provider}`;
+      setOperationLog(successMsg);
+      setOperationStatus('success');
 
       toast({
         title: "Test email sent",
@@ -289,6 +322,10 @@ const Settings = () => {
       await loadEmailLogs();
     } catch (error) {
       console.error('Test email error:', error);
+      const errorMsg = `❌ Test email failed!\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nTimestamp: ${new Date().toLocaleString()}\n\nCheck your email configuration and try again.`;
+      setOperationLog(errorMsg);
+      setOperationStatus('error');
+      
       toast({
         title: "Test failed",
         description: `Failed to send test email: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -1415,6 +1452,48 @@ const Settings = () => {
                 >
                   {emailSaving ? 'Sending...' : 'Send Test Email'}
                 </Button>
+                
+                {/* Operation Log Display */}
+                {operationLog && (
+                  <div className={`mt-4 p-3 rounded-lg border ${
+                    operationStatus === 'success' 
+                      ? 'bg-green-50 border-green-200 text-green-800' 
+                      : operationStatus === 'error'
+                      ? 'bg-red-50 border-red-200 text-red-800'
+                      : 'bg-gray-50 border-gray-200 text-gray-800'
+                  }`}>
+                    <div className="flex items-start space-x-2">
+                      <div className="flex-shrink-0 mt-0.5">
+                        {operationStatus === 'success' && (
+                          <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
+                            <span className="text-white text-xs">✓</span>
+                          </div>
+                        )}
+                        {operationStatus === 'error' && (
+                          <div className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center">
+                            <span className="text-white text-xs">✗</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">
+                          {operationStatus === 'success' ? 'Success' : operationStatus === 'error' ? 'Error' : 'Info'}
+                        </p>
+                        <p className="text-sm mt-1 whitespace-pre-wrap">{operationLog}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setOperationLog('');
+                          setOperationStatus('idle');
+                        }}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <span className="sr-only">Close</span>
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
