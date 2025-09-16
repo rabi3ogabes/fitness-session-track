@@ -16,6 +16,7 @@ interface BalanceRequest {
   status: string;
   created_at: string;
   member_gender?: string;
+  member_phone?: string;
 }
 
 const BalanceRequestsWidget = () => {
@@ -41,23 +42,24 @@ const BalanceRequestsWidget = () => {
 
         if (error) throw error;
         
-        // Get member gender separately to avoid filtering out requests
-        const requestsWithGender = await Promise.all(
+        // Get member gender and phone separately to avoid filtering out requests
+        const requestsWithMemberData = await Promise.all(
           (data || []).map(async (request) => {
             const { data: memberData } = await supabase
               .from("members")
-              .select("gender")
+              .select("gender, phone")
               .eq("email", request.email)
               .single();
             
             return {
               ...request,
-              member_gender: memberData?.gender
+              member_gender: memberData?.gender,
+              member_phone: memberData?.phone
             };
           })
         );
         
-        setBalanceRequests(requestsWithGender);
+        setBalanceRequests(requestsWithMemberData);
       } catch (error) {
         console.error("Error fetching balance requests:", error);
       } finally {
@@ -279,7 +281,7 @@ You can now book your classes. Thank you for choosing our gym!`;
               </div>
               
               <div className="text-sm text-gray-500 mb-2">
-                <strong>Email:</strong> {request.email}
+                <strong>Phone:</strong> {request.member_phone || 'Not provided'}
               </div>
               
               <div className="flex justify-between items-center">
