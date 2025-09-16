@@ -231,17 +231,22 @@ Balance request has been approved and sessions added to member's account.`;
               });
 
               try {
-                // Format phone number for Green API (digits only)
+                // Format phone number for Green API - ensure country code
                 let formattedPhone = memberData.phone.trim();
                 
-                // Remove any non-digit characters but preserve the number as entered
+                // Remove any non-digit characters
                 formattedPhone = formattedPhone.replace(/[^\d]/g, '');
+                
+                // Add Qatar country code if not present (same format as admin numbers)
+                if (!formattedPhone.startsWith('974')) {
+                  formattedPhone = `974${formattedPhone}`;
+                }
                 
                 console.log('Phone number formatting:', {
                   original: memberData.phone,
                   cleaned: formattedPhone,
                   final: `${formattedPhone}@c.us`,
-                  note: 'Using phone number as stored in database without adding country code'
+                  note: 'Added 974 country code to match admin number format'
                 });
                 
                 const memberMessage = `🎉 Great news! Your session balance request has been approved!
