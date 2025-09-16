@@ -220,20 +220,18 @@ Balance request has been approved and sessions added to member's account.`;
 
             // Send WhatsApp notification to the member about their approved request
             if (settings.enabled && settings.instance_id && settings.api_token && memberData.phone) {
-              // Format phone number for WhatsApp (ensure +974 prefix for Qatar numbers)
+              // Format phone number for Green API (digits only with country code, no + sign)
               let formattedPhone = memberData.phone.trim();
               
-              // Remove any existing country code prefixes
-              if (formattedPhone.startsWith('+974')) {
-                formattedPhone = formattedPhone.substring(4);
-              } else if (formattedPhone.startsWith('974')) {
-                formattedPhone = formattedPhone.substring(3);
-              } else if (formattedPhone.startsWith('+')) {
-                formattedPhone = formattedPhone.substring(1);
+              // Remove any existing prefixes and non-digits
+              formattedPhone = formattedPhone.replace(/[^\d]/g, '');
+              
+              // If it doesn't start with 974, add it (Qatar country code)
+              if (!formattedPhone.startsWith('974')) {
+                formattedPhone = `974${formattedPhone}`;
               }
               
-              // Add +974 prefix for Qatar numbers
-              formattedPhone = `+974${formattedPhone}`;
+              // Green API expects just digits with country code for chatId formatting
               
               const memberMessage = `🎉 Great news! Your session balance request has been approved!
 
