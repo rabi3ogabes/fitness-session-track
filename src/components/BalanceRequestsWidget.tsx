@@ -220,7 +220,7 @@ Balance request has been approved and sessions added to member's account.`;
 
             // Send WhatsApp notification to the member about their approved request
             if (settings.enabled && settings.instance_id && settings.api_token && memberData.phone) {
-              // Format phone number for WhatsApp (ensure 974 prefix for Qatar numbers)
+              // Format phone number for WhatsApp (ensure +974 prefix for Qatar numbers)
               let formattedPhone = memberData.phone.trim();
               
               // Remove any existing country code prefixes
@@ -228,10 +228,12 @@ Balance request has been approved and sessions added to member's account.`;
                 formattedPhone = formattedPhone.substring(4);
               } else if (formattedPhone.startsWith('974')) {
                 formattedPhone = formattedPhone.substring(3);
+              } else if (formattedPhone.startsWith('+')) {
+                formattedPhone = formattedPhone.substring(1);
               }
               
-              // Add 974 prefix for Qatar numbers (should be 8 digits + 974 = 11 digits total)
-              formattedPhone = `974${formattedPhone}`;
+              // Add +974 prefix for Qatar numbers
+              formattedPhone = `+974${formattedPhone}`;
               
               const memberMessage = `🎉 Great news! Your session balance request has been approved!
 
