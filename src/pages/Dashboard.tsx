@@ -12,8 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Calendar, Clock, Bell, Settings } from "lucide-react";
 import { supabase, requireAuth } from "@/integrations/supabase/client";
 import useComingClass from "@/hooks/useComingClass";
-import RecentBookingsWidget from "@/components/RecentBookingsWidget";
-import BalanceRequestsWidget from "@/components/BalanceRequestsWidget";
 
 // Mock user data - we will overlay this with real data from Supabase if available
 // const userData = {
@@ -297,10 +295,42 @@ const Dashboard = () => {
             </Alert>
           )}
 
-          {/* Recent Bookings and Balance Requests Widgets */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <RecentBookingsWidget />
-            <BalanceRequestsWidget />
+          {/* Upcoming Classes */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-gym-blue" />
+              Upcoming Classes
+            </h2>
+            {upcomingClassesNext7Days.length > 0 ? (
+              <div className="space-y-3">
+                {upcomingClassesNext7Days.slice(0, 5).map((cls) => (
+                  <div
+                    key={cls.id}
+                    className="p-4 border border-gray-200 rounded-md flex justify-between items-center"
+                  >
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{cls.name}</h3>
+                      <p className="text-sm text-gray-600">
+                        {new Date(cls.schedule).toLocaleDateString()} at {cls.start_time}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Trainer: {cls.trainer} • {cls.location}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-gray-600">
+                        {cls.enrolled}/{cls.capacity}
+                      </div>
+                      <div className="text-xs text-gray-500">enrolled</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-8">
+                No upcoming classes in the next 7 days.
+              </p>
+            )}
           </div>
 
           {/* <div className="bg-white rounded-lg shadow-md p-6">
