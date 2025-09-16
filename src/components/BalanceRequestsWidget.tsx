@@ -35,13 +35,19 @@ const BalanceRequestsWidget = () => {
 
   useEffect(() => {
     const fetchBalanceRequests = async () => {
-      if (!user?.email) return;
+      if (!isAdmin && !user?.email) return;
       
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("membership_requests")
-          .select("*")
-          .eq("email", user.email)
+          .select("*");
+        
+        // If not admin, filter by user email
+        if (!isAdmin && user?.email) {
+          query = query.eq("email", user.email);
+        }
+        
+        const { data, error } = await query
           .order("created_at", { ascending: false })
           .limit(5);
 
@@ -74,7 +80,7 @@ const BalanceRequestsWidget = () => {
 
     fetchBalanceRequests();
 
-    if (!user?.email) return;
+    if (!isAdmin && !user?.email) return;
 
     // Set up real-time subscription for new requests
     const channel = supabase
@@ -95,7 +101,7 @@ const BalanceRequestsWidget = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.email]);
+  }, [user?.email, isAdmin]);
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
@@ -253,7 +259,7 @@ You can now book your classes. Thank you for choosing our gym!`;
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <CreditCard className="h-5 w-5 text-purple-600" />
-          My Session Balance Requests
+          {isAdmin ? "Session Balance Requests" : "My Session Balance Requests"}
         </h2>
         <Button
           variant="outline"
