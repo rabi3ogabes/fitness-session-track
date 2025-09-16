@@ -253,11 +253,13 @@ const Settings = () => {
         userName: "Test User",
         notificationEmail: emailSettings.notification_email,
         smtpSettings: {
-          host: emailSettings.smtp_host,
-          port: emailSettings.smtp_port,
-          username: emailSettings.smtp_username,
-          password: emailSettings.smtp_password,
-          useTLS: emailSettings.smtp_use_tls
+          smtpHost: emailSettings.smtp_host,
+          smtpPort: emailSettings.smtp_port,
+          smtpUsername: emailSettings.smtp_username,
+          smtpPassword: emailSettings.smtp_password,
+          fromEmail: emailSettings.from_email || emailSettings.notification_email,
+          fromName: emailSettings.from_name || "Gym System",
+          useSsl: emailSettings.smtp_use_tls
         }
       } : {
         userEmail: "test@example.com",
