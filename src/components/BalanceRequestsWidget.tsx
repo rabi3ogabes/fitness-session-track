@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { CreditCard, Clock, User, CheckCircle, XCircle, Check } from "lucide-react";
+import { CreditCard, Clock, User, CheckCircle, XCircle, Check, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface BalanceRequest {
   id: number;
@@ -21,6 +22,7 @@ const BalanceRequestsWidget = () => {
   const [balanceRequests, setBalanceRequests] = useState<BalanceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const getGenderIconColor = (gender?: string) => {
     if (gender === "Male") return "text-blue-600";
@@ -34,7 +36,8 @@ const BalanceRequestsWidget = () => {
         const { data, error } = await supabase
           .from("membership_requests")
           .select("*")
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(5);
 
         if (error) throw error;
         
@@ -211,10 +214,21 @@ Balance request has been approved and sessions added to member's account.`;
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-        <CreditCard className="h-5 w-5 text-purple-600" />
-        Session Balance Requests
-      </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <CreditCard className="h-5 w-5 text-purple-600" />
+          Session Balance Requests
+        </h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate("/admin/memberships")}
+          className="flex items-center gap-2"
+        >
+          <ExternalLink className="h-4 w-4" />
+          View More
+        </Button>
+      </div>
       {balanceRequests.length > 0 ? (
         <div className="space-y-3">
           {balanceRequests.map((request) => (
