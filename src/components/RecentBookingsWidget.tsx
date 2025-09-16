@@ -12,11 +12,18 @@ interface RecentBooking {
   start_time: string;
   end_time: string;
   member_balance: number;
+  member_gender?: string;
 }
 
 const RecentBookingsWidget = () => {
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const getGenderIconColor = (gender?: string) => {
+    if (gender === "Male") return "text-blue-600";
+    if (gender === "Female") return "text-pink-600";
+    return "text-gray-600"; // default color for unknown gender
+  };
 
   useEffect(() => {
     const fetchRecentBookings = async () => {
@@ -41,6 +48,7 @@ const RecentBookingsWidget = () => {
         const bookingsWithBalance = await Promise.all(
           (bookingsData || []).map(async (booking) => {
             let memberBalance = 0;
+            let memberGender = undefined;
             let classDetails = {
               name: "Unknown Class",
               schedule: "",
@@ -61,15 +69,16 @@ const RecentBookingsWidget = () => {
               }
             }
             
-            // Get member balance
+            // Get member balance and gender
             if (booking.member_id) {
               const { data: memberData } = await supabase
                 .from("members")
-                .select("remaining_sessions")
+                .select("remaining_sessions, gender")
                 .eq("id", booking.member_id)
                 .single();
               
               memberBalance = memberData?.remaining_sessions || 0;
+              memberGender = memberData?.gender;
             }
 
             return {
@@ -81,6 +90,7 @@ const RecentBookingsWidget = () => {
               start_time: classDetails.start_time,
               end_time: classDetails.end_time,
               member_balance: memberBalance,
+              member_gender: memberGender,
             };
           })
         );
@@ -147,7 +157,7 @@ const RecentBookingsWidget = () => {
             >
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-500" />
+                  <User className={`h-4 w-4 ${getGenderIconColor(booking.member_gender)}`} />
                   <h3 className="font-semibold text-gray-900">{booking.user_name}</h3>
                 </div>
                 <div className="text-right">
