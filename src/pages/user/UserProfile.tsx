@@ -31,6 +31,7 @@ const UserProfile = () => {
       if (!user?.id) return;
       
       try {
+        // Try to get profile from database
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -43,6 +44,7 @@ const UserProfile = () => {
         }
 
         if (data) {
+          // Profile exists in database, use that data
           setProfile({
             name: data.name || "",
             email: data.email || user.email || "",
@@ -53,13 +55,42 @@ const UserProfile = () => {
             emergencyPhone: data.emergency_contact_phone || "",
           });
         } else {
-          // Set basic info from auth user if no profile exists
-          setProfile(prev => ({
-            ...prev,
-            name: user.name || "",
+          // No profile in database, check if user exists in members table
+          const { data: memberData } = await supabase
+            .from('members')
+            .select('phone, name')
+            .eq('email', user.email)
+            .single();
+
+          const phoneFromMember = memberData?.phone || (user as any).user_metadata?.phone_number || "";
+          const nameFromMember = memberData?.name || user.name || "";
+
+          // Create profile record with data from member or user metadata
+          if (phoneFromMember || nameFromMember) {
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: user.id,
+                email: user.email,
+                name: nameFromMember,
+                phone_number: phoneFromMember,
+              });
+
+            if (insertError) {
+              console.error('Error creating profile:', insertError);
+            }
+          }
+
+          // Set profile state
+          setProfile({
+            name: nameFromMember,
             email: user.email || "",
-            phone: (user as any).user_metadata?.phone_number || "",
-          }));
+            phone: phoneFromMember,
+            address: "",
+            city: "",
+            emergencyContact: "",
+            emergencyPhone: "",
+          });
         }
       } catch (error) {
         console.error('Error loading profile:', error);
