@@ -1330,10 +1330,20 @@ const Settings = () => {
                   <p className="text-sm text-gray-600 mt-1">
                     Email address that will receive all admin notifications
                   </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                 </div>
+               </div>
+               
+               <div className="pt-4 border-t">
+                 <Button 
+                   onClick={handleSaveSettings}
+                   disabled={saving}
+                   className="w-full"
+                 >
+                   {saving ? 'Saving...' : 'Save Email Configuration'}
+                 </Button>
+               </div>
+             </CardContent>
+           </Card>
 
           {/* Notification Settings */}
           <Card>
