@@ -83,7 +83,8 @@ const UserProfile = () => {
     if (!user?.id) return;
     
     try {
-      const { error } = await supabase
+      // Update profiles table
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
           name: editedProfile.name,
@@ -93,7 +94,7 @@ const UserProfile = () => {
         })
         .eq('id', user.id);
 
-      if (error) {
+      if (profileError) {
         toast({
           title: "Error",
           description: "Failed to update profile. Please try again.",
@@ -102,12 +103,26 @@ const UserProfile = () => {
         return;
       }
 
+      // Also update phone number in members table if the member exists
+      const { error: memberError } = await supabase
+        .from('members')
+        .update({
+          phone: editedProfile.phone,
+          name: editedProfile.name,
+        })
+        .eq('email', editedProfile.email);
+
+      // Note: We don't fail if member update fails as it might not exist
+      if (memberError) {
+        console.log('Member record not found or failed to update:', memberError);
+      }
+
       setProfile(editedProfile);
       setIsEditing(false);
       
       toast({
         title: "Profile updated",
-        description: "Your profile has been updated successfully",
+        description: "Your profile has been updated successfully. Phone number updated for WhatsApp notifications.",
       });
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -183,14 +198,18 @@ const UserProfile = () => {
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                    Phone
+                    Phone Number
                   </label>
                   <Input
                     id="phone"
                     name="phone"
                     value={editedProfile.phone}
                     onChange={handleChange}
+                    placeholder="e.g., +971501234567"
                   />
+                  <p className="text-xs text-gray-500">
+                    Include country code for WhatsApp notifications (e.g., +971 for UAE)
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="address" className="block text-sm font-medium text-gray-700">
