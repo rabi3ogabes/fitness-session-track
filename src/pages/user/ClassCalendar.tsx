@@ -481,6 +481,27 @@ const ClassCalendar = () => {
         return;
       }
 
+      // Check gender restrictions - only restrict men from women-only classes
+      if (selectedClass.gender === "Female") {
+        // Get member record to check gender
+        const { data: memberData, error: memberError } = await supabase
+          .from("members")
+          .select("gender")
+          .eq("email", user.email)
+          .single();
+        
+        if (memberData?.gender === "Male") {
+          toast({
+            title: "Class not available",
+            description: "This class is for women only.",
+            variant: "destructive",
+          });
+          setIsBookingInProgress(false);
+          setConfirmDialogOpen(false);
+          return;
+        }
+      }
+
       // Get member record first to link the booking
       const { data: memberData, error: memberError } = await supabase
         .from("members")

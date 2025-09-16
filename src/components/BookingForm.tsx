@@ -133,19 +133,33 @@ const BookingForm = ({
 
     // Check gender restrictions - only restrict men from women-only classes
     const selectedClassData = unbookedClasses.find(cls => cls.id === selectedClass);
-    if (selectedClassData) {
-      // Get user profile to check gender
-      const { data: profile } = await supabase
-        .from("profiles")
+    if (selectedClassData && selectedClassData.gender === "Female") {
+      // Get user gender from members table (primary source)
+      const { data: memberData } = await supabase
+        .from("members")
         .select("gender")
-        .eq("id", user.id)
+        .eq("email", user.email)
         .single();
-
-      // Only restrict men from women-only classes
-      if (profile?.gender === "Male" && 
-          selectedClassData.gender === "Female") {
+      
+      // If not found in members, check profiles table as fallback
+      if (!memberData) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("gender")
+          .eq("id", user.id)
+          .single();
+        
+        if (profile?.gender === "Male") {
+          toast({
+            title: "Class not available",
+            description: "This class is for women only.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else if (memberData.gender === "Male") {
         toast({
-          title: "Class not available",
+          title: "Class not available", 
           description: "This class is for women only.",
           variant: "destructive",
         });
