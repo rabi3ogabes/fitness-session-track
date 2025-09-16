@@ -220,42 +220,58 @@ Balance request has been approved and sessions added to member's account.`;
 
             // Send WhatsApp notification to the member about their approved request
             if (settings.enabled && settings.instance_id && settings.api_token && memberData.phone) {
-              // Format phone number for Green API (digits only with country code, no + sign)
-              let formattedPhone = memberData.phone.trim();
-              
-              // Remove any existing prefixes and non-digits
-              formattedPhone = formattedPhone.replace(/[^\d]/g, '');
-              
-              // If it doesn't start with 974, add it (Qatar country code)
-              if (!formattedPhone.startsWith('974')) {
-                formattedPhone = `974${formattedPhone}`;
-              }
-              
-              // Green API expects just digits with country code for chatId formatting
-              
-              const memberMessage = `🎉 Great news! Your session balance request has been approved!
+              try {
+                // Format phone number for Green API (digits only with country code, no + sign)
+                let formattedPhone = memberData.phone.trim();
+                
+                // Remove any existing prefixes and non-digits
+                formattedPhone = formattedPhone.replace(/[^\d]/g, '');
+                
+                // If it doesn't start with 974, add it (Qatar country code)
+                if (!formattedPhone.startsWith('974')) {
+                  formattedPhone = `974${formattedPhone}`;
+                }
+                
+                const memberMessage = `🎉 Great news! Your session balance request has been approved!
 
 ✅ ${requestedSessions} sessions have been added to your account
 💪 Your new balance: ${newBalance} sessions
 
 You can now book your classes. Thank you for choosing our gym!`;
 
-              console.log('Sending approval notification to member...', {
-                memberPhone: memberData.phone,
-                formattedPhone: formattedPhone,
-                memberName: memberName,
-                memberEmail: memberEmail
-              });
-              await supabase.functions.invoke('send-whatsapp-notification', {
-                body: {
-                  userName: memberName,
-                  userEmail: memberEmail,
-                  phoneNumbers: [formattedPhone],
-                  apiToken: settings.api_token,
-                  instanceId: settings.instance_id,
-                  customMessage: memberMessage
+                console.log('Sending approval notification to member...', {
+                  memberPhone: memberData.phone,
+                  formattedPhone: formattedPhone,
+                  memberName: memberName,
+                  memberEmail: memberEmail,
+                  settings: {
+                    enabled: settings.enabled,
+                    hasApiToken: !!settings.api_token,
+                    hasInstanceId: !!settings.instance_id
+                  }
+                });
+
+                const response = await supabase.functions.invoke('send-whatsapp-notification', {
+                  body: {
+                    userName: memberName,
+                    userEmail: memberEmail,
+                    phoneNumbers: [formattedPhone],
+                    apiToken: settings.api_token,
+                    instanceId: settings.instance_id,
+                    customMessage: memberMessage
+                  }
+                });
+
+                console.log('WhatsApp response:', response);
+                
+                if (response.error) {
+                  console.error('WhatsApp notification failed:', response.error);
+                } else {
+                  console.log('WhatsApp notification sent successfully');
                 }
-              });
+              } catch (error) {
+                console.error('Error sending WhatsApp notification to member:', error);
+              }
             }
           }
         } catch (whatsappError) {
