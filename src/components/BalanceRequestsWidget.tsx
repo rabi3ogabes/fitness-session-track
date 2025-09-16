@@ -186,6 +186,11 @@ Balance request has been approved and sessions added to member's account.`;
 
             // Send WhatsApp notification to the member about their approved request
             if (settings.enabled && settings.instance_id && settings.api_token && memberData.phone) {
+              // Format phone number for WhatsApp (add +971 prefix for UAE numbers)
+              const formattedPhone = memberData.phone.startsWith('+971') 
+                ? memberData.phone 
+                : `+971${memberData.phone}`;
+              
               const memberMessage = `🎉 Great news! Your session balance request has been approved!
 
 ✅ ${requestedSessions} sessions have been added to your account
@@ -198,7 +203,7 @@ You can now book your classes. Thank you for choosing our gym!`;
                 body: {
                   userName: memberName,
                   userEmail: memberEmail,
-                  phoneNumbers: [memberData.phone],
+                  phoneNumbers: [formattedPhone],
                   apiToken: settings.api_token,
                   instanceId: settings.instance_id,
                   customMessage: memberMessage
