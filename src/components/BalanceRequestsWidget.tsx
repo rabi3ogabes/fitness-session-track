@@ -242,6 +242,12 @@ Balance request has been approved and sessions added to member's account.`;
                   formattedPhone = `974${formattedPhone}`;
                 }
                 
+                console.log('Phone number formatting:', {
+                  original: memberData.phone,
+                  cleaned: formattedPhone,
+                  final: `${formattedPhone}@c.us`
+                });
+                
                 const memberMessage = `🎉 Great news! Your session balance request has been approved!
 
 ✅ ${requestedSessions} sessions have been added to your account
