@@ -88,7 +88,7 @@ const BalanceRequestsWidget = () => {
     }
   };
 
-  const handleApproveRequest = async (requestId: number, memberEmail: string, requestedSessions: number) => {
+  const handleApproveRequest = async (requestId: number, memberEmail: string, requestedSessions: number, memberName: string) => {
     try {
       // Update the request status to approved
       const { error: updateError } = await supabase
@@ -99,10 +99,10 @@ const BalanceRequestsWidget = () => {
       if (updateError) throw updateError;
 
       // Update the member's session balance
-      // First get the current balance
+      // First get the current balance and phone number
       const { data: memberData, error: fetchError } = await supabase
         .from("members")
-        .select("remaining_sessions")
+        .select("remaining_sessions, phone")
         .eq("email", memberEmail)
         .single();
 
@@ -116,6 +116,43 @@ const BalanceRequestsWidget = () => {
           .eq("email", memberEmail);
 
         if (updateMemberError) throw updateMemberError;
+
+        // Send WhatsApp notification to admin about approval
+        try {
+          const whatsappSettings = localStorage.getItem("whatsappSettings");
+          if (whatsappSettings) {
+            const settings = JSON.parse(whatsappSettings);
+            if (settings.enabled && settings.balance_approval_notifications && 
+                settings.instance_id && settings.api_token && settings.phone_numbers) {
+              
+              const phoneNumbers = settings.phone_numbers.split(',').map(num => num.trim());
+              
+              const message = `✅ Session balance approved!
+
+Member: ${memberName}
+Email: ${memberEmail}
+Sessions Added: ${requestedSessions}
+New Balance: ${newBalance} sessions
+
+Balance request has been approved and sessions added to member's account.`;
+
+              console.log('Sending balance approval WhatsApp notification...');
+              await supabase.functions.invoke('send-whatsapp-notification', {
+                body: {
+                  userName: memberName,
+                  userEmail: memberEmail,
+                  phoneNumbers: phoneNumbers,
+                  apiToken: settings.api_token,
+                  instanceId: settings.instance_id,
+                  customMessage: message
+                }
+              });
+            }
+          }
+        } catch (whatsappError) {
+          console.error("Failed to send approval WhatsApp notification:", whatsappError);
+          // Don't fail the approval if WhatsApp fails
+        }
       }
 
       toast({
@@ -194,7 +231,7 @@ const BalanceRequestsWidget = () => {
                 {request.status.toLowerCase() === "pending" && (
                   <Button
                     size="sm"
-                    onClick={() => handleApproveRequest(request.id, request.email, request.sessions)}
+                    onClick={() => handleApproveRequest(request.id, request.email, request.sessions, request.member)}
                     className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 text-xs"
                   >
                     <Check className="h-3 w-3 mr-1" />

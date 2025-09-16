@@ -245,6 +245,13 @@ export const cancelClassBooking = async (
 
     console.log("Found booking(s) to cancel:", bookingData);
 
+    // Get class details for notification
+    const { data: classDetails, error: classDetailsError } = await supabase
+      .from("classes")
+      .select("*")
+      .eq("id", classId)
+      .single();
+
     // Update the booking status to 'cancelled'
     const { error: updateError } = await supabase
       .from("bookings")
@@ -259,6 +266,53 @@ export const cancelClassBooking = async (
     }
 
     console.log("Successfully updated booking status to cancelled");
+
+    // Send WhatsApp notification for cancellation
+    try {
+      const whatsappSettings = localStorage.getItem("whatsappSettings");
+      if (whatsappSettings && classDetails && bookingData[0]) {
+        const settings = JSON.parse(whatsappSettings);
+        if (settings.enabled && settings.cancellation_notifications && 
+            settings.instance_id && settings.api_token && settings.phone_numbers) {
+          
+          // Get user profile info
+          const { data: userProfile } = await supabase
+            .from("profiles")
+            .select("name, email, phone_number")
+            .eq("id", userId)
+            .single();
+          
+          const phoneNumbers = settings.phone_numbers.split(',').map(num => num.trim());
+          
+          if (userProfile) {
+            const message = `❌ Class booking cancelled!
+
+Member: ${userProfile.name}
+Class: ${classDetails.name}
+Date: ${new Date(classDetails.schedule).toLocaleDateString()}
+Time: ${classDetails.start_time}
+Trainer: ${classDetails.trainer}
+
+Booking has been cancelled.`;
+
+            console.log('Sending cancellation WhatsApp notification...');
+            await supabase.functions.invoke('send-whatsapp-notification', {
+              body: {
+                userName: userProfile.name,
+                userEmail: userProfile.email,
+                phoneNumbers: phoneNumbers,
+                apiToken: settings.api_token,
+                instanceId: settings.instance_id,
+                customMessage: message
+              }
+            });
+          }
+        }
+      }
+    } catch (whatsappError) {
+      console.error("Failed to send cancellation WhatsApp notification:", whatsappError);
+      // Don't fail the cancellation if WhatsApp fails
+    }
 
     // Get the class details to update the enrolled count
     const { data: classData, error: classError } = await supabase
