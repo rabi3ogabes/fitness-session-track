@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, MessageCircle, Clock, Image, Trash, Palette, LayoutDashboard, Type, Plus, Send, Mail, Key, User, Shield } from "lucide-react";
+import { Settings as SettingsIcon, MessageCircle, Clock, Image, Trash, Palette, LayoutDashboard, Type, Plus, Send, Mail, Key, User, Shield, Bell, FileText } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,6 +28,12 @@ const Settings = () => {
     notification_email: "",
     from_email: "",
     from_name: "",
+    email_provider: "smtp",
+    smtp_host: "",
+    smtp_port: 587,
+    smtp_username: "",
+    smtp_password: "",
+    smtp_use_tls: true,
     signup_notifications: true,
     booking_notifications: true,
     session_request_notifications: true
@@ -50,6 +56,8 @@ const Settings = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [emailSaving, setEmailSaving] = useState(false);
   const [emailLogs, setEmailLogs] = useState<Array<{
     timestamp: string;
     to: string;
@@ -284,6 +292,12 @@ const Settings = () => {
           from_email: data.from_email || "",
           from_name: data.from_name || "",
           notification_email: data.notification_email || "",
+          email_provider: data.email_provider || "smtp",
+          smtp_host: data.smtp_host || "",
+          smtp_port: data.smtp_port || 587,
+          smtp_username: data.smtp_username || "",
+          smtp_password: data.smtp_password || "",
+          smtp_use_tls: data.smtp_use_tls ?? true,
           signup_notifications: data.signup_notifications ?? true,
           booking_notifications: data.booking_notifications ?? true,
           session_request_notifications: data.session_request_notifications ?? true
@@ -297,6 +311,12 @@ const Settings = () => {
             from_email: parsed.from_email || parsed.fromEmail || "",
             from_name: parsed.from_name || parsed.fromName || "",
             notification_email: parsed.notification_email || parsed.notificationEmail || "",
+            email_provider: parsed.email_provider || "smtp",
+            smtp_host: parsed.smtp_host || "",
+            smtp_port: parsed.smtp_port || 587,
+            smtp_username: parsed.smtp_username || "",
+            smtp_password: parsed.smtp_password || "",
+            smtp_use_tls: parsed.smtp_use_tls ?? true,
             signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
             booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
             session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true
@@ -313,6 +333,12 @@ const Settings = () => {
           from_email: parsed.from_email || parsed.fromEmail || "",
           from_name: parsed.from_name || parsed.fromName || "",
           notification_email: parsed.notification_email || parsed.notificationEmail || "",
+          email_provider: parsed.email_provider || "smtp",
+          smtp_host: parsed.smtp_host || "",
+          smtp_port: parsed.smtp_port || 587,
+          smtp_username: parsed.smtp_username || "",
+          smtp_password: parsed.smtp_password || "",
+          smtp_use_tls: parsed.smtp_use_tls ?? true,
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true
@@ -1145,19 +1171,239 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="email" className="space-y-6">
-          {/* Admin Notification Email */}
+          {/* Email Provider Selection */}
           <Card>
             <CardHeader>
               <div className="flex items-center space-x-2">
                 <Mail className="h-5 w-5 text-blue-600" />
-                <CardTitle>Admin Notification Email</CardTitle>
+                <CardTitle>Email Configuration</CardTitle>
               </div>
               <CardDescription>
-                Configure the email account that will receive all admin notifications
+                Configure your email service provider for sending notifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="email-provider">Email Provider</Label>
+                  <select
+                    id="email-provider"
+                    value={emailSettings.email_provider || 'smtp'}
+                    onChange={(e) => setEmailSettings({...emailSettings, email_provider: e.target.value})}
+                    className="w-full mt-1 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="smtp">SMTP Server</option>
+                    <option value="resend">Resend Service</option>
+                  </select>
+                </div>
+
+                {emailSettings.email_provider === 'smtp' ? (
+                  <>
+                    {/* SMTP Configuration */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="smtp-host">SMTP Host</Label>
+                        <Input
+                          id="smtp-host"
+                          type="text"
+                          placeholder="smtp.gmail.com"
+                          value={emailSettings.smtp_host || ''}
+                          onChange={(e) => setEmailSettings({...emailSettings, smtp_host: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="smtp-port">SMTP Port</Label>
+                        <Input
+                          id="smtp-port"
+                          type="number"
+                          placeholder="587"
+                          value={emailSettings.smtp_port || 587}
+                          onChange={(e) => setEmailSettings({...emailSettings, smtp_port: parseInt(e.target.value)})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="smtp-username">SMTP Username</Label>
+                        <Input
+                          id="smtp-username"
+                          type="text"
+                          placeholder="your-email@gmail.com"
+                          value={emailSettings.smtp_username || ''}
+                          onChange={(e) => setEmailSettings({...emailSettings, smtp_username: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="smtp-password">SMTP Password</Label>
+                        <Input
+                          id="smtp-password"
+                          type="password"
+                          placeholder="Your app password"
+                          value={emailSettings.smtp_password || ''}
+                          onChange={(e) => setEmailSettings({...emailSettings, smtp_password: e.target.value})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="smtp-tls"
+                        checked={emailSettings.smtp_use_tls !== false}
+                        onChange={(e) => setEmailSettings({...emailSettings, smtp_use_tls: e.target.checked})}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <Label htmlFor="smtp-tls">Use TLS/SSL encryption</Label>
+                    </div>
+
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-blue-900 mb-2">SMTP Configuration Guide</h4>
+                      <div className="text-sm text-blue-800 space-y-1">
+                        <p><strong>Gmail:</strong> Host: smtp.gmail.com, Port: 587, Use app passwords</p>
+                        <p><strong>Outlook:</strong> Host: smtp-mail.outlook.com, Port: 587</p>
+                        <p><strong>Yahoo:</strong> Host: smtp.mail.yahoo.com, Port: 587</p>
+                        <p><strong>Custom:</strong> Check with your email provider for SMTP settings</p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-yellow-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-yellow-900 mb-2">Resend Configuration</h4>
+                    <p className="text-sm text-yellow-800">
+                      To use Resend, you need to set up the RESEND_API_KEY in your Supabase secrets.
+                      Visit the Supabase dashboard to configure this setting.
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="from-email">From Email</Label>
+                    <Input
+                      id="from-email"
+                      type="email"
+                      placeholder="noreply@yourdomain.com"
+                      value={emailSettings.from_email || ''}
+                      onChange={(e) => setEmailSettings({...emailSettings, from_email: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="from-name">From Name</Label>
+                    <Input
+                      id="from-name"
+                      type="text"
+                      placeholder="Gym System"
+                      value={emailSettings.from_name || 'Gym System'}
+                      onChange={(e) => setEmailSettings({...emailSettings, from_name: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="notification-email">Notification Email</Label>
+                  <Input
+                    id="notification-email"
+                    type="email"
+                    placeholder="admin@yourgym.com"
+                    value={emailSettings.notification_email || ''}
+                    onChange={(e) => setEmailSettings({...emailSettings, notification_email: e.target.value})}
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Email address that will receive all admin notifications
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Notification Settings */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <Bell className="h-5 w-5 text-green-600" />
+                <CardTitle>Notification Preferences</CardTitle>
+              </div>
+              <CardDescription>
+                Choose which events trigger email notifications
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {emailSettings.notification_email ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">New Member Signups</h4>
+                    <p className="text-sm text-gray-600">Get notified when new members register</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={emailSettings.signup_notifications !== false}
+                    onChange={(e) => setEmailSettings({...emailSettings, signup_notifications: e.target.checked})}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">Class Bookings</h4>
+                    <p className="text-sm text-gray-600">Get notified when members book classes</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={emailSettings.booking_notifications !== false}
+                    onChange={(e) => setEmailSettings({...emailSettings, booking_notifications: e.target.checked})}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">Session Requests</h4>
+                    <p className="text-sm text-gray-600">Get notified when members request additional sessions</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={emailSettings.session_request_notifications !== false}
+                    onChange={(e) => setEmailSettings({...emailSettings, session_request_notifications: e.target.checked})}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 space-y-3">
+                <Button 
+                  onClick={handleSaveSettings}
+                  disabled={saving}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  {saving ? 'Saving...' : 'Save Email Settings'}
+                </Button>
+                
+                <Button 
+                  onClick={handleTestEmail}
+                  disabled={!emailSettings.notification_email || emailSaving}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {emailSaving ? 'Sending...' : 'Send Test Email'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Email Logs */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <FileText className="h-5 w-5 text-purple-600" />
+                <CardTitle>Email Logs</CardTitle>
+              </div>
+              <CardDescription>
+                Recent email sending activity and status
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {emailLogs.length > 0 ? (
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                   <div className="flex items-center justify-between">
                     <div>

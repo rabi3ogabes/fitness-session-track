@@ -18,34 +18,52 @@ export type Database = {
         Row: {
           booking_notifications: boolean
           created_at: string
+          email_provider: string | null
           from_email: string | null
           from_name: string | null
           id: string
           notification_email: string
           session_request_notifications: boolean
           signup_notifications: boolean
+          smtp_host: string | null
+          smtp_password: string | null
+          smtp_port: number | null
+          smtp_use_tls: boolean | null
+          smtp_username: string | null
           updated_at: string
         }
         Insert: {
           booking_notifications?: boolean
           created_at?: string
+          email_provider?: string | null
           from_email?: string | null
           from_name?: string | null
           id?: string
           notification_email: string
           session_request_notifications?: boolean
           signup_notifications?: boolean
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_use_tls?: boolean | null
+          smtp_username?: string | null
           updated_at?: string
         }
         Update: {
           booking_notifications?: boolean
           created_at?: string
+          email_provider?: string | null
           from_email?: string | null
           from_name?: string | null
           id?: string
           notification_email?: string
           session_request_notifications?: boolean
           signup_notifications?: boolean
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_use_tls?: boolean | null
+          smtp_username?: string | null
           updated_at?: string
         }
         Relationships: []
