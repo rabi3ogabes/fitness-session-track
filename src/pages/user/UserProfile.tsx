@@ -83,10 +83,10 @@ const UserProfile = () => {
     if (!user?.id) return;
     
     try {
-      // Format phone number for WhatsApp (add +974 if it's 8 digits)
+      // Format phone number for WhatsApp (add 974 if it's 8 digits)
       let formattedPhone = editedProfile.phone;
       if (editedProfile.phone && /^\d{8}$/.test(editedProfile.phone.trim())) {
-        formattedPhone = `+974${editedProfile.phone.trim()}`;
+        formattedPhone = `974${editedProfile.phone.trim()}`;
       }
 
       // Update profiles table with original phone number (for display)
@@ -227,7 +227,7 @@ const UserProfile = () => {
                    </p>
                    {editedProfile.phone && /^\d{8}$/.test(editedProfile.phone.trim()) && (
                      <p className="text-xs text-green-600">
-                       WhatsApp format: +974{editedProfile.phone}
+                       WhatsApp format: 974{editedProfile.phone}
                     </p>
                   )}
                 </div>

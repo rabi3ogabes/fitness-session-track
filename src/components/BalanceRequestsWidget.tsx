@@ -192,10 +192,10 @@ Balance request has been approved and sessions added to member's account.`;
 
             // Send WhatsApp notification to the member about their approved request
             if (settings.enabled && settings.instance_id && settings.api_token && memberData.phone) {
-              // Format phone number for WhatsApp (add +974 prefix for Qatar numbers)
-              const formattedPhone = memberData.phone.startsWith('+974') 
+              // Format phone number for WhatsApp (add 974 prefix for Qatar numbers)
+              const formattedPhone = memberData.phone.startsWith('974') 
                 ? memberData.phone 
-                : `+974${memberData.phone}`;
+                : `974${memberData.phone}`;
               
               const memberMessage = `🎉 Great news! Your session balance request has been approved!
 
