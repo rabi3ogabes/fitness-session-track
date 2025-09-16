@@ -58,6 +58,7 @@ const UserProfile = () => {
             ...prev,
             name: user.name || "",
             email: user.email || "",
+            phone: (user as any).user_metadata?.phone_number || "",
           }));
         }
       } catch (error) {
