@@ -83,7 +83,7 @@ const RecentBookingsWidget = () => {
 
             return {
               id: booking.id,
-              user_name: booking.user_name || "Unknown Member",
+              user_name: booking.user_name?.trim() || "Unknown Member",
               booking_date: booking.booking_date,
               class_name: classDetails.name,
               class_date: classDetails.schedule,
