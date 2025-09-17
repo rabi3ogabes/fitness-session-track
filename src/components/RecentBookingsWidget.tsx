@@ -49,6 +49,7 @@ const RecentBookingsWidget = () => {
           (bookingsData || []).map(async (booking) => {
             let memberBalance = 0;
             let memberGender = undefined;
+            let memberName = booking.user_name?.trim() || "";
             let classDetails = {
               name: "Unknown Class",
               schedule: "",
@@ -69,21 +70,37 @@ const RecentBookingsWidget = () => {
               }
             }
             
-            // Get member balance and gender
+            // Get member details - try member_id first, then fall back to user_name
             if (booking.member_id) {
               const { data: memberData } = await supabase
                 .from("members")
-                .select("remaining_sessions, gender")
+                .select("name, remaining_sessions, gender")
                 .eq("id", booking.member_id)
                 .single();
               
-              memberBalance = memberData?.remaining_sessions || 0;
-              memberGender = memberData?.gender;
+              if (memberData) {
+                memberName = memberData.name || memberName;
+                memberBalance = memberData.remaining_sessions || 0;
+                memberGender = memberData.gender;
+              }
+            } else if (memberName) {
+              // If no member_id but we have a user_name, try to find member by name
+              const { data: memberData } = await supabase
+                .from("members")
+                .select("name, remaining_sessions, gender")
+                .ilike("name", `%${memberName}%`)
+                .single();
+              
+              if (memberData) {
+                memberName = memberData.name;
+                memberBalance = memberData.remaining_sessions || 0;
+                memberGender = memberData.gender;
+              }
             }
 
             return {
               id: booking.id,
-              user_name: booking.user_name?.trim() || "Unknown Member",
+              user_name: memberName || "Unknown Member",
               booking_date: booking.booking_date,
               class_name: classDetails.name,
               class_date: classDetails.schedule,
