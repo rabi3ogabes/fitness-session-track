@@ -588,6 +588,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
+      // Send welcome email to new member
+      try {
+        await supabase.functions.invoke('send-email-notification', {
+          body: {
+            type: 'signup',
+            memberName: name,
+            memberEmail: email,
+            emailTo: email
+          }
+        });
+        console.log('Welcome email sent to new member:', email);
+      } catch (error) {
+        console.error('Failed to send welcome email to member:', error);
+      }
+
       // Send notification to admin about new signup
       const adminNotificationEmail = localStorage.getItem('adminNotificationEmail');
       const smtpSettings = localStorage.getItem('smtpSettings');

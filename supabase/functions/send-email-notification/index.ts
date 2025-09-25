@@ -243,7 +243,38 @@ const handler = async (req: Request): Promise<Response> => {
             </p>
           </div>
         `;
+      } else if (type === 'signup') {
+        // Welcome email for new members
+        emailTo = memberEmail || userEmail || emailTo;
+        emailSubject = `Welcome to our gym family!`;
+        emailBody = `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #22c55e;">🎉 Welcome to our gym family!</h1>
+            <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #22c55e;">
+              <p><strong>Dear ${memberName || userName},</strong></p>
+              <p>Thank you for joining us! We're excited to have you as part of our community.</p>
+              <p><strong>Your Account Details:</strong></p>
+              <ul>
+                <li><strong>Email:</strong> ${memberEmail || userEmail}</li>
+                <li><strong>Registration Date:</strong> ${new Date().toLocaleDateString()}</li>
+              </ul>
+            </div>
+            <div style="background-color: #e0f2fe; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">What's Next?</h3>
+              <ul>
+                <li>Log in to your account to book fitness classes</li>
+                <li>Explore our class schedule and trainers</li>
+                <li>Contact us if you have any questions</li>
+              </ul>
+            </div>
+            <p>If you have any questions, please don't hesitate to contact us.</p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              Best regards,<br>The Gym Team
+            </p>
+          </div>
+        `;
       } else {
+        // Admin notification for new registrations  
         emailSubject = `New User Registration: ${userName}`;
         emailBody = `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
