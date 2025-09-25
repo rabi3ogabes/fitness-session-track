@@ -40,12 +40,11 @@ export const NotificationTester: React.FC = () => {
 
       const response = await supabase.functions.invoke('send-email-notification', {
         body: {
+          type: 'signup',
+          notificationEmail: adminSettings.notification_email,
           userEmail: 'test.member@example.com',
           userName: 'Test Member',
-          userPhone: '+1234567890',
-          notificationEmail: adminSettings.notification_email,
-          fromEmail: adminSettings.from_email,
-          fromName: adminSettings.from_name
+          details: 'Test signup notification from NotificationTester'
         }
       });
 
@@ -76,20 +75,11 @@ export const NotificationTester: React.FC = () => {
 
       const response = await supabase.functions.invoke('send-email-notification', {
         body: {
+          type: 'booking',
+          notificationEmail: adminSettings.notification_email,
           userEmail: 'test.member@example.com',
           userName: 'Test Member',
-          userPhone: '+1234567890',
-          notificationEmail: adminSettings.notification_email,
-          fromEmail: adminSettings.from_email,
-          fromName: adminSettings.from_name,
-          bookingDetails: {
-            className: 'Test Yoga Class',
-            schedule: new Date().toISOString(),
-            startTime: '09:00 AM',
-            endTime: '10:00 AM',
-            trainer: 'Test Trainer',
-            location: 'Studio A'
-          }
+          details: 'Class: Test Yoga Class at 09:00 AM'
         }
       });
 
@@ -120,17 +110,11 @@ export const NotificationTester: React.FC = () => {
 
       const response = await supabase.functions.invoke('send-email-notification', {
         body: {
+          type: 'session_request',
+          notificationEmail: adminSettings.notification_email,
           userEmail: 'test.member@example.com',
           userName: 'Test Member',
-          userPhone: '+1234567890',
-          notificationEmail: adminSettings.notification_email,
-          fromEmail: adminSettings.from_email,
-          fromName: adminSettings.from_name,
-          sessionRequestDetails: {
-            planName: 'Premium Membership',
-            sessions: 10,
-            requestDate: new Date().toLocaleDateString()
-          }
+          details: 'Requested 10 sessions of type: Premium Membership'
         }
       });
 

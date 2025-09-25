@@ -8,6 +8,7 @@ import UpcomingClassWidget from "@/components/UpcomingClassWidget";
 import RecentMembersWidget from "@/components/RecentMembersWidget";
 import RecentBookingsWidget from "@/components/RecentBookingsWidget";
 import BalanceRequestsWidget from "@/components/BalanceRequestsWidget";
+import { NotificationTester } from "@/components/NotificationTester";
 import { Users, User, Calendar, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -156,6 +157,11 @@ const AdminDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           <RecentBookingsWidget />
           <BalanceRequestsWidget />
+        </div>
+        
+        {/* Notification Testing */}
+        <div className="mt-6">
+          <NotificationTester />
         </div>
       </div>
     </DashboardLayout>
