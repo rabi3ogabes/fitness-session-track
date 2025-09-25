@@ -187,7 +187,7 @@ const BookingForm = ({
           .select("*")
           .single();
 
-        if (adminSettings?.booking_notifications && adminSettings?.notification_email) {
+        if (adminSettings?.booking_notifications && adminSettings?.notification_email && adminSettings?.email_provider) {
           // Get user profile
           const { data: profile } = await supabase
             .from("profiles")
@@ -200,7 +200,19 @@ const BookingForm = ({
 
           if (profile && classData) {
             console.log("Sending booking notification email...");
-            await supabase.functions.invoke('send-email-notification', {
+            console.log("Admin settings:", { 
+              email_provider: adminSettings.email_provider,
+              notification_email: adminSettings.notification_email,
+              booking_notifications: adminSettings.booking_notifications 
+            });
+            
+            const functionName = adminSettings.email_provider === 'resend' 
+              ? 'send-email-notification' 
+              : 'send-smtp-notification';
+              
+            console.log(`Using ${functionName} for booking notification`);
+            
+            await supabase.functions.invoke(functionName, {
               body: {
                 userEmail: profile.email,
                 userName: profile.name,
