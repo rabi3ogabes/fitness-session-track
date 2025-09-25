@@ -1360,28 +1360,63 @@ const Settings = () => {
                   </>
                 ) : emailSettings.email_provider === 'resend' ? (
                   <div className="space-y-4">
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                      <h4 className="font-medium text-green-800 mb-2">✓ Resend Configuration</h4>
-                      <p className="text-sm text-green-700 mb-3">
-                        Resend is configured and ready to use! Your domain is verified and emails should work properly.
-                      </p>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open('https://resend.com/domains', '_blank')}
-                        >
-                          Manage Domains
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(`https://supabase.com/dashboard/project/wlawjupusugrhojbywyq/functions/send-email-notification/logs`, '_blank')}
-                        >
-                          View Email Logs
-                        </Button>
+                    {emailSettings.from_email?.includes('@gmail.com') || emailSettings.from_email?.includes('@yahoo.com') || emailSettings.from_email?.includes('@hotmail.com') ? (
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <h4 className="font-medium text-red-800 mb-2">❌ Invalid From Email</h4>
+                        <p className="text-sm text-red-700 mb-3">
+                          <strong>Error:</strong> You cannot use {emailSettings.from_email?.split('@')[1]} addresses with Resend. 
+                          Public email domains (Gmail, Yahoo, Hotmail) cannot be verified.
+                        </p>
+                        <div className="text-sm text-red-700 mb-3">
+                          <p><strong>Solutions:</strong></p>
+                          <ul className="list-disc ml-4 mt-1">
+                            <li>Use <code className="bg-red-100 px-1 rounded">onboarding@resend.dev</code> for testing</li>
+                            <li>Or verify your own custom domain at resend.com/domains</li>
+                          </ul>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEmailSettings(prev => ({ ...prev, from_email: 'onboarding@resend.dev' }));
+                            }}
+                          >
+                            Use Test Email
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open('https://resend.com/domains', '_blank')}
+                          >
+                            Add Custom Domain
+                          </Button>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <h4 className="font-medium text-green-800 mb-2">✓ Resend Configuration</h4>
+                        <p className="text-sm text-green-700 mb-3">
+                          Resend is configured and ready to use! Your from email looks good.
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open('https://resend.com/domains', '_blank')}
+                          >
+                            Manage Domains
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`https://supabase.com/dashboard/project/wlawjupusugrhojbywyq/functions/send-email-notification/logs`, '_blank')}
+                          >
+                            View Email Logs
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     <div className="bg-blue-50 p-4 rounded-lg">
                       <h4 className="font-medium text-blue-900 mb-2">How to Fix This</h4>
                       <div className="text-sm text-blue-800 space-y-2">
