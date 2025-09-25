@@ -12,8 +12,5 @@ verify_jwt = false
 [functions.send-whatsapp-notification]
 verify_jwt = false
 
-[functions.send-notification-api]
-verify_jwt = false
-
 [functions.send-custom-webhook]
 verify_jwt = false

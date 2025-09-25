@@ -53,40 +53,6 @@ const Settings = () => {
       cancel: "❌ Class booking cancelled!\n\nMember: {memberName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nBooking has been cancelled."
     }
   });
-  const [notificationApiSettings, setNotificationApiSettings] = useState({
-    enabled: false,
-    client_id: "",
-    client_secret: "",
-    user_id: "",
-    signup_notifications: true,
-    booking_notifications: true,
-    session_request_notifications: true,
-    cancellation_notifications: true,
-    environment: "production",
-    webhook_url: "",
-    templates: {
-      signup: {
-        title: "New Member Registration",
-        body: "Welcome {userName}! Your gym membership is now active.",
-        redirect_url: ""
-      },
-      booking: {
-        title: "Class Booking Confirmed",
-        body: "Your booking for {className} on {classDate} at {classTime} is confirmed.",
-        redirect_url: ""
-      },
-      session_request: {
-        title: "Session Balance Request",
-        body: "Your request for {requestedSessions} sessions has been received.",
-        redirect_url: ""
-      },
-      cancellation: {
-        title: "Booking Cancelled",
-        body: "Your booking for {className} on {classDate} has been cancelled.",
-        redirect_url: ""
-      }
-    }
-  });
   const [customIntegrations, setCustomIntegrations] = useState([
     {
       id: "1",
@@ -98,7 +64,7 @@ const Settings = () => {
       events: ["signup", "booking", "cancellation"]
     }
   ]);
-  const [isTestingNotificationApi, setIsTestingNotificationApi] = useState(false);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isTestingWhatsapp, setIsTestingWhatsapp] = useState(false);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
@@ -174,8 +140,6 @@ const Settings = () => {
     // Load WhatsApp settings from local storage
     loadWhatsappSettings();
     
-    // Load notification API settings
-    loadNotificationApiSettings();
     
     // Load custom integrations
     loadCustomIntegrations();
@@ -267,7 +231,7 @@ const Settings = () => {
       
       localStorage.setItem("mainPageContent", JSON.stringify(mainPageContent));
       localStorage.setItem("whatsappSettings", JSON.stringify(whatsappSettings));
-      localStorage.setItem("notificationApiSettings", JSON.stringify(notificationApiSettings));
+      
       localStorage.setItem("customIntegrations", JSON.stringify(customIntegrations));
       
       const systemSettings = {
@@ -306,12 +270,6 @@ const Settings = () => {
     }
   };
 
-  const loadNotificationApiSettings = () => {
-    const saved = localStorage.getItem("notificationApiSettings");
-    if (saved) {
-      setNotificationApiSettings(JSON.parse(saved));
-    }
-  };
 
   const loadCustomIntegrations = () => {
     const saved = localStorage.getItem("customIntegrations");
@@ -320,57 +278,6 @@ const Settings = () => {
     }
   };
 
-  const handleTestNotificationApi = async () => {
-    if (!notificationApiSettings.client_id || !notificationApiSettings.user_id) {
-      toast({
-        title: "Error",
-        description: "Please configure Client ID and User ID first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsTestingNotificationApi(true);
-    setOperationLog('Testing Notification API...\nSending test notification...');
-
-    try {
-      const { data, error } = await supabase.functions.invoke('send-notification-api', {
-        body: {
-          client_id: notificationApiSettings.client_id,
-          client_secret: notificationApiSettings.client_secret,
-          user_id: notificationApiSettings.user_id,
-          environment: notificationApiSettings.environment,
-          notification: {
-            title: "Test Notification",
-            body: "This is a test notification from your gym management system.",
-            redirect_url: notificationApiSettings.templates.signup.redirect_url
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      setOperationLog('✅ Notification API test successful!\n\nTest notification sent successfully.');
-      setOperationStatus('success');
-      
-      toast({
-        title: "Test successful",
-        description: "Test notification sent via NotificationAPI.com",
-      });
-    } catch (error) {
-      console.error('Notification API test error:', error);
-      setOperationLog(`❌ Notification API test failed!\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setOperationStatus('error');
-      
-      toast({
-        title: "Test failed",
-        description: `Failed to send test notification: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsTestingNotificationApi(false);
-    }
-  };
 
   const addCustomIntegration = () => {
     const newIntegration = {
@@ -824,11 +731,10 @@ const Settings = () => {
   return (
     <DashboardLayout title="System Settings">
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="email">Email</TabsTrigger>
           <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="mainpage">Main Page</TabsTrigger>
         </TabsList>
@@ -1896,257 +1802,6 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                NotificationAPI.com Integration
-              </CardTitle>
-              <CardDescription>
-                Configure notifications using NotificationAPI.com for real-time push notifications, emails, and SMS.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="notification-api-enabled"
-                  checked={notificationApiSettings.enabled}
-                  onCheckedChange={(checked) => 
-                    setNotificationApiSettings(prev => ({ ...prev, enabled: checked }))
-                  }
-                />
-                <Label htmlFor="notification-api-enabled">Enable NotificationAPI.com</Label>
-              </div>
-
-              {notificationApiSettings.enabled && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="notification-client-id">Client ID</Label>
-                      <Input
-                        id="notification-client-id"
-                        value={notificationApiSettings.client_id}
-                        onChange={(e) => 
-                          setNotificationApiSettings(prev => ({ ...prev, client_id: e.target.value }))
-                        }
-                        placeholder="Your NotificationAPI Client ID"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="notification-client-secret">Client Secret</Label>
-                      <Input
-                        id="notification-client-secret"
-                        type="password"
-                        value={notificationApiSettings.client_secret}
-                        onChange={(e) => 
-                          setNotificationApiSettings(prev => ({ ...prev, client_secret: e.target.value }))
-                        }
-                        placeholder="Your NotificationAPI Client Secret"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="notification-user-id">User ID</Label>
-                      <Input
-                        id="notification-user-id"
-                        value={notificationApiSettings.user_id}
-                        onChange={(e) => 
-                          setNotificationApiSettings(prev => ({ ...prev, user_id: e.target.value }))
-                        }
-                        placeholder="Default user ID for notifications"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="notification-environment">Environment</Label>
-                      <select
-                        id="notification-environment"
-                        value={notificationApiSettings.environment}
-                        onChange={(e) => 
-                          setNotificationApiSettings(prev => ({ ...prev, environment: e.target.value }))
-                        }
-                        className="w-full p-2 border rounded-md"
-                      >
-                        <option value="production">Production</option>
-                        <option value="staging">Staging</option>
-                        <option value="development">Development</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="notification-webhook-url">Webhook URL (Optional)</Label>
-                    <Input
-                      id="notification-webhook-url"
-                      value={notificationApiSettings.webhook_url}
-                      onChange={(e) => 
-                        setNotificationApiSettings(prev => ({ ...prev, webhook_url: e.target.value }))
-                      }
-                      placeholder="https://your-webhook-url.com/notifications"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Notification Types</Label>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="notification-signup"
-                          checked={notificationApiSettings.signup_notifications}
-                          onCheckedChange={(checked) => 
-                            setNotificationApiSettings(prev => ({ ...prev, signup_notifications: checked }))
-                          }
-                        />
-                        <Label htmlFor="notification-signup">New Member Signups</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="notification-booking"
-                          checked={notificationApiSettings.booking_notifications}
-                          onCheckedChange={(checked) => 
-                            setNotificationApiSettings(prev => ({ ...prev, booking_notifications: checked }))
-                          }
-                        />
-                        <Label htmlFor="notification-booking">Class Bookings</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="notification-session-request"
-                          checked={notificationApiSettings.session_request_notifications}
-                          onCheckedChange={(checked) => 
-                            setNotificationApiSettings(prev => ({ ...prev, session_request_notifications: checked }))
-                          }
-                        />
-                        <Label htmlFor="notification-session-request">Session Requests</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="notification-cancellation"
-                          checked={notificationApiSettings.cancellation_notifications}
-                          onCheckedChange={(checked) => 
-                            setNotificationApiSettings(prev => ({ ...prev, cancellation_notifications: checked }))
-                          }
-                        />
-                        <Label htmlFor="notification-cancellation">Booking Cancellations</Label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <Label>Notification Templates</Label>
-                    
-                    <div className="space-y-3">
-                      <div>
-                        <Label>Signup Notification</Label>
-                        <Input
-                          value={notificationApiSettings.templates.signup.title}
-                          onChange={(e) => 
-                            setNotificationApiSettings(prev => ({
-                              ...prev,
-                              templates: {
-                                ...prev.templates,
-                                signup: { ...prev.templates.signup, title: e.target.value }
-                              }
-                            }))
-                          }
-                          placeholder="Notification title"
-                          className="mb-2"
-                        />
-                        <Textarea
-                          value={notificationApiSettings.templates.signup.body}
-                          onChange={(e) => 
-                            setNotificationApiSettings(prev => ({
-                              ...prev,
-                              templates: {
-                                ...prev.templates,
-                                signup: { ...prev.templates.signup, body: e.target.value }
-                              }
-                            }))
-                          }
-                          placeholder="Notification body (use {userName}, {userEmail} for dynamic values)"
-                          rows={3}
-                        />
-                        <Input
-                          value={notificationApiSettings.templates.signup.redirect_url}
-                          onChange={(e) => 
-                            setNotificationApiSettings(prev => ({
-                              ...prev,
-                              templates: {
-                                ...prev.templates,
-                                signup: { ...prev.templates.signup, redirect_url: e.target.value }
-                              }
-                            }))
-                          }
-                          placeholder="Redirect URL (optional)"
-                          className="mt-2"
-                        />
-                      </div>
-
-                      <div>
-                        <Label>Booking Notification</Label>
-                        <Input
-                          value={notificationApiSettings.templates.booking.title}
-                          onChange={(e) => 
-                            setNotificationApiSettings(prev => ({
-                              ...prev,
-                              templates: {
-                                ...prev.templates,
-                                booking: { ...prev.templates.booking, title: e.target.value }
-                              }
-                            }))
-                          }
-                          placeholder="Notification title"
-                          className="mb-2"
-                        />
-                        <Textarea
-                          value={notificationApiSettings.templates.booking.body}
-                          onChange={(e) => 
-                            setNotificationApiSettings(prev => ({
-                              ...prev,
-                              templates: {
-                                ...prev.templates,
-                                booking: { ...prev.templates.booking, body: e.target.value }
-                              }
-                            }))
-                          }
-                          placeholder="Notification body (use {className}, {classDate}, {classTime} for dynamic values)"
-                          rows={3}
-                        />
-                        <Input
-                          value={notificationApiSettings.templates.booking.redirect_url}
-                          onChange={(e) => 
-                            setNotificationApiSettings(prev => ({
-                              ...prev,
-                              templates: {
-                                ...prev.templates,
-                                booking: { ...prev.templates.booking, redirect_url: e.target.value }
-                              }
-                            }))
-                          }
-                          placeholder="Redirect URL (optional)"
-                          className="mt-2"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={handleTestNotificationApi}
-                      disabled={isTestingNotificationApi}
-                      variant="outline"
-                    >
-                      <Send className="h-4 w-4 mr-2" />
-                      {isTestingNotificationApi ? "Testing..." : "Test Notification"}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="integrations" className="space-y-6">
           <Card>
