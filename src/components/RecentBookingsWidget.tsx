@@ -58,7 +58,7 @@ const RecentBookingsWidget = () => {
               end_time: ""
             };
             
-            console.log("Processing booking:", booking.id, "user_id:", booking.user_id, "user_name:", booking.user_name, "member_id:", booking.member_id);
+            
             
             // Get class details
             if (booking.class_id) {
@@ -76,9 +76,10 @@ const RecentBookingsWidget = () => {
             // Try multiple methods to get member information
             let memberFound = false;
             
-            // Method 1: Try by user_id from profiles table
+            // Method 1: Try by user_id using the get_user_name function
             if (booking.user_id && !memberFound) {
               try {
+                // First try profiles table
                 const { data: profileData } = await supabase
                   .from("profiles")
                   .select("name, email, sessions_remaining")
@@ -103,16 +104,17 @@ const RecentBookingsWidget = () => {
                     }
                   }
                 } else {
-                  // Get user data from current session or make RPC call
-                  const { data: { user } } = await supabase.auth.getUser();
-                  if (user && user.id === booking.user_id) {
-                    memberName = user.user_metadata?.name || user.email?.split('@')[0] || "User";
-                    memberBalance = 0;
+                  // Use our function to get user name from auth table
+                  const { data: userName } = await supabase
+                    .rpc('get_user_name', { user_id: booking.user_id });
+                  
+                  if (userName && userName !== 'Unknown User') {
+                    memberName = userName;
+                    memberBalance = 0; // Default since no profile data
                     memberFound = true;
                   }
                 }
               } catch (error) {
-                console.log("Error in method 1:", error);
               }
             }
             
