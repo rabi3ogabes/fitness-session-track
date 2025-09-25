@@ -340,8 +340,40 @@ const UserMembership = () => {
         },
       ]);
 
-      // Send WhatsApp notification if enabled and successful
+      // Send email notification if enabled and successful
       if (!error) {
+        try {
+          const { data: adminSettings } = await supabase
+            .from('admin_notification_settings')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (adminSettings && adminSettings.session_request_notifications && adminSettings.email_provider === 'resend') {
+            console.log("Sending session request notification email...");
+            await supabase.functions.invoke('send-email-notification', {
+              body: {
+                userEmail: currentUser.email,
+                userName: currentUser.name,
+                notificationEmail: adminSettings.notification_email,
+                fromEmail: adminSettings.from_email,
+                fromName: adminSettings.from_name,
+                sessionRequestDetails: {
+                  planName: planName,
+                  sessions: plan.sessions,
+                  requestDate: formattedDate
+                }
+              }
+            });
+            console.log("Session request notification sent successfully");
+          }
+        } catch (emailError) {
+          console.error("Failed to send session request email notification:", emailError);
+          // Don't fail the request if email fails
+        }
+
+        // Send WhatsApp notification if enabled
         try {
           const whatsappSettings = localStorage.getItem("whatsappSettings");
           if (whatsappSettings) {

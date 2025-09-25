@@ -26,6 +26,11 @@ interface EmailNotificationRequest {
     trainer: string;
     location: string;
   };
+  sessionRequestDetails?: {
+    planName: string;
+    sessions: number;
+    requestDate: string;
+  };
 }
 
 interface EmailLogEntry {
@@ -85,7 +90,7 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      const { userEmail, userName, userPhone, notificationEmail, fromEmail, fromName, bookingDetails }: EmailNotificationRequest = requestBody;
+      const { userEmail, userName, userPhone, notificationEmail, fromEmail, fromName, bookingDetails, sessionRequestDetails }: EmailNotificationRequest = requestBody;
 
       // Validate required fields
       if (!notificationEmail) {
@@ -110,6 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       const isTestEmail = userEmail === 'test@example.com';
       const isBookingNotification = !!bookingDetails;
+      const isSessionRequestNotification = !!sessionRequestDetails;
       
       let emailSubject: string;
       let emailBody: string;
@@ -165,6 +171,35 @@ const handler = async (req: Request): Promise<Response> => {
               </ul>
             </div>
             <p>Please review the new booking in your admin dashboard.</p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              This email was sent automatically by your gym management system.
+            </p>
+          </div>
+        `;
+      } else if (isSessionRequestNotification) {
+        emailSubject = `New Session Request: ${sessionRequestDetails!.planName}`;
+        emailBody = `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #2563eb;">📋 New Session Request</h2>
+            <p>A member has requested additional sessions.</p>
+            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Member Details:</h3>
+              <ul>
+                <li><strong>Name:</strong> ${userName}</li>
+                <li><strong>Email:</strong> ${userEmail}</li>
+                ${userPhone ? `<li><strong>Phone:</strong> ${userPhone}</li>` : ''}
+              </ul>
+            </div>
+            <div style="background-color: #fef3c7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Session Request Details:</h3>
+              <ul>
+                <li><strong>Membership Type:</strong> ${sessionRequestDetails!.planName}</li>
+                <li><strong>Requested Sessions:</strong> ${sessionRequestDetails!.sessions}</li>
+                <li><strong>Request Date:</strong> ${sessionRequestDetails!.requestDate}</li>
+                <li><strong>Status:</strong> Pending Review</li>
+              </ul>
+            </div>
+            <p>Please review this session request in your admin dashboard and take appropriate action.</p>
             <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
               This email was sent automatically by your gym management system.
             </p>

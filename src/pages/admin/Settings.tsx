@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { NotificationTester } from "@/components/NotificationTester";
 import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1740,8 +1741,13 @@ const Settings = () => {
                       onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, session_request_notifications: checked }))}
                     />
                   </div>
-                </div>
-              </div>
+                    </div>
+                    
+                    {/* Notification Tester */}
+                    <div className="mt-8">
+                      <NotificationTester />
+                    </div>
+                  </div>
 
               <div className="flex justify-between">
                 <Button onClick={handleSaveEmailSettings} disabled={isLoading}>

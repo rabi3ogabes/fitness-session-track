@@ -292,30 +292,52 @@ const Login = () => {
       if (success === true) {
         console.log("Signup successful for:", email);
         
-        // Send notification to admin emails using SMTP
+        // Send email notification to admin
         try {
-          const notificationEmails = localStorage.getItem("notificationEmails");
-          const smtpSettings = localStorage.getItem("smtpSettings");
-          
-          if (notificationEmails && smtpSettings) {
-            const emails = JSON.parse(notificationEmails);
-            const smtp = JSON.parse(smtpSettings);
+          const { data: adminSettings } = await supabase
+            .from('admin_notification_settings')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (adminSettings && adminSettings.signup_notifications && adminSettings.email_provider === 'resend') {
+            console.log("Sending signup notification email...");
+            await supabase.functions.invoke('send-email-notification', {
+              body: {
+                userEmail: email,
+                userName: name,
+                notificationEmail: adminSettings.notification_email,
+                fromEmail: adminSettings.from_email,
+                fromName: adminSettings.from_name
+              }
+            });
+            console.log("Signup notification sent successfully");
+          } else if (adminSettings && adminSettings.signup_notifications && adminSettings.email_provider === 'smtp') {
+            // Legacy SMTP notification logic (keep for backward compatibility)
+            const notificationEmails = localStorage.getItem("notificationEmails");
+            const smtpSettings = localStorage.getItem("smtpSettings");
             
-            if (emails.email1 && smtp.host) {
-              console.log("Sending SMTP signup notification...");
-              const response = await supabase.functions.invoke('send-smtp-notification', {
-                body: {
-                  userEmail: email,
-                  userName: name,
-                  notificationEmail: emails.email1,
-                  smtpSettings: smtp
-                }
-              });
+            if (notificationEmails && smtpSettings) {
+              const emails = JSON.parse(notificationEmails);
+              const smtp = JSON.parse(smtpSettings);
               
-              if (response.error) {
-                console.error("Failed to send SMTP notification:", response.error);
-              } else {
-                console.log("SMTP notification sent successfully");
+              if (emails.email1 && smtp.host) {
+                console.log("Sending SMTP signup notification...");
+                const response = await supabase.functions.invoke('send-smtp-notification', {
+                  body: {
+                    userEmail: email,
+                    userName: name,
+                    notificationEmail: emails.email1,
+                    smtpSettings: smtp
+                  }
+                });
+                
+                if (response.error) {
+                  console.error("Failed to send SMTP notification:", response.error);
+                } else {
+                  console.log("SMTP notification sent successfully");
+                }
               }
             }
           }
