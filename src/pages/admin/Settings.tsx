@@ -1358,15 +1358,40 @@ const Settings = () => {
                       </div>
                     </div>
                   </>
-                ) : (
-                  <div className="bg-yellow-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-yellow-900 mb-2">Resend Configuration</h4>
-                    <p className="text-sm text-yellow-800">
-                      To use Resend, you need to set up the RESEND_API_KEY in your Supabase secrets.
-                      Visit the Supabase dashboard to configure this setting.
-                    </p>
+                ) : emailSettings.email_provider === 'resend' ? (
+                  <div className="space-y-4">
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                      <h4 className="font-medium text-green-800 mb-2">✓ Resend Configuration</h4>
+                      <p className="text-sm text-green-700 mb-3">
+                        Resend is configured and ready to use! The RESEND_API_KEY is set in your Supabase secrets.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open('https://resend.com/domains', '_blank')}
+                        >
+                          Verify Domain
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open('https://supabase.com/dashboard/project/wlawjupusugrhojbywyq/settings/functions', '_blank')}
+                        >
+                          Manage Secrets
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h4 className="font-medium text-blue-900 mb-2">Using Resend</h4>
+                      <div className="text-sm text-blue-800 space-y-1">
+                        <p>• Make sure to verify your domain at resend.com/domains</p>
+                        <p>• Use a verified email address in the "From Email" field below</p>
+                        <p>• For testing, you can use: onboarding@resend.dev</p>
+                      </div>
+                    </div>
                   </div>
-                )}
+                ) : null}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
