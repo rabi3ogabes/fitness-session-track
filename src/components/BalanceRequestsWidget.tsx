@@ -130,6 +130,8 @@ const BalanceRequestsWidget = () => {
   };
 
   const handleApproveRequest = async (requestId: number, memberEmail: string, requestedSessions: number, memberName: string) => {
+    let approvalSuccessful = false;
+    
     try {
       // Update the request status to approved
       const { error: updateError } = await supabase
@@ -158,8 +160,12 @@ const BalanceRequestsWidget = () => {
 
         if (updateMemberError) throw updateMemberError;
 
-        // Send notifications about approval
-        try {
+        // Mark approval as successful
+        approvalSuccessful = true;
+
+        // Send notifications about approval (non-blocking)
+        setTimeout(async () => {
+          try {
           // Send email notification to member
           const emailSettings = localStorage.getItem("emailSettings");
           if (emailSettings) {
@@ -323,16 +329,20 @@ You can now book your classes. Thank you for choosing our gym!`;
               });
             }
           }
-        } catch (whatsappError) {
-          console.error("Failed to send approval WhatsApp notification:", whatsappError);
-          // Don't fail the approval if WhatsApp fails
-        }
+          } catch (notificationError) {
+            console.error("Failed to send notifications:", notificationError);
+            // Notifications failing shouldn't affect the approval success
+          }
+        }, 100);
       }
 
-      toast({
-        title: "Request approved",
-        description: `${requestedSessions} sessions added to member's balance`,
-      });
+      // Show success message immediately after core approval operations
+      if (approvalSuccessful) {
+        toast({
+          title: "Request approved",
+          description: `${requestedSessions} sessions added to member's balance`,
+        });
+      }
 
     } catch (error) {
       console.error("Error approving request:", error);
