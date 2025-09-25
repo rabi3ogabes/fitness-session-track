@@ -580,4 +580,15 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-serve(handler);
+serve(async (req) => {
+  // Process pending notifications automatically on every call
+  if (req.method === 'POST') {
+    try {
+      await processPendingNotifications();
+    } catch (error) {
+      console.error("Error auto-processing pending notifications:", error);
+    }
+  }
+  
+  return await handler(req);
+});

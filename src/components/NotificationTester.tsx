@@ -204,7 +204,13 @@ export const NotificationTester: React.FC = () => {
             onClick={async () => {
               setIsLoading(true);
               try {
-                const { data, error } = await supabase.functions.invoke('send-email-notification');
+                console.log("Processing pending notifications...");
+                
+                // Call the test function to see what's happening
+                const { data, error } = await supabase.functions.invoke('test-notifications');
+                
+                console.log("Test notifications result:", { data, error });
+                
                 if (error) {
                   toast({
                     title: "Error",
@@ -213,14 +219,26 @@ export const NotificationTester: React.FC = () => {
                   });
                 } else {
                   toast({
-                    title: "Success",
-                    description: "Processed pending notifications",
+                    title: "Success", 
+                    description: `Processed ${data?.before || 0} pending notifications. Check email logs.`,
                   });
+                  
+                  // Also try to process via send-email-notification directly
+                  const { data: directData, error: directError } = await supabase.functions.invoke('send-email-notification', {
+                    body: { action: 'process_pending' }
+                  });
+                  
+                  if (directError) {
+                    console.error("Direct processing error:", directError);
+                  } else {
+                    console.log("Direct processing success:", directData);
+                  }
                 }
-              } catch (err) {
+              } catch (err: any) {
+                console.error("Failed to process notifications:", err);
                 toast({
                   title: "Error",
-                  description: "Failed to process notifications",
+                  description: err.message || "Failed to process notifications",
                   variant: "destructive",
                 });
               } finally {
@@ -230,7 +248,7 @@ export const NotificationTester: React.FC = () => {
             disabled={isLoading}
             variant="secondary"
           >
-            Process Pending Notifications
+            {isLoading ? "Processing..." : "Process Pending Notifications"}
           </Button>
         </div>
 
