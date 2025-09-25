@@ -1,3 +1,4 @@
+# Supabase project configuration - Updated 2025-09-25
 project_id = "wlawjupusugrhojbywyq"
 
 [functions.send-signup-notification]

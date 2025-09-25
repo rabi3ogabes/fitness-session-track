@@ -8,6 +8,7 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 console.log("Resend API Key configured:", !!Deno.env.get("RESEND_API_KEY"));
+console.log("Email notification function loaded successfully");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
