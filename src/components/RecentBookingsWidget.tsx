@@ -26,22 +26,22 @@ const RecentBookingsWidget = () => {
   };
 
   useEffect(() => {
-    const fetchRecentBookings = async () => {
-      try {
-        // Get recent bookings with class details
-        const { data: bookingsData, error: bookingsError } = await supabase
-          .from("bookings")
-          .select(`
-            id,
-            user_name,
-            booking_date,
-            member_id,
-            class_id,
-            user_id
-          `)
-          .eq("status", "confirmed")
-          .order("booking_date", { ascending: false })
-          .limit(5);
+  const fetchRecentBookings = async () => {
+    try {
+      // Get recent bookings with class details
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from("bookings")
+        .select(`
+          id,
+          user_name,
+          booking_date,
+          member_id,
+          class_id,
+          user_id
+        `)
+        .eq("status", "confirmed")
+        .order("booking_date", { ascending: false })
+        .limit(5);
 
         if (bookingsError) throw bookingsError;
 
@@ -57,6 +57,8 @@ const RecentBookingsWidget = () => {
               start_time: "",
               end_time: ""
             };
+            
+            console.log("Processing booking:", booking.id, "user_id:", booking.user_id, "user_name:", booking.user_name, "member_id:", booking.member_id);
             
             // Get class details
             if (booking.class_id) {
@@ -81,7 +83,7 @@ const RecentBookingsWidget = () => {
                   .from("profiles")
                   .select("name, email, sessions_remaining")
                   .eq("id", booking.user_id)
-                  .single();
+                  .maybeSingle();
                 
                 if (profileData?.name) {
                   memberName = profileData.name;
@@ -94,15 +96,23 @@ const RecentBookingsWidget = () => {
                       .from("members")
                       .select("gender")
                       .eq("email", profileData.email)
-                      .single();
+                      .maybeSingle();
                     
                     if (memberData) {
                       memberGender = memberData.gender;
                     }
                   }
+                } else {
+                  // Get user data from current session or make RPC call
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (user && user.id === booking.user_id) {
+                    memberName = user.user_metadata?.name || user.email?.split('@')[0] || "User";
+                    memberBalance = 0;
+                    memberFound = true;
+                  }
                 }
               } catch (error) {
-                // Continue to next method
+                console.log("Error in method 1:", error);
               }
             }
             
