@@ -79,7 +79,7 @@ const processPendingNotifications = async () => {
         console.log(`Processing notification ${log.id} of type ${log.notification_type}`);
         
         const emailResponse = await resend.emails.send({
-          from: "Gym System <notifications@fhb-fit.com>",
+          from: "Gym System <onboarding@resend.dev>", // Use the default Resend testing domain
           to: [log.recipient_email],
           subject: `[Gym System] ${log.subject}`,
           html: generateNotificationHTML(log),
