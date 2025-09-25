@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import LoadingIndicator from "./components/LoadingIndicator";
+import { useNotificationProcessor } from "./hooks/useNotificationProcessor";
 
 // Pages
 import Index from "./pages/Index";
@@ -119,6 +120,9 @@ const UserDashboardRedirect = () => {
 // AppContent component to separate the routes from the providers
 const AppContent = () => {
   const { loading } = useAuth();
+  
+  // Enable automatic notification processing globally
+  useNotificationProcessor();
 
   // Show a more lightweight loading indicator
   if (loading) {

@@ -45,7 +45,6 @@ const adminData = {
 };
 
 const AdminDashboard = () => {
-  useNotificationProcessor(); // Enable automatic notification processing
   const { isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
