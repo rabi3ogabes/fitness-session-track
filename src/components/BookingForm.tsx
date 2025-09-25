@@ -188,23 +188,39 @@ const BookingForm = ({
           .single();
 
         if (adminSettings?.booking_notifications && adminSettings?.notification_email && adminSettings?.email_provider) {
-          // Get user profile
-          const { data: profile } = await supabase
+          console.log("Admin settings check passed:", { 
+            booking_notifications: adminSettings.booking_notifications,
+            notification_email: adminSettings.notification_email,
+            email_provider: adminSettings.email_provider 
+          });
+          
+          // Get user profile, fallback to auth.users if no profile exists
+          let profile = null;
+          const { data: profileData, error: profileError } = await supabase
             .from("profiles")
             .select("name, email, phone_number")
             .eq("id", user.id)
             .single();
 
+          if (profileData) {
+            profile = profileData;
+          } else {
+            // Fallback to auth.users data
+            profile = {
+              name: (user as any).user_metadata?.name || user.email,
+              email: user.email,
+              phone_number: (user as any).phone || (user as any).user_metadata?.phone
+            };
+          }
+
+          console.log("Profile data:", profile, "Profile error:", profileError);
+
           // Get class details
           const classData = unbookedClasses.find(cls => cls.id === selectedClass);
+          console.log("Class data:", classData);
 
           if (profile && classData) {
             console.log("Sending booking notification email...");
-            console.log("Admin settings:", { 
-              email_provider: adminSettings.email_provider,
-              notification_email: adminSettings.notification_email,
-              booking_notifications: adminSettings.booking_notifications 
-            });
             
             const functionName = adminSettings.email_provider === 'resend' 
               ? 'send-email-notification' 
@@ -212,7 +228,7 @@ const BookingForm = ({
               
             console.log(`Using ${functionName} for booking notification`);
             
-            await supabase.functions.invoke(functionName, {
+            const emailResponse = await supabase.functions.invoke(functionName, {
               body: {
                 userEmail: profile.email,
                 userName: profile.name,
@@ -230,6 +246,10 @@ const BookingForm = ({
                 }
               }
             });
+            
+            console.log("Email function response:", emailResponse);
+          } else {
+            console.log("Missing data:", { profile: !!profile, classData: !!classData });
           }
         }
       } catch (emailError) {
