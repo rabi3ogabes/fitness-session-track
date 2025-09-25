@@ -158,8 +158,33 @@ const BalanceRequestsWidget = () => {
 
         if (updateMemberError) throw updateMemberError;
 
-        // Send WhatsApp notification to admin about approval
+        // Send notifications about approval
         try {
+          // Send email notification to member
+          const emailSettings = localStorage.getItem("emailSettings");
+          if (emailSettings) {
+            const settings = JSON.parse(emailSettings);
+            if (settings.enabled && settings.session_requests) {
+              try {
+                await supabase.functions.invoke('send-email-notification', {
+                  body: {
+                    type: 'session_request_approved',
+                    memberName: memberName,
+                    memberEmail: memberEmail,
+                    requestedSessions: requestedSessions,
+                    newBalance: newBalance,
+                    notificationEmail: settings.notification_email || settings.from_email,
+                    fromEmail: settings.from_email,
+                    fromName: settings.from_name
+                  }
+                });
+                console.log('Email notification sent to member for approved request');
+              } catch (emailError) {
+                console.error('Failed to send email notification:', emailError);
+              }
+            }
+          }
+
           const whatsappSettings = localStorage.getItem("whatsappSettings");
           if (whatsappSettings) {
             const settings = JSON.parse(whatsappSettings);

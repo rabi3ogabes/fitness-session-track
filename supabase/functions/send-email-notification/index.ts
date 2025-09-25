@@ -12,9 +12,14 @@ const corsHeaders = {
 };
 
 interface EmailNotificationRequest {
-  userEmail: string;
-  userName: string;
+  type?: string;
+  userEmail?: string;
+  userName?: string;
   userPhone?: string;
+  memberName?: string;
+  memberEmail?: string;
+  requestedSessions?: number;
+  newBalance?: number;
   notificationEmail: string;
   fromEmail?: string;
   fromName?: string;
@@ -90,7 +95,21 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      const { userEmail, userName, userPhone, notificationEmail, fromEmail, fromName, bookingDetails, sessionRequestDetails }: EmailNotificationRequest = requestBody;
+      const { 
+        type, 
+        userEmail, 
+        userName, 
+        userPhone, 
+        memberName, 
+        memberEmail, 
+        requestedSessions, 
+        newBalance, 
+        notificationEmail, 
+        fromEmail, 
+        fromName, 
+        bookingDetails, 
+        sessionRequestDetails 
+      }: EmailNotificationRequest = requestBody;
 
       // Validate required fields
       if (!notificationEmail) {
@@ -116,11 +135,30 @@ const handler = async (req: Request): Promise<Response> => {
       const isTestEmail = userEmail === 'test@example.com';
       const isBookingNotification = !!bookingDetails;
       const isSessionRequestNotification = !!sessionRequestDetails;
+      const isSessionRequestApproval = type === 'session_request_approved';
       
       let emailSubject: string;
       let emailBody: string;
+      let emailTo: string = notificationEmail;
 
-      if (isTestEmail) {
+      if (isSessionRequestApproval) {
+        // Send to member's email for approval notifications
+        emailTo = memberEmail || userEmail || notificationEmail;
+        emailSubject = `🎉 Session Balance Request Approved`;
+        emailBody = `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #22c55e;">Great News! Your Session Request Has Been Approved</h2>
+            <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #22c55e;">
+              <p><strong>Dear ${memberName || userName},</strong></p>
+              <p>We're excited to inform you that your session balance request has been approved!</p>
+              <p><strong>✅ Sessions Added:</strong> ${requestedSessions}</p>
+              <p><strong>💪 Your New Balance:</strong> ${newBalance} sessions</p>
+            </div>
+            <p style="color: #666;">You can now book your classes using your updated session balance. Thank you for choosing our gym!</p>
+            <p style="color: #888; font-size: 14px; margin-top: 30px;">Visit our website to book your next session.</p>
+          </div>
+        `;
+      } else if (isTestEmail) {
         emailSubject = 'Email Test - Configuration Successful';
         emailBody = `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -229,13 +267,13 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       try {
-        console.log(`Attempting to send email to: ${notificationEmail}`);
+        console.log(`Attempting to send email to: ${emailTo}`);
         console.log(`From: ${fromEmail && fromName ? `${fromName} <${fromEmail}>` : "Gym Management <onboarding@resend.dev>"}`);
         console.log(`Subject: ${emailSubject}`);
         
         const emailResponse = await resend.emails.send({
           from: fromEmail && fromName ? `${fromName} <${fromEmail}>` : "Gym Management <onboarding@resend.dev>",
-          to: [notificationEmail],
+          to: [emailTo],
           subject: emailSubject,
           html: emailBody,
         });
@@ -249,7 +287,7 @@ const handler = async (req: Request): Promise<Response> => {
           // Log failed email
           const logEntry: EmailLogEntry = {
             timestamp: new Date().toISOString(),
-            to: notificationEmail,
+            to: emailTo,
             subject: emailSubject,
             success: false,
             error: emailResponse.error.message || JSON.stringify(emailResponse.error)
@@ -273,7 +311,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Log successful email
         const logEntry: EmailLogEntry = {
           timestamp: new Date().toISOString(),
-          to: notificationEmail,
+          to: emailTo,
           subject: emailSubject,
           success: true,
           error: null
@@ -293,7 +331,7 @@ const handler = async (req: Request): Promise<Response> => {
               : 'New user registration notification sent successfully.',
             emailDetails: {
               id: emailResponse.data?.id,
-              to: notificationEmail,
+              to: emailTo,
               subject: emailSubject,
               timestamp: new Date().toISOString()
             }
@@ -309,7 +347,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Log failed email
         const logEntry: EmailLogEntry = {
           timestamp: new Date().toISOString(),
-          to: notificationEmail,
+          to: emailTo,
           subject: emailSubject,
           success: false,
           error: emailError.message || 'Unknown error'
