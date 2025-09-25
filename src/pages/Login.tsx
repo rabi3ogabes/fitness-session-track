@@ -302,17 +302,25 @@ const Login = () => {
             .single();
 
           if (adminSettings && adminSettings.signup_notifications && adminSettings.email_provider === 'resend') {
-            console.log("Sending signup notification email...");
-            await supabase.functions.invoke('send-email-notification', {
-              body: {
-                userEmail: email,
-                userName: name,
-                notificationEmail: adminSettings.notification_email,
-                fromEmail: adminSettings.from_email,
-                fromName: adminSettings.from_name
-              }
-            });
-            console.log("Signup notification sent successfully");
+            console.log("Creating signup notification log...");
+            
+            // Create notification log entry which will trigger automatic email sending
+            const { error: logError } = await supabase
+              .from('notification_logs')
+              .insert({
+                notification_type: 'signup',
+                recipient_email: adminSettings.notification_email,
+                user_name: name,
+                user_email: email,
+                subject: `New Member Signup: ${name}`,
+                status: 'pending'
+              });
+            
+            if (logError) {
+              console.error("Failed to create notification log:", logError);
+            } else {
+              console.log("Signup notification log created successfully");
+            }
           } else if (adminSettings && adminSettings.signup_notifications && adminSettings.email_provider === 'smtp') {
             // Legacy SMTP notification logic (keep for backward compatibility)
             const notificationEmails = localStorage.getItem("notificationEmails");

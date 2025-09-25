@@ -351,22 +351,25 @@ const UserMembership = () => {
             .single();
 
           if (adminSettings && adminSettings.session_request_notifications && adminSettings.email_provider === 'resend') {
-            console.log("Sending session request notification email...");
-            await supabase.functions.invoke('send-email-notification', {
-              body: {
-                userEmail: currentUser.email,
-                userName: currentUser.name,
-                notificationEmail: adminSettings.notification_email,
-                fromEmail: adminSettings.from_email,
-                fromName: adminSettings.from_name,
-                sessionRequestDetails: {
-                  planName: planName,
-                  sessions: plan.sessions,
-                  requestDate: formattedDate
-                }
-              }
-            });
-            console.log("Session request notification sent successfully");
+            console.log("Creating session request notification log...");
+            
+            // Create notification log entry which will trigger automatic email sending
+            const { error: logError } = await supabase
+              .from('notification_logs')
+              .insert({
+                notification_type: 'session_request',
+                recipient_email: adminSettings.notification_email,
+                user_name: currentUser.name,
+                user_email: currentUser.email,
+                subject: `Session Request from ${currentUser.name}`,
+                status: 'pending'
+              });
+            
+            if (logError) {
+              console.error("Failed to create notification log:", logError);
+            } else {
+              console.log("Session request notification log created successfully");
+            }
           }
         } catch (emailError) {
           console.error("Failed to send session request email notification:", emailError);
