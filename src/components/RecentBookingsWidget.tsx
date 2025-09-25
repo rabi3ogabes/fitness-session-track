@@ -36,7 +36,8 @@ const RecentBookingsWidget = () => {
             user_name,
             booking_date,
             member_id,
-            class_id
+            class_id,
+            user_id
           `)
           .eq("status", "confirmed")
           .order("booking_date", { ascending: false })
@@ -70,10 +71,42 @@ const RecentBookingsWidget = () => {
               }
             }
             
-            // Try to get member details using various methods
+            // Try multiple methods to get member information
             let memberFound = false;
             
-            // Method 1: Try by member_id if available
+            // Method 1: Try by user_id from profiles table
+            if (booking.user_id && !memberFound) {
+              try {
+                const { data: profileData } = await supabase
+                  .from("profiles")
+                  .select("name, email, sessions_remaining")
+                  .eq("id", booking.user_id)
+                  .single();
+                
+                if (profileData?.name) {
+                  memberName = profileData.name;
+                  memberBalance = profileData.sessions_remaining || 0;
+                  memberFound = true;
+                  
+                  // Try to get gender from members table using email
+                  if (profileData.email) {
+                    const { data: memberData } = await supabase
+                      .from("members")
+                      .select("gender")
+                      .eq("email", profileData.email)
+                      .single();
+                    
+                    if (memberData) {
+                      memberGender = memberData.gender;
+                    }
+                  }
+                }
+              } catch (error) {
+                // Continue to next method
+              }
+            }
+            
+            // Method 2: Try by member_id if available
             if (booking.member_id && !memberFound) {
               try {
                 const { data: memberData } = await supabase
@@ -93,7 +126,7 @@ const RecentBookingsWidget = () => {
               }
             }
             
-            // Method 2: Try by user_name if available and member not found yet
+            // Method 3: Try by user_name if available
             if (booking.user_name?.trim() && !memberFound) {
               try {
                 const { data: memberData } = await supabase
@@ -109,7 +142,7 @@ const RecentBookingsWidget = () => {
                   memberFound = true;
                 }
               } catch (error) {
-                // Continue to next method
+                // Continue
               }
             }
 
