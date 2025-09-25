@@ -560,6 +560,84 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
       });
 
+      // Handle user already exists case
+      if (error && error.message?.includes("User already registered")) {
+        console.log("User already exists, sending notifications about attempted signup:", email);
+        
+        // Send notification to admin about attempted signup with existing email
+        const adminNotificationEmail = localStorage.getItem('adminNotificationEmail');
+        const smtpSettings = localStorage.getItem('smtpSettings');
+        
+        if (adminNotificationEmail && smtpSettings) {
+          try {
+            const parsedSmtpSettings = JSON.parse(smtpSettings);
+            
+            if (parsedSmtpSettings.host && parsedSmtpSettings.username && parsedSmtpSettings.password && parsedSmtpSettings.fromEmail) {
+              await supabase.functions.invoke('send-smtp-notification', {
+                body: {
+                  userEmail: email,
+                  userName: name,
+                  userPhone: phone,
+                  notificationEmail: adminNotificationEmail,
+                  smtpSettings: {
+                    ...parsedSmtpSettings,
+                    useSsl: true
+                  },
+                  isAttemptedSignup: true
+                }
+              });
+            }
+          } catch (notificationError) {
+            console.error('Failed to send admin notification for existing user:', notificationError);
+          }
+        }
+
+        // Send WhatsApp notification about attempted signup
+        try {
+          const whatsappSettings = localStorage.getItem("whatsappSettings");
+          if (whatsappSettings) {
+            const settings = JSON.parse(whatsappSettings);
+            if (settings.enabled && settings.signup_notifications && 
+                settings.instance_id && settings.api_token && settings.phone_numbers) {
+              
+              const phoneNumbers = settings.phone_numbers.split(',').map(num => num.trim());
+              
+              const signupMessage = `⚠️ Attempted signup with existing email!\n\nName: ${name}\nEmail: ${email}\nPhone: ${phone || 'Not provided'}\nAttempted: ${new Date().toLocaleDateString()}\n\nThis email is already registered in the system.`;
+              
+              await supabase.functions.invoke('send-whatsapp-notification', {
+                body: {
+                  userName: name,
+                  userEmail: email,
+                  phoneNumbers: phoneNumbers,
+                  apiToken: settings.api_token,
+                  instanceId: settings.instance_id,
+                  customMessage: signupMessage
+                }
+              });
+            }
+          }
+        } catch (whatsappError) {
+          console.error("Failed to send WhatsApp notification for existing user:", whatsappError);
+        }
+
+        // Send notification to the user about existing account
+        try {
+          await supabase.functions.invoke('send-email-notification', {
+            body: {
+              type: 'existing_account',
+              memberName: name,
+              memberEmail: email,
+              emailTo: email
+            }
+          });
+          console.log('Existing account notification sent to:', email);
+        } catch (emailError) {
+          console.error('Failed to send existing account notification:', emailError);
+        }
+        
+        throw error;
+      }
+
       if (error) throw error;
 
       if (data.user) {

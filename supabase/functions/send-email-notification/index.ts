@@ -273,6 +273,37 @@ const handler = async (req: Request): Promise<Response> => {
             </p>
           </div>
         `;
+      } else if (type === 'existing_account') {
+        // Notification for existing account signup attempt
+        emailTo = memberEmail || userEmail || emailTo;
+        emailSubject = `Account Already Exists - Gym Management System`;
+        emailBody = `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #f59e0b;">⚠️ Account Already Exists</h1>
+            <div style="background-color: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+              <p><strong>Dear ${memberName || userName},</strong></p>
+              <p>We received a signup request for this email address, but an account already exists in our system.</p>
+              <p><strong>What this means:</strong></p>
+              <ul>
+                <li>You already have an account with us</li>
+                <li>Your email: ${memberEmail || userEmail}</li>
+                <li>Attempt date: ${new Date().toLocaleDateString()}</li>
+              </ul>
+            </div>
+            <div style="background-color: #e0f2fe; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">What to do next:</h3>
+              <ul>
+                <li>Try logging in with your existing credentials</li>
+                <li>Use "Forgot Password" if you can't remember your password</li>
+                <li>Contact gym administration if you need assistance</li>
+              </ul>
+            </div>
+            <p>If this wasn't you, you can safely ignore this email.</p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              Best regards,<br>The Gym Team
+            </p>
+          </div>
+        `;
       } else {
         // Admin notification for new registrations  
         emailSubject = `New User Registration: ${userName}`;

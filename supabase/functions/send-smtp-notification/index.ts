@@ -11,6 +11,7 @@ interface SMTPNotificationRequest {
   userName: string;
   userPhone?: string;
   notificationEmail: string;
+  isAttemptedSignup?: boolean;
   smtpSettings: {
     smtpHost: string;
     smtpPort: string;
@@ -175,6 +176,8 @@ serve(async (req: Request): Promise<Response> => {
 
       const emailSubject = userEmail === 'test@example.com' 
         ? 'SMTP Test Email - Configuration Successful'
+        : requestBody.isAttemptedSignup
+        ? `⚠️ Attempted Signup with Existing Email: ${userName}`
         : `New User Registration: ${userName}`;
 
       const emailBody = userEmail === 'test@example.com' 
@@ -194,6 +197,31 @@ serve(async (req: Request): Promise<Response> => {
                   </ul>
                 </div>
                 <p>Your email notification system is now ready to send notifications for new user registrations.</p>
+                <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+                  This email was sent automatically by your gym management system.
+                </p>
+              </div>
+            </body>
+          </html>
+        `
+        : requestBody.isAttemptedSignup
+        ? `
+          <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+              <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #f59e0b;">⚠️ Attempted Signup with Existing Email</h2>
+                <p>Someone attempted to register with an email that already exists in your system.</p>
+                <div style="background-color: #fffbeb; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+                  <h3 style="margin-top: 0;">Attempt Details:</h3>
+                  <ul>
+                    <li><strong>Name Provided:</strong> ${userName}</li>
+                    <li><strong>Email:</strong> ${userEmail}</li>
+                    ${userPhone ? `<li><strong>Phone:</strong> ${userPhone}</li>` : ''}
+                    <li><strong>Attempt Date:</strong> ${new Date().toLocaleString()}</li>
+                  </ul>
+                </div>
+                <p><strong>Action Taken:</strong> The user was notified that this email is already registered and advised to log in instead.</p>
+                <p>If this is a legitimate user who may need account assistance, please follow up accordingly.</p>
                 <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
                   This email was sent automatically by your gym management system.
                 </p>
