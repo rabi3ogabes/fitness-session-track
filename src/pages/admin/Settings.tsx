@@ -474,6 +474,7 @@ const Settings = () => {
         notification_email: emailSettings.notification_email,
         from_email: emailSettings.from_email,
         from_name: emailSettings.from_name || 'Gym System',
+        email_provider: emailSettings.email_provider,
         signup_notifications: emailSettings.signup_notifications,
         booking_notifications: emailSettings.booking_notifications,
         session_request_notifications: emailSettings.session_request_notifications
