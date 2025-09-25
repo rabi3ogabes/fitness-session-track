@@ -1360,34 +1360,40 @@ const Settings = () => {
                   </>
                 ) : emailSettings.email_provider === 'resend' ? (
                   <div className="space-y-4">
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                      <h4 className="font-medium text-green-800 mb-2">✓ Resend Configuration</h4>
-                      <p className="text-sm text-green-700 mb-3">
-                        Resend is configured and ready to use! The RESEND_API_KEY is set in your Supabase secrets.
+                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                      <h4 className="font-medium text-yellow-800 mb-2">⚠️ Domain Verification Required</h4>
+                      <p className="text-sm text-yellow-700 mb-3">
+                        <strong>Important:</strong> You're using a gmail.com address, but Resend requires domain verification for custom domains. 
+                        Gmail.com cannot be verified since it's owned by Google.
                       </p>
+                      <div className="text-sm text-yellow-700 mb-3">
+                        <p><strong>Quick Fix:</strong> Change your "From Email" to <code className="bg-yellow-100 px-1 rounded">onboarding@resend.dev</code> for testing</p>
+                      </div>
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => window.open('https://resend.com/domains', '_blank')}
                         >
-                          Verify Domain
+                          Add Your Domain
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open('https://supabase.com/dashboard/project/wlawjupusugrhojbywyq/settings/functions', '_blank')}
+                          onClick={() => {
+                            setEmailSettings(prev => ({ ...prev, from_email: 'onboarding@resend.dev' }));
+                          }}
                         >
-                          Manage Secrets
+                          Use Test Email
                         </Button>
                       </div>
                     </div>
                     <div className="bg-blue-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-900 mb-2">Using Resend</h4>
-                      <div className="text-sm text-blue-800 space-y-1">
-                        <p>• Make sure to verify your domain at resend.com/domains</p>
-                        <p>• Use a verified email address in the "From Email" field below</p>
-                        <p>• For testing, you can use: onboarding@resend.dev</p>
+                      <h4 className="font-medium text-blue-900 mb-2">How to Fix This</h4>
+                      <div className="text-sm text-blue-800 space-y-2">
+                        <p><strong>Option 1 (Quick):</strong> Use <code>onboarding@resend.dev</code> for testing</p>
+                        <p><strong>Option 2 (Production):</strong> Add and verify your own domain at resend.com/domains</p>
+                        <p><strong>Note:</strong> You cannot use gmail.com, yahoo.com, or other public email domains</p>
                       </div>
                     </div>
                   </div>
