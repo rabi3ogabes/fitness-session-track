@@ -319,16 +319,6 @@ const Members = () => {
           throw new Error("Member email missing");
         }
 
-        // Find the auth user by email
-        const { data: authData, error: usersError } = await supabase.auth.admin.listUsers();
-        
-        if (usersError) {
-          console.error("Error fetching users:", usersError);
-          throw usersError;
-        }
-
-        const authUser = authData.users.find((user: any) => user.email === memberEmail);
-
         // Delete from members table first
         const { error: memberDeleteError } = await supabase
           .from("members")
@@ -340,16 +330,15 @@ const Members = () => {
           throw memberDeleteError;
         }
 
-        // If auth user exists, delete them too (this will cascade to bookings, profiles, and membership_requests)
-        if (authUser) {
-          const { error: authDeleteError } = await supabase.auth.admin.deleteUser(authUser.id);
-          
-          if (authDeleteError) {
-            console.error("Error deleting auth user:", authDeleteError);
-            // Don't throw here - the member is already deleted from members table
-            // Just log the error and continue
-            console.warn("Member deleted from members table but auth user deletion failed:", authDeleteError);
-          }
+        // Call edge function to delete auth user (requires admin privileges)
+        const { data, error } = await supabase.functions.invoke('delete-user', {
+          body: { email: memberEmail }
+        });
+
+        if (error) {
+          console.error("Error calling delete-user function:", error);
+          // Don't throw here - the member is already deleted from members table
+          console.warn("Member deleted from members table but auth user deletion failed:", error);
         }
 
         // Update local state by removing the member
