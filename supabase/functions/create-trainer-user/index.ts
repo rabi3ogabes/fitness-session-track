@@ -97,7 +97,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("[EdgeFunction create-trainer-user] General error in function handler:", error, error.stack);
+    console.error("[EdgeFunction create-trainer-user] General error in function handler:", error, error instanceof Error ? error.stack : '');
     let errorMessage = "An unexpected error occurred in the Edge Function.";
     if (error instanceof SyntaxError && error.message.includes("JSON")) {
         errorMessage = "Invalid JSON in request body.";

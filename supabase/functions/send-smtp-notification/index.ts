@@ -54,7 +54,7 @@ async function sendEmail(settings: SMTPNotificationRequest['smtpSettings'], to: 
     console.log(`Email sent successfully to: ${to}`);
   } catch (error) {
     console.error(`Failed to send email to ${to}:`, error);
-    throw new Error(`SMTP Error: ${error.message}`);
+    throw new Error(`SMTP Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

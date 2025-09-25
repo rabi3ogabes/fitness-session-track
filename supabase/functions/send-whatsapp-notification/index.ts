@@ -114,7 +114,7 @@ serve(async (req) => {
           results.push({
             phoneNumber,
             status: 'failed',
-            error: error.message
+            error: error instanceof Error ? error.message : 'Unknown error'
           });
         }
       }
@@ -148,7 +148,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: 'Failed to send WhatsApp notification',
-        details: error.message
+        details: error instanceof Error ? error.message : 'Unknown error'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
