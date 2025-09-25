@@ -298,14 +298,58 @@ const Members = () => {
   const deleteMember = async (id: number) => {
     try {
       await requireAuth(async () => {
-        const { error } = await supabase
+        // First, get the member's email to find the corresponding auth user
+        const { data: member, error: fetchError } = await supabase
+          .from("members")
+          .select("email")
+          .eq("id", id)
+          .single();
+
+        if (fetchError) {
+          console.error("Error fetching member:", fetchError);
+          throw fetchError;
+        }
+
+        if (!member) {
+          throw new Error("Member not found");
+        }
+
+        const memberEmail = member.email as string;
+        if (!memberEmail) {
+          throw new Error("Member email missing");
+        }
+
+        // Find the auth user by email
+        const { data: authData, error: usersError } = await supabase.auth.admin.listUsers();
+        
+        if (usersError) {
+          console.error("Error fetching users:", usersError);
+          throw usersError;
+        }
+
+        const authUser = authData.users.find((user: any) => user.email === memberEmail);
+
+        // Delete from members table first
+        const { error: memberDeleteError } = await supabase
           .from("members")
           .delete()
           .eq("id", id);
 
-        if (error) {
-          console.error("Error deleting member:", error);
-          throw error;
+        if (memberDeleteError) {
+          console.error("Error deleting member:", memberDeleteError);
+          throw memberDeleteError;
+        }
+
+        // If auth user exists, delete them too (this will cascade to bookings, profiles, and membership_requests)
+        if (authUser) {
+          const { error: authDeleteError } = await supabase.auth.admin.deleteUser(authUser.id);
+          
+          if (authDeleteError) {
+            console.error("Error deleting auth user:", authDeleteError);
+            // Don't throw here - the member is already deleted from members table
+            // Just log the error and continue
+            console.warn("Member deleted from members table but auth user deletion failed:", authDeleteError);
+          }
         }
 
         // Update local state by removing the member
@@ -315,7 +359,7 @@ const Members = () => {
 
         toast({
           title: "Member deleted successfully",
-          description: "The member has been removed from the database",
+          description: "The member and all associated data have been removed",
         });
       });
     } catch (err: any) {

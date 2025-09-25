@@ -173,7 +173,7 @@ const MemberTable = ({
                                    variant="ghost"
                                    size="icon"
                                    onClick={() => {
-                                     if (window.confirm(`Are you sure you want to delete ${member.name}? This action cannot be undone.`)) {
+                                     if (window.confirm(`Are you sure you want to delete ${member.name}?\n\nThis will permanently remove:\n• Member account\n• Authentication access\n• All bookings\n• All session requests\n\nThis action cannot be undone.`)) {
                                        deleteMember(member.id);
                                      }
                                    }}
