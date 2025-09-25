@@ -174,7 +174,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Handle POST request for sending emails
+    // Handle POST request for sending emails or processing pending notifications
     if (req.method === 'POST') {
       console.log("Processing POST request for email sending");
       
@@ -188,6 +188,19 @@ const handler = async (req: Request): Promise<Response> => {
           JSON.stringify({ error: 'Invalid JSON in request body' }),
           { 
             status: 400, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+          }
+        );
+      }
+
+      // Check if this is a request to process pending notifications
+      if (requestBody.action === 'process_pending') {
+        console.log("Processing pending notifications...");
+        await processPendingNotifications();
+        return new Response(
+          JSON.stringify({ success: true, message: 'Pending notifications processed' }),
+          { 
+            status: 200, 
             headers: { 'Content-Type': 'application/json', ...corsHeaders } 
           }
         );
