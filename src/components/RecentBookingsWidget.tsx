@@ -76,49 +76,7 @@ const RecentBookingsWidget = () => {
             // Try multiple methods to get member information
             let memberFound = false;
             
-            // Method 1: Try by user_id using the get_user_name function
-            if (booking.user_id && !memberFound) {
-              try {
-                // First try profiles table
-                const { data: profileData } = await supabase
-                  .from("profiles")
-                  .select("name, email, sessions_remaining")
-                  .eq("id", booking.user_id)
-                  .maybeSingle();
-                
-                if (profileData?.name) {
-                  memberName = profileData.name;
-                  memberBalance = profileData.sessions_remaining || 0;
-                  memberFound = true;
-                  
-                  // Try to get gender from members table using email
-                  if (profileData.email) {
-                    const { data: memberData } = await supabase
-                      .from("members")
-                      .select("gender")
-                      .eq("email", profileData.email)
-                      .maybeSingle();
-                    
-                    if (memberData) {
-                      memberGender = memberData.gender;
-                    }
-                  }
-                } else {
-                  // Use our function to get user name from auth table
-                  const { data: userName } = await supabase
-                    .rpc('get_user_name', { user_id: booking.user_id });
-                  
-                  if (userName && userName !== 'Unknown User') {
-                    memberName = userName;
-                    memberBalance = 0; // Default since no profile data
-                    memberFound = true;
-                  }
-                }
-              } catch (error) {
-              }
-            }
-            
-            // Method 2: Try by member_id if available
+            // Method 1: Try by member_id first (most reliable for session counts)
             if (booking.member_id && !memberFound) {
               try {
                 const { data: memberData } = await supabase
@@ -138,7 +96,7 @@ const RecentBookingsWidget = () => {
               }
             }
             
-            // Method 3: Try by user_name if available
+            // Method 2: Try by user_name if available
             if (booking.user_name?.trim() && !memberFound) {
               try {
                 const { data: memberData } = await supabase
@@ -152,6 +110,51 @@ const RecentBookingsWidget = () => {
                   memberBalance = memberData.remaining_sessions || 0;
                   memberGender = memberData.gender;
                   memberFound = true;
+                }
+              } catch (error) {
+                // Continue
+              }
+            }
+            
+            // Method 3: Try by user_id using profiles table (fallback)
+            if (booking.user_id && !memberFound) {
+              try {
+                // First try profiles table
+                const { data: profileData } = await supabase
+                  .from("profiles")
+                  .select("name, email, sessions_remaining")
+                  .eq("id", booking.user_id)
+                  .maybeSingle();
+                
+                if (profileData?.name) {
+                  memberName = profileData.name;
+                  memberBalance = profileData.sessions_remaining || 0;
+                  memberFound = true;
+                  
+                  // Try to get gender and correct session count from members table using email
+                  if (profileData.email) {
+                    const { data: memberData } = await supabase
+                      .from("members")
+                      .select("gender, remaining_sessions")
+                      .eq("email", profileData.email)
+                      .maybeSingle();
+                    
+                    if (memberData) {
+                      memberGender = memberData.gender;
+                      // Use members table session count if available (more reliable)
+                      memberBalance = memberData.remaining_sessions || memberBalance;
+                    }
+                  }
+                } else {
+                  // Use our function to get user name from auth table
+                  const { data: userName } = await supabase
+                    .rpc('get_user_name', { user_id: booking.user_id });
+                  
+                  if (userName && userName !== 'Unknown User') {
+                    memberName = userName;
+                    memberBalance = 0; // Default since no profile data
+                    memberFound = true;
+                  }
                 }
               } catch (error) {
                 // Continue
