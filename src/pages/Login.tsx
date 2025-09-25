@@ -359,7 +359,18 @@ const Login = () => {
     } catch (error: any) {
       // Display error message
       console.error("Signup error caught in component:", error);
-      setError(error?.message || "Failed to sign up. Please try again.");
+      
+      // Handle specific error cases with clear messages
+      if (error?.message?.includes("User already registered") || error?.message?.includes("already exists")) {
+        setError("An account with this email already exists. If your membership was recently deleted, please contact the gym administrator to reactivate your account or use the login form instead.");
+        toast({
+          title: "Account already exists",
+          description: "An account with this email already exists. Please contact the gym administrator if you need assistance.",
+          variant: "destructive",
+        });
+      } else {
+        setError(error?.message || "Failed to sign up. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
