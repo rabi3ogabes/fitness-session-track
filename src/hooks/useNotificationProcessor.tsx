@@ -21,7 +21,9 @@ export const useNotificationProcessor = () => {
           
           // Process the notification by calling the edge function
           try {
-            const { data, error } = await supabase.functions.invoke('process-pending-notifications');
+            const { data, error } = await supabase.functions.invoke('send-email-notification', {
+              method: 'GET'
+            });
             
             if (error) {
               console.error('Error processing notifications:', error);

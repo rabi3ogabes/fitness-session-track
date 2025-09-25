@@ -200,6 +200,38 @@ export const NotificationTester: React.FC = () => {
           <Button onClick={runAllTests} disabled={isLoading} className="ml-auto">
             {isLoading ? 'Running Tests...' : 'Run All Tests'}
           </Button>
+          <Button 
+            onClick={async () => {
+              setIsLoading(true);
+              try {
+                const { data, error } = await supabase.functions.invoke('send-email-notification');
+                if (error) {
+                  toast({
+                    title: "Error",
+                    description: error.message,
+                    variant: "destructive",
+                  });
+                } else {
+                  toast({
+                    title: "Success",
+                    description: "Processed pending notifications",
+                  });
+                }
+              } catch (err) {
+                toast({
+                  title: "Error",
+                  description: "Failed to process notifications",
+                  variant: "destructive",
+                });
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+            disabled={isLoading}
+            variant="secondary"
+          >
+            Process Pending Notifications
+          </Button>
         </div>
 
         {testResults.length > 0 && (

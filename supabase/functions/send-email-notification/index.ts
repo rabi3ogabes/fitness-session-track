@@ -1,7 +1,11 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { Resend } from "https://esm.sh/resend@2.1.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 console.log("Resend API Key configured:", !!Deno.env.get("RESEND_API_KEY"));
 
@@ -47,6 +51,99 @@ interface EmailLogEntry {
 }
 
 const emailLogs: EmailLogEntry[] = [];
+
+const processPendingNotifications = async () => {
+  console.log("Processing pending notifications...");
+  
+  try {
+    const { data: pendingLogs, error: fetchError } = await supabase
+      .from('notification_logs')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true });
+
+    if (fetchError) {
+      console.error("Error fetching pending notifications:", fetchError);
+      return;
+    }
+
+    console.log(`Found ${pendingLogs?.length || 0} pending notifications`);
+
+    if (!pendingLogs || pendingLogs.length === 0) {
+      return;
+    }
+
+    for (const log of pendingLogs) {
+      try {
+        console.log(`Processing notification ${log.id} of type ${log.notification_type}`);
+        
+        const emailResponse = await resend.emails.send({
+          from: "Gym System <notifications@fhb-fit.com>",
+          to: [log.recipient_email],
+          subject: `[Gym System] ${log.subject}`,
+          html: generateNotificationHTML(log),
+        });
+
+        console.log(`Email sent successfully for ${log.id}:`, emailResponse);
+
+        // Update status to sent
+        await supabase
+          .from('notification_logs')
+          .update({ status: 'sent' })
+          .eq('id', log.id);
+
+      } catch (emailError: any) {
+        console.error(`Error sending email for ${log.id}:`, emailError);
+        
+        await supabase
+          .from('notification_logs')
+          .update({ 
+            status: 'error',
+            error_message: emailError.message || 'Failed to send email'
+          })
+          .eq('id', log.id);
+      }
+    }
+  } catch (error) {
+    console.error("Error processing pending notifications:", error);
+  }
+};
+
+const generateNotificationHTML = (log: any): string => {
+  switch (log.notification_type) {
+    case 'signup':
+      return `
+        <h2>🎉 New Member Registration</h2>
+        <p><strong>Name:</strong> ${log.user_name}</p>
+        <p><strong>Email:</strong> ${log.user_email}</p>
+        <p><strong>Registration Date:</strong> ${new Date(log.created_at).toLocaleString()}</p>
+        <p>A new member has successfully registered for your gym.</p>
+      `;
+    case 'booking':
+      return `
+        <h2>📅 New Class Booking</h2>
+        <p><strong>Member:</strong> ${log.user_name}</p>
+        <p><strong>Email:</strong> ${log.user_email}</p>
+        <p><strong>Booking Date:</strong> ${new Date(log.created_at).toLocaleString()}</p>
+        <p>A member has booked a class at your gym.</p>
+      `;
+    case 'session_request':
+      return `
+        <h2>💪 New Session Request</h2>
+        <p><strong>Member:</strong> ${log.user_name}</p>
+        <p><strong>Email:</strong> ${log.user_email}</p>
+        <p><strong>Request Date:</strong> ${new Date(log.created_at).toLocaleString()}</p>
+        <p>A member has requested additional sessions.</p>
+      `;
+    default:
+      return `
+        <h2>📢 Gym Notification</h2>
+        <p><strong>Member:</strong> ${log.user_name}</p>
+        <p><strong>Email:</strong> ${log.user_email}</p>
+        <p><strong>Date:</strong> ${new Date(log.created_at).toLocaleString()}</p>
+      `;
+  }
+};
 
 const handler = async (req: Request): Promise<Response> => {
   console.log("=== Email notification function called ===");
