@@ -9,6 +9,7 @@ import RecentMembersWidget from "@/components/RecentMembersWidget";
 import RecentBookingsWidget from "@/components/RecentBookingsWidget";
 import BalanceRequestsWidget from "@/components/BalanceRequestsWidget";
 import { NotificationTester } from "@/components/NotificationTester";
+import { useNotificationProcessor } from "@/hooks/useNotificationProcessor";
 import { Users, User, Calendar, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -44,6 +45,7 @@ const adminData = {
 };
 
 const AdminDashboard = () => {
+  useNotificationProcessor(); // Enable automatic notification processing
   const { isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
