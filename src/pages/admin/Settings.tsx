@@ -838,7 +838,7 @@ const Settings = () => {
               <CardHeader>
                 <div className="flex items-center space-x-2">
                   <MessageCircle className="h-5 w-5 text-green-600" />
-                  <CardTitle>WhatsApp Notification System</CardTitle>
+                  <CardTitle>Email Notification Resend</CardTitle>
                 </div>
                 <CardDescription>
                   Configure WhatsApp notifications using Green API - 3000 free messages per month
