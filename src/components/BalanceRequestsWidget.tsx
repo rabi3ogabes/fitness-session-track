@@ -338,6 +338,15 @@ You can now book your classes. Thank you for choosing our gym!`;
 
       // Show success message immediately after core approval operations
       if (approvalSuccessful) {
+        // Update local state immediately to show the change
+        setBalanceRequests(prev => 
+          prev.map(req => 
+            req.id === requestId 
+              ? { ...req, status: "Approved" }
+              : req
+          )
+        );
+        
         toast({
           title: "Request approved",
           description: `${requestedSessions} sessions added to member's balance`,
