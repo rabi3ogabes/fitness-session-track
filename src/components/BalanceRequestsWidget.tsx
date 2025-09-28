@@ -18,6 +18,7 @@ interface BalanceRequest {
   created_at: string;
   member_gender?: string;
   member_phone?: string;
+  member_name?: string;
 }
 
 const BalanceRequestsWidget = () => {
@@ -58,14 +59,15 @@ const BalanceRequestsWidget = () => {
           (data || []).map(async (request) => {
             const { data: memberData } = await supabase
               .from("members")
-              .select("gender, phone")
+              .select("gender, phone, name")
               .eq("email", request.email)
               .single();
             
             return {
               ...request,
               member_gender: memberData?.gender,
-              member_phone: memberData?.phone
+              member_phone: memberData?.phone,
+              member_name: memberData?.name || request.member // Fallback to request.member if no member found
             };
           })
         );
@@ -400,7 +402,7 @@ You can now book your classes. Thank you for choosing our gym!`;
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
                   <User className={`h-4 w-4 ${getGenderIconColor(request.member_gender)}`} />
-                  <h3 className="font-semibold text-gray-900">{request.member}</h3>
+                  <h3 className="font-semibold text-gray-900">{request.member_name || request.member}</h3>
                 </div>
                 <div className="flex items-center gap-2">
                   {getStatusIcon(request.status)}
