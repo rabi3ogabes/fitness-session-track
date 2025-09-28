@@ -26,22 +26,22 @@ const RecentBookingsWidget = () => {
   };
 
   useEffect(() => {
-  const fetchRecentBookings = async () => {
-    try {
-      // Get recent bookings with class details
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from("bookings")
-        .select(`
-          id,
-          user_name,
-          booking_date,
-          member_id,
-          class_id,
-          user_id
-        `)
-        .eq("status", "confirmed")
-        .order("booking_date", { ascending: false })
-        .limit(5);
+    const fetchRecentBookings = async () => {
+      try {
+        // Get recent bookings with class details
+        const { data: bookingsData, error: bookingsError } = await supabase
+          .from("bookings")
+          .select(`
+            id,
+            user_name,
+            booking_date,
+            member_id,
+            class_id,
+            user_id
+          `)
+          .eq("status", "confirmed")
+          .order("booking_date", { ascending: false })
+          .limit(5);
 
         if (bookingsError) throw bookingsError;
 
@@ -57,8 +57,6 @@ const RecentBookingsWidget = () => {
               start_time: "",
               end_time: ""
             };
-            
-            
             
             // Get class details
             if (booking.class_id) {
@@ -185,24 +183,49 @@ const RecentBookingsWidget = () => {
 
     fetchRecentBookings();
 
-    // Set up real-time subscription for new bookings
-    const channel = supabase
-      .channel("recent-bookings")
+    // Set up comprehensive real-time subscriptions
+    const bookingsChannel = supabase
+      .channel("recent-bookings-updates")
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
           schema: "public",
           table: "bookings",
         },
-        () => {
+        (payload) => {
+          console.log("Bookings change detected:", payload);
+          fetchRecentBookings();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public", 
+          table: "members",
+        },
+        (payload) => {
+          console.log("Member session update detected:", payload);
+          fetchRecentBookings();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+        },
+        (payload) => {
+          console.log("Profile session update detected:", payload);
           fetchRecentBookings();
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(bookingsChannel);
     };
   }, []);
 
