@@ -22,7 +22,7 @@ export const useNotificationProcessor = () => {
           // Process the notification by calling the edge function
           try {
             const { data, error } = await supabase.functions.invoke('send-email-notification', {
-              method: 'GET'
+              body: { action: 'process_pending' }
             });
             
             if (error) {
