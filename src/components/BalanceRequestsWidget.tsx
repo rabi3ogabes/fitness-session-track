@@ -130,9 +130,16 @@ const BalanceRequestsWidget = () => {
   };
 
   const handleApproveRequest = async (requestId: number, memberEmail: string, requestedSessions: number, memberName: string) => {
-    let approvalSuccessful = false;
-    
     try {
+      // Update local state immediately to show the change
+      setBalanceRequests(prev => 
+        prev.map(req => 
+          req.id === requestId 
+            ? { ...req, status: "Approved" }
+            : req
+        )
+      );
+
       // Update the request status to approved
       const { error: updateError } = await supabase
         .from("membership_requests")
@@ -160,8 +167,11 @@ const BalanceRequestsWidget = () => {
 
         if (updateMemberError) throw updateMemberError;
 
-        // Mark approval as successful
-        approvalSuccessful = true;
+        // Show success message immediately after core approval operations
+        toast({
+          title: "Request approved",
+          description: `${requestedSessions} sessions added to member's balance`,
+        });
 
         // Send notifications about approval (non-blocking)
         setTimeout(async () => {
@@ -336,22 +346,6 @@ You can now book your classes. Thank you for choosing our gym!`;
         }, 100);
       }
 
-      // Show success message immediately after core approval operations
-      if (approvalSuccessful) {
-        // Update local state immediately to show the change
-        setBalanceRequests(prev => 
-          prev.map(req => 
-            req.id === requestId 
-              ? { ...req, status: "Approved" }
-              : req
-          )
-        );
-        
-        toast({
-          title: "Request approved",
-          description: `${requestedSessions} sessions added to member's balance`,
-        });
-      }
 
     } catch (error) {
       console.error("Error approving request:", error);
