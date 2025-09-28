@@ -322,7 +322,6 @@ export const cancelClassBooking = async (
           try {
             const { error: processError } = await supabase.functions.invoke('send-email-notification', {
               body: { 
-                action: 'send_individual',
                 type: 'cancellation',
                 userEmail: user?.user?.email || 'unknown@example.com',
                 userName: userName,

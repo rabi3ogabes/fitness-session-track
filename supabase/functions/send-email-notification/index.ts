@@ -41,6 +41,11 @@ interface EmailNotificationRequest {
     sessions: number;
     requestDate: string;
   };
+  cancellationDetails?: {
+    className: string;
+    classDate: string;
+    currentEnrollment: number;
+  };
 }
 
 interface EmailLogEntry {
@@ -235,7 +240,8 @@ const handler = async (req: Request): Promise<Response> => {
         fromEmail, 
         fromName, 
         bookingDetails, 
-        sessionRequestDetails 
+        sessionRequestDetails,
+        cancellationDetails
       }: EmailNotificationRequest = requestBody;
 
       // Validate required fields
@@ -343,7 +349,6 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
         `;
       } else if (isCancellationNotification) {
-        const { cancellationDetails } = await req.json();
         emailSubject = `Class Booking Cancelled: ${cancellationDetails?.className || 'Unknown Class'}`;
         emailBody = `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
