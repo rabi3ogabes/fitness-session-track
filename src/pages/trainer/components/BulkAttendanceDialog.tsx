@@ -145,7 +145,9 @@ export const BulkAttendanceDialog = ({
       });
 
       // Cancel the booking using the proper function that includes notification logic
+      console.log("BulkAttendanceDialog: About to call cancelClassBooking with:", bookingDetails.user_id, classDetails.id);
       const success = await cancelClassBooking(bookingDetails.user_id, classDetails.id);
+      console.log("BulkAttendanceDialog: cancelClassBooking returned:", success);
       
       if (!success) {
         throw new Error("Failed to cancel booking");

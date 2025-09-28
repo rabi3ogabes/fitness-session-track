@@ -342,7 +342,9 @@ export const CalendarSection = ({
       });
 
       // Cancel the booking using the proper function that includes notification logic
+      console.log("CalendarSection: About to call cancelClassBooking with:", user_id, classId);
       const success = await cancelClassBooking(user_id, classId);
+      console.log("CalendarSection: cancelClassBooking returned:", success);
       
       if (!success) {
         toast({
