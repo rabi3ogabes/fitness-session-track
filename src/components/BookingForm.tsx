@@ -179,82 +179,50 @@ const BookingForm = ({
 
       if (error) throw error;
 
-      // Send email notification if enabled
+      // Create notification log entry which will trigger the notification system
       try {
-        // Get admin notification settings
+        // Get admin notification settings to check if notifications are enabled
         const { data: adminSettings } = await supabase
           .from("admin_notification_settings")
-          .select("*")
+          .select("booking_notifications, notification_email")
           .single();
 
-        if (adminSettings?.booking_notifications && adminSettings?.notification_email && adminSettings?.email_provider) {
-          console.log("Admin settings check passed:", { 
-            booking_notifications: adminSettings.booking_notifications,
-            notification_email: adminSettings.notification_email,
-            email_provider: adminSettings.email_provider 
-          });
-          
-          // Get user profile, fallback to auth.users if no profile exists
-          let profile = null;
-          const { data: profileData, error: profileError } = await supabase
+        if (adminSettings?.booking_notifications && adminSettings?.notification_email) {
+          // Get user profile for name
+          let userName = user.email;
+          const { data: profileData } = await supabase
             .from("profiles")
-            .select("name, email, phone_number")
+            .select("name")
             .eq("id", user.id)
             .single();
 
-          if (profileData) {
-            profile = profileData;
-          } else {
-            // Fallback to auth.users data
-            profile = {
-              name: (user as any).user_metadata?.name || user.email,
-              email: user.email,
-              phone_number: (user as any).phone || (user as any).user_metadata?.phone
-            };
+          if (profileData?.name) {
+            userName = profileData.name;
+          } else if ((user as any).user_metadata?.name) {
+            userName = (user as any).user_metadata.name;
           }
 
-          console.log("Profile data:", profile, "Profile error:", profileError);
-
-          // Get class details
-          const classData = unbookedClasses.find(cls => cls.id === selectedClass);
-          console.log("Class data:", classData);
-
-          if (profile && classData) {
-            console.log("Sending booking notification email...");
-            
-            const functionName = adminSettings.email_provider === 'resend' 
-              ? 'send-email-notification' 
-              : 'send-smtp-notification';
-              
-            console.log(`Using ${functionName} for booking notification`);
-            
-            const emailResponse = await supabase.functions.invoke(functionName, {
-              body: {
-                userEmail: profile.email,
-                userName: profile.name,
-                userPhone: profile.phone_number,
-                notificationEmail: adminSettings.notification_email,
-                fromEmail: adminSettings.from_email,
-                fromName: adminSettings.from_name,
-                bookingDetails: {
-                  className: classData.name,
-                  schedule: classData.schedule,
-                  startTime: classData.start_time,
-                  endTime: classData.end_time,
-                  trainer: classData.trainer,
-                  location: classData.location
-                }
-              }
+          // Insert notification log entry - this will trigger the notification processor
+          const { error: logError } = await supabase
+            .from("notification_logs")
+            .insert({
+              notification_type: 'booking',
+              user_email: user.email,
+              user_name: userName,
+              recipient_email: adminSettings.notification_email,
+              subject: 'New Class Booking',
+              status: 'pending'
             });
-            
-            console.log("Email function response:", emailResponse);
+
+          if (logError) {
+            console.error("Failed to create notification log:", logError);
           } else {
-            console.log("Missing data:", { profile: !!profile, classData: !!classData });
+            console.log("Booking notification log created successfully");
           }
         }
       } catch (emailError) {
-        console.error("Failed to send booking notification:", emailError);
-        // Don't fail the booking if email fails
+        console.error("Failed to create booking notification:", emailError);
+        // Don't fail the booking if notification fails
       }
 
       // Booking completed successfully
