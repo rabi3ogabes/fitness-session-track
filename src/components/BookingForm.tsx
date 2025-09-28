@@ -184,7 +184,7 @@ const BookingForm = ({
         // Get admin notification settings to check if notifications are enabled
         const { data: adminSettings } = await supabase
           .from("admin_notification_settings")
-          .select("booking_notifications, notification_email")
+          .select("booking_notifications, notification_email, from_email, from_name")
           .single();
 
         if (adminSettings?.booking_notifications && adminSettings?.notification_email) {
@@ -202,7 +202,7 @@ const BookingForm = ({
             userName = (user as any).user_metadata.name;
           }
 
-          // Insert notification log entry - this will trigger the notification processor
+          // Insert notification log entry
           const { error: logError } = await supabase
             .from("notification_logs")
             .insert({
@@ -218,21 +218,43 @@ const BookingForm = ({
             console.error("Failed to create notification log:", logError);
           } else {
             console.log("Booking notification log created successfully");
-            
-            // Process notification immediately for faster delivery
-            try {
-              const { error: processError } = await supabase.functions.invoke('send-email-notification', {
-                body: { action: 'process_pending' }
-              });
-              
-              if (processError) {
-                console.error('Error processing notification immediately:', processError);
-              } else {
-                console.log('Notification processed immediately');
+          }
+
+          // Get class details for notification
+          const { data: classDetails } = await supabase
+            .from("classes")
+            .select("*")
+            .eq("id", selectedClass)
+            .single();
+
+          // Process notification immediately
+          try {
+            const { error: processError } = await supabase.functions.invoke('send-email-notification', {
+              body: { 
+                type: 'booking',
+                userEmail: user.email,
+                userName: userName,
+                notificationEmail: adminSettings.notification_email,
+                fromEmail: adminSettings.from_email || 'info@fhb-fit.com',
+                fromName: adminSettings.from_name || 'Gym System',
+                bookingDetails: {
+                  className: classDetails?.name || 'Unknown Class',
+                  date: classDetails?.schedule || 'Unknown Date',
+                  time: `${classDetails?.start_time || '00:00'} - ${classDetails?.end_time || '00:00'}`,
+                  trainer: classDetails?.trainer || 'Unknown Trainer',
+                  location: classDetails?.location || 'Main Gym',
+                  memberName: userName
+                }
               }
-            } catch (err) {
-              console.error('Error calling notification processor:', err);
+            });
+            
+            if (processError) {
+              console.error('Error processing booking notification immediately:', processError);
+            } else {
+              console.log('Booking notification processed immediately');
             }
+          } catch (err) {
+            console.error('Error calling notification processor for booking:', err);
           }
         }
       } catch (emailError) {

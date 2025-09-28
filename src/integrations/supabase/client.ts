@@ -272,7 +272,7 @@ export const cancelClassBooking = async (
       // Get admin notification settings
       const { data: adminSettings } = await supabase
         .from("admin_notification_settings")
-        .select("booking_notifications, notification_email")
+        .select("booking_notifications, notification_email, from_email, from_name")
         .single();
 
       if (adminSettings?.booking_notifications && adminSettings?.notification_email) {
@@ -326,6 +326,8 @@ export const cancelClassBooking = async (
                 userEmail: user?.user?.email || 'unknown@example.com',
                 userName: userName,
                 notificationEmail: adminSettings.notification_email,
+                fromEmail: adminSettings.from_email || 'info@fhb-fit.com',
+                fromName: adminSettings.from_name || 'Gym System',
                 cancellationDetails: {
                   className: className,
                   classDate: classDate,
