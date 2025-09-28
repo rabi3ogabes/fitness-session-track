@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { cancelClassBooking } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { CalendarIcon, Clock, User, CheckCircle, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -143,27 +144,12 @@ export const BulkAttendanceDialog = ({
         description: `Cancelling ${bookingDetails.user_name}'s class booking.`,
       });
 
-      // Update booking status to cancelled
-      const { error: updateError } = await supabase
-        .from("bookings")
-        .update({ status: "cancelled" })
-        .eq("id", bookingDetails.id);
-
-      if (updateError) throw updateError;
-
-      // Update class enrollment count
-      const { error: classUpdateError } = await supabase
-        .from("classes")
-        .update({
-          enrolled: classDetails.enrolled > 0 ? classDetails.enrolled - 1 : 0,
-        })
-        .eq("id", classDetails.id);
-
-      if (classUpdateError) {
-        console.error("Error updating class enrollment:", classUpdateError);
+      // Cancel the booking using the proper function that includes notification logic
+      const success = await cancelClassBooking(bookingDetails.user_id, classDetails.id);
+      
+      if (!success) {
+        throw new Error("Failed to cancel booking");
       }
-
-      // Sessions are now automatically managed by database triggers
 
       // Update attendees list in UI by removing the cancelled booking
       setAttendees((prevAttendees) =>

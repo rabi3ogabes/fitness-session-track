@@ -341,43 +341,22 @@ export const CalendarSection = ({
         description: `Cancelling ${user_name}'s class booking.`,
       });
 
-      // First, update the booking status in the database to "cancelled"
-      const { error: updateError } = await supabase
-        .from("bookings")
-        .update({ status: "cancelled" })
-        .eq("user_id", user_id)
-        .eq("class_id", classId);
-
-      if (updateError) {
-        console.error("Error updating booking status:", updateError);
+      // Cancel the booking using the proper function that includes notification logic
+      const success = await cancelClassBooking(user_id, classId);
+      
+      if (!success) {
         toast({
           title: "Failed to cancel booking",
-          description:
-            "There was an error cancelling the booking. Please try again.",
+          description: "There was an error cancelling the booking. Please try again.",
           variant: "destructive",
         });
         return;
-      }
-
-      // Update the enrolled count in the classes table
-      const { error: classUpdateError } = await supabase
-        .from("classes")
-        .update({
-          enrolled: classToCancel.enrolled > 0 ? classToCancel.enrolled - 1 : 0,
-        })
-        .eq("id", classId);
-
-      if (classUpdateError) {
-        console.error("Error updating class enrollment:", classUpdateError);
-        // Continue with the process even if this fails
       }
 
       // Remove the user from the attendees list in the UI
       setClassAttendees((prevAttendees) =>
         prevAttendees.filter((attendee) => attendee.user_id !== user_id)
       );
-      console.log(user_id, "user_id");
-      console.log(classAttendees, "classAttendees");
 
       // Update the enrolled count in classes array
       setTrainerClasses((prevClasses) =>
@@ -390,13 +369,9 @@ export const CalendarSection = ({
         }))
       );
 
-      // Sessions are now automatically managed by database triggers
-
       // Update local state for UI
       const updatedBooked = [...bookedClasses.filter((id) => id !== classId)];
       setBookedClasses(updatedBooked);
-
-      // Cancellation successful
 
       toast({
         title: "Class cancelled",
