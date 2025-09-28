@@ -44,6 +44,7 @@ interface EmailNotificationRequest {
   cancellationDetails?: {
     className: string;
     classDate: string;
+    classTime: string;
     currentEnrollment: number;
   };
 }
@@ -365,7 +366,8 @@ const handler = async (req: Request): Promise<Response> => {
               <h3 style="margin-top: 0;">Class Details:</h3>
               <ul>
                 <li><strong>Class:</strong> ${cancellationDetails?.className || 'Unknown Class'}</li>
-                <li><strong>Date/Time:</strong> ${cancellationDetails?.classDate || 'Unknown time'}</li>
+                <li><strong>Date:</strong> ${cancellationDetails?.classDate ? new Date(cancellationDetails.classDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown date'}</li>
+                <li><strong>Time:</strong> ${cancellationDetails?.classTime || 'Unknown time'}</li>
                 <li><strong>Current Enrollment:</strong> ${cancellationDetails?.currentEnrollment || 0} members</li>
               </ul>
             </div>

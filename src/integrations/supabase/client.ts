@@ -269,11 +269,20 @@ export const cancelClassBooking = async (
 
     // Send cancellation notification to admin
     try {
+      console.log("Attempting to send cancellation notification...");
+      
       // Get admin notification settings
-      const { data: adminSettings } = await supabase
+      const { data: adminSettings, error: settingsError } = await supabase
         .from("admin_notification_settings")
         .select("booking_notifications, notification_email, from_email, from_name")
         .single();
+
+      if (settingsError) {
+        console.error("Error fetching admin notification settings:", settingsError);
+        return true; // Don't fail cancellation if notification settings fail
+      }
+
+      console.log("Admin settings:", adminSettings);
 
       if (adminSettings?.booking_notifications && adminSettings?.notification_email) {
         // Get user details
@@ -281,14 +290,20 @@ export const cancelClassBooking = async (
         let userName = 'Unknown User';
         
         if (user?.user) {
-          const { data: profileData } = await supabase
-            .from("profiles")
+          // Try to get name from members table first
+          const { data: memberData } = await supabase
+            .from("members")
             .select("name")
-            .eq("id", user.user.id)
+            .eq("email", user.user.email)
             .single();
           
-          userName = profileData?.name || (user.user as any).user_metadata?.name || user.user.email || 'Unknown User';
+          userName = memberData?.name || 
+                    (user.user as any).user_metadata?.name || 
+                    user.user.email || 
+                    'Unknown User';
         }
+        
+        console.log("User name determined:", userName);
 
         // Get current enrollment count after cancellation
         const { data: enrolledData } = await supabase
@@ -298,9 +313,12 @@ export const cancelClassBooking = async (
           .eq("status", "confirmed");
 
         const currentEnrollment = enrolledData?.length || 0;
-        const classDate = classDetails?.start_time || 'Unknown time';
+        const classDate = classDetails?.schedule || 'Unknown date';
+        const classTime = `${classDetails?.start_time || ''} - ${classDetails?.end_time || ''}`.trim();
         const className = classDetails?.name || 'Unknown class';
 
+        console.log("Creating cancellation notification log...");
+        
         // Insert cancellation notification log
         const { error: logError } = await supabase
           .from("notification_logs")
@@ -320,7 +338,8 @@ export const cancelClassBooking = async (
           
           // Process notification immediately
           try {
-            const { error: processError } = await supabase.functions.invoke('send-email-notification', {
+            console.log("Invoking send-email-notification function for cancellation...");
+            const { data: functionData, error: processError } = await supabase.functions.invoke('send-email-notification', {
               body: { 
                 type: 'cancellation',
                 userEmail: user?.user?.email || 'unknown@example.com',
@@ -331,10 +350,13 @@ export const cancelClassBooking = async (
                 cancellationDetails: {
                   className: className,
                   classDate: classDate,
+                  classTime: classTime,
                   currentEnrollment: currentEnrollment
                 }
               }
             });
+            
+            console.log("Function response:", { data: functionData, error: processError });
             
             if (processError) {
               console.error('Error processing cancellation notification immediately:', processError);
