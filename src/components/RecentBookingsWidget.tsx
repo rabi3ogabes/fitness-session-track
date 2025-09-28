@@ -13,6 +13,7 @@ interface RecentBooking {
   end_time: string;
   member_balance: number;
   member_gender?: string;
+  status: string;
 }
 
 const RecentBookingsWidget = () => {
@@ -28,7 +29,7 @@ const RecentBookingsWidget = () => {
   useEffect(() => {
     const fetchRecentBookings = async () => {
       try {
-        // Get recent bookings with class details
+        // Get recent bookings (both confirmed and cancelled for complete activity view)
         const { data: bookingsData, error: bookingsError } = await supabase
           .from("bookings")
           .select(`
@@ -37,9 +38,10 @@ const RecentBookingsWidget = () => {
             booking_date,
             member_id,
             class_id,
-            user_id
+            user_id,
+            status
           `)
-          .eq("status", "confirmed")
+          .in("status", ["confirmed", "cancelled"])
           .order("booking_date", { ascending: false })
           .limit(5);
 
@@ -169,6 +171,7 @@ const RecentBookingsWidget = () => {
               end_time: classDetails.end_time,
               member_balance: memberBalance,
               member_gender: memberGender,
+              status: booking.status, // Add status to track booking state
             };
           })
         );
@@ -256,12 +259,21 @@ const RecentBookingsWidget = () => {
           {recentBookings.map((booking) => (
             <div
               key={booking.id}
-              className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+              className={`p-4 border rounded-md hover:bg-gray-50 transition-colors ${
+                booking.status === 'cancelled' 
+                  ? 'border-red-200 bg-red-50' 
+                  : 'border-gray-200'
+              }`}
             >
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
                   <User className={`h-4 w-4 ${getGenderIconColor(booking.member_gender)}`} />
                   <h3 className="font-semibold text-gray-900">{booking.user_name}</h3>
+                  {booking.status === 'cancelled' && (
+                    <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                      Cancelled
+                    </span>
+                  )}
                 </div>
                 <div className="text-right">
                   <div className="text-xs text-gray-500">Sessions Left</div>
@@ -289,7 +301,7 @@ const RecentBookingsWidget = () => {
               </div>
               
               <div className="text-xs text-gray-400 mt-2">
-                Booked: {format(new Date(booking.booking_date), 'MMM d, yyyy HH:mm')}
+                {booking.status === 'cancelled' ? 'Cancelled' : 'Booked'}: {format(new Date(booking.booking_date), 'MMM d, yyyy HH:mm')}
               </div>
             </div>
           ))}
