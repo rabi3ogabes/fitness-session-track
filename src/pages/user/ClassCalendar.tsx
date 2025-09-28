@@ -679,47 +679,7 @@ const ClassCalendar = () => {
       // Refresh user data to update session balance
       await fetchUserData();
 
-      // Send WhatsApp notification to admin about cancellation
-      try {
-        const whatsappSettings = localStorage.getItem("whatsappSettings");
-        if (whatsappSettings) {
-          const settings = JSON.parse(whatsappSettings);
-          if (settings.enabled && settings.instance_id && 
-              settings.api_token && settings.phone_numbers) {
-            
-            const phoneNumbers = settings.phone_numbers.split(',').map(num => num.trim());
-            const trainerName = classToCancel.trainer || 'TBD';
-            const classDate = format(new Date(classToCancel.schedule), 'MMM d, yyyy');
-            const classTimeFormatted = `${classTime}`;
-            
-            let cancelMessage = settings.templates?.cancel || 
-              '❌ Class booking cancelled!\n\nMember: {memberName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nBooking has been cancelled.';
-            
-            // Replace template variables
-            cancelMessage = cancelMessage
-              .replace(/{memberName}/g, userData?.name || 'Unknown')
-              .replace(/{className}/g, className)
-              .replace(/{classDate}/g, classDate)
-              .replace(/{classTime}/g, classTimeFormatted)
-              .replace(/{trainerName}/g, trainerName);
-            
-            console.log('Sending cancellation WhatsApp notification...');
-            await supabase.functions.invoke('send-whatsapp-notification', {
-              body: {
-                userName: userData?.name || 'Unknown',
-                userEmail: userData?.email || user.email || 'unknown@example.com',
-                phoneNumbers: phoneNumbers,
-                apiToken: settings.api_token,
-                instanceId: settings.instance_id,
-                customMessage: cancelMessage
-              }
-            });
-          }
-        }
-      } catch (whatsappError) {
-        console.error('Error sending WhatsApp cancellation notification:', whatsappError);
-        // Don't block the cancellation if WhatsApp fails
-      }
+      // Cancellation completed successfully
 
       toast({
         title: "Class cancelled",

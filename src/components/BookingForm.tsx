@@ -257,55 +257,7 @@ const BookingForm = ({
         // Don't fail the booking if email fails
       }
 
-      // Send WhatsApp notification if enabled
-      try {
-        const whatsappSettings = localStorage.getItem("whatsappSettings");
-        if (whatsappSettings) {
-          const settings = JSON.parse(whatsappSettings);
-          if (settings.enabled && settings.booking_notifications && 
-              settings.instance_id && settings.api_token && settings.phone_numbers) {
-            
-            // Get user profile for WhatsApp notification
-            const { data: userProfile } = await supabase
-              .from("profiles")
-              .select("name, email, phone_number")
-              .eq("id", user.id)
-              .single();
-            
-            const phoneNumbers = settings.phone_numbers.split(',').map(num => num.trim());
-            const template = settings.templates?.booking || 
-              "📅 New class booking!\n\nMember: {userName}\nClass: {className}\nDate: {classDate}\nTime: {classTime}\nTrainer: {trainerName}\n\nSee you at the gym! 🏋️‍♂️";
-
-            // Get class details
-            const classData = unbookedClasses.find(cls => cls.id === selectedClass);
-            
-            if (userProfile && classData) {
-              // Replace template variables
-              const message = template
-                .replace(/{userName}/g, userProfile.name || 'Unknown')
-                .replace(/{className}/g, classData.name || 'Unknown Class')
-                .replace(/{classDate}/g, format(new Date(classData.schedule), 'MMM d, yyyy'))
-                .replace(/{classTime}/g, `${classData.start_time} - ${classData.end_time}`)
-                .replace(/{trainerName}/g, classData.trainer || 'TBD');
-
-              console.log('Sending booking WhatsApp notification...');
-              await supabase.functions.invoke('send-whatsapp-notification', {
-                body: {
-                  userName: userProfile.name,
-                  userEmail: userProfile.email,
-                  phoneNumbers: phoneNumbers,
-                  apiToken: settings.api_token,
-                  instanceId: settings.instance_id,
-                  customMessage: message
-                }
-              });
-            }
-          }
-        }
-      } catch (whatsappError) {
-        console.error("Failed to send booking WhatsApp notification:", whatsappError);
-        // Don't fail the booking if WhatsApp fails
-      }
+      // Booking completed successfully
 
       setAvailableClasses((prevClasses) =>
         prevClasses.map((cls) =>

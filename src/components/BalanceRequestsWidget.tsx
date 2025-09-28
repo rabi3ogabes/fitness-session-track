@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { CreditCard, Clock, User, CheckCircle, XCircle, Check, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
+import { Clock, CheckCircle, XCircle, Check, Users } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
 
 interface BalanceRequest {
@@ -16,65 +16,57 @@ interface BalanceRequest {
   type: string;
   status: string;
   created_at: string;
-  member_gender?: string;
-  member_phone?: string;
+  date: string;
   member_name?: string;
+  member_phone?: string;
+  member_gender?: string;
 }
 
-const BalanceRequestsWidget = () => {
+const BalanceRequestsWidget: React.FC = () => {
   const [balanceRequests, setBalanceRequests] = useState<BalanceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
-
-  const getGenderIconColor = (gender?: string) => {
-    if (gender === "Male") return "text-blue-600";
-    if (gender === "Female") return "text-pink-600";
-    return "text-gray-600"; // default color for unknown gender
-  };
 
   useEffect(() => {
     const fetchBalanceRequests = async () => {
-      if (!isAdmin && !user?.email) return;
-      
       try {
         let query = supabase
-          .from("membership_requests")
-          .select("*");
-        
-        // If not admin, filter by user email
+          .from('membership_requests')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        // Non-admin users can only see their own requests
         if (!isAdmin && user?.email) {
-          query = query.eq("email", user.email);
+          query = query.eq('email', user.email);
         }
-        
-        const { data, error } = await query
-          .order("created_at", { ascending: false })
-          .limit(5);
+
+        const { data, error } = await query;
 
         if (error) throw error;
-        
-        // Get member gender and phone separately to avoid filtering out requests
-        const requestsWithMemberData = await Promise.all(
+
+        // Enrich with member data
+        const enrichedRequests = await Promise.all(
           (data || []).map(async (request) => {
             const { data: memberData } = await supabase
-              .from("members")
-              .select("gender, phone, name")
-              .eq("email", request.email)
+              .from('members')
+              .select('name, phone, gender')
+              .eq('email', request.email)
               .single();
-            
+
             return {
               ...request,
-              member_gender: memberData?.gender,
+              member_name: memberData?.name || request.member,
               member_phone: memberData?.phone,
-              member_name: memberData?.name || request.member // Fallback to request.member if no member found
+              member_gender: memberData?.gender
             };
           })
         );
-        
-        setBalanceRequests(requestsWithMemberData);
+
+        setBalanceRequests(enrichedRequests);
       } catch (error) {
-        console.error("Error fetching balance requests:", error);
+        console.error('Error fetching balance requests:', error);
       } finally {
         setLoading(false);
       }
@@ -82,17 +74,15 @@ const BalanceRequestsWidget = () => {
 
     fetchBalanceRequests();
 
-    if (!isAdmin && !user?.email) return;
-
-    // Set up real-time subscription for new requests
+    // Set up real-time subscription
     const channel = supabase
-      .channel("balance-requests")
+      .channel('membership_requests_changes')
       .on(
-        "postgres_changes",
+        'postgres_changes',
         {
-          event: "*",
-          schema: "public",
-          table: "membership_requests",
+          event: '*',
+          schema: 'public',
+          table: 'membership_requests'
         },
         () => {
           fetchBalanceRequests();
@@ -105,14 +95,25 @@ const BalanceRequestsWidget = () => {
     };
   }, [user?.email, isAdmin]);
 
+  const getGenderIconColor = (gender: string | undefined) => {
+    switch (gender?.toLowerCase()) {
+      case 'male':
+        return 'text-blue-600';
+      case 'female':
+        return 'text-pink-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
       case "pending":
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Pending</Badge>;
       case "approved":
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Approved</Badge>;
+        return <Badge variant="secondary" className="bg-green-100 text-green-800">Approved</Badge>;
       case "rejected":
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejected</Badge>;
+        return <Badge variant="secondary" className="bg-red-100 text-red-800">Rejected</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -142,213 +143,94 @@ const BalanceRequestsWidget = () => {
         )
       );
 
-      // Update the request status to approved
+      // Update the request status to "Approved" in the database
       const { error: updateError } = await supabase
-        .from("membership_requests")
-        .update({ status: "Approved" })
-        .eq("id", requestId);
+        .from('membership_requests')
+        .update({ status: 'Approved' })
+        .eq('id', requestId);
 
-      if (updateError) throw updateError;
-
-      // Update the member's session balance
-      // First get the current balance and phone number
-      const { data: memberData, error: fetchError } = await supabase
-        .from("members")
-        .select("remaining_sessions, phone")
-        .eq("email", memberEmail)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      if (memberData) {
-        const newBalance = (memberData.remaining_sessions || 0) + requestedSessions;
-        const { error: updateMemberError } = await supabase
-          .from("members")
-          .update({ remaining_sessions: newBalance })
-          .eq("email", memberEmail);
-
-        if (updateMemberError) throw updateMemberError;
-
-        // Show success message immediately after core approval operations
-        toast({
-          title: "Request approved",
-          description: `${requestedSessions} sessions added to member's balance`,
-        });
-
-        // Send notifications about approval (non-blocking)
-        setTimeout(async () => {
-          try {
-          // Send email notification to member
-          const emailSettings = localStorage.getItem("emailSettings");
-          if (emailSettings) {
-            const settings = JSON.parse(emailSettings);
-            if (settings.enabled && settings.session_requests) {
-              try {
-                await supabase.functions.invoke('send-email-notification', {
-                  body: {
-                    type: 'session_request_approved',
-                    memberName: memberName,
-                    memberEmail: memberEmail,
-                    requestedSessions: requestedSessions,
-                    newBalance: newBalance,
-                    notificationEmail: settings.notification_email || settings.from_email,
-                    fromEmail: settings.from_email,
-                    fromName: settings.from_name
-                  }
-                });
-                console.log('Email notification sent to member for approved request');
-              } catch (emailError) {
-                console.error('Failed to send email notification:', emailError);
-              }
-            }
-          }
-
-          const whatsappSettings = localStorage.getItem("whatsappSettings");
-          if (whatsappSettings) {
-            const settings = JSON.parse(whatsappSettings);
-            if (settings.enabled && settings.balance_approval_notifications && 
-                settings.instance_id && settings.api_token && settings.phone_numbers) {
-              
-              const phoneNumbers = settings.phone_numbers.split(',').map(num => num.trim());
-              
-              const message = `✅ Session balance approved!
-
-Member: ${memberName}
-Email: ${memberEmail}
-Sessions Added: ${requestedSessions}
-New Balance: ${newBalance} sessions
-
-Balance request has been approved and sessions added to member's account.`;
-
-              console.log('Sending balance approval WhatsApp notification...');
-              await supabase.functions.invoke('send-whatsapp-notification', {
-                body: {
-                  userName: memberName,
-                  userEmail: memberEmail,
-                  phoneNumbers: phoneNumbers,
-                  apiToken: settings.api_token,
-                  instanceId: settings.instance_id,
-                  customMessage: message
-                }
-              });
-            }
-
-            // Update user's profile with the phone number from member data  
-            if (memberData?.phone) {
-              // Find the user by email to get their user ID
-              const { data: userData, error: userError } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('email', memberEmail)
-                .single();
-
-              if (!userError && userData) {
-                const { error: profileUpdateError } = await supabase
-                  .from('profiles')
-                  .update({
-                    phone_number: memberData.phone,
-                    name: memberName,
-                    updated_at: new Date().toISOString()
-                  })
-                  .eq('id', userData.id);
-
-                if (profileUpdateError) {
-                  console.log('Profile update error:', profileUpdateError);
-                }
-              } else {
-                // If profile doesn't exist, try to create one if we can get the user ID
-                console.log('Profile not found for email:', memberEmail);
-              }
-            }
-
-            // Send WhatsApp notification to the member about their approved request
-            if (settings.enabled && settings.instance_id && settings.api_token && memberData.phone) {
-              console.log('=== MEMBER NOTIFICATION START ===');
-              console.log('Checking member notification conditions:', {
-                settingsEnabled: settings.enabled,
-                hasInstanceId: !!settings.instance_id,
-                hasApiToken: !!settings.api_token,
-                memberPhone: memberData.phone,
-                memberName: memberName,
-                memberEmail: memberEmail
-              });
-
-              try {
-                // Format phone number for Green API - ensure country code
-                let formattedPhone = memberData.phone.trim();
-                
-                // Remove any non-digit characters
-                formattedPhone = formattedPhone.replace(/[^\d]/g, '');
-                
-                // Add Qatar country code if not present (same format as admin numbers)
-                if (!formattedPhone.startsWith('974')) {
-                  formattedPhone = `974${formattedPhone}`;
-                }
-                
-                console.log('Phone number formatting:', {
-                  original: memberData.phone,
-                  cleaned: formattedPhone,
-                  final: `${formattedPhone}@c.us`,
-                  note: 'Added 974 country code to match admin number format'
-                });
-                
-                const memberMessage = `🎉 Great news! Your session balance request has been approved!
-
-✅ ${requestedSessions} sessions have been added to your account
-💪 Your new balance: ${newBalance} sessions
-
-You can now book your classes. Thank you for choosing our gym!`;
-
-                console.log('Sending approval notification to member...', {
-                  originalPhone: memberData.phone,
-                  formattedPhone: formattedPhone,
-                  memberName: memberName,
-                  memberEmail: memberEmail,
-                  messageLength: memberMessage.length
-                });
-
-                const response = await supabase.functions.invoke('send-whatsapp-notification', {
-                  body: {
-                    userName: memberName,
-                    userEmail: memberEmail,
-                    phoneNumbers: [formattedPhone],
-                    apiToken: settings.api_token,
-                    instanceId: settings.instance_id,
-                    customMessage: memberMessage
-                  }
-                });
-
-                console.log('=== MEMBER NOTIFICATION RESPONSE ===');
-                console.log('Full response:', response);
-                
-                if (response.error) {
-                  console.error('WhatsApp member notification failed:', response.error);
-                } else {
-                  console.log('WhatsApp member notification sent successfully:', response.data);
-                }
-              } catch (error) {
-                console.error('Error sending WhatsApp notification to member:', error);
-                console.error('Error details:', error.message, error.stack);
-              }
-              
-              console.log('=== MEMBER NOTIFICATION END ===');
-            } else {
-              console.log('Member notification skipped - conditions not met:', {
-                settingsEnabled: settings.enabled,
-                hasInstanceId: !!settings.instance_id,
-                hasApiToken: !!settings.api_token,
-                memberPhone: memberData?.phone
-              });
-            }
-          }
-          } catch (notificationError) {
-            console.error("Failed to send notifications:", notificationError);
-            // Notifications failing shouldn't affect the approval success
-          }
-        }, 100);
+      if (updateError) {
+        console.error('Error updating request status:', updateError);
+        throw updateError;
       }
 
+      // Get member data to update sessions
+      const { data: memberData, error: memberError } = await supabase
+        .from('members')
+        .select('*')
+        .eq('email', memberEmail)
+        .single();
 
+      if (memberData) {
+        // Calculate new balance
+        const currentSessions = memberData.remaining_sessions || 0;
+        const newBalance = currentSessions + requestedSessions;
+
+        // Update member's remaining sessions
+        const { error: memberUpdateError } = await supabase
+          .from('members')
+          .update({ 
+            remaining_sessions: newBalance,
+            total_sessions: (memberData.total_sessions || 0) + requestedSessions
+          })
+          .eq('id', memberData.id);
+
+        if (memberUpdateError) {
+          console.error('Error updating member sessions:', memberUpdateError);
+          throw memberUpdateError;
+        }
+
+        console.log(`Updated ${memberName}'s balance: ${currentSessions} → ${newBalance} sessions`);
+
+        // Send email notification
+        try {
+          await supabase.from('notification_logs').insert({
+            notification_type: 'balance_approval',
+            recipient_email: memberEmail,
+            user_email: memberEmail,
+            user_name: memberName,
+            subject: 'Session Balance Request Approved',
+            status: 'pending'
+          });
+          console.log('Email notification queued for balance approval');
+        } catch (emailError) {
+          console.error('Failed to send email notification:', emailError);
+        }
+
+        // Update user's profile with the phone number from member data  
+        if (memberData?.phone) {
+          // Find the user by email to get their user ID
+          const { data: userData, error: userError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', memberEmail)
+            .single();
+
+          if (!userError && userData) {
+            const { error: profileUpdateError } = await supabase
+              .from('profiles')
+              .update({
+                phone_number: memberData.phone,
+                name: memberName,
+              })
+              .eq('id', userData.id);
+
+            if (profileUpdateError) {
+              console.error("Error updating profile:", profileUpdateError);
+            } else {
+              console.log("Profile updated successfully");
+            }
+          }
+        }
+
+        toast({
+          title: "Success",
+          description: `Request approved! ${requestedSessions} sessions added to ${memberName}'s account.`,
+        });
+      } else if (memberError) {
+        console.error('Error finding member:', memberError);
+        throw memberError;
+      }
     } catch (error) {
       console.error("Error approving request:", error);
       toast({
@@ -366,8 +248,16 @@ You can now book your classes. Thank you for choosing our gym!`;
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-6 w-20" />
+              </div>
             </div>
           ))}
         </div>
@@ -377,50 +267,48 @@ You can now book your classes. Thank you for choosing our gym!`;
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold flex items-center gap-2">
-          <CreditCard className="h-5 w-5 text-purple-600" />
-          {isAdmin ? "Session Balance Requests" : "My Session Balance Requests"}
+          <Users className="h-5 w-5" />
+          Session Balance Requests
         </h2>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate("/admin/memberships")}
-          className="flex items-center gap-2"
-        >
-          <ExternalLink className="h-4 w-4" />
-          View More
-        </Button>
+        <Badge variant="outline" className="bg-blue-50 text-blue-700">
+          {balanceRequests.filter(req => req.status.toLowerCase() === "pending").length} Pending
+        </Badge>
       </div>
-      {balanceRequests.length > 0 ? (
+
+      {balanceRequests.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+          <p>No balance requests</p>
+        </div>
+      ) : (
         <div className="space-y-3">
           {balanceRequests.map((request) => (
-            <div
-              key={request.id}
-              className="p-4 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center gap-2">
-                  <User className={`h-4 w-4 ${getGenderIconColor(request.member_gender)}`} />
-                  <h3 className="font-semibold text-gray-900">{request.member}</h3>
+            <div key={request.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2">
+                    {getStatusIcon(request.status)}
+                    <Users className={`h-4 w-4 ${getGenderIconColor(request.member_gender)}`} />
+                  </div>
+                  
+                  <div>
+                    <div className="font-medium text-gray-900">
+                      {request.member}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {request.email}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      Requesting {request.sessions} sessions
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(request.status)}
+                
+                <div className="flex items-center space-x-3">
                   {getStatusBadge(request.status)}
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-2">
-                <div>
-                  <strong>Sessions Requested:</strong> {request.sessions}
-                </div>
-                <div>
-                  <strong>Type:</strong> {request.type}
-                </div>
-              </div>
-              
-              <div className="text-sm text-gray-500 mb-2">
-                <strong>Phone:</strong> {request.member_phone || 'Not provided'}
               </div>
               
               <div className="flex justify-between items-center">
@@ -443,10 +331,17 @@ You can now book your classes. Thank you for choosing our gym!`;
             </div>
           ))}
         </div>
-      ) : (
-        <div className="text-center py-8 text-gray-500">
-          <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No balance requests</p>
+      )}
+
+      {balanceRequests.length > 0 && (
+        <div className="mt-4 text-center">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => window.location.href = '/admin/memberships'}
+          >
+            View More
+          </Button>
         </div>
       )}
     </div>
