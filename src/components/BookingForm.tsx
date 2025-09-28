@@ -218,6 +218,21 @@ const BookingForm = ({
             console.error("Failed to create notification log:", logError);
           } else {
             console.log("Booking notification log created successfully");
+            
+            // Process notification immediately for faster delivery
+            try {
+              const { error: processError } = await supabase.functions.invoke('send-email-notification', {
+                body: { action: 'process_pending' }
+              });
+              
+              if (processError) {
+                console.error('Error processing notification immediately:', processError);
+              } else {
+                console.log('Notification processed immediately');
+              }
+            } catch (err) {
+              console.error('Error calling notification processor:', err);
+            }
           }
         }
       } catch (emailError) {

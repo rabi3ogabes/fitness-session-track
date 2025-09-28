@@ -267,7 +267,88 @@ export const cancelClassBooking = async (
 
     console.log("Successfully updated booking status to cancelled");
 
-    // Booking cancelled successfully
+    // Send cancellation notification to admin
+    try {
+      // Get admin notification settings
+      const { data: adminSettings } = await supabase
+        .from("admin_notification_settings")
+        .select("booking_notifications, notification_email")
+        .single();
+
+      if (adminSettings?.booking_notifications && adminSettings?.notification_email) {
+        // Get user details
+        const { data: user } = await supabase.auth.getUser();
+        let userName = 'Unknown User';
+        
+        if (user?.user) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("name")
+            .eq("id", user.user.id)
+            .single();
+          
+          userName = profileData?.name || (user.user as any).user_metadata?.name || user.user.email || 'Unknown User';
+        }
+
+        // Get current enrollment count after cancellation
+        const { data: enrolledData } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("class_id", classId)
+          .eq("status", "confirmed");
+
+        const currentEnrollment = enrolledData?.length || 0;
+        const classDate = classDetails?.start_time || 'Unknown time';
+        const className = classDetails?.name || 'Unknown class';
+
+        // Insert cancellation notification log
+        const { error: logError } = await supabase
+          .from("notification_logs")
+          .insert({
+            notification_type: 'cancellation',
+            user_email: user?.user?.email || 'unknown@example.com',
+            user_name: userName,
+            recipient_email: adminSettings.notification_email,
+            subject: `Class Booking Cancelled: ${className}`,
+            status: 'pending'
+          });
+
+        if (logError) {
+          console.error("Failed to create cancellation notification log:", logError);
+        } else {
+          console.log("Cancellation notification log created successfully");
+          
+          // Process notification immediately
+          try {
+            const { error: processError } = await supabase.functions.invoke('send-email-notification', {
+              body: { 
+                action: 'send_individual',
+                type: 'cancellation',
+                userEmail: user?.user?.email || 'unknown@example.com',
+                userName: userName,
+                notificationEmail: adminSettings.notification_email,
+                cancellationDetails: {
+                  className: className,
+                  classDate: classDate,
+                  currentEnrollment: currentEnrollment
+                }
+              }
+            });
+            
+            if (processError) {
+              console.error('Error processing cancellation notification immediately:', processError);
+            } else {
+              console.log('Cancellation notification processed immediately');
+            }
+          } catch (err) {
+            console.error('Error calling notification processor for cancellation:', err);
+          }
+        }
+      }
+    } catch (notificationError) {
+      console.error("Error sending cancellation notification:", notificationError);
+      // Don't fail the cancellation if notification fails
+    }
 
     // Get the class details to update the enrolled count
     const { data: classData, error: classError } = await supabase

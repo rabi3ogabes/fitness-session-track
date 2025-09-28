@@ -263,6 +263,7 @@ const handler = async (req: Request): Promise<Response> => {
       const isBookingNotification = !!bookingDetails;
       const isSessionRequestNotification = !!sessionRequestDetails;
       const isSessionRequestApproval = type === 'session_request_approved';
+      const isCancellationNotification = type === 'cancellation';
       
       let emailSubject: string;
       let emailBody: string;
@@ -341,11 +342,39 @@ const handler = async (req: Request): Promise<Response> => {
             </p>
           </div>
         `;
+      } else if (isCancellationNotification) {
+        const { cancellationDetails } = await req.json();
+        emailSubject = `Class Booking Cancelled: ${cancellationDetails?.className || 'Unknown Class'}`;
+        emailBody = `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #dc2626;">❌ Class Booking Cancelled</h2>
+            <p>A member has cancelled their class booking.</p>
+            <div style="background-color: #fef2f2; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #dc2626;">
+              <h3 style="margin-top: 0;">Member Details:</h3>
+              <ul>
+                <li><strong>Name:</strong> ${userName}</li>
+                <li><strong>Email:</strong> ${userEmail}</li>
+              </ul>
+            </div>
+            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Class Details:</h3>
+              <ul>
+                <li><strong>Class:</strong> ${cancellationDetails?.className || 'Unknown Class'}</li>
+                <li><strong>Date/Time:</strong> ${cancellationDetails?.classDate || 'Unknown time'}</li>
+                <li><strong>Current Enrollment:</strong> ${cancellationDetails?.currentEnrollment || 0} members</li>
+              </ul>
+            </div>
+            <p>The member's session has been restored to their account balance.</p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              This email was sent automatically by your gym management system.
+            </p>
+          </div>
+        `;
       } else if (isSessionRequestNotification) {
         emailSubject = `New Session Request: ${sessionRequestDetails!.planName}`;
         emailBody = `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #2563eb;">📋 New Session Request</h2>
+            <h2 style="color: #f59e0b;">📋 New Session Request</h2>
             <p>A member has requested additional sessions.</p>
             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
               <h3 style="margin-top: 0;">Member Details:</h3>
