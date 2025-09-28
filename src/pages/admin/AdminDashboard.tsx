@@ -160,10 +160,6 @@ const AdminDashboard = () => {
           <BalanceRequestsWidget />
         </div>
         
-        {/* Notification Testing */}
-        <div className="mt-6">
-          <NotificationTester />
-        </div>
       </div>
     </DashboardLayout>
   );
