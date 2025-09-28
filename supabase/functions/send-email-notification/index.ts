@@ -136,6 +136,22 @@ const generateNotificationHTML = (log: any): string => {
         <p><strong>Request Date:</strong> ${new Date(log.created_at).toLocaleString()}</p>
         <p>A member has requested additional sessions.</p>
       `;
+    case 'membership_approval':
+      return `
+        <h2>✅ Membership Request Approved</h2>
+        <p><strong>Member:</strong> ${log.user_name}</p>
+        <p><strong>Email:</strong> ${log.user_email}</p>
+        <p><strong>Approval Date:</strong> ${new Date(log.created_at).toLocaleString()}</p>
+        <p>🎉 Congratulations! Your membership request has been approved and is now active.</p>
+        <p>You can now start booking classes and using your gym sessions.</p>
+        <p><strong>Next Steps:</strong></p>
+        <ul>
+          <li>Log into your account to view your available sessions</li>
+          <li>Browse and book your first class</li>
+          <li>Visit us at the gym with a valid ID</li>
+        </ul>
+        <p>Welcome to our gym family! 💪</p>
+      `;
     default:
       return `
         <h2>📢 Gym Notification</h2>

@@ -435,9 +435,50 @@ const handleApproveRequest = async (id: number) => {
     console.error("Error creating payment record:", err);
   }
 
+  // Send email notification
+  try {
+    await supabase.from('notification_logs').insert({
+      notification_type: 'membership_approval',
+      recipient_email: request.email,
+      user_email: request.email,
+      user_name: request.member,
+      subject: 'Membership Request Approved',
+      status: 'pending'
+    });
+    console.log('Membership approval email notification queued');
+  } catch (err) {
+    console.error("Error sending email notification:", err);
+  }
+
+  // Send WhatsApp notification if member has phone
+  try {
+    const { data: memberData } = await supabase
+      .from('members')
+      .select('phone')
+      .eq('email', request.email)
+      .single();
+
+    if (memberData?.phone) {
+      const { error: whatsappError } = await supabase.functions.invoke('send-whatsapp-notification', {
+        body: {
+          phone: memberData.phone,
+          message: `🎉 Great news! Your ${request.type} membership request has been approved! You now have ${membershipType.sessions} sessions available. Welcome to our gym family! 💪`
+        }
+      });
+
+      if (whatsappError) {
+        console.error('WhatsApp notification error:', whatsappError);
+      } else {
+        console.log('WhatsApp notification sent successfully');
+      }
+    }
+  } catch (err) {
+    console.error("Error sending WhatsApp notification:", err);
+  }
+
   toast({
     title: "Request approved",
-    description: `The membership request has been approved successfully. ${membershipType.sessions} sessions have been added to ${request.member}'s account.`,
+    description: `The membership request has been approved successfully. ${membershipType.sessions} sessions have been added to ${request.member}'s account. Notifications sent.`,
   });
 };
 
