@@ -170,11 +170,15 @@ const BookingForm = ({
     try {
       setIsLoading(true);
 
+      // Get user name from user metadata or profile
+      let userName = (user as any).user_metadata?.name || 'Unknown User';
+      
       const { error } = await supabase.from("bookings").insert({
         user_id: user.id,
         class_id: selectedClass,
         status: "confirmed",
         booking_date: new Date().toISOString(),
+        user_name: userName,
       });
 
       if (error) throw error;
