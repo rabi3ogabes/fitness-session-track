@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PencilIcon, PowerIcon, UserMinusIcon, Lock, Trash2, User, UserRound, Mail, Phone, CreditCard, Activity } from "lucide-react";
+import { PencilIcon, PowerIcon, UserMinusIcon, Lock, Trash2, User, UserRound, Mail, Phone, CreditCard, Activity, CheckCircle, XCircle } from "lucide-react";
 import { Member } from "./types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -104,10 +104,12 @@ const MemberGrid = ({
                 </div>
               </div>
               
-              {/* Status Badge */}
-              <Badge variant={member.status === "Active" ? "default" : "destructive"}>
-                {member.status}
-              </Badge>
+              {/* Status Icon */}
+              {member.status === "Active" ? (
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              ) : (
+                <XCircle className="h-6 w-6 text-red-600" />
+              )}
             </div>
 
             {/* Member details */}
