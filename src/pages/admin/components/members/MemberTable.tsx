@@ -15,6 +15,7 @@ interface MemberTableProps {
   deleteMember: (id: number) => void;
   isLoading?: boolean;
   showDeleteIcon?: boolean;
+  onMemberClick?: (member: Member) => void;
 }
 
 const MemberTable = ({
@@ -26,7 +27,8 @@ const MemberTable = ({
   resetPassword,
   deleteMember,
   isLoading = false,
-  showDeleteIcon = true
+  showDeleteIcon = true,
+  onMemberClick
 }: MemberTableProps) => {
 
   if (isLoading) {
@@ -65,7 +67,10 @@ const MemberTable = ({
                 filteredMembers.map((member) => (
                   <TableRow key={member.id}>
                     <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
+                      <div 
+                        className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 p-2 rounded transition-colors"
+                        onClick={() => onMemberClick?.(member)}
+                      >
                         {member.gender === "Male" && (
                           <User className="h-4 w-4 text-blue-600 drop-shadow-md filter hover-scale" style={{
                             filter: 'drop-shadow(2px 2px 4px rgba(37, 99, 235, 0.3))',
@@ -78,7 +83,7 @@ const MemberTable = ({
                             textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
                           }} />
                         )}
-                        <span>{member.name}</span>
+                        <span className="text-blue-600 hover:text-blue-800 font-medium">{member.name}</span>
                       </div>
                     </TableCell>
                     <TableCell>{member.email}</TableCell>

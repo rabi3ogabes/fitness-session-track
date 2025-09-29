@@ -18,6 +18,7 @@ import MemberSearch from "./components/members/MemberSearch";
 import MemberTable from "./components/members/MemberTable";
 import AddMemberDialog from "./components/members/AddMemberDialog";
 import EditMemberDialog from "./components/members/EditMemberDialog";
+import MemberDetailsDialog from "./components/members/MemberDetailsDialog";
 
 // Types
 import { Member, PaymentHistoryData } from "./components/members/types";
@@ -31,7 +32,9 @@ const Members = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] =
     useState(false);
   const { isTrainer } = useAuth();
@@ -182,6 +185,11 @@ const Members = () => {
   const openEditDialog = (member: Member) => {
     setCurrentMember({ ...member });
     setIsEditDialogOpen(true);
+  };
+
+  const handleMemberClick = (member: Member) => {
+    setSelectedMember(member);
+    setIsDetailsDialogOpen(true);
   };
 
   const toggleMemberStatus = async (id: number) => {
@@ -384,6 +392,7 @@ const Members = () => {
         deleteMember={deleteMember}
         isLoading={isLoading}
         showDeleteIcon={showDeleteIcon}
+        onMemberClick={handleMemberClick}
       />
 
       <AddMemberDialog
@@ -397,6 +406,12 @@ const Members = () => {
         onOpenChange={setIsEditDialogOpen}
         currentMember={currentMember}
         onEditMember={handleEditMember}
+      />
+
+      <MemberDetailsDialog
+        member={selectedMember}
+        open={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
       />
 
       {/* Reset Password Confirmation Dialog */}
