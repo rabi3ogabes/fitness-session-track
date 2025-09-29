@@ -117,30 +117,35 @@ const RecentBookingsWidget = () => {
                   memberBalance = memberData.remaining_sessions || 0;
                   memberGender = memberData.gender;
                   memberFound = true;
+                  console.log(`Found member by ID ${booking.member_id}:`, memberData.name);
                 }
               } catch (error) {
-                // Continue to next method
+                console.log(`No member found by ID ${booking.member_id}`);
               }
             }
             
-            // Method 2: Try by user_name if available
+            // Method 2: If we have user_name from booking, use it but try to get additional info
             if (booking.user_name?.trim() && !memberFound) {
+              memberName = booking.user_name; // Use the booking's user_name directly
+              console.log(`Using booking user_name: ${booking.user_name}`);
+              
+              // Try to get session balance and gender by matching name
               try {
                 const { data: memberData } = await supabase
                   .from("members")
-                  .select("name, remaining_sessions, gender")
+                  .select("remaining_sessions, gender")
                   .ilike("name", `%${booking.user_name.trim()}%`)
                   .single();
                 
-                if (memberData?.name) {
-                  memberName = memberData.name;
+                if (memberData) {
                   memberBalance = memberData.remaining_sessions || 0;
                   memberGender = memberData.gender;
-                  memberFound = true;
+                  console.log(`Found additional member info for ${booking.user_name}:`, memberData);
                 }
               } catch (error) {
-                // Continue
+                console.log(`No additional member info found for ${booking.user_name}`);
               }
+              memberFound = true;
             }
             
             // Method 3: Try by user_id using profiles table (fallback)
