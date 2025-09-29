@@ -261,6 +261,7 @@ const RecentBookingsWidget = () => {
   }, []);
 
   const handleDeleteBooking = async (bookingId: string, bookingStatus: string) => {
+    console.log("Delete button clicked for booking:", bookingId, "status:", bookingStatus);
     try {
       // If booking is confirmed, it will be cancelled and credits returned via database trigger
       // If booking is already cancelled, we'll delete it completely
@@ -290,7 +291,103 @@ const RecentBookingsWidget = () => {
         });
       }
       
-      // Force refresh the bookings data - this will trigger via real-time subscription
+      // Force refresh the bookings data immediately
+      console.log("Delete operation completed, refreshing data...");
+      // Trigger a manual refresh by calling the fetch function from useEffect
+      const refreshBookings = async () => {
+        try {
+          console.log("Fetching recent bookings...");
+          const { data: bookingsData, error: bookingsError } = await supabase
+            .from("bookings")
+            .select(`
+              id,
+              user_name,
+              booking_date,
+              member_id,
+              class_id,
+              user_id,
+              status
+            `)
+            .in("status", ["confirmed", "cancelled"])
+            .order("booking_date", { ascending: false })
+            .limit(5);
+
+          if (bookingsError) {
+            console.error("Error fetching bookings:", bookingsError);
+            return;
+          }
+          
+          // Process the bookings data same as in useEffect
+          const bookingsWithBalance = await Promise.all(
+            (bookingsData || []).map(async (booking) => {
+              let memberBalance = 0;
+              let memberGender = undefined;
+              let memberName = "Unknown Member";
+              let classDetails = {
+                name: "Unknown Class",
+                schedule: "",
+                start_time: "",
+                end_time: ""
+              };
+              
+              // Get class details
+              if (booking.class_id) {
+                const { data: classData } = await supabase
+                  .from("classes")
+                  .select("name, schedule, start_time, end_time")
+                  .eq("id", booking.class_id)
+                  .single();
+                
+                if (classData) {
+                  classDetails = classData;
+                }
+              }
+              
+              // Get member information by member_id first
+              if (booking.member_id) {
+                try {
+                  const { data: memberData } = await supabase
+                    .from("members")
+                    .select("name, remaining_sessions, gender")
+                    .eq("id", booking.member_id)
+                    .single();
+                  
+                  if (memberData?.name) {
+                    memberName = memberData.name;
+                    memberBalance = memberData.remaining_sessions || 0;
+                    memberGender = memberData.gender;
+                  }
+                } catch (error) {
+                  // Use user_name as fallback
+                  if (booking.user_name) {
+                    memberName = booking.user_name;
+                  }
+                }
+              }
+
+              return {
+                id: booking.id,
+                user_name: memberName,
+                booking_date: booking.booking_date,
+                class_name: classDetails.name,
+                class_date: classDetails.schedule,
+                start_time: classDetails.start_time,
+                end_time: classDetails.end_time,
+                member_balance: memberBalance,
+                member_gender: memberGender,
+                status: booking.status,
+              };
+            })
+          );
+
+          console.log("Refreshed bookings:", bookingsWithBalance);
+          setRecentBookings(bookingsWithBalance);
+        } catch (error) {
+          console.error("Error refreshing bookings:", error);
+        }
+      };
+      
+      refreshBookings();
     } catch (error) {
       console.error("Error handling booking:", error);
       toast({
