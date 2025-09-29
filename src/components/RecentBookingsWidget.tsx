@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { Calendar, User, Clock } from "lucide-react";
+import { Calendar, User, Clock, Trash2, Eye, EyeOff } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface RecentBooking {
   id: string;
@@ -19,6 +20,8 @@ interface RecentBooking {
 const RecentBookingsWidget = () => {
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDeleteIcons, setShowDeleteIcons] = useState(false);
+  const { toast } = useToast();
 
   const getGenderIconColor = (gender?: string) => {
     if (gender === "Male") return "text-blue-600";
@@ -239,6 +242,45 @@ const RecentBookingsWidget = () => {
     };
   }, []);
 
+  const handleDeleteBooking = async (bookingId: string, bookingStatus: string) => {
+    try {
+      // If booking is confirmed, it will be cancelled and credits returned via database trigger
+      // If booking is already cancelled, we'll delete it completely
+      if (bookingStatus === 'confirmed') {
+        const { error } = await supabase
+          .from("bookings")
+          .update({ status: 'cancelled' })
+          .eq("id", bookingId);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Booking cancelled",
+          description: "The booking has been cancelled and the session credit has been returned.",
+        });
+      } else {
+        const { error } = await supabase
+          .from("bookings")
+          .delete()
+          .eq("id", bookingId);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Booking deleted",
+          description: "The cancelled booking has been removed.",
+        });
+      }
+    } catch (error) {
+      console.error("Error handling booking:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process the booking. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -257,10 +299,29 @@ const RecentBookingsWidget = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-        <Calendar className="h-5 w-5 text-blue-600" />
-        Recent Bookings
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-blue-600" />
+          Recent Bookings
+        </h2>
+        <button
+          onClick={() => setShowDeleteIcons(!showDeleteIcons)}
+          className="flex items-center gap-2 px-3 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+          title={showDeleteIcons ? "Hide delete options" : "Show delete options"}
+        >
+          {showDeleteIcons ? (
+            <>
+              <EyeOff className="h-4 w-4" />
+              Hide Delete
+            </>
+          ) : (
+            <>
+              <Eye className="h-4 w-4" />
+              Show Delete
+            </>
+          )}
+        </button>
+      </div>
       {recentBookings.length > 0 ? (
         <div className="space-y-3">
           {recentBookings.map((booking) => (
@@ -282,11 +343,22 @@ const RecentBookingsWidget = () => {
                     </span>
                   )}
                 </div>
-                <div className="text-right">
-                  <div className="text-xs text-gray-500">Sessions Left</div>
-                  <div className={`font-semibold ${booking.member_balance <= 2 ? 'text-red-600' : 'text-green-600'}`}>
-                    {booking.member_balance}
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500">Sessions Left</div>
+                    <div className={`font-semibold ${booking.member_balance <= 2 ? 'text-red-600' : 'text-green-600'}`}>
+                      {booking.member_balance}
+                    </div>
                   </div>
+                  {showDeleteIcons && (
+                    <button
+                      onClick={() => handleDeleteBooking(booking.id, booking.status)}
+                      className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                      title={booking.status === 'confirmed' ? 'Cancel booking and return credit' : 'Delete cancelled booking'}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
               
