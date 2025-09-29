@@ -29,6 +29,7 @@ const RecentBookingsWidget = () => {
   useEffect(() => {
     const fetchRecentBookings = async () => {
       try {
+        console.log("Fetching recent bookings...");
         // Get recent bookings (both confirmed and cancelled for complete activity view)
         const { data: bookingsData, error: bookingsError } = await supabase
           .from("bookings")
@@ -45,7 +46,12 @@ const RecentBookingsWidget = () => {
           .order("booking_date", { ascending: false })
           .limit(5);
 
-        if (bookingsError) throw bookingsError;
+        if (bookingsError) {
+          console.error("Error fetching bookings:", bookingsError);
+          throw bookingsError;
+        }
+        
+        console.log("Raw bookings data:", bookingsData);
 
         // Get class details and member balances for each booking
         const bookingsWithBalance = await Promise.all(
@@ -176,6 +182,7 @@ const RecentBookingsWidget = () => {
           })
         );
 
+        console.log("Final bookings with balance:", bookingsWithBalance);
         setRecentBookings(bookingsWithBalance);
       } catch (error) {
         console.error("Error fetching recent bookings:", error);
