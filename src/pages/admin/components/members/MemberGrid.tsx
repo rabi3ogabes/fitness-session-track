@@ -97,7 +97,7 @@ const MemberGrid = ({
                   <h3 className="font-semibold text-gray-900 hover:text-blue-600 transition-colors">
                     {member.name}
                   </h3>
-                  <p className="text-sm text-gray-500 flex items-center gap-1">
+                  <p className="text-sm text-gray-500 flex items-center gap-1 hidden">
                     <Mail className="h-3 w-3" />
                     {member.email}
                   </p>
