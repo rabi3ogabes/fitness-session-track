@@ -818,9 +818,14 @@ const Classes = () => {
                 </Label>
                 <Input
                   id="capacity"
+                  type="number"
+                  min="1"
                   defaultValue={String(currentClass.capacity)}
                   className="col-span-3"
-                  onChange={(e) => setCurrentClass({ ...currentClass, capacity: Number(e.target.value) })}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 1;
+                    setCurrentClass({ ...currentClass, capacity: value });
+                  }}
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
