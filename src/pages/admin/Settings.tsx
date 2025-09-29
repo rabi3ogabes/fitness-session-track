@@ -66,6 +66,7 @@ const Settings = () => {
   const [showTestimonials, setShowTestimonials] = useState(true);
   const [showLowSessionWarning, setShowLowSessionWarning] = useState(true);
   const [showMemberDeleteIcon, setShowMemberDeleteIcon] = useState(true);
+  const [showClassDeleteIcon, setShowClassDeleteIcon] = useState(true);
   const [mainPageContent, setMainPageContent] = useState({
     heroTitle: "Streamlined Gym Management System",
     heroDescription: "A complete solution for gym owners and members. Manage memberships, book sessions, track attendance, and more.",
@@ -140,6 +141,12 @@ const Settings = () => {
     if (savedShowMemberDeleteIcon !== null) {
       setShowMemberDeleteIcon(JSON.parse(savedShowMemberDeleteIcon));
     }
+    
+    // Load class delete icon visibility setting
+    const savedShowClassDeleteIcon = localStorage.getItem("showClassDeleteIcon");
+    if (savedShowClassDeleteIcon !== null) {
+      setShowClassDeleteIcon(JSON.parse(savedShowClassDeleteIcon));
+    }
   }, []);
 
   const handleSaveSettings = async () => {
@@ -210,6 +217,7 @@ const Settings = () => {
       localStorage.setItem("showTestimonials", JSON.stringify(showTestimonials));
       localStorage.setItem("showLowSessionWarning", JSON.stringify(showLowSessionWarning));
       localStorage.setItem("showMemberDeleteIcon", JSON.stringify(showMemberDeleteIcon));
+      localStorage.setItem("showClassDeleteIcon", JSON.stringify(showClassDeleteIcon));
 
       setIsLoading(false);
       const successMsg = `✅ Email settings saved successfully!\n\nTimestamp: ${new Date().toLocaleString()}\n\nSettings have been saved to the database and will persist across sessions.`;
@@ -757,6 +765,20 @@ const Settings = () => {
                      id="show-member-delete-icon"
                      checked={showMemberDeleteIcon}
                      onCheckedChange={setShowMemberDeleteIcon}
+                   />
+                 </div>
+                 
+                 <div className="flex items-center justify-between">
+                   <div className="space-y-0.5">
+                     <Label htmlFor="show-class-delete-icon">Class Delete Icon</Label>
+                     <p className="text-sm text-muted-foreground">
+                       Show delete icon for classes in the class management page (with session refund)
+                     </p>
+                   </div>
+                   <Switch
+                     id="show-class-delete-icon"
+                     checked={showClassDeleteIcon}
+                     onCheckedChange={setShowClassDeleteIcon}
                    />
                  </div>
                </CardContent>

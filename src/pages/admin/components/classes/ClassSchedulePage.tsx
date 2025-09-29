@@ -192,6 +192,15 @@ const ClassSchedulePage = () => {
   const [classToEdit, setClassToEdit] = useState<ClassModel | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteButtons, setShowDeleteButtons] = useState(false);
+  const [showClassDeleteIcon, setShowClassDeleteIcon] = useState(true);
+
+  // Load settings on mount
+  useEffect(() => {
+    const savedShowClassDeleteIcon = localStorage.getItem("showClassDeleteIcon");
+    if (savedShowClassDeleteIcon !== null) {
+      setShowClassDeleteIcon(JSON.parse(savedShowClassDeleteIcon));
+    }
+  }, []);
   const [viewType, setViewType] = useState<'table' | 'boxes'>('boxes'); // Default to boxes
   const [showPreviousClasses, setShowPreviousClasses] = useState(false);
 
@@ -847,6 +856,58 @@ const ClassSchedulePage = () => {
     if (!classToDelete) return;
 
     try {
+      // First, find all bookings for this class and refund sessions
+      const { data: bookings, error: bookingsError } = await supabase
+        .from("bookings")
+        .select("user_id, user_name, member_id")
+        .eq("class_id", classToDelete)
+        .eq("status", "confirmed");
+
+      if (bookingsError) throw bookingsError;
+
+      // Refund sessions for each booking
+      if (bookings && bookings.length > 0) {
+        for (const booking of bookings) {
+          // Get current member data to increment sessions
+          let memberQuery = supabase.from("members").select("remaining_sessions");
+          
+          if (booking.member_id) {
+            memberQuery = memberQuery.eq("id", booking.member_id);
+          } else if (booking.user_name) {
+            memberQuery = memberQuery.eq("name", booking.user_name);
+          }
+
+          const { data: memberData, error: fetchError } = await memberQuery.single();
+          
+          if (fetchError) {
+            console.error("Error fetching member for refund:", booking, fetchError);
+            continue;
+          }
+
+          // Update with incremented sessions
+          let updateQuery = supabase.from("members").update({
+            remaining_sessions: (memberData.remaining_sessions || 0) + 1
+          });
+
+          if (booking.member_id) {
+            updateQuery = updateQuery.eq("id", booking.member_id);
+          } else if (booking.user_name) {
+            updateQuery = updateQuery.eq("name", booking.user_name);
+          }
+
+          const { error: memberError } = await updateQuery;
+          if (memberError) {
+            console.error("Error refunding session for booking:", booking, memberError);
+          }
+        }
+
+        toast({
+          title: "Sessions refunded",
+          description: `${bookings.length} session(s) have been refunded to members`,
+        });
+      }
+
+      // Delete the class
       const { error } = await supabase
         .from("classes")
         .delete()
@@ -856,7 +917,7 @@ const ClassSchedulePage = () => {
 
       toast({
         title: "Class deleted",
-        description: "Class has been removed successfully",
+        description: "Class has been removed successfully and sessions refunded",
       });
 
       fetchClasses();
@@ -1719,14 +1780,15 @@ const ClassSchedulePage = () => {
                         >
                           <Power className="h-4 w-4" />
                         </Button>
-                        {showDeleteButtons && (
+                        {showDeleteButtons && showClassDeleteIcon && (
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteClass(cls.id)}
-                            className="text-red-600"
+                            className="text-red-600 p-2"
+                            title="Delete class"
                           >
-                            Delete
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
@@ -1782,7 +1844,7 @@ const ClassSchedulePage = () => {
                       >
                         {cls.status}
                       </button>
-                      {showDeleteButtons && (
+                      {showDeleteButtons && showClassDeleteIcon && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
