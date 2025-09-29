@@ -289,6 +289,8 @@ const RecentBookingsWidget = () => {
           description: "The cancelled booking has been removed.",
         });
       }
+      
+      // Force refresh the bookings data - this will trigger via real-time subscription
     } catch (error) {
       console.error("Error handling booking:", error);
       toast({
