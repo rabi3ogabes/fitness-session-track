@@ -86,25 +86,126 @@ const MemberGrid = ({
       {filteredMembers.map((member) => (
         <Card key={member.id} className="hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-blue-500">
           <CardContent className="p-6">
-            {/* Header with name and gender icon */}
-            <div 
-              className="flex items-center gap-3 mb-4 cursor-pointer hover:bg-blue-50 p-2 rounded transition-colors -m-2"
-              onClick={() => onMemberClick?.(member)}
-            >
-              {getGenderIcon(member.gender)}
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 hover:text-blue-600 transition-colors">
-                  {member.name}
-                </h3>
-                <p className="text-sm text-gray-500 flex items-center gap-1">
-                  <Mail className="h-3 w-3" />
-                  {member.email}
-                </p>
+            {/* Header with name, gender icon, and actions */}
+            <div className="flex items-start justify-between mb-4">
+              <div 
+                className="flex items-center gap-3 cursor-pointer hover:bg-blue-50 p-2 rounded transition-colors -m-2 flex-1"
+                onClick={() => onMemberClick?.(member)}
+              >
+                {getGenderIcon(member.gender)}
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 hover:text-blue-600 transition-colors">
+                    {member.name}
+                  </h3>
+                  <p className="text-sm text-gray-500 flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    {member.email}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Status and Actions - moved to top right */}
+              <div className="flex flex-col items-end gap-2">
+                <Badge variant={member.status === "Active" ? "default" : "destructive"}>
+                  {member.status}
+                </Badge>
+                
+                <TooltipProvider>
+                  <div className="flex gap-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditDialog(member)}
+                          className="h-8 w-8 text-gym-blue hover:text-gym-dark-blue hover:bg-blue-50"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Edit</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => toggleMemberStatus(member.id)}
+                          className={`h-8 w-8 ${member.status === "Active" 
+                            ? "text-red-600 hover:text-red-800 hover:bg-red-50" 
+                            : "text-green-600 hover:text-green-800 hover:bg-green-50"}`}
+                        >
+                          <PowerIcon className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{member.status === "Active" ? "Deactivate" : "Activate"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => toggleTrainerEditAccess(member.id)}
+                          className="h-8 w-8 text-orange-600 hover:text-orange-800 hover:bg-orange-50"
+                        >
+                          <UserMinusIcon className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{member.canBeEditedByTrainers ? "Remove Trainer Access" : "Allow Trainer Access"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => resetPassword(member.id)}
+                          className="h-8 w-8 text-purple-600 hover:text-purple-800 hover:bg-purple-50"
+                        >
+                          <Lock className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Reset Password</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    {showDeleteIcon && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to delete ${member.name}?\n\nThis will permanently remove:\n• Member account\n• Authentication access\n• All bookings\n• All session requests\n\nThis action cannot be undone.`)) {
+                                deleteMember(member.id);
+                              }
+                            }}
+                            className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Delete Member</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </TooltipProvider>
               </div>
             </div>
 
             {/* Member details */}
-            <div className="space-y-3 mb-4">
+            <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <Phone className="h-4 w-4 text-gray-400" />
                 <span className="text-gray-600">{member.phone || 'Not provided'}</span>
@@ -124,105 +225,6 @@ const MemberGrid = ({
                   {member.remainingSessions}
                 </Badge>
               </div>
-            </div>
-
-            {/* Status and Actions */}
-            <div className="flex items-center justify-between pt-4 border-t">
-              <Badge variant={member.status === "Active" ? "default" : "destructive"}>
-                {member.status}
-              </Badge>
-              
-              <TooltipProvider>
-                <div className="flex gap-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(member)}
-                        className="h-8 w-8 text-gym-blue hover:text-gym-dark-blue hover:bg-blue-50"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Edit</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => toggleMemberStatus(member.id)}
-                        className={`h-8 w-8 ${member.status === "Active" 
-                          ? "text-red-600 hover:text-red-800 hover:bg-red-50" 
-                          : "text-green-600 hover:text-green-800 hover:bg-green-50"}`}
-                      >
-                        <PowerIcon className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{member.status === "Active" ? "Deactivate" : "Activate"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => toggleTrainerEditAccess(member.id)}
-                        className="h-8 w-8 text-orange-600 hover:text-orange-800 hover:bg-orange-50"
-                      >
-                        <UserMinusIcon className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{member.canBeEditedByTrainers ? "Remove Trainer Access" : "Allow Trainer Access"}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => resetPassword(member.id)}
-                        className="h-8 w-8 text-purple-600 hover:text-purple-800 hover:bg-purple-50"
-                      >
-                        <Lock className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Reset Password</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  {showDeleteIcon && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete ${member.name}?\n\nThis will permanently remove:\n• Member account\n• Authentication access\n• All bookings\n• All session requests\n\nThis action cannot be undone.`)) {
-                              deleteMember(member.id);
-                            }
-                          }}
-                          className="h-8 w-8 text-red-600 hover:text-red-800 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Delete Member</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-              </TooltipProvider>
             </div>
           </CardContent>
         </Card>
