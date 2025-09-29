@@ -4,6 +4,7 @@ import { PencilIcon, PowerIcon, UserMinusIcon, Lock, Trash2, User, UserRound } f
 import { Member } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import MemberGrid from "./MemberGrid";
 
 interface MemberTableProps {
   members: Member[];
@@ -16,6 +17,7 @@ interface MemberTableProps {
   isLoading?: boolean;
   showDeleteIcon?: boolean;
   onMemberClick?: (member: Member) => void;
+  viewMode?: 'box' | 'grid';
 }
 
 const MemberTable = ({
@@ -28,8 +30,27 @@ const MemberTable = ({
   deleteMember,
   isLoading = false,
   showDeleteIcon = true,
-  onMemberClick
+  onMemberClick,
+  viewMode = 'box'
 }: MemberTableProps) => {
+
+  // If viewMode is 'box', render the grid component
+  if (viewMode === 'box') {
+    return (
+      <MemberGrid
+        members={members}
+        filteredMembers={filteredMembers}
+        toggleMemberStatus={toggleMemberStatus}
+        toggleTrainerEditAccess={toggleTrainerEditAccess}
+        openEditDialog={openEditDialog}
+        resetPassword={resetPassword}
+        deleteMember={deleteMember}
+        isLoading={isLoading}
+        showDeleteIcon={showDeleteIcon}
+        onMemberClick={onMemberClick}
+      />
+    );
+  }
 
   if (isLoading) {
     return (

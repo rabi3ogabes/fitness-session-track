@@ -396,6 +396,7 @@ const Members = () => {
         isLoading={isLoading}
         showDeleteIcon={showDeleteIcon}
         onMemberClick={handleMemberClick}
+        viewMode={viewMode}
       />
 
       <AddMemberDialog
