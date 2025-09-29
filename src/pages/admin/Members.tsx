@@ -30,6 +30,7 @@ const Members = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<'box' | 'grid'>('box');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
@@ -380,6 +381,8 @@ const Members = () => {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         onAddClick={() => setIsAddDialogOpen(true)}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
 
       <MemberTable
