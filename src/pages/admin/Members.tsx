@@ -331,14 +331,19 @@ const Members = () => {
         }
 
         // Call edge function to delete auth user (requires admin privileges)
+        console.log("About to call delete-user edge function for email:", memberEmail);
         const { data, error } = await supabase.functions.invoke('delete-user', {
           body: { email: memberEmail }
         });
+
+        console.log("delete-user function response:", { data, error });
 
         if (error) {
           console.error("Error calling delete-user function:", error);
           // Don't throw here - the member is already deleted from members table
           console.warn("Member deleted from members table but auth user deletion failed:", error);
+        } else {
+          console.log("delete-user function succeeded:", data);
         }
 
         // Update local state by removing the member
