@@ -1780,7 +1780,7 @@ const ClassSchedulePage = () => {
                         >
                           <Power className="h-4 w-4" />
                         </Button>
-                        {showClassDeleteIcon && (
+                        {showClassDeleteIcon && !showPreviousClasses && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1844,7 +1844,7 @@ const ClassSchedulePage = () => {
                       >
                         {cls.status}
                       </button>
-                      {showClassDeleteIcon && (
+                      {showClassDeleteIcon && !showPreviousClasses && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
