@@ -9,6 +9,7 @@ interface UpcomingClass {
   name: string;
   start_time: string;
   end_time: string;
+  schedule: string;
   trainer: string;
   capacity: number;
   enrolled: number;
@@ -29,12 +30,14 @@ const UpcomingClassWidget = () => {
 
   const fetchUpcomingClass = async () => {
     try {
+      const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+      
       // First try to get upcoming classes
       let { data: classes } = await supabase
         .from('classes')
         .select('*')
-        .gte('start_time', new Date().toISOString())
-        .order('start_time', { ascending: true })
+        .gte('schedule', today)
+        .order('schedule', { ascending: true })
         .limit(1);
 
       // If no upcoming classes, get the most recent classes for demo purposes
@@ -42,7 +45,7 @@ const UpcomingClassWidget = () => {
         const { data: recentClasses } = await supabase
           .from('classes')
           .select('*')
-          .order('start_time', { ascending: false })
+          .order('schedule', { ascending: false })
           .limit(1);
         
         classes = recentClasses;
@@ -142,7 +145,7 @@ const UpcomingClassWidget = () => {
         <div className="bg-primary/5 p-4 rounded-lg">
           <h3 className="font-semibold text-lg">{upcomingClass.name}</h3>
           <p className="text-sm text-muted-foreground">
-            {new Date(upcomingClass.start_time).toLocaleDateString()} • {new Date(upcomingClass.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(upcomingClass.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            {upcomingClass.schedule ? new Date(upcomingClass.schedule).toLocaleDateString() : 'Date TBD'} • {upcomingClass.start_time || 'TBD'} - {upcomingClass.end_time || 'TBD'}
           </p>
           <p className="text-sm text-muted-foreground">Trainer: {upcomingClass.trainer}</p>
           <div className="flex items-center gap-4 mt-2">
