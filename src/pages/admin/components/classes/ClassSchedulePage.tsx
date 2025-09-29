@@ -953,7 +953,8 @@ const ClassSchedulePage = () => {
 
       console.log("Querying bookings for class_id:", classId);
       
-      const { data, error } = await supabase
+      // First get the bookings
+      const { data: bookingsData, error } = await supabase
         .from('bookings')
         .select(`
           *,
@@ -967,7 +968,7 @@ const ClassSchedulePage = () => {
         .order('booking_date', { ascending: false });
 
       console.log("Supabase query completed");
-      console.log("All bookings data received (including cancelled):", data);
+      console.log("All bookings data received (including cancelled):", bookingsData);
       console.log("Bookings error:", error);
 
       if (error) {
@@ -980,18 +981,39 @@ const ClassSchedulePage = () => {
         return;
       }
 
+      // Enhance bookings with user names where member data is missing
+      const enhancedBookings = await Promise.all(
+        (bookingsData || []).map(async (booking) => {
+          // If we don't have member info but have user_id, try to get user name
+          if (!booking.members && !booking.user_name && booking.user_id) {
+            try {
+              // Try to get user name from get_user_name function
+              const { data: userName, error: userError } = await supabase
+                .rpc('get_user_name', { user_id: booking.user_id });
+              
+              if (!userError && userName) {
+                return { ...booking, user_name: userName };
+              }
+            } catch (err) {
+              console.log("Could not fetch user name for:", booking.user_id);
+            }
+          }
+          return booking;
+        })
+      );
+
       console.log("Setting dialog state...");
-      setSelectedClassBookings(data || []);
+      setSelectedClassBookings(enhancedBookings);
       setCurrentClass(selectedClass);
       console.log("Opening dialog...");
       setIsBookedMembersDialogOpen(true);
       console.log("Dialog state should be true now");
       
       // Show success message
-      if (data && data.length > 0) {
+      if (enhancedBookings && enhancedBookings.length > 0) {
         toast({
           title: "Class Details",
-          description: `Found ${data.length} registered member(s) for ${selectedClass.name}`,
+          description: `Found ${enhancedBookings.length} registered member(s) for ${selectedClass.name}`,
         });
       } else {
         toast({
@@ -1982,7 +2004,7 @@ const ClassSchedulePage = () => {
                             )}
                           </div>
                           <span className="mt-2 text-sm text-center font-medium text-gray-900">
-                            {booking.user_name || booking.members?.name || "Unknown"}
+                            {booking.user_name || booking.members?.name || "Member"}
                           </span>
                           <span className="text-xs text-gray-500">
                             {booking.members?.remaining_sessions ? `${booking.members.remaining_sessions} sessions left` : 'No session data'}
@@ -2013,11 +2035,11 @@ const ClassSchedulePage = () => {
                         .reduce((uniqueBookings, booking) => {
                           // Only add if this user hasn't been added yet
                           const userId = booking.user_id || booking.member_id;
-                          const userName = booking.user_name || booking.members?.name || "Unknown";
+                          const userName = booking.user_name || booking.members?.name || "Member";
                           
                           if (!uniqueBookings.find(ub => 
                             (ub.user_id === userId && userId) || 
-                            (ub.user_name === userName && userName !== "Unknown")
+                            (ub.user_name === userName && userName !== "Member")
                           )) {
                             uniqueBookings.push(booking);
                           }
@@ -2033,7 +2055,7 @@ const ClassSchedulePage = () => {
                             )}
                           </div>
                           <span className="mt-2 text-sm text-center font-medium text-gray-400 line-through">
-                            {booking.user_name || booking.members?.name || "Unknown"}
+                            {booking.user_name || booking.members?.name || "Member"}
                           </span>
                           <span className="text-xs text-gray-500">
                             {booking.members?.remaining_sessions ? `${booking.members.remaining_sessions} sessions left` : 'No session data'}
@@ -2071,7 +2093,7 @@ const ClassSchedulePage = () => {
                             )}
                           </div>
                           <span className="mt-2 text-sm text-center font-medium text-gray-900">
-                            {booking.user_name || booking.members?.name || "Unknown"}
+                            {booking.user_name || booking.members?.name || "Member"}
                           </span>
                           <span className="text-xs text-gray-500">
                             {booking.members?.remaining_sessions ? `${booking.members.remaining_sessions} sessions left` : 'No session data'}

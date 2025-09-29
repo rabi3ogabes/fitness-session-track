@@ -1199,7 +1199,7 @@ const Classes = () => {
                 <TableBody>
                   {selectedClassBookings.map((booking) => (
                     <TableRow key={booking.id}>
-                      <TableCell className="font-medium">{booking.user_name || "Unknown Member"}</TableCell>
+                      <TableCell className="font-medium">{booking.user_name || "Member"}</TableCell>
                       <TableCell>{new Date(booking.booking_date).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
