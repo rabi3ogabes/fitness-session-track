@@ -813,7 +813,7 @@ const ClassSchedulePage = () => {
         .from("classes")
         .update({
           name: updatedClass.name,
-          trainer_id: updatedClass.trainer,
+          trainer: updatedClass.trainer,
           capacity: updatedClass.capacity,
           gender: updatedClass.gender,
           start_time: updatedClass.startTime,
