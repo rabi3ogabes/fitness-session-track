@@ -115,16 +115,23 @@ const SessionBalance = ({ className = "", showIcon = true, compact = false }: Se
 
   const sessionText = sessionBalance === 1 ? "session" : "sessions";
   const isLow = sessionBalance <= 2;
+  const isNegative = sessionBalance < 0;
 
   return (
-    <div className={`flex items-center gap-1 ${className}`}>
+    <div className={`flex items-center gap-2 ${className}`}>
       {showIcon && (
-        <User className={`h-4 w-4 ${isLow ? "text-red-600" : "text-red-500"}`} />
+        <User className={`h-4 w-4 ${
+          isNegative ? "text-destructive" : 
+          isLow ? "text-warning" : 
+          "text-primary"
+        }`} />
       )}
       <span 
-        className={`font-semibold ${isLow ? "text-red-600" : "text-red-500"} ${
-          compact ? "text-xs" : "text-sm"
-        }`}
+        className={`font-semibold ${
+          isNegative ? "text-destructive" : 
+          isLow ? "text-warning" : 
+          "text-primary"
+        } ${compact ? "text-xs" : "text-sm"}`}
       >
         {compact ? sessionBalance : `${sessionBalance} ${sessionText}`}
       </span>
