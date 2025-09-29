@@ -79,7 +79,7 @@ const RecentBookingsWidget = () => {
           (bookingsData || []).map(async (booking) => {
             let memberBalance = 0;
             let memberGender = undefined;
-            let memberName = "Unknown Member";
+            let memberName = booking.user_name || "Unknown Member";
             let classDetails = {
               name: "Unknown Class",
               schedule: "",
