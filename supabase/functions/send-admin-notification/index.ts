@@ -170,34 +170,57 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error(`Unknown notification type: ${type}`);
     }
 
-    // Send email using SMTP settings
-    const emailPayload = {
-      userEmail: userEmail,
-      userName: userName,
-      notificationEmail: adminSettings.notification_email,
-      subject: subject,
-      body: body,
-      smtpSettings: {
-        smtpHost: adminSettings.smtp_host,
-        smtpPort: adminSettings.smtp_port.toString(),
-        smtpUsername: adminSettings.smtp_username,
-        smtpPassword: adminSettings.smtp_password,
-        fromEmail: adminSettings.from_email,
-        fromName: adminSettings.from_name,
-        useSsl: adminSettings.use_ssl
-      }
-    };
+    // Send email using the appropriate provider based on settings
+    if (adminSettings.email_provider === 'resend') {
+      // Use Resend for email sending
+      const emailPayload = {
+        userEmail: userEmail,
+        userName: userName,
+        notificationEmail: adminSettings.notification_email,
+        subject: subject,
+        body: body
+      };
 
-    console.log("Sending email notification...");
-    
-    const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-smtp-notification`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(emailPayload)
-    });
+      console.log("Sending email notification via Resend...");
+      
+      const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-notification`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(emailPayload)
+      });
+    } else {
+      // Use SMTP for email sending
+      const emailPayload = {
+        userEmail: userEmail,
+        userName: userName,
+        notificationEmail: adminSettings.notification_email,
+        subject: subject,
+        body: body,
+        smtpSettings: {
+          smtpHost: adminSettings.smtp_host,
+          smtpPort: adminSettings.smtp_port.toString(),
+          smtpUsername: adminSettings.smtp_username,
+          smtpPassword: adminSettings.smtp_password,
+          fromEmail: adminSettings.from_email,
+          fromName: adminSettings.from_name,
+          useSsl: adminSettings.smtp_use_tls || false
+        }
+      };
+
+      console.log("Sending email notification via SMTP...");
+      
+      const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-smtp-notification`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(emailPayload)
+      });
+    }
 
     let emailResult;
     try {
