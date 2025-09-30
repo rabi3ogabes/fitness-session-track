@@ -84,19 +84,20 @@ const processPendingNotifications = async () => {
       try {
         console.log(`Processing notification ${log.id} of type ${log.notification_type}`);
         
-        // Get admin settings to check for CC email
+        // Get admin settings to check for CC email and sender name
         const { data: adminSettings } = await supabase
           .from('admin_notification_settings')
-          .select('notification_cc_email')
+          .select('notification_cc_email, from_name')
           .single();
 
         const ccEmails = adminSettings?.notification_cc_email ? [adminSettings.notification_cc_email] : [];
+        const senderName = adminSettings?.from_name || "Gym System";
 
         const emailResponse = await resend.emails.send({
-          from: "Gym System <onboarding@resend.dev>", // Use the default Resend testing domain
+          from: `${senderName} <onboarding@resend.dev>`, // Use the sender name from admin settings
           to: [log.recipient_email],
           cc: ccEmails,
-          subject: `[Gym System] ${log.subject}`,
+          subject: `[${senderName}] ${log.subject}`,
           html: generateNotificationHTML(log),
         });
 
@@ -502,19 +503,21 @@ const handler = async (req: Request): Promise<Response> => {
 
       try {
         console.log(`Attempting to send email to: ${emailTo}`);
-        console.log(`From: ${fromEmail && fromName ? `${fromName} <${fromEmail}>` : "Gym Management <onboarding@resend.dev>"}`);
-        console.log(`Subject: ${emailSubject}`);
-        
-        // Get admin settings to check for CC email
+        // Get admin settings for sender name and CC email
         const { data: adminSettings } = await supabase
           .from('admin_notification_settings')
-          .select('notification_cc_email')
+          .select('notification_cc_email, from_name, from_email')
           .single();
 
         const ccEmails = adminSettings?.notification_cc_email ? [adminSettings.notification_cc_email] : [];
+        const defaultSenderName = adminSettings?.from_name || "Gym Management";
+        const defaultSenderEmail = adminSettings?.from_email || "onboarding@resend.dev";
+        
+        console.log(`From: ${fromEmail && fromName ? `${fromName} <${fromEmail}>` : `${defaultSenderName} <${defaultSenderEmail}>`}`);
+        console.log(`Subject: ${emailSubject}`);
         
         const emailResponse = await resend.emails.send({
-          from: fromEmail && fromName ? `${fromName} <${fromEmail}>` : "Gym Management <onboarding@resend.dev>",
+          from: fromEmail && fromName ? `${fromName} <${fromEmail}>` : `${defaultSenderName} <${defaultSenderEmail}>`,
           to: [emailTo],
           cc: ccEmails,
           subject: emailSubject,
