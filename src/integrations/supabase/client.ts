@@ -271,102 +271,59 @@ export const cancelClassBooking = async (
     try {
       console.log("Attempting to send cancellation notification...");
       
-      // Get admin notification settings
-      const { data: adminSettings, error: settingsError } = await supabase
-        .from("admin_notification_settings")
-        .select("booking_notifications, notification_email, from_email, from_name")
-        .single();
-
-      if (settingsError) {
-        console.error("Error fetching admin notification settings:", settingsError);
-        return true; // Don't fail cancellation if notification settings fail
+      // Get user details
+      const { data: user } = await supabase.auth.getUser();
+      let userName = 'Unknown User';
+      
+      if (user?.user) {
+        // Try to get name from members table first
+        const { data: memberData } = await supabase
+          .from("members")
+          .select("name")
+          .eq("email", user.user.email)
+          .single();
+        
+        userName = memberData?.name || 
+                  (user.user as any).user_metadata?.name || 
+                  user.user.email || 
+                  'Unknown User';
       }
+      
+      console.log("User name determined:", userName);
 
-      console.log("Admin settings:", adminSettings);
+      // Get current enrollment count after cancellation
+      const { data: enrolledData } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("class_id", classId)
+        .eq("status", "confirmed");
 
-      if (adminSettings?.booking_notifications && adminSettings?.notification_email) {
-        // Get user details
-        const { data: user } = await supabase.auth.getUser();
-        let userName = 'Unknown User';
-        
-        if (user?.user) {
-          // Try to get name from members table first
-          const { data: memberData } = await supabase
-            .from("members")
-            .select("name")
-            .eq("email", user.user.email)
-            .single();
-          
-          userName = memberData?.name || 
-                    (user.user as any).user_metadata?.name || 
-                    user.user.email || 
-                    'Unknown User';
-        }
-        
-        console.log("User name determined:", userName);
+      const currentEnrollment = enrolledData?.length || 0;
+      const classDate = classDetails?.schedule || 'Unknown date';
+      const classTime = `${classDetails?.start_time || ''} - ${classDetails?.end_time || ''}`.trim();
+      const className = classDetails?.name || 'Unknown class';
 
-        // Get current enrollment count after cancellation
-        const { data: enrolledData } = await supabase
-          .from("bookings")
-          .select("*")
-          .eq("class_id", classId)
-          .eq("status", "confirmed");
-
-        const currentEnrollment = enrolledData?.length || 0;
-        const classDate = classDetails?.schedule || 'Unknown date';
-        const classTime = `${classDetails?.start_time || ''} - ${classDetails?.end_time || ''}`.trim();
-        const className = classDetails?.name || 'Unknown class';
-
-        console.log("Creating cancellation notification log...");
-        
-        // Insert cancellation notification log
-        const { error: logError } = await supabase
-          .from("notification_logs")
-          .insert({
-            notification_type: 'cancellation',
-            user_email: user?.user?.email || 'unknown@example.com',
-            user_name: userName,
-            recipient_email: adminSettings.notification_email,
-            subject: `Class Booking Cancelled: ${className}`,
-            status: 'pending'
-          });
-
-        if (logError) {
-          console.error("Failed to create cancellation notification log:", logError);
-        } else {
-          console.log("Cancellation notification log created successfully");
-          
-          // Process notification immediately
-          try {
-            console.log("Invoking send-email-notification function for cancellation...");
-            const { data: functionData, error: processError } = await supabase.functions.invoke('send-email-notification', {
-              body: { 
-                type: 'cancellation',
-                userEmail: user?.user?.email || 'unknown@example.com',
-                userName: userName,
-                notificationEmail: adminSettings.notification_email,
-                fromEmail: adminSettings.from_email || 'info@fhb-fit.com',
-                fromName: adminSettings.from_name || 'Gym System',
-                cancellationDetails: {
-                  className: className,
-                  classDate: classDate,
-                  classTime: classTime,
-                  currentEnrollment: currentEnrollment
-                }
-              }
-            });
-            
-            console.log("Function response:", { data: functionData, error: processError });
-            
-            if (processError) {
-              console.error('Error processing cancellation notification immediately:', processError);
-            } else {
-              console.log('Cancellation notification processed immediately');
-            }
-          } catch (err) {
-            console.error('Error calling notification processor for cancellation:', err);
+      console.log("Sending admin cancellation notification...");
+      
+      // Use the admin notification system consistently
+      const { error: notificationError } = await supabase.functions.invoke('send-admin-notification', {
+        body: {
+          type: 'cancellation',
+          userEmail: user?.user?.email || 'unknown@example.com',
+          userName: userName,
+          cancellationDetails: {
+            className: className,
+            classDate: classDate,
+            classTime: classTime,
+            currentEnrollment: currentEnrollment
           }
         }
+      });
+
+      if (notificationError) {
+        console.error('Error sending cancellation notification:', notificationError);
+      } else {
+        console.log('Cancellation notification sent successfully');
       }
     } catch (notificationError) {
       console.error("Error sending cancellation notification:", notificationError);

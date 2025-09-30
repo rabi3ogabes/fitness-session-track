@@ -7,10 +7,16 @@ const corsHeaders = {
 };
 
 interface AdminNotificationRequest {
-  type: 'signup' | 'booking' | 'session_request';
+  type: 'signup' | 'booking' | 'session_request' | 'cancellation';
   userEmail: string;
   userName: string;
   details?: string;
+  cancellationDetails?: {
+    className: string;
+    classDate: string;
+    classTime: string;
+    currentEnrollment: number;
+  };
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -26,7 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log("Admin notification request received");
     
-    const { type, userEmail, userName, details }: AdminNotificationRequest = await req.json();
+    const { type, userEmail, userName, details, cancellationDetails }: AdminNotificationRequest = await req.json();
     
     if (!type || !userEmail || !userName) {
       return new Response(
@@ -71,9 +77,10 @@ const handler = async (req: Request): Promise<Response> => {
     const adminSettings = settings[0];
     
     // Check if this type of notification is enabled
-    const notificationEnabled = type === 'signup' ? adminSettings.notify_signup :
-                               type === 'booking' ? adminSettings.notify_booking :
-                               adminSettings.notify_session_request;
+    const notificationEnabled = type === 'signup' ? adminSettings.signup_notifications :
+                               type === 'booking' ? adminSettings.booking_notifications :
+                               type === 'cancellation' ? adminSettings.booking_notifications :
+                               adminSettings.session_request_notifications;
     
     if (!notificationEnabled) {
       console.log(`Notification type ${type} is disabled in settings`);
@@ -124,6 +131,37 @@ const handler = async (req: Request): Promise<Response> => {
           <p><strong>Request Time:</strong> ${new Date().toLocaleString()}</p>
           ${details ? `<p><strong>Request Details:</strong> ${details}</p>` : ''}
           <p>Please review and process this session balance request.</p>
+        `;
+        break;
+        
+      case 'cancellation':
+        subject = `Class Booking Cancelled - ${cancellationDetails?.className || 'Unknown Class'}`;
+        body = `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #dc2626;">❌ Class Booking Cancelled</h2>
+            <p>A member has cancelled their class booking.</p>
+            <div style="background-color: #fef2f2; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #dc2626;">
+              <h3 style="margin-top: 0;">Member Details:</h3>
+              <ul>
+                <li><strong>Name:</strong> ${userName}</li>
+                <li><strong>Email:</strong> ${userEmail}</li>
+              </ul>
+            </div>
+            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3 style="margin-top: 0;">Class Details:</h3>
+              <ul>
+                <li><strong>Class:</strong> ${cancellationDetails?.className || 'Unknown Class'}</li>
+                <li><strong>Date:</strong> ${cancellationDetails?.classDate ? new Date(cancellationDetails.classDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown date'}</li>
+                <li><strong>Time:</strong> ${cancellationDetails?.classTime || 'Unknown time'}</li>
+                <li><strong>Current Enrollment:</strong> ${cancellationDetails?.currentEnrollment || 0} members</li>
+                <li><strong>Cancellation Time:</strong> ${new Date().toLocaleString()}</li>
+              </ul>
+            </div>
+            <p>The member's session has been restored to their account balance.</p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+              This email was sent automatically by your gym management system.
+            </p>
+          </div>
         `;
         break;
         
