@@ -89,32 +89,36 @@ const Dashboard = () => {
 
     try {
       setLoadingUserData(true);
-      // Try to get user's profile from the profiles table
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("sessions_remaining, membership_type")
+      
+      // Try to get data from members table first (primary source)
+      const { data: memberData, error: memberError } = await supabase
+        .from("members")
+        .select("remaining_sessions, membership")
         .eq("email", user.email)
         .maybeSingle();
-    
-      if (profileError) throw profileError;
 
-      // If we have profile data, use it
-      if (profileData) {
-        setSessionsRemaining(profileData.sessions_remaining ?? 0);
-        setUserMembership(profileData.membership_type || "Basic");
+      if (memberError && memberError.code !== "PGRST116") {
+        throw memberError;
+      }
+
+      if (memberData) {
+        setSessionsRemaining(memberData.remaining_sessions ?? 0);
+        setUserMembership(memberData.membership || "Basic");
       } else {
-        // Try to get data from members table as fallback
-        const { data: memberData, error: memberError } = await supabase
-          .from("members")
-          .select("remaining_sessions, membership")
+        // Fallback to profiles table
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("sessions_remaining, membership_type")
           .eq("email", user.email)
           .maybeSingle();
+      
+        if (profileError && profileError.code !== "PGRST116") {
+          throw profileError;
+        }
 
-        if (memberError) throw memberError;
-
-        if (memberData) {
-          setSessionsRemaining(memberData.remaining_sessions ?? 0);
-          setUserMembership(memberData.membership || "Basic");
+        if (profileData) {
+          setSessionsRemaining(profileData.sessions_remaining ?? 0);
+          setUserMembership(profileData.membership_type || "Basic");
         }
       }
     } catch (error) {
