@@ -22,6 +22,7 @@ export type Database = {
           from_email: string | null
           from_name: string | null
           id: string
+          notification_cc_email: string | null
           notification_email: string
           session_request_notifications: boolean
           signup_notifications: boolean
@@ -39,6 +40,7 @@ export type Database = {
           from_email?: string | null
           from_name?: string | null
           id?: string
+          notification_cc_email?: string | null
           notification_email: string
           session_request_notifications?: boolean
           signup_notifications?: boolean
@@ -56,6 +58,7 @@ export type Database = {
           from_email?: string | null
           from_name?: string | null
           id?: string
+          notification_cc_email?: string | null
           notification_email?: string
           session_request_notifications?: boolean
           signup_notifications?: boolean

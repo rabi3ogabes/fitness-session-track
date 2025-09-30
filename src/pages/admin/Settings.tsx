@@ -27,6 +27,7 @@ const Settings = () => {
   const [cancellationHours, setCancellationHours] = useState(4);
   const [emailSettings, setEmailSettings] = useState({
     notification_email: "",
+    notification_cc_email: "",
     from_email: "",
     from_name: "",
     signup_notifications: true,
@@ -112,6 +113,7 @@ const Settings = () => {
           from_email: emailSettings.from_email,
           from_name: emailSettings.from_name,
           notification_email: emailSettings.notification_email,
+          notification_cc_email: emailSettings.notification_cc_email || null,
           email_provider: "resend",
           smtp_host: "",
           smtp_port: 587,
@@ -399,6 +401,7 @@ const Settings = () => {
           from_email: data.from_email || "",
           from_name: data.from_name || "",
           notification_email: data.notification_email || "",
+          notification_cc_email: data.notification_cc_email || "",
           signup_notifications: data.signup_notifications ?? true,
           booking_notifications: data.booking_notifications ?? true,
           session_request_notifications: data.session_request_notifications ?? true
@@ -412,6 +415,7 @@ const Settings = () => {
             from_email: parsed.from_email || parsed.fromEmail || "",
             from_name: parsed.from_name || parsed.fromName || "",
             notification_email: parsed.notification_email || parsed.notificationEmail || "",
+            notification_cc_email: parsed.notification_cc_email || "",
             signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
             booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
             session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true
@@ -428,6 +432,7 @@ const Settings = () => {
           from_email: parsed.from_email || parsed.fromEmail || "",
           from_name: parsed.from_name || parsed.fromName || "",
           notification_email: parsed.notification_email || parsed.notificationEmail || "",
+          notification_cc_email: parsed.notification_cc_email || "",
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true
@@ -989,7 +994,21 @@ const Settings = () => {
                     onChange={(e) => setEmailSettings({...emailSettings, notification_email: e.target.value})}
                   />
                   <p className="text-sm text-gray-600 mt-1">
-                    Email address that will receive all admin notifications
+                    Primary email address for receiving admin notifications
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="notification-cc-email">CC Email (Optional)</Label>
+                  <Input
+                    id="notification-cc-email"
+                    type="email"
+                    placeholder="admin2@yourgym.com"
+                    value={emailSettings.notification_cc_email || ''}
+                    onChange={(e) => setEmailSettings({...emailSettings, notification_cc_email: e.target.value})}
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Additional email address to receive copies of notifications
                   </p>
                  </div>
                </div>

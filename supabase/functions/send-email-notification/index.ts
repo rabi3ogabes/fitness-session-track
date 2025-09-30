@@ -84,9 +84,18 @@ const processPendingNotifications = async () => {
       try {
         console.log(`Processing notification ${log.id} of type ${log.notification_type}`);
         
+        // Get admin settings to check for CC email
+        const { data: adminSettings } = await supabase
+          .from('admin_notification_settings')
+          .select('notification_cc_email')
+          .single();
+
+        const ccEmails = adminSettings?.notification_cc_email ? [adminSettings.notification_cc_email] : [];
+
         const emailResponse = await resend.emails.send({
           from: "Gym System <onboarding@resend.dev>", // Use the default Resend testing domain
           to: [log.recipient_email],
+          cc: ccEmails,
           subject: `[Gym System] ${log.subject}`,
           html: generateNotificationHTML(log),
         });
@@ -496,9 +505,18 @@ const handler = async (req: Request): Promise<Response> => {
         console.log(`From: ${fromEmail && fromName ? `${fromName} <${fromEmail}>` : "Gym Management <onboarding@resend.dev>"}`);
         console.log(`Subject: ${emailSubject}`);
         
+        // Get admin settings to check for CC email
+        const { data: adminSettings } = await supabase
+          .from('admin_notification_settings')
+          .select('notification_cc_email')
+          .single();
+
+        const ccEmails = adminSettings?.notification_cc_email ? [adminSettings.notification_cc_email] : [];
+        
         const emailResponse = await resend.emails.send({
           from: fromEmail && fromName ? `${fromName} <${fromEmail}>` : "Gym Management <onboarding@resend.dev>",
           to: [emailTo],
+          cc: ccEmails,
           subject: emailSubject,
           html: emailBody,
         });
