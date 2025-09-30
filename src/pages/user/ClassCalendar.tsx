@@ -968,7 +968,7 @@ const ClassCalendar = () => {
                                 )}
                                 {cls.gender === "All" && (
                                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                    Mixed
+                                    <Users className="h-3 w-3" />
                                   </Badge>
                                 )}
                               </div>
