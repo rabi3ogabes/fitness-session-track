@@ -68,6 +68,120 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_settings: {
+        Row: {
+          cancellation_hours: number
+          company_name: string | null
+          copyright: string | null
+          created_at: string
+          cta_button: string | null
+          cta_description: string | null
+          cta_title: string | null
+          feature1_description: string | null
+          feature1_title: string | null
+          feature2_description: string | null
+          feature2_title: string | null
+          feature3_description: string | null
+          feature3_title: string | null
+          features_section: string | null
+          footer_about: string | null
+          footer_color: string | null
+          footer_contact: string | null
+          footer_login: string | null
+          footer_privacy: string | null
+          header_color: string | null
+          hero_description: string | null
+          hero_image: string | null
+          hero_title: string | null
+          id: string
+          logo: string | null
+          membership_expiry_basic: number | null
+          membership_expiry_premium: number | null
+          membership_expiry_standard: number | null
+          show_booking_delete_icon: boolean | null
+          show_class_delete_icon: boolean | null
+          show_low_session_warning: boolean | null
+          show_member_delete_icon: boolean | null
+          show_testimonials: boolean | null
+          testimonials_section: string | null
+          updated_at: string
+        }
+        Insert: {
+          cancellation_hours?: number
+          company_name?: string | null
+          copyright?: string | null
+          created_at?: string
+          cta_button?: string | null
+          cta_description?: string | null
+          cta_title?: string | null
+          feature1_description?: string | null
+          feature1_title?: string | null
+          feature2_description?: string | null
+          feature2_title?: string | null
+          feature3_description?: string | null
+          feature3_title?: string | null
+          features_section?: string | null
+          footer_about?: string | null
+          footer_color?: string | null
+          footer_contact?: string | null
+          footer_login?: string | null
+          footer_privacy?: string | null
+          header_color?: string | null
+          hero_description?: string | null
+          hero_image?: string | null
+          hero_title?: string | null
+          id?: string
+          logo?: string | null
+          membership_expiry_basic?: number | null
+          membership_expiry_premium?: number | null
+          membership_expiry_standard?: number | null
+          show_booking_delete_icon?: boolean | null
+          show_class_delete_icon?: boolean | null
+          show_low_session_warning?: boolean | null
+          show_member_delete_icon?: boolean | null
+          show_testimonials?: boolean | null
+          testimonials_section?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cancellation_hours?: number
+          company_name?: string | null
+          copyright?: string | null
+          created_at?: string
+          cta_button?: string | null
+          cta_description?: string | null
+          cta_title?: string | null
+          feature1_description?: string | null
+          feature1_title?: string | null
+          feature2_description?: string | null
+          feature2_title?: string | null
+          feature3_description?: string | null
+          feature3_title?: string | null
+          features_section?: string | null
+          footer_about?: string | null
+          footer_color?: string | null
+          footer_contact?: string | null
+          footer_login?: string | null
+          footer_privacy?: string | null
+          header_color?: string | null
+          hero_description?: string | null
+          hero_image?: string | null
+          hero_title?: string | null
+          id?: string
+          logo?: string | null
+          membership_expiry_basic?: number | null
+          membership_expiry_premium?: number | null
+          membership_expiry_standard?: number | null
+          show_booking_delete_icon?: boolean | null
+          show_class_delete_icon?: boolean | null
+          show_low_session_warning?: boolean | null
+          show_member_delete_icon?: boolean | null
+          show_testimonials?: boolean | null
+          testimonials_section?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           attendance: boolean | null

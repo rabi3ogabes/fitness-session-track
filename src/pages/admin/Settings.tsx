@@ -94,66 +94,12 @@ const Settings = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load logo and header color from local storage
-    const savedLogo = localStorage.getItem("gymLogo");
-    if (savedLogo) {
-      setLogo(savedLogo);
-    }
-    
-    const savedHeaderColor = localStorage.getItem("headerBackgroundColor");
-    if (savedHeaderColor) {
-      setHeaderColor(savedHeaderColor);
-    }
-    
-    const savedFooterColor = localStorage.getItem("footerBackgroundColor");
-    if (savedFooterColor) {
-      setFooterColor(savedFooterColor);
-    }
-    
-    // Load email settings from database and fallback to local storage
+    // Load all settings from database
+    loadAllSettings();
+    // Load email settings from database
     loadEmailSettings();
-    
-    
-    
-    
     // Load email logs on component mount
     loadEmailLogs();
-    
-    // Load main page content from local storage
-    const savedMainPageContent = localStorage.getItem("mainPageContent");
-    if (savedMainPageContent) {
-      setMainPageContent(JSON.parse(savedMainPageContent));
-    }
-    
-    // Load testimonials visibility setting
-    const savedShowTestimonials = localStorage.getItem("showTestimonials");
-    if (savedShowTestimonials !== null) {
-      setShowTestimonials(JSON.parse(savedShowTestimonials));
-    }
-    
-    // Load low session warning setting
-    const savedShowLowSessionWarning = localStorage.getItem("showLowSessionWarning");
-    if (savedShowLowSessionWarning !== null) {
-      setShowLowSessionWarning(JSON.parse(savedShowLowSessionWarning));
-    }
-    
-    // Load member delete icon visibility setting
-    const savedShowMemberDeleteIcon = localStorage.getItem("showMemberDeleteIcon");
-    if (savedShowMemberDeleteIcon !== null) {
-      setShowMemberDeleteIcon(JSON.parse(savedShowMemberDeleteIcon));
-    }
-    
-    // Load class delete icon visibility setting
-    const savedShowClassDeleteIcon = localStorage.getItem("showClassDeleteIcon");
-    if (savedShowClassDeleteIcon !== null) {
-      setShowClassDeleteIcon(JSON.parse(savedShowClassDeleteIcon));
-    }
-    
-    // Load booking delete icon visibility setting
-    const savedShowBookingDeleteIcon = localStorage.getItem("showBookingDeleteIcon");
-    if (savedShowBookingDeleteIcon !== null) {
-      setShowBookingDeleteIcon(JSON.parse(savedShowBookingDeleteIcon));
-    }
   }, []);
 
   const handleSaveSettings = async () => {
@@ -162,11 +108,11 @@ const Settings = () => {
     setOperationStatus('idle');
     
     setIsLoading(true);
-    setOperationLog('Saving email settings to database...\nUpdating configuration...');
+    setOperationLog('Saving all settings to database...\nUpdating configuration...');
 
     try {
       // Save email settings to Supabase database
-      const { data, error } = await supabase
+      const { data: emailData, error: emailError } = await supabase
         .from('admin_notification_settings')
         .upsert({
           from_email: emailSettings.from_email,
@@ -185,68 +131,76 @@ const Settings = () => {
           onConflict: 'id'
         });
 
-      if (error) {
-        throw error;
+      if (emailError) {
+        throw emailError;
       }
 
-      setOperationLog('Email settings saved to database...\nUpdating local storage...');
+      setOperationLog('Email settings saved...\nSaving admin settings to database...');
 
-      // Also save to localStorage for backwards compatibility
-      localStorage.setItem("emailSettings", JSON.stringify(emailSettings));
+      // Save all other settings to admin_settings table
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('admin_settings')
+        .upsert({
+          cancellation_hours: cancellationHours,
+          logo: logo,
+          header_color: headerColor,
+          footer_color: footerColor,
+          membership_expiry_basic: membershipExpiry.basic,
+          membership_expiry_standard: membershipExpiry.standard,
+          membership_expiry_premium: membershipExpiry.premium,
+          show_testimonials: showTestimonials,
+          show_low_session_warning: showLowSessionWarning,
+          show_member_delete_icon: showMemberDeleteIcon,
+          show_class_delete_icon: showClassDeleteIcon,
+          show_booking_delete_icon: showBookingDeleteIcon,
+          hero_title: mainPageContent.heroTitle,
+          hero_description: mainPageContent.heroDescription,
+          hero_image: mainPageContent.heroImage,
+          feature1_title: mainPageContent.feature1Title,
+          feature1_description: mainPageContent.feature1Description,
+          feature2_title: mainPageContent.feature2Title,
+          feature2_description: mainPageContent.feature2Description,
+          feature3_title: mainPageContent.feature3Title,
+          feature3_description: mainPageContent.feature3Description,
+          features_section: mainPageContent.featuresSection,
+          testimonials_section: mainPageContent.testimonialsSection,
+          cta_title: mainPageContent.ctaTitle,
+          cta_description: mainPageContent.ctaDescription,
+          cta_button: mainPageContent.ctaButton,
+          company_name: mainPageContent.companyName,
+          copyright: mainPageContent.copyright,
+          footer_login: mainPageContent.footerLogin,
+          footer_about: mainPageContent.footerAbout,
+          footer_contact: mainPageContent.footerContact,
+          footer_privacy: mainPageContent.footerPrivacy
+        }, {
+          onConflict: 'id'
+        });
 
-      // Save other settings to localStorage
-      if (logo) {
-        localStorage.setItem("gymLogo", logo);
-      } else {
-        localStorage.removeItem("gymLogo");
+      if (settingsError) {
+        throw settingsError;
       }
-      
-      if (headerColor) {
-        localStorage.setItem("headerBackgroundColor", headerColor);
-      } else {
-        localStorage.removeItem("headerBackgroundColor");
-      }
-      
-      if (footerColor) {
-        localStorage.setItem("footerBackgroundColor", footerColor);
-      } else {
-        localStorage.removeItem("footerBackgroundColor");
-      }
-      
-      localStorage.setItem("mainPageContent", JSON.stringify(mainPageContent));
-      
-      const systemSettings = {
-        cancellationTimeLimit: cancellationHours
-      };
-      localStorage.setItem("systemSettings", JSON.stringify(systemSettings));
-      localStorage.setItem("cancellationHours", cancellationHours.toString());
-      localStorage.setItem("membershipExpiry", JSON.stringify(membershipExpiry));
-      localStorage.setItem("showTestimonials", JSON.stringify(showTestimonials));
-      localStorage.setItem("showLowSessionWarning", JSON.stringify(showLowSessionWarning));
-      localStorage.setItem("showMemberDeleteIcon", JSON.stringify(showMemberDeleteIcon));
-      localStorage.setItem("showClassDeleteIcon", JSON.stringify(showClassDeleteIcon));
-      localStorage.setItem("showBookingDeleteIcon", JSON.stringify(showBookingDeleteIcon));
 
       setIsLoading(false);
-      const successMsg = `✅ Email settings saved successfully!\n\nTimestamp: ${new Date().toLocaleString()}\n\nSettings have been saved to the database and will persist across sessions.`;
+      const successMsg = `✅ All settings saved successfully!\n\nTimestamp: ${new Date().toLocaleString()}\n\nSettings have been saved to the database and will persist across sessions.`;
       setOperationLog(successMsg);
       setOperationStatus('success');
       
       toast({
-        title: "Email settings saved",
-        description: "Your email configuration has been saved successfully.",
+        title: "Settings saved",
+        description: "All your settings have been saved successfully to the database.",
       });
 
     } catch (error) {
       console.error('Save settings error:', error);
       setIsLoading(false);
-      const errorMsg = `❌ Failed to save email settings!\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nTimestamp: ${new Date().toLocaleString()}\n\nPlease check your configuration and try again.`;
+      const errorMsg = `❌ Failed to save settings!\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\n\nTimestamp: ${new Date().toLocaleString()}\n\nPlease check your configuration and try again.`;
       setOperationLog(errorMsg);
       setOperationStatus('error');
       
       toast({
         title: "Save failed",
-        description: `Failed to save email settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: `Failed to save settings: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     }
@@ -365,6 +319,91 @@ const Settings = () => {
     } finally {
       setIsTestingEmail(false);
     }
+  };
+
+  const loadAllSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('*')
+        .maybeSingle();
+
+      if (data && !error) {
+        // Load all settings from database
+        setCancellationHours(data.cancellation_hours || 4);
+        setLogo(data.logo);
+        setHeaderColor(data.header_color || "#ffffff");
+        setFooterColor(data.footer_color || "#000000");
+        setMembershipExpiry({
+          basic: data.membership_expiry_basic || 30,
+          standard: data.membership_expiry_standard || 60,
+          premium: data.membership_expiry_premium || 90
+        });
+        setShowTestimonials(data.show_testimonials ?? true);
+        setShowLowSessionWarning(data.show_low_session_warning ?? true);
+        setShowMemberDeleteIcon(data.show_member_delete_icon ?? true);
+        setShowClassDeleteIcon(data.show_class_delete_icon ?? true);
+        setShowBookingDeleteIcon(data.show_booking_delete_icon ?? false);
+        setMainPageContent({
+          heroTitle: data.hero_title || "Streamlined Gym Management System",
+          heroDescription: data.hero_description || "A complete solution for gym owners and members. Manage memberships, book sessions, track attendance, and more.",
+          heroImage: data.hero_image || "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+          feature1Title: data.feature1_title || "User Roles",
+          feature1Description: data.feature1_description || "Separate dashboards for administrators and members with role-specific functionality.",
+          feature2Title: data.feature2_title || "Session Booking",
+          feature2Description: data.feature2_description || "Effortless class booking with membership session tracking and management.",
+          feature3Title: data.feature3_title || "Membership Management",
+          feature3Description: data.feature3_description || "Easily manage different membership packages with automated session tracking.",
+          featuresSection: data.features_section || "Our Features",
+          testimonialsSection: data.testimonials_section || "What Our Members Say",
+          ctaTitle: data.cta_title || "Ready to Transform Your Fitness Journey?",
+          ctaDescription: data.cta_description || "Join us today and take control of your fitness goals with our comprehensive gym management system.",
+          ctaButton: data.cta_button || "Get Started Now",
+          companyName: data.company_name || "FitTrack Pro",
+          copyright: data.copyright || "© 2025 All rights reserved",
+          footerLogin: data.footer_login || "Login",
+          footerAbout: data.footer_about || "About",
+          footerContact: data.footer_contact || "Contact",
+          footerPrivacy: data.footer_privacy || "Privacy"
+        });
+      } else {
+        // Fallback to localStorage if no database settings
+        loadFromLocalStorage();
+      }
+    } catch (error) {
+      console.error('Failed to load settings from database:', error);
+      loadFromLocalStorage();
+    }
+  };
+
+  const loadFromLocalStorage = () => {
+    // Load from localStorage as fallback
+    const savedLogo = localStorage.getItem("gymLogo");
+    if (savedLogo) setLogo(savedLogo);
+    
+    const savedHeaderColor = localStorage.getItem("headerBackgroundColor");
+    if (savedHeaderColor) setHeaderColor(savedHeaderColor);
+    
+    const savedFooterColor = localStorage.getItem("footerBackgroundColor");
+    if (savedFooterColor) setFooterColor(savedFooterColor);
+    
+    const savedMainPageContent = localStorage.getItem("mainPageContent");
+    if (savedMainPageContent) setMainPageContent(JSON.parse(savedMainPageContent));
+    
+    const savedShowTestimonials = localStorage.getItem("showTestimonials");
+    if (savedShowTestimonials !== null) setShowTestimonials(JSON.parse(savedShowTestimonials));
+    
+    const savedShowLowSessionWarning = localStorage.getItem("showLowSessionWarning");
+    if (savedShowLowSessionWarning !== null) setShowLowSessionWarning(JSON.parse(savedShowLowSessionWarning));
+    
+    const savedShowMemberDeleteIcon = localStorage.getItem("showMemberDeleteIcon");
+    if (savedShowMemberDeleteIcon !== null) setShowMemberDeleteIcon(JSON.parse(savedShowMemberDeleteIcon));
+    
+    const savedShowClassDeleteIcon = localStorage.getItem("showClassDeleteIcon");
+    if (savedShowClassDeleteIcon !== null) setShowClassDeleteIcon(JSON.parse(savedShowClassDeleteIcon));
+    
+    const savedShowBookingDeleteIcon = localStorage.getItem("showBookingDeleteIcon");
+    if (savedShowBookingDeleteIcon !== null) setShowBookingDeleteIcon(JSON.parse(savedShowBookingDeleteIcon));
   };
 
   const loadEmailSettings = async () => {
