@@ -29,12 +29,6 @@ const Settings = () => {
     notification_email: "",
     from_email: "",
     from_name: "",
-    email_provider: "smtp",
-    smtp_host: "",
-    smtp_port: 587,
-    smtp_username: "",
-    smtp_password: "",
-    smtp_use_tls: true,
     signup_notifications: true,
     booking_notifications: true,
     session_request_notifications: true
@@ -118,12 +112,12 @@ const Settings = () => {
           from_email: emailSettings.from_email,
           from_name: emailSettings.from_name,
           notification_email: emailSettings.notification_email,
-          email_provider: emailSettings.email_provider,
-          smtp_host: emailSettings.smtp_host,
-          smtp_port: emailSettings.smtp_port,
-          smtp_username: emailSettings.smtp_username,
-          smtp_password: emailSettings.smtp_password,
-          smtp_use_tls: emailSettings.smtp_use_tls,
+          email_provider: "resend",
+          smtp_host: "",
+          smtp_port: 587,
+          smtp_username: "",
+          smtp_password: "",
+          smtp_use_tls: true,
           signup_notifications: emailSettings.signup_notifications,
           booking_notifications: emailSettings.booking_notifications,
           session_request_notifications: emailSettings.session_request_notifications
@@ -251,26 +245,13 @@ const Settings = () => {
       console.log("About to invoke edge function...");
       console.log("Email settings:", emailSettings);
       
-      // Choose the appropriate function based on email provider
-      const functionName = emailSettings.email_provider === 'smtp' ? 'send-smtp-notification' : 'send-email-notification';
+      // Use Resend function for all email testing
+      const functionName = 'send-email-notification';
       console.log("Using function:", functionName);
       
       setOperationLog(`Using ${functionName} function...\nPreparing request...`);
       
-      const requestBody = emailSettings.email_provider === 'smtp' ? {
-        userEmail: "test@example.com",
-        userName: "Test User",
-        notificationEmail: testEmail,
-        smtpSettings: {
-          smtpHost: emailSettings.smtp_host,
-          smtpPort: emailSettings.smtp_port,
-          smtpUsername: emailSettings.smtp_username,
-          smtpPassword: emailSettings.smtp_password,
-          fromEmail: emailSettings.from_email || emailSettings.notification_email,
-          fromName: emailSettings.from_name || "Gym System",
-          useSsl: emailSettings.smtp_use_tls
-        }
-      } : {
+      const requestBody = {
         userEmail: "test@example.com",
         userName: "Test User",
         notificationEmail: testEmail,
@@ -294,7 +275,7 @@ const Settings = () => {
         throw error;
       }
 
-      const successMsg = `✅ Test email sent successfully!\n\nRecipient: ${testEmail}\nFunction: ${functionName}\nResponse: ${data?.message || 'Email sent via ' + emailSettings.email_provider}`;
+      const successMsg = `✅ Test email sent successfully!\n\nRecipient: ${testEmail}\nFunction: ${functionName}\nResponse: ${data?.message || 'Email sent via Resend'}`;
       setOperationLog(successMsg);
       setOperationStatus('success');
 
@@ -418,12 +399,6 @@ const Settings = () => {
           from_email: data.from_email || "",
           from_name: data.from_name || "",
           notification_email: data.notification_email || "",
-          email_provider: data.email_provider || "smtp",
-          smtp_host: data.smtp_host || "",
-          smtp_port: data.smtp_port || 587,
-          smtp_username: data.smtp_username || "",
-          smtp_password: data.smtp_password || "",
-          smtp_use_tls: data.smtp_use_tls ?? true,
           signup_notifications: data.signup_notifications ?? true,
           booking_notifications: data.booking_notifications ?? true,
           session_request_notifications: data.session_request_notifications ?? true
@@ -437,12 +412,6 @@ const Settings = () => {
             from_email: parsed.from_email || parsed.fromEmail || "",
             from_name: parsed.from_name || parsed.fromName || "",
             notification_email: parsed.notification_email || parsed.notificationEmail || "",
-            email_provider: parsed.email_provider || "smtp",
-            smtp_host: parsed.smtp_host || "",
-            smtp_port: parsed.smtp_port || 587,
-            smtp_username: parsed.smtp_username || "",
-            smtp_password: parsed.smtp_password || "",
-            smtp_use_tls: parsed.smtp_use_tls ?? true,
             signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
             booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
             session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true
@@ -459,12 +428,6 @@ const Settings = () => {
           from_email: parsed.from_email || parsed.fromEmail || "",
           from_name: parsed.from_name || parsed.fromName || "",
           notification_email: parsed.notification_email || parsed.notificationEmail || "",
-          email_provider: parsed.email_provider || "smtp",
-          smtp_host: parsed.smtp_host || "",
-          smtp_port: parsed.smtp_port || 587,
-          smtp_username: parsed.smtp_username || "",
-          smtp_password: parsed.smtp_password || "",
-          smtp_use_tls: parsed.smtp_use_tls ?? true,
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true
@@ -913,171 +876,85 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="email" className="space-y-6">
-          {/* Email Provider Selection */}
+          {/* Resend Email Configuration */}
           <Card>
             <CardHeader>
               <div className="flex items-center space-x-2">
                 <Mail className="h-5 w-5 text-blue-600" />
-                <CardTitle>Email Configuration</CardTitle>
+                <CardTitle>Resend Email Configuration</CardTitle>
               </div>
               <CardDescription>
-                Configure your email service provider for sending notifications
+                Configure your Resend service for sending notifications
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="email-provider">Email Provider</Label>
-                  <select
-                    id="email-provider"
-                    value={emailSettings.email_provider || 'smtp'}
-                    onChange={(e) => setEmailSettings({...emailSettings, email_provider: e.target.value})}
-                    className="w-full mt-1 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="smtp">SMTP Server</option>
-                    <option value="resend">Resend Service</option>
-                  </select>
-                </div>
-
-                {emailSettings.email_provider === 'smtp' ? (
-                  <>
-                    {/* SMTP Configuration */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="smtp-host">SMTP Host</Label>
-                        <Input
-                          id="smtp-host"
-                          type="text"
-                          placeholder="smtp.gmail.com"
-                          value={emailSettings.smtp_host || ''}
-                          onChange={(e) => setEmailSettings({...emailSettings, smtp_host: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="smtp-port">SMTP Port</Label>
-                        <Input
-                          id="smtp-port"
-                          type="number"
-                          placeholder="587"
-                          value={emailSettings.smtp_port || 587}
-                          onChange={(e) => setEmailSettings({...emailSettings, smtp_port: parseInt(e.target.value)})}
-                        />
-                      </div>
+                {emailSettings.from_email?.includes('@gmail.com') || emailSettings.from_email?.includes('@yahoo.com') || emailSettings.from_email?.includes('@hotmail.com') ? (
+                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <h4 className="font-medium text-red-800 mb-2">❌ Invalid From Email</h4>
+                    <p className="text-sm text-red-700 mb-3">
+                      <strong>Error:</strong> You cannot use {emailSettings.from_email?.split('@')[1]} addresses with Resend. 
+                      Public email domains (Gmail, Yahoo, Hotmail) cannot be verified.
+                    </p>
+                    <div className="text-sm text-red-700 mb-3">
+                      <p><strong>Solutions:</strong></p>
+                      <ul className="list-disc ml-4 mt-1">
+                        <li>Use <code className="bg-red-100 px-1 rounded">onboarding@resend.dev</code> for testing</li>
+                        <li>Or verify your own custom domain at resend.com/domains</li>
+                      </ul>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="smtp-username">SMTP Username</Label>
-                        <Input
-                          id="smtp-username"
-                          type="text"
-                          placeholder="your-email@gmail.com"
-                          value={emailSettings.smtp_username || ''}
-                          onChange={(e) => setEmailSettings({...emailSettings, smtp_username: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="smtp-password">SMTP Password</Label>
-                        <Input
-                          id="smtp-password"
-                          type="password"
-                          placeholder="Your app password"
-                          value={emailSettings.smtp_password || ''}
-                          onChange={(e) => setEmailSettings({...emailSettings, smtp_password: e.target.value})}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="smtp-tls"
-                        checked={emailSettings.smtp_use_tls !== false}
-                        onChange={(e) => setEmailSettings({...emailSettings, smtp_use_tls: e.target.checked})}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <Label htmlFor="smtp-tls">Use TLS/SSL encryption</Label>
-                    </div>
-
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-900 mb-2">SMTP Configuration Guide</h4>
-                      <div className="text-sm text-blue-800 space-y-1">
-                        <p><strong>Gmail:</strong> Host: smtp.gmail.com, Port: 587, Use app passwords</p>
-                        <p><strong>Outlook:</strong> Host: smtp-mail.outlook.com, Port: 587</p>
-                        <p><strong>Yahoo:</strong> Host: smtp.mail.yahoo.com, Port: 587</p>
-                        <p><strong>Custom:</strong> Check with your email provider for SMTP settings</p>
-                      </div>
-                    </div>
-                  </>
-                ) : emailSettings.email_provider === 'resend' ? (
-                  <div className="space-y-4">
-                    {emailSettings.from_email?.includes('@gmail.com') || emailSettings.from_email?.includes('@yahoo.com') || emailSettings.from_email?.includes('@hotmail.com') ? (
-                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                        <h4 className="font-medium text-red-800 mb-2">❌ Invalid From Email</h4>
-                        <p className="text-sm text-red-700 mb-3">
-                          <strong>Error:</strong> You cannot use {emailSettings.from_email?.split('@')[1]} addresses with Resend. 
-                          Public email domains (Gmail, Yahoo, Hotmail) cannot be verified.
-                        </p>
-                        <div className="text-sm text-red-700 mb-3">
-                          <p><strong>Solutions:</strong></p>
-                          <ul className="list-disc ml-4 mt-1">
-                            <li>Use <code className="bg-red-100 px-1 rounded">onboarding@resend.dev</code> for testing</li>
-                            <li>Or verify your own custom domain at resend.com/domains</li>
-                          </ul>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEmailSettings(prev => ({ ...prev, from_email: 'onboarding@resend.dev' }));
-                            }}
-                          >
-                            Use Test Email
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open('https://resend.com/domains', '_blank')}
-                          >
-                            Add Custom Domain
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                        <h4 className="font-medium text-green-800 mb-2">✓ Resend Configuration</h4>
-                        <p className="text-sm text-green-700 mb-3">
-                          Resend is configured and ready to use! Your from email looks good.
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open('https://resend.com/domains', '_blank')}
-                          >
-                            Manage Domains
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(`https://supabase.com/dashboard/project/wlawjupusugrhojbywyq/functions/send-email-notification/logs`, '_blank')}
-                          >
-                            View Email Logs
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-blue-900 mb-2">How to Fix This</h4>
-                      <div className="text-sm text-blue-800 space-y-2">
-                        <p><strong>Option 1 (Quick):</strong> Use <code>onboarding@resend.dev</code> for testing</p>
-                        <p><strong>Option 2 (Production):</strong> Add and verify your own domain at resend.com/domains</p>
-                        <p><strong>Note:</strong> You cannot use gmail.com, yahoo.com, or other public email domains</p>
-                      </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEmailSettings(prev => ({ ...prev, from_email: 'onboarding@resend.dev' }));
+                        }}
+                      >
+                        Use Test Email
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open('https://resend.com/domains', '_blank')}
+                      >
+                        Add Custom Domain
+                      </Button>
                     </div>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <h4 className="font-medium text-green-800 mb-2">✓ Resend Configuration</h4>
+                    <p className="text-sm text-green-700 mb-3">
+                      Resend is configured and ready to use! Your from email looks good.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open('https://resend.com/domains', '_blank')}
+                      >
+                        Manage Domains
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`https://supabase.com/dashboard/project/wlawjupusugrhojbywyq/functions/send-email-notification/logs`, '_blank')}
+                      >
+                        View Email Logs
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-blue-900 mb-2">Resend Setup Guide</h4>
+                  <div className="text-sm text-blue-800 space-y-2">
+                    <p><strong>Option 1 (Quick):</strong> Use <code>onboarding@resend.dev</code> for testing</p>
+                    <p><strong>Option 2 (Production):</strong> Add and verify your own domain at resend.com/domains</p>
+                    <p><strong>Note:</strong> You cannot use gmail.com, yahoo.com, or other public email domains</p>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
