@@ -170,8 +170,26 @@ const BookingForm = ({
     try {
       setIsLoading(true);
 
-      // Get user name from user metadata or profile
-      let userName = (user as any).user_metadata?.name || 'Unknown User';
+      // Get user name from user metadata or profile - try multiple sources
+      let userName = 'Unknown User';
+      
+      // First try to get from profiles table
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("name")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileData?.name) {
+        userName = profileData.name;
+      } else if ((user as any).user_metadata?.name) {
+        userName = (user as any).user_metadata.name;
+      } else if ((user as any).user_metadata?.full_name) {
+        userName = (user as any).user_metadata.full_name;
+      } else if (user.email) {
+        // Use email as fallback but extract name part before @
+        userName = user.email.split('@')[0];
+      }
       
       const { error } = await supabase.from("bookings").insert({
         user_id: user.id,
@@ -192,18 +210,25 @@ const BookingForm = ({
           .single();
 
         if (adminSettings?.booking_notifications && adminSettings?.notification_email) {
-          // Get user profile for name
-          let userName = user.email;
+          // Get user profile for name - try multiple sources
+          let userName = 'Unknown User';
+          
+          // First try to get from profiles table
           const { data: profileData } = await supabase
             .from("profiles")
             .select("name")
             .eq("id", user.id)
-            .single();
+            .maybeSingle();
 
           if (profileData?.name) {
             userName = profileData.name;
           } else if ((user as any).user_metadata?.name) {
             userName = (user as any).user_metadata.name;
+          } else if ((user as any).user_metadata?.full_name) {
+            userName = (user as any).user_metadata.full_name;
+          } else if (user.email) {
+            // Use email as fallback but extract name part before @
+            userName = user.email.split('@')[0];
           }
 
           // Insert notification log entry
