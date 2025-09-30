@@ -125,7 +125,8 @@ const RecentBookingsWidget = () => {
             }
             
             // Method 2: If we have user_name from booking, use it but try to get additional info
-            if (booking.user_name?.trim() && !memberFound) {
+            // Skip if user_name is "Unknown User" and try user_id lookup instead
+            if (booking.user_name?.trim() && booking.user_name !== "Unknown User" && !memberFound) {
               memberName = booking.user_name; // Use the booking's user_name directly
               console.log(`Using booking user_name: ${booking.user_name}`);
               
