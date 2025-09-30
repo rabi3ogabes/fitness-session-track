@@ -80,7 +80,8 @@ const handler = async (req: Request): Promise<Response> => {
     const notificationEnabled = type === 'signup' ? adminSettings.signup_notifications :
                                type === 'booking' ? adminSettings.booking_notifications :
                                type === 'cancellation' ? adminSettings.booking_notifications :
-                               adminSettings.session_request_notifications;
+                               type === 'session_request' ? adminSettings.session_request_notifications :
+                               false;
     
     if (!notificationEnabled) {
       console.log(`Notification type ${type} is disabled in settings`);
