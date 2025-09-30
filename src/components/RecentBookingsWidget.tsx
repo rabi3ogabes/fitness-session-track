@@ -79,7 +79,7 @@ const RecentBookingsWidget = () => {
           (bookingsData || []).map(async (booking) => {
             let memberBalance = 0;
             let memberGender = undefined;
-            let memberName = booking.user_name || "Unknown Member";
+            let memberName = "Unknown Member"; // Default fallback
             let classDetails = {
               name: "Unknown Class",
               schedule: "",
@@ -100,11 +100,14 @@ const RecentBookingsWidget = () => {
               }
             }
             
-            // Try multiple methods to get member information
-            let memberFound = false;
+            // Priority 1: Use booking.user_name if available and not "Unknown User"
+            if (booking.user_name?.trim() && booking.user_name !== "Unknown User") {
+              memberName = booking.user_name;
+              console.log(`Using booking user_name: ${booking.user_name}`);
+            }
             
-            // Method 1: Try by member_id first (most reliable for session counts)
-            if (booking.member_id && !memberFound) {
+            // Priority 2: Try to get member details by member_id
+            if (booking.member_id) {
               try {
                 const { data: memberData } = await supabase
                   .from("members")
@@ -112,11 +115,12 @@ const RecentBookingsWidget = () => {
                   .eq("id", booking.member_id)
                   .single();
                 
-                if (memberData?.name) {
-                  memberName = memberData.name;
+                if (memberData) {
+                  if (memberData.name) {
+                    memberName = memberData.name; // Override with members table name if available
+                  }
                   memberBalance = memberData.remaining_sessions || 0;
                   memberGender = memberData.gender;
-                  memberFound = true;
                   console.log(`Found member by ID ${booking.member_id}:`, memberData.name);
                 }
               } catch (error) {
@@ -124,35 +128,29 @@ const RecentBookingsWidget = () => {
               }
             }
             
-            // Method 2: If we have user_name from booking, use it but try to get additional info
-            // Skip if user_name is "Unknown User" and try user_id lookup instead
-            if (booking.user_name?.trim() && booking.user_name !== "Unknown User" && !memberFound) {
-              memberName = booking.user_name; // Use the booking's user_name directly
-              console.log(`Using booking user_name: ${booking.user_name}`);
-              
-              // Try to get session balance and gender by matching name
+            // Priority 3: If we have user_name but no member_id, try to get session info by name
+            if (memberName !== "Unknown Member" && !booking.member_id) {
               try {
                 const { data: memberData } = await supabase
                   .from("members")
                   .select("remaining_sessions, gender")
-                  .ilike("name", `%${booking.user_name.trim()}%`)
-                  .single();
+                  .ilike("name", `%${memberName.trim()}%`)
+                  .maybeSingle();
                 
                 if (memberData) {
                   memberBalance = memberData.remaining_sessions || 0;
                   memberGender = memberData.gender;
-                  console.log(`Found additional member info for ${booking.user_name}:`, memberData);
+                  console.log(`Found additional member info for ${memberName}:`, memberData);
                 }
               } catch (error) {
-                console.log(`No additional member info found for ${booking.user_name}`);
+                console.log(`No additional member info found for ${memberName}`);
               }
-              memberFound = true;
             }
             
-            // Method 3: Try by user_id using profiles table (fallback)
-            if (booking.user_id && !memberFound) {
+            // Priority 4: Fallback to user_id lookup only if we still don't have a name
+            if (memberName === "Unknown Member" && booking.user_id) {
               try {
-                // First try profiles table to get basic info
+                // Try profiles table first
                 const { data: profileData } = await supabase
                   .from("profiles")
                   .select("name, email, sessions_remaining")
@@ -161,11 +159,8 @@ const RecentBookingsWidget = () => {
                 
                 if (profileData?.name) {
                   memberName = profileData.name;
-                  // Always try to get session count from members table first
-                  memberBalance = 0; // Default fallback
-                  memberFound = true;
                   
-                  // Try to get accurate session count and gender from members table using email
+                  // Try to get session count from members table using email
                   if (profileData.email) {
                     const { data: memberData } = await supabase
                       .from("members")
@@ -175,24 +170,20 @@ const RecentBookingsWidget = () => {
                     
                     if (memberData) {
                       memberGender = memberData.gender;
-                      // Use members table session count (primary source)
                       memberBalance = memberData.remaining_sessions || 0;
                     } else {
-                      // Only use profiles session count if no members record exists
                       memberBalance = profileData.sessions_remaining || 0;
                     }
                   } else {
-                    // No email available, use profiles data
                     memberBalance = profileData.sessions_remaining || 0;
                   }
                 } else {
-                  // Use our function to get user name from auth table
+                  // Last resort: use auth function to get user name
                   const { data: userName } = await supabase
                     .rpc('get_user_name', { user_id: booking.user_id });
                    
                   if (userName && userName !== 'Unknown User') {
                     memberName = userName;
-                    memberFound = true;
                     
                     // Try to get session count from members table by matching name
                     try {
@@ -208,7 +199,6 @@ const RecentBookingsWidget = () => {
                       }
                     } catch (error) {
                       console.log(`No member data found for ${userName}`);
-                      memberBalance = 0; // Default since no reliable data
                     }
                   }
                 }
