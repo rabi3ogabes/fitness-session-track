@@ -120,15 +120,18 @@ const RecentBookingsWidget = () => {
                 memberGender = memberData.gender;
               }
             } else if (booking.user_id) {
-              // Get user email from profiles/auth, then lookup member by email
-              const { data: { user } } = await supabase.auth.admin.getUserById(booking.user_id).catch(() => ({ data: { user: null } }));
-              const userEmail = user?.email;
+              // Get user email from profiles table, then lookup member by email
+              const { data: profileData } = await supabase
+                .from("profiles")
+                .select("email")
+                .eq("id", booking.user_id)
+                .maybeSingle();
               
-              if (userEmail) {
+              if (profileData?.email) {
                 const { data: memberData } = await supabase
                   .from("members")
                   .select("name, remaining_sessions, gender")
-                  .eq("email", userEmail)
+                  .eq("email", profileData.email)
                   .maybeSingle();
                 
                 if (memberData) {
@@ -313,15 +316,18 @@ const RecentBookingsWidget = () => {
                   memberGender = memberData.gender;
                 }
               } else if (booking.user_id) {
-                // Get user email from auth, then lookup member by email
-                const { data: { user } } = await supabase.auth.admin.getUserById(booking.user_id).catch(() => ({ data: { user: null } }));
-                const userEmail = user?.email;
+                // Get user email from profiles table, then lookup member by email
+                const { data: profileData } = await supabase
+                  .from("profiles")
+                  .select("email")
+                  .eq("id", booking.user_id)
+                  .maybeSingle();
                 
-                if (userEmail) {
+                if (profileData?.email) {
                   const { data: memberData } = await supabase
                     .from("members")
                     .select("name, remaining_sessions, gender")
-                    .eq("email", userEmail)
+                    .eq("email", profileData.email)
                     .maybeSingle();
                   
                   if (memberData) {
