@@ -79,7 +79,7 @@ const RecentBookingsWidget = () => {
           (bookingsData || []).map(async (booking) => {
             let memberBalance = 0;
             let memberGender = undefined;
-            let memberName = "Unknown Member"; // Default fallback
+            let memberName = "Unknown Member";
             let classDetails = {
               name: "Unknown Class",
               schedule: "",
@@ -100,110 +100,42 @@ const RecentBookingsWidget = () => {
               }
             }
             
-            // Priority 1: Use booking.user_name if available and not "Unknown User"
+            // Use user_name from booking as initial value
             if (booking.user_name?.trim() && booking.user_name !== "Unknown User") {
               memberName = booking.user_name;
-              console.log(`Using booking user_name: ${booking.user_name}`);
             }
             
-            // Priority 2: Try to get member details by member_id
+            // Get member data - prioritize member_id, fallback to user_id email lookup
             if (booking.member_id) {
-              try {
+              // Direct member lookup by ID
+              const { data: memberData } = await supabase
+                .from("members")
+                .select("name, remaining_sessions, gender")
+                .eq("id", booking.member_id)
+                .maybeSingle();
+              
+              if (memberData) {
+                memberName = memberData.name || memberName;
+                memberBalance = memberData.remaining_sessions || 0;
+                memberGender = memberData.gender;
+              }
+            } else if (booking.user_id) {
+              // Get user email from profiles/auth, then lookup member by email
+              const { data: { user } } = await supabase.auth.admin.getUserById(booking.user_id).catch(() => ({ data: { user: null } }));
+              const userEmail = user?.email;
+              
+              if (userEmail) {
                 const { data: memberData } = await supabase
                   .from("members")
                   .select("name, remaining_sessions, gender")
-                  .eq("id", booking.member_id)
-                  .single();
-                
-                if (memberData) {
-                  if (memberData.name) {
-                    memberName = memberData.name; // Override with members table name if available
-                  }
-                  memberBalance = memberData.remaining_sessions || 0;
-                  memberGender = memberData.gender;
-                  console.log(`Found member by ID ${booking.member_id}:`, memberData.name);
-                }
-              } catch (error) {
-                console.log(`No member found by ID ${booking.member_id}`);
-              }
-            }
-            
-            // Priority 3: If we have user_name but no member_id, try to get session info by name
-            if (memberName !== "Unknown Member" && !booking.member_id) {
-              try {
-                const { data: memberData } = await supabase
-                  .from("members")
-                  .select("remaining_sessions, gender")
-                  .ilike("name", `%${memberName.trim()}%`)
+                  .eq("email", userEmail)
                   .maybeSingle();
                 
                 if (memberData) {
+                  memberName = memberData.name || memberName;
                   memberBalance = memberData.remaining_sessions || 0;
                   memberGender = memberData.gender;
-                  console.log(`Found additional member info for ${memberName}:`, memberData);
                 }
-              } catch (error) {
-                console.log(`No additional member info found for ${memberName}`);
-              }
-            }
-            
-            // Priority 4: Fallback to user_id lookup only if we still don't have a name
-            if (memberName === "Unknown Member" && booking.user_id) {
-              try {
-                // Try profiles table first
-                const { data: profileData } = await supabase
-                  .from("profiles")
-                  .select("name, email, sessions_remaining")
-                  .eq("id", booking.user_id)
-                  .maybeSingle();
-                
-                if (profileData?.name) {
-                  memberName = profileData.name;
-                  
-                  // Try to get session count from members table using email
-                  if (profileData.email) {
-                    const { data: memberData } = await supabase
-                      .from("members")
-                      .select("gender, remaining_sessions")
-                      .eq("email", profileData.email)
-                      .maybeSingle();
-                    
-                    if (memberData) {
-                      memberGender = memberData.gender;
-                      memberBalance = memberData.remaining_sessions || 0;
-                    } else {
-                      memberBalance = profileData.sessions_remaining || 0;
-                    }
-                  } else {
-                    memberBalance = profileData.sessions_remaining || 0;
-                  }
-                } else {
-                  // Last resort: use auth function to get user name
-                  const { data: userName } = await supabase
-                    .rpc('get_user_name', { user_id: booking.user_id });
-                   
-                  if (userName && userName !== 'Unknown User') {
-                    memberName = userName;
-                    
-                    // Try to get session count from members table by matching name
-                    try {
-                      const { data: memberData } = await supabase
-                        .from("members")
-                        .select("remaining_sessions, gender")
-                        .ilike("name", `%${userName.trim()}%`)
-                        .maybeSingle();
-                      
-                      if (memberData) {
-                        memberBalance = memberData.remaining_sessions || 0;
-                        memberGender = memberData.gender;
-                      }
-                    } catch (error) {
-                      console.log(`No member data found for ${userName}`);
-                    }
-                  }
-                }
-              } catch (error) {
-                console.log(`Error fetching user data for user_id ${booking.user_id}:`, error);
               }
             }
 
@@ -362,24 +294,40 @@ const RecentBookingsWidget = () => {
                 }
               }
               
-              // Get member information by member_id first
+              // Use user_name from booking as initial value
+              if (booking.user_name?.trim() && booking.user_name !== "Unknown User") {
+                memberName = booking.user_name;
+              }
+              
+              // Get member data - prioritize member_id, fallback to user_id email lookup
               if (booking.member_id) {
-                try {
+                const { data: memberData } = await supabase
+                  .from("members")
+                  .select("name, remaining_sessions, gender")
+                  .eq("id", booking.member_id)
+                  .maybeSingle();
+                
+                if (memberData) {
+                  memberName = memberData.name || memberName;
+                  memberBalance = memberData.remaining_sessions || 0;
+                  memberGender = memberData.gender;
+                }
+              } else if (booking.user_id) {
+                // Get user email from auth, then lookup member by email
+                const { data: { user } } = await supabase.auth.admin.getUserById(booking.user_id).catch(() => ({ data: { user: null } }));
+                const userEmail = user?.email;
+                
+                if (userEmail) {
                   const { data: memberData } = await supabase
                     .from("members")
                     .select("name, remaining_sessions, gender")
-                    .eq("id", booking.member_id)
-                    .single();
+                    .eq("email", userEmail)
+                    .maybeSingle();
                   
-                  if (memberData?.name) {
-                    memberName = memberData.name;
+                  if (memberData) {
+                    memberName = memberData.name || memberName;
                     memberBalance = memberData.remaining_sessions || 0;
                     memberGender = memberData.gender;
-                  }
-                } catch (error) {
-                  // Use user_name as fallback
-                  if (booking.user_name) {
-                    memberName = booking.user_name;
                   }
                 }
               }
