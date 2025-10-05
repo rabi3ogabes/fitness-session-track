@@ -105,12 +105,12 @@ const RecentBookingsWidget = () => {
               memberName = booking.user_name;
             }
             
-            // Get member data - prioritize member_id, fallback to user_id email lookup
+            // Get member data - prioritize member_id, then search by username pattern
             if (booking.member_id) {
               // Direct member lookup by ID
               const { data: memberData } = await supabase
                 .from("members")
-                .select("name, remaining_sessions, gender")
+                .select("name, remaining_sessions, gender, email")
                 .eq("id", booking.member_id)
                 .maybeSingle();
               
@@ -119,25 +119,32 @@ const RecentBookingsWidget = () => {
                 memberBalance = memberData.remaining_sessions || 0;
                 memberGender = memberData.gender;
               }
-            } else if (booking.user_id) {
-              // Get user email from profiles table, then lookup member by email
-              const { data: profileData } = await supabase
-                .from("profiles")
-                .select("email")
-                .eq("id", booking.user_id)
+            } else if (booking.user_name && booking.user_name !== "Unknown User") {
+              // Try to find member by searching their email or name patterns
+              // First try exact email match using the username as email prefix
+              const { data: memberByEmail } = await supabase
+                .from("members")
+                .select("name, remaining_sessions, gender")
+                .ilike("email", `${booking.user_name}%`)
                 .maybeSingle();
               
-              if (profileData?.email) {
-                const { data: memberData } = await supabase
+              if (memberByEmail) {
+                memberName = memberByEmail.name || memberName;
+                memberBalance = memberByEmail.remaining_sessions || 0;
+                memberGender = memberByEmail.gender;
+              } else {
+                // Fallback: search by name pattern (handle reversed names, etc.)
+                const searchTerm = booking.user_name.replace(/[._]/g, ' ').trim();
+                const { data: memberByName } = await supabase
                   .from("members")
                   .select("name, remaining_sessions, gender")
-                  .eq("email", profileData.email)
+                  .or(`name.ilike.%${searchTerm}%,name.ilike.%${searchTerm.split(' ').reverse().join(' ')}%`)
                   .maybeSingle();
                 
-                if (memberData) {
-                  memberName = memberData.name || memberName;
-                  memberBalance = memberData.remaining_sessions || 0;
-                  memberGender = memberData.gender;
+                if (memberByName) {
+                  memberName = memberByName.name || memberName;
+                  memberBalance = memberByName.remaining_sessions || 0;
+                  memberGender = memberByName.gender;
                 }
               }
             }
@@ -302,7 +309,7 @@ const RecentBookingsWidget = () => {
                 memberName = booking.user_name;
               }
               
-              // Get member data - prioritize member_id, fallback to user_id email lookup
+              // Get member data - prioritize member_id, then search by username pattern
               if (booking.member_id) {
                 const { data: memberData } = await supabase
                   .from("members")
@@ -315,25 +322,31 @@ const RecentBookingsWidget = () => {
                   memberBalance = memberData.remaining_sessions || 0;
                   memberGender = memberData.gender;
                 }
-              } else if (booking.user_id) {
-                // Get user email from profiles table, then lookup member by email
-                const { data: profileData } = await supabase
-                  .from("profiles")
-                  .select("email")
-                  .eq("id", booking.user_id)
+              } else if (booking.user_name && booking.user_name !== "Unknown User") {
+                // Try to find member by email pattern match
+                const { data: memberByEmail } = await supabase
+                  .from("members")
+                  .select("name, remaining_sessions, gender")
+                  .ilike("email", `${booking.user_name}%`)
                   .maybeSingle();
                 
-                if (profileData?.email) {
-                  const { data: memberData } = await supabase
+                if (memberByEmail) {
+                  memberName = memberByEmail.name || memberName;
+                  memberBalance = memberByEmail.remaining_sessions || 0;
+                  memberGender = memberByEmail.gender;
+                } else {
+                  // Fallback: search by name pattern
+                  const searchTerm = booking.user_name.replace(/[._]/g, ' ').trim();
+                  const { data: memberByName } = await supabase
                     .from("members")
                     .select("name, remaining_sessions, gender")
-                    .eq("email", profileData.email)
+                    .or(`name.ilike.%${searchTerm}%,name.ilike.%${searchTerm.split(' ').reverse().join(' ')}%`)
                     .maybeSingle();
                   
-                  if (memberData) {
-                    memberName = memberData.name || memberName;
-                    memberBalance = memberData.remaining_sessions || 0;
-                    memberGender = memberData.gender;
+                  if (memberByName) {
+                    memberName = memberByName.name || memberName;
+                    memberBalance = memberByName.remaining_sessions || 0;
+                    memberGender = memberByName.gender;
                   }
                 }
               }
