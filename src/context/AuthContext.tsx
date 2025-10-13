@@ -640,6 +640,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
+      // Get admin notification settings
+      const { data: adminSettings } = await supabase
+        .from('admin_notification_settings')
+        .select('notification_email')
+        .single();
+
+      const notificationEmail = adminSettings?.notification_email || '';
+
       // Send welcome email to new member
       try {
         await supabase.functions.invoke('send-email-notification', {
@@ -647,7 +655,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             type: 'signup',
             memberName: name,
             memberEmail: email,
-            emailTo: email
+            emailTo: email,
+            notificationEmail: notificationEmail
           }
         });
         console.log('Welcome email sent to new member:', email);

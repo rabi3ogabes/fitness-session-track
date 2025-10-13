@@ -554,6 +554,56 @@ const handler = async (req: Request): Promise<Response> => {
 
         console.log("Email sent successfully!");
 
+        // Send to n8n webhook if configured
+        const { data: n8nSettings } = await supabase
+          .from('admin_notification_settings')
+          .select('n8n_webhook_url')
+          .single();
+
+        if (n8nSettings?.n8n_webhook_url) {
+          console.log("Sending to n8n webhook:", n8nSettings.n8n_webhook_url);
+          try {
+            const webhookPayload = {
+              type,
+              timestamp: new Date().toISOString(),
+              user: {
+                name: userName || memberName,
+                email: userEmail || memberEmail,
+                phone: userPhone
+              },
+              notification: {
+                subject: emailSubject,
+                to: emailTo
+              },
+              ...(bookingDetails && { bookingDetails }),
+              ...(sessionRequestDetails && { sessionRequestDetails }),
+              ...(cancellationDetails && { cancellationDetails }),
+              ...(requestedSessions && { requestedSessions }),
+              ...(newBalance && { newBalance })
+            };
+
+            const webhookResponse = await fetch(n8nSettings.n8n_webhook_url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(webhookPayload)
+            });
+
+            console.log("n8n webhook response status:", webhookResponse.status);
+            if (!webhookResponse.ok) {
+              console.error("n8n webhook failed:", await webhookResponse.text());
+            } else {
+              console.log("n8n webhook sent successfully");
+            }
+          } catch (webhookError: any) {
+            console.error("Error calling n8n webhook:", webhookError.message);
+            // Don't fail the main email send if webhook fails
+          }
+        } else {
+          console.log("No n8n webhook URL configured");
+        }
+
         // Log successful email
         const logEntry: EmailLogEntry = {
           timestamp: new Date().toISOString(),
