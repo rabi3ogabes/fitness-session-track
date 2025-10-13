@@ -443,9 +443,14 @@ const UserMembership = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 {currentMembership.name === "null" ? (
-                  <p className=" font-medium text-lg mt-1">
-                    you not have a Membership yet
-                  </p>
+                  <div>
+                    <p className="font-medium text-lg mt-1">
+                      You don't have a Membership yet
+                    </p>
+                    <p className="text-muted-foreground mt-2">
+                      Session Balance: {currentMembership.sessionsRemaining || 0} sessions
+                    </p>
+                  </div>
                 ) : (
                   <>
                     <h3 className="font-medium text-lg">
