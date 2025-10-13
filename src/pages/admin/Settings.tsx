@@ -26,6 +26,7 @@ import {
 const Settings = () => {
   const [cancellationHours, setCancellationHours] = useState(4);
   const [emailSettings, setEmailSettings] = useState({
+    id: null as string | null,
     notification_email: "",
     notification_cc_email: "",
     from_email: "",
@@ -108,26 +109,35 @@ const Settings = () => {
 
     try {
       // Save email settings to Supabase database
+      const emailPayload: any = {
+        from_email: emailSettings.from_email,
+        from_name: emailSettings.from_name,
+        notification_email: emailSettings.notification_email,
+        notification_cc_email: emailSettings.notification_cc_email || null,
+        email_provider: "resend",
+        smtp_host: "",
+        smtp_port: 587,
+        smtp_username: "",
+        smtp_password: "",
+        smtp_use_tls: true,
+        signup_notifications: emailSettings.signup_notifications,
+        booking_notifications: emailSettings.booking_notifications,
+        session_request_notifications: emailSettings.session_request_notifications,
+        n8n_webhook_url: emailSettings.n8n_webhook_url || null
+      };
+
+      // Include id if it exists
+      if (emailSettings.id) {
+        emailPayload.id = emailSettings.id;
+      }
+
       const { data: emailData, error: emailError } = await supabase
         .from('admin_notification_settings')
-        .upsert({
-          from_email: emailSettings.from_email,
-          from_name: emailSettings.from_name,
-          notification_email: emailSettings.notification_email,
-          notification_cc_email: emailSettings.notification_cc_email || null,
-          email_provider: "resend",
-          smtp_host: "",
-          smtp_port: 587,
-          smtp_username: "",
-          smtp_password: "",
-          smtp_use_tls: true,
-          signup_notifications: emailSettings.signup_notifications,
-          booking_notifications: emailSettings.booking_notifications,
-          session_request_notifications: emailSettings.session_request_notifications,
-          n8n_webhook_url: emailSettings.n8n_webhook_url || null
-        }, {
+        .upsert(emailPayload, {
           onConflict: 'id'
-        });
+        })
+        .select()
+        .single();
 
       if (emailError) {
         throw emailError;
@@ -400,6 +410,7 @@ const Settings = () => {
 
       if (data && !error) {
         setEmailSettings({
+          id: data.id || null,
           from_email: data.from_email || "",
           from_name: data.from_name || "",
           notification_email: data.notification_email || "",
@@ -413,17 +424,18 @@ const Settings = () => {
         // Fallback to local storage if no database settings
         const savedEmailSettings = localStorage.getItem("emailSettings");
         if (savedEmailSettings) {
-          const parsed = JSON.parse(savedEmailSettings);
-          setEmailSettings({
-            from_email: parsed.from_email || parsed.fromEmail || "",
-            from_name: parsed.from_name || parsed.fromName || "",
-            notification_email: parsed.notification_email || parsed.notificationEmail || "",
-            notification_cc_email: parsed.notification_cc_email || "",
-            signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
-            booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
-            session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
-            n8n_webhook_url: parsed.n8n_webhook_url || ""
-          });
+        const parsed = JSON.parse(savedEmailSettings);
+        setEmailSettings({
+          id: null,
+          from_email: parsed.from_email || parsed.fromEmail || "",
+          from_name: parsed.from_name || parsed.fromName || "",
+          notification_email: parsed.notification_email || parsed.notificationEmail || "",
+          notification_cc_email: parsed.notification_cc_email || "",
+          signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
+          booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
+          session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
+          n8n_webhook_url: parsed.n8n_webhook_url || ""
+        });
         }
       }
     } catch (error) {
@@ -433,6 +445,7 @@ const Settings = () => {
       if (savedEmailSettings) {
         const parsed = JSON.parse(savedEmailSettings);
         setEmailSettings({
+          id: null,
           from_email: parsed.from_email || parsed.fromEmail || "",
           from_name: parsed.from_name || parsed.fromName || "",
           notification_email: parsed.notification_email || parsed.notificationEmail || "",
