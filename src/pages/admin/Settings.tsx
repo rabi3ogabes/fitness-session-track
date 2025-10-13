@@ -817,7 +817,63 @@ const Settings = () => {
                   </div>
                </CardContent>
             </Card>
+
+            {/* N8N Webhook Integration */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <Zap className="h-5 w-5 text-purple-600" />
+                  <CardTitle>N8N Webhook Integration</CardTitle>
+                </div>
+                <CardDescription>
+                  Configure N8N webhook to receive real-time notifications
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="n8n-webhook">N8N Webhook URL</Label>
+                  <Input
+                    id="n8n-webhook"
+                    type="url"
+                    placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/..."
+                    value={emailSettings.n8n_webhook_url}
+                    onChange={(e) => setEmailSettings({...emailSettings, n8n_webhook_url: e.target.value})}
+                    className="mt-1"
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Enter your N8N webhook URL to receive notifications for signups, bookings, and session requests
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
+
+          <div className="flex justify-end">
+            <Button 
+              onClick={handleSaveSettings}
+              disabled={isLoading}
+              className="px-8"
+            >
+              {isLoading ? 'Saving...' : 'Save All Settings'}
+            </Button>
+          </div>
+          
+          {operationLog && (
+            <Card className={`mt-6 ${
+              operationStatus === 'success' ? 'border-green-500' : 
+              operationStatus === 'error' ? 'border-red-500' : 
+              'border-gray-300'
+            }`}>
+              <CardHeader>
+                <CardTitle className="text-sm">Operation Log</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <pre className="text-xs whitespace-pre-wrap font-mono bg-gray-50 p-4 rounded">
+                  {operationLog}
+                </pre>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="auth" className="space-y-6">
@@ -1085,41 +1141,19 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* N8N Webhook Integration */}
+          {/* Email Settings - Saved via General Tab */}
           <Card>
             <CardHeader>
               <div className="flex items-center space-x-2">
-                <Zap className="h-5 w-5 text-purple-600" />
-                <CardTitle>N8N Webhook Integration</CardTitle>
+                <Bell className="h-5 w-5 text-blue-600" />
+                <CardTitle>Email Configuration</CardTitle>
               </div>
               <CardDescription>
-                Configure N8N webhook to receive notifications
+                Configure email settings for notifications (N8N webhook is configured in General tab)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="n8n-webhook">N8N Webhook URL</Label>
-                <Input
-                  id="n8n-webhook"
-                  type="url"
-                  placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/..."
-                  value={emailSettings.n8n_webhook_url}
-                  onChange={(e) => setEmailSettings({...emailSettings, n8n_webhook_url: e.target.value})}
-                  className="mt-1"
-                />
-                <p className="text-sm text-gray-600 mt-1">
-                  Enter your N8N webhook URL to receive real-time notifications
-                </p>
-              </div>
-
               <div className="pt-4 space-y-3">
-                <Button 
-                  onClick={handleSaveSettings}
-                  disabled={saving}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  {saving ? 'Saving...' : 'Save All Settings'}
-                </Button>
                 
                 {/* Test Email Section */}
                 <div className="border-t pt-4">
