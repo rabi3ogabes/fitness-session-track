@@ -548,7 +548,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Send to n8n webhook if configured (runs regardless of email status)
         const { data: n8nSettings } = await supabase
           .from('admin_notification_settings')
-          .select('n8n_webhook_url')
+          .select('n8n_webhook_url, notification_email')
           .single();
 
         if (n8nSettings?.n8n_webhook_url) {
@@ -557,6 +557,7 @@ const handler = async (req: Request): Promise<Response> => {
             const webhookPayload = {
               type,
               timestamp: new Date().toISOString(),
+              adminEmail: n8nSettings.notification_email,
               user: {
                 name: userName || memberName,
                 email: userEmail || memberEmail,
