@@ -233,6 +233,8 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Send email using the appropriate provider based on settings
+    let emailResponse;
+    
     if (adminSettings.email_provider === 'resend') {
       // Use Resend for email sending
       const emailPayload = {
@@ -245,7 +247,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log("Sending email notification via Resend...");
       
-      const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-notification`, {
+      emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-notification`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${supabaseKey}`,
@@ -274,7 +276,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       console.log("Sending email notification via SMTP...");
       
-      const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-smtp-notification`, {
+      emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-smtp-notification`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${supabaseKey}`,
