@@ -557,7 +557,8 @@ const ClassCalendar = () => {
 
       // Send n8n webhook notification via edge function
       try {
-        await supabase.functions.invoke('send-admin-notification', {
+        console.log("Attempting to send booking notification to n8n...");
+        const { data: notificationData, error: notificationError } = await supabase.functions.invoke('send-admin-notification', {
           body: {
             type: 'booking',
             userName: memberData.name,
@@ -568,6 +569,12 @@ const ClassCalendar = () => {
             trainerName: selectedClass.trainer || 'TBD'
           }
         });
+        
+        if (notificationError) {
+          console.error("N8N notification error:", notificationError);
+        } else {
+          console.log("N8N notification sent successfully:", notificationData);
+        }
       } catch (n8nError) {
         console.error("Failed to send n8n booking notification:", n8nError);
         // Don't fail the booking if n8n webhook fails
