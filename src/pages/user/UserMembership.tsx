@@ -444,9 +444,6 @@ const UserMembership = () => {
               <div>
                 {currentMembership.name === "null" ? (
                   <div>
-                    <p className="font-medium text-lg mt-1">
-                      You don't have a Membership yet
-                    </p>
                     <p className="text-muted-foreground mt-2">
                       Session Balance: {currentMembership.sessionsRemaining || 0} sessions
                     </p>
