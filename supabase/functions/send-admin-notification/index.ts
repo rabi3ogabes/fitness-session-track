@@ -174,9 +174,27 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error(`Unknown notification type: ${type}`);
     }
 
+    // Determine which webhook URL to use based on notification type
+    let webhookUrl = null;
+    
+    switch (type) {
+      case 'signup':
+        webhookUrl = adminSettings.n8n_signup_webhook_url || adminSettings.n8n_webhook_url;
+        break;
+      case 'booking':
+        webhookUrl = adminSettings.n8n_booking_webhook_url || adminSettings.n8n_webhook_url;
+        break;
+      case 'cancellation':
+        webhookUrl = adminSettings.n8n_cancellation_webhook_url || adminSettings.n8n_webhook_url;
+        break;
+      case 'session_request':
+        webhookUrl = adminSettings.n8n_session_request_webhook_url || adminSettings.n8n_webhook_url;
+        break;
+    }
+
     // Send to N8N webhook if configured
-    if (adminSettings.n8n_webhook_url) {
-      console.log("Sending notification to N8N webhook...");
+    if (webhookUrl) {
+      console.log(`Sending ${type} notification to N8N webhook: ${webhookUrl}`);
       
       try {
         const n8nPayload = {
@@ -194,7 +212,7 @@ const handler = async (req: Request): Promise<Response> => {
           timestamp: new Date().toISOString()
         };
 
-        const n8nResponse = await fetch(adminSettings.n8n_webhook_url, {
+        const n8nResponse = await fetch(webhookUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -203,13 +221,15 @@ const handler = async (req: Request): Promise<Response> => {
         });
 
         if (n8nResponse.ok) {
-          console.log("N8N webhook notification sent successfully");
+          console.log(`N8N ${type} webhook notification sent successfully`);
         } else {
-          console.error("N8N webhook failed:", await n8nResponse.text());
+          console.error(`N8N ${type} webhook failed:`, await n8nResponse.text());
         }
       } catch (error) {
-        console.error("Error sending to N8N webhook:", error);
+        console.error(`Error sending ${type} notification to N8N webhook:`, error);
       }
+    } else {
+      console.log(`No N8N webhook configured for ${type} notifications`);
     }
 
     // Send email using the appropriate provider based on settings

@@ -34,7 +34,11 @@ const Settings = () => {
     signup_notifications: true,
     booking_notifications: true,
     session_request_notifications: true,
-    n8n_webhook_url: ""
+    n8n_webhook_url: "",
+    n8n_signup_webhook_url: "",
+    n8n_booking_webhook_url: "",
+    n8n_cancellation_webhook_url: "",
+    n8n_session_request_webhook_url: ""
   });
   
   const [isLoading, setIsLoading] = useState(false);
@@ -440,7 +444,11 @@ const Settings = () => {
           signup_notifications: data.signup_notifications ?? true,
           booking_notifications: data.booking_notifications ?? true,
           session_request_notifications: data.session_request_notifications ?? true,
-          n8n_webhook_url: data.n8n_webhook_url || ""
+          n8n_webhook_url: data.n8n_webhook_url || "",
+          n8n_signup_webhook_url: data.n8n_signup_webhook_url || "",
+          n8n_booking_webhook_url: data.n8n_booking_webhook_url || "",
+          n8n_cancellation_webhook_url: data.n8n_cancellation_webhook_url || "",
+          n8n_session_request_webhook_url: data.n8n_session_request_webhook_url || ""
         };
         console.log('Setting state to:', loadedSettings);
         setEmailSettings(loadedSettings);
@@ -458,7 +466,11 @@ const Settings = () => {
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
-          n8n_webhook_url: parsed.n8n_webhook_url || ""
+          n8n_webhook_url: parsed.n8n_webhook_url || "",
+          n8n_signup_webhook_url: parsed.n8n_signup_webhook_url || "",
+          n8n_booking_webhook_url: parsed.n8n_booking_webhook_url || "",
+          n8n_cancellation_webhook_url: parsed.n8n_cancellation_webhook_url || "",
+          n8n_session_request_webhook_url: parsed.n8n_session_request_webhook_url || ""
         });
         }
       }
@@ -477,7 +489,11 @@ const Settings = () => {
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
-          n8n_webhook_url: parsed.n8n_webhook_url || ""
+          n8n_webhook_url: parsed.n8n_webhook_url || "",
+          n8n_signup_webhook_url: parsed.n8n_signup_webhook_url || "",
+          n8n_booking_webhook_url: parsed.n8n_booking_webhook_url || "",
+          n8n_cancellation_webhook_url: parsed.n8n_cancellation_webhook_url || "",
+          n8n_session_request_webhook_url: parsed.n8n_session_request_webhook_url || ""
         });
       }
     }
@@ -863,7 +879,7 @@ const Settings = () => {
                   <CardTitle>N8N Webhook Integration</CardTitle>
                 </div>
                 <CardDescription>
-                  Configure N8N webhook to receive real-time notifications
+                  Configure separate N8N webhook URLs for different notification types
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -882,19 +898,85 @@ const Settings = () => {
                   </p>
                 </div>
                 
-                <div>
-                  <Label htmlFor="n8n-webhook">N8N Webhook URL</Label>
-                  <Input
-                    id="n8n-webhook"
-                    type="url"
-                    placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/..."
-                    value={emailSettings.n8n_webhook_url}
-                    onChange={(e) => setEmailSettings({...emailSettings, n8n_webhook_url: e.target.value})}
-                    className="mt-1"
-                  />
-                  <p className="text-sm text-gray-600 mt-1">
-                    Enter your N8N webhook URL to receive notifications for signups, bookings, and session requests
-                  </p>
+                <div className="space-y-4 pt-4 border-t">
+                  <h4 className="font-medium text-sm text-gray-700">Separate Webhook URLs by Notification Type</h4>
+                  
+                  <div>
+                    <Label htmlFor="n8n-signup-webhook">Signup Notifications Webhook</Label>
+                    <Input
+                      id="n8n-signup-webhook"
+                      type="url"
+                      placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/signup..."
+                      value={emailSettings.n8n_signup_webhook_url || ''}
+                      onChange={(e) => setEmailSettings({...emailSettings, n8n_signup_webhook_url: e.target.value})}
+                      className="mt-1"
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Webhook URL for new member signup notifications
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="n8n-booking-webhook">Booking Notifications Webhook</Label>
+                    <Input
+                      id="n8n-booking-webhook"
+                      type="url"
+                      placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/booking..."
+                      value={emailSettings.n8n_booking_webhook_url || ''}
+                      onChange={(e) => setEmailSettings({...emailSettings, n8n_booking_webhook_url: e.target.value})}
+                      className="mt-1"
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Webhook URL for class booking notifications
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="n8n-cancellation-webhook">Cancellation Notifications Webhook</Label>
+                    <Input
+                      id="n8n-cancellation-webhook"
+                      type="url"
+                      placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/cancellation..."
+                      value={emailSettings.n8n_cancellation_webhook_url || ''}
+                      onChange={(e) => setEmailSettings({...emailSettings, n8n_cancellation_webhook_url: e.target.value})}
+                      className="mt-1"
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Webhook URL for booking cancellation notifications
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="n8n-session-webhook">Session Request Notifications Webhook</Label>
+                    <Input
+                      id="n8n-session-webhook"
+                      type="url"
+                      placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/session..."
+                      value={emailSettings.n8n_session_request_webhook_url || ''}
+                      onChange={(e) => setEmailSettings({...emailSettings, n8n_session_request_webhook_url: e.target.value})}
+                      className="mt-1"
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Webhook URL for session balance request notifications
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <div>
+                    <Label htmlFor="n8n-webhook">Legacy Webhook URL (All Notifications)</Label>
+                    <Input
+                      id="n8n-webhook"
+                      type="url"
+                      placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/..."
+                      value={emailSettings.n8n_webhook_url || ''}
+                      onChange={(e) => setEmailSettings({...emailSettings, n8n_webhook_url: e.target.value})}
+                      className="mt-1"
+                    />
+                    <p className="text-sm text-gray-600 mt-1">
+                      Fallback webhook URL for all notifications (used if specific webhooks are not configured)
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>

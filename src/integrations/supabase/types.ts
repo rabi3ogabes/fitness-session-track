@@ -22,6 +22,10 @@ export type Database = {
           from_email: string | null
           from_name: string | null
           id: string
+          n8n_booking_webhook_url: string | null
+          n8n_cancellation_webhook_url: string | null
+          n8n_session_request_webhook_url: string | null
+          n8n_signup_webhook_url: string | null
           n8n_webhook_url: string | null
           notification_cc_email: string | null
           notification_email: string
@@ -41,6 +45,10 @@ export type Database = {
           from_email?: string | null
           from_name?: string | null
           id?: string
+          n8n_booking_webhook_url?: string | null
+          n8n_cancellation_webhook_url?: string | null
+          n8n_session_request_webhook_url?: string | null
+          n8n_signup_webhook_url?: string | null
           n8n_webhook_url?: string | null
           notification_cc_email?: string | null
           notification_email: string
@@ -60,6 +68,10 @@ export type Database = {
           from_email?: string | null
           from_name?: string | null
           id?: string
+          n8n_booking_webhook_url?: string | null
+          n8n_cancellation_webhook_url?: string | null
+          n8n_session_request_webhook_url?: string | null
+          n8n_signup_webhook_url?: string | null
           n8n_webhook_url?: string | null
           notification_cc_email?: string | null
           notification_email?: string
