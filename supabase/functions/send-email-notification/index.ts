@@ -255,26 +255,8 @@ const handler = async (req: Request): Promise<Response> => {
         cancellationDetails
       }: EmailNotificationRequest = requestBody;
 
-      // Validate required fields
-      if (!notificationEmail) {
-        console.error("Validation failed: notificationEmail is required");
-        const logEntry: EmailLogEntry = {
-          timestamp: new Date().toISOString(),
-          to: 'unknown',
-          subject: 'Validation Failed',
-          success: false,
-          error: 'Notification email is required'
-        };
-        emailLogs.push(logEntry);
-        
-        return new Response(
-          JSON.stringify({ error: 'Notification email is required' }),
-          { 
-            status: 400, 
-            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-          }
-        );
-      }
+      // Validate required fields - notificationEmail is now optional
+      // We'll still send webhooks even if email notifications are not configured
 
       const isTestEmail = userEmail === 'test@example.com';
       const isBookingNotification = !!bookingDetails;
@@ -284,7 +266,7 @@ const handler = async (req: Request): Promise<Response> => {
       
       let emailSubject: string;
       let emailBody: string;
-      let emailTo: string = notificationEmail;
+      let emailTo: string = notificationEmail || '';
 
       if (isSessionRequestApproval) {
         // Send to member's email for approval notifications
@@ -502,59 +484,68 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       try {
-        console.log(`Attempting to send email to: ${emailTo}`);
-        // Get admin settings for sender name and CC email
-        const { data: adminSettings } = await supabase
-          .from('admin_notification_settings')
-          .select('notification_cc_email, from_name, from_email')
-          .single();
-
-        const ccEmails = adminSettings?.notification_cc_email ? [adminSettings.notification_cc_email] : [];
-        const defaultSenderName = adminSettings?.from_name || "Gym Management";
-        const defaultSenderEmail = adminSettings?.from_email || "onboarding@resend.dev";
+        let emailSent = false;
         
-        console.log(`From: ${fromEmail && fromName ? `${fromName} <${fromEmail}>` : `${defaultSenderName} <${defaultSenderEmail}>`}`);
-        console.log(`Subject: ${emailSubject}`);
-        
-        const emailResponse = await resend.emails.send({
-          from: fromEmail && fromName ? `${fromName} <${fromEmail}>` : `${defaultSenderName} <${defaultSenderEmail}>`,
-          to: [emailTo],
-          cc: ccEmails,
-          subject: emailSubject,
-          html: emailBody,
-        });
+        // Only send email if notificationEmail is provided
+        if (notificationEmail && emailTo) {
+          console.log(`Attempting to send email to: ${emailTo}`);
+          // Get admin settings for sender name and CC email
+          const { data: adminSettings } = await supabase
+            .from('admin_notification_settings')
+            .select('notification_cc_email, from_name, from_email')
+            .single();
 
-        console.log("Email API response:", emailResponse);
-
-        // Check if there's an error in the response
-        if (emailResponse.error) {
-          console.error("Email API error:", emailResponse.error);
+          const ccEmails = adminSettings?.notification_cc_email ? [adminSettings.notification_cc_email] : [];
+          const defaultSenderName = adminSettings?.from_name || "Gym Management";
+          const defaultSenderEmail = adminSettings?.from_email || "onboarding@resend.dev";
           
-          // Log failed email
-          const logEntry: EmailLogEntry = {
-            timestamp: new Date().toISOString(),
-            to: emailTo,
+          console.log(`From: ${fromEmail && fromName ? `${fromName} <${fromEmail}>` : `${defaultSenderName} <${defaultSenderEmail}>`}`);
+          console.log(`Subject: ${emailSubject}`);
+          
+          const emailResponse = await resend.emails.send({
+            from: fromEmail && fromName ? `${fromName} <${fromEmail}>` : `${defaultSenderName} <${defaultSenderEmail}>`,
+            to: [emailTo],
+            cc: ccEmails,
             subject: emailSubject,
-            success: false,
-            error: emailResponse.error.message || JSON.stringify(emailResponse.error)
-          };
-          emailLogs.push(logEntry);
-          
-          return new Response(
-            JSON.stringify({ 
-              error: "Failed to send email",
-              details: emailResponse.error.message || emailResponse.error
-            }),
-            {
-              status: 500,
-              headers: { "Content-Type": "application/json", ...corsHeaders },
-            }
-          );
+            html: emailBody,
+          });
+
+          console.log("Email API response:", emailResponse);
+
+          // Check if there's an error in the response
+          if (emailResponse.error) {
+            console.error("Email API error:", emailResponse.error);
+            
+            // Log failed email
+            const logEntry: EmailLogEntry = {
+              timestamp: new Date().toISOString(),
+              to: emailTo,
+              subject: emailSubject,
+              success: false,
+              error: emailResponse.error.message || JSON.stringify(emailResponse.error)
+            };
+            emailLogs.push(logEntry);
+            
+            // Still try to send webhook even if email fails
+          } else {
+            console.log("Email sent successfully!");
+            emailSent = true;
+            
+            // Log successful email
+            const logEntry: EmailLogEntry = {
+              timestamp: new Date().toISOString(),
+              to: emailTo,
+              subject: emailSubject,
+              success: true,
+              error: null
+            };
+            emailLogs.push(logEntry);
+          }
+        } else {
+          console.log("Skipping email send - no notification email configured");
         }
 
-        console.log("Email sent successfully!");
-
-        // Send to n8n webhook if configured
+        // Send to n8n webhook if configured (runs regardless of email status)
         const { data: n8nSettings } = await supabase
           .from('admin_notification_settings')
           .select('n8n_webhook_url')
@@ -573,8 +564,9 @@ const handler = async (req: Request): Promise<Response> => {
               },
               notification: {
                 subject: emailSubject,
-                to: emailTo
+                to: emailTo || 'N/A'
               },
+              emailSent,
               ...(bookingDetails && { bookingDetails }),
               ...(sessionRequestDetails && { sessionRequestDetails }),
               ...(cancellationDetails && { cancellationDetails }),
@@ -591,28 +583,21 @@ const handler = async (req: Request): Promise<Response> => {
             });
 
             console.log("n8n webhook response status:", webhookResponse.status);
+            const responseText = await webhookResponse.text();
+            console.log("n8n webhook response body:", responseText);
+            
             if (!webhookResponse.ok) {
-              console.error("n8n webhook failed:", await webhookResponse.text());
+              console.error("n8n webhook failed with status:", webhookResponse.status);
             } else {
               console.log("n8n webhook sent successfully");
             }
           } catch (webhookError: any) {
             console.error("Error calling n8n webhook:", webhookError.message);
-            // Don't fail the main email send if webhook fails
+            // Don't fail the request if webhook fails
           }
         } else {
           console.log("No n8n webhook URL configured");
         }
-
-        // Log successful email
-        const logEntry: EmailLogEntry = {
-          timestamp: new Date().toISOString(),
-          to: emailTo,
-          subject: emailSubject,
-          success: true,
-          error: null
-        };
-        emailLogs.push(logEntry);
         
         // Keep only last 100 logs
         if (emailLogs.length > 100) {
