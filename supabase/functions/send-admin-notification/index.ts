@@ -11,6 +11,10 @@ interface AdminNotificationRequest {
   userEmail: string;
   userName: string;
   details?: string;
+  className?: string;
+  classDate?: string;
+  classTime?: string;
+  trainerName?: string;
   cancellationDetails?: {
     className: string;
     classDate: string;
@@ -32,7 +36,7 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log("Admin notification request received");
     
-    const { type, userEmail, userName, details, cancellationDetails }: AdminNotificationRequest = await req.json();
+    const { type, userEmail, userName, details, className, classDate, classTime, trainerName, cancellationDetails }: AdminNotificationRequest = await req.json();
     
     if (!type || !userEmail || !userName) {
       return new Response(
@@ -182,6 +186,10 @@ const handler = async (req: Request): Promise<Response> => {
             email: userEmail
           },
           details: details,
+          className: className,
+          classDate: classDate,
+          classTime: classTime,
+          trainerName: trainerName,
           cancellationDetails: cancellationDetails,
           timestamp: new Date().toISOString()
         };

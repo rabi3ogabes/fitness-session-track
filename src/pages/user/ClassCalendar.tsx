@@ -555,36 +555,19 @@ const ClassCalendar = () => {
       // Refresh user data to update session balance
       await fetchUserData();
 
-      // Send n8n webhook notification for successful booking
+      // Send n8n webhook notification via edge function
       try {
-        const { data: adminSettings } = await supabase
-          .from("admin_notification_settings")
-          .select("n8n_webhook_url, notification_email")
-          .single();
-
-        if (adminSettings?.n8n_webhook_url) {
-          const webhookData = {
+        await supabase.functions.invoke('send-admin-notification', {
+          body: {
             type: 'booking',
             userName: memberData.name,
             userEmail: user.email,
-            adminEmail: adminSettings.notification_email,
             className: selectedClass.name,
             classDate: format(new Date(selectedClass.schedule), 'MMM d, yyyy'),
             classTime: `${selectedClass.start_time} - ${selectedClass.end_time}`,
-            trainerName: selectedClass.trainer || 'TBD',
-            timestamp: new Date().toISOString()
-          };
-
-          console.log('Sending booking notification to n8n:', webhookData);
-          
-          await fetch(adminSettings.n8n_webhook_url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(webhookData)
-          });
-        }
+            trainerName: selectedClass.trainer || 'TBD'
+          }
+        });
       } catch (n8nError) {
         console.error("Failed to send n8n booking notification:", n8nError);
         // Don't fail the booking if n8n webhook fails
