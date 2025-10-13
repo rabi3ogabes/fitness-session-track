@@ -108,6 +108,12 @@ const Settings = () => {
     setOperationLog('Saving all settings to database...\nUpdating configuration...');
 
     try {
+      // First, get existing settings to ensure we have the ID
+      const { data: existingSettings } = await supabase
+        .from('admin_notification_settings')
+        .select('id')
+        .maybeSingle();
+
       // Save email settings to Supabase database
       const emailPayload: any = {
         from_email: emailSettings.from_email,
@@ -126,21 +132,24 @@ const Settings = () => {
         n8n_webhook_url: emailSettings.n8n_webhook_url || null
       };
 
-      // Include id if it exists
-      if (emailSettings.id) {
-        emailPayload.id = emailSettings.id;
+      // Include id if it exists from state or database
+      if (emailSettings.id || existingSettings?.id) {
+        emailPayload.id = emailSettings.id || existingSettings.id;
       }
 
       const { data: emailData, error: emailError } = await supabase
         .from('admin_notification_settings')
-        .upsert(emailPayload, {
-          onConflict: 'id'
-        })
+        .upsert(emailPayload)
         .select()
         .single();
 
       if (emailError) {
         throw emailError;
+      }
+
+      // Update state with the returned id
+      if (emailData?.id && !emailSettings.id) {
+        setEmailSettings(prev => ({ ...prev, id: emailData.id }));
       }
 
       setOperationLog('Email settings saved...\nSaving admin settings to database...');
@@ -1358,29 +1367,24 @@ const Settings = () => {
                       onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, session_request_notifications: checked }))}
                     />
                   </div>
-                    </div>
-                    
-                    {/* Notification Tester */}
-                    <div className="mt-8">
-                      <NotificationTester />
-                    </div>
-                  </div>
-
-              <div className="flex justify-between">
-                <Button onClick={handleSaveSettings} disabled={isLoading}>
-                  <Send className="h-4 w-4 mr-2" />
-                  Save Email Settings
-                </Button>
+                </div>
                 
-                {emailSettings.notification_email && (
-                  <Button 
-                    variant="outline" 
-                    onClick={handleTestEmail}
-                    disabled={isTestingEmail}
-                  >
-                    {isTestingEmail ? "Testing..." : "Send Test Email"}
-                  </Button>
-                )}
+                {/* Notification Tester */}
+                <div className="mt-8">
+                  <NotificationTester />
+                </div>
+
+                <div className="mt-4">
+                  {emailSettings.notification_email && (
+                    <Button 
+                      variant="outline" 
+                      onClick={handleTestEmail}
+                      disabled={isTestingEmail}
+                    >
+                      {isTestingEmail ? "Testing..." : "Send Test Email"}
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1968,15 +1972,6 @@ const Settings = () => {
         </TabsContent>
       </Tabs>
 
-      <div className="mt-6">
-        <Button 
-          onClick={handleSaveSettings} 
-          className="bg-gym-blue hover:bg-gym-dark-blue"
-          disabled={isLoading}
-        >
-          {isLoading ? "Saving..." : "Save Settings"}
-        </Button>
-      </div>
     </DashboardLayout>
   );
 };
