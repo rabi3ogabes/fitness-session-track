@@ -141,7 +141,11 @@ const Settings = () => {
         signup_notifications: emailSettings.signup_notifications,
         booking_notifications: emailSettings.booking_notifications,
         session_request_notifications: emailSettings.session_request_notifications,
-        n8n_webhook_url: emailSettings.n8n_webhook_url || null
+        n8n_webhook_url: emailSettings.n8n_webhook_url || null,
+        n8n_signup_webhook_url: emailSettings.n8n_signup_webhook_url || null,
+        n8n_booking_webhook_url: emailSettings.n8n_booking_webhook_url || null,
+        n8n_cancellation_webhook_url: emailSettings.n8n_cancellation_webhook_url || null,
+        n8n_session_request_webhook_url: emailSettings.n8n_session_request_webhook_url || null
       };
 
       console.log('Payload to save:', emailPayload);
