@@ -32,7 +32,8 @@ const Settings = () => {
     from_name: "",
     signup_notifications: true,
     booking_notifications: true,
-    session_request_notifications: true
+    session_request_notifications: true,
+    n8n_webhook_url: ""
   });
   
   const [isLoading, setIsLoading] = useState(false);
@@ -122,7 +123,8 @@ const Settings = () => {
           smtp_use_tls: true,
           signup_notifications: emailSettings.signup_notifications,
           booking_notifications: emailSettings.booking_notifications,
-          session_request_notifications: emailSettings.session_request_notifications
+          session_request_notifications: emailSettings.session_request_notifications,
+          n8n_webhook_url: emailSettings.n8n_webhook_url || null
         }, {
           onConflict: 'id'
         });
@@ -404,7 +406,8 @@ const Settings = () => {
           notification_cc_email: data.notification_cc_email || "",
           signup_notifications: data.signup_notifications ?? true,
           booking_notifications: data.booking_notifications ?? true,
-          session_request_notifications: data.session_request_notifications ?? true
+          session_request_notifications: data.session_request_notifications ?? true,
+          n8n_webhook_url: data.n8n_webhook_url || ""
         });
       } else {
         // Fallback to local storage if no database settings
@@ -418,7 +421,8 @@ const Settings = () => {
             notification_cc_email: parsed.notification_cc_email || "",
             signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
             booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
-            session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true
+            session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
+            n8n_webhook_url: parsed.n8n_webhook_url || ""
           });
         }
       }
@@ -435,7 +439,8 @@ const Settings = () => {
           notification_cc_email: parsed.notification_cc_email || "",
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
-          session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true
+          session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
+          n8n_webhook_url: parsed.n8n_webhook_url || ""
         });
       }
     }
@@ -1077,6 +1082,35 @@ const Settings = () => {
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* N8N Webhook Integration */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <Zap className="h-5 w-5 text-purple-600" />
+                <CardTitle>N8N Webhook Integration</CardTitle>
+              </div>
+              <CardDescription>
+                Configure N8N webhook to receive notifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="n8n-webhook">N8N Webhook URL</Label>
+                <Input
+                  id="n8n-webhook"
+                  type="url"
+                  placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/..."
+                  value={emailSettings.n8n_webhook_url}
+                  onChange={(e) => setEmailSettings({...emailSettings, n8n_webhook_url: e.target.value})}
+                  className="mt-1"
+                />
+                <p className="text-sm text-gray-600 mt-1">
+                  Enter your N8N webhook URL to receive real-time notifications
+                </p>
+              </div>
 
               <div className="pt-4 space-y-3">
                 <Button 
@@ -1084,7 +1118,7 @@ const Settings = () => {
                   disabled={saving}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
-                  {saving ? 'Saving...' : 'Save Email Settings'}
+                  {saving ? 'Saving...' : 'Save All Settings'}
                 </Button>
                 
                 {/* Test Email Section */}

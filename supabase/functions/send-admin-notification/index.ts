@@ -170,6 +170,40 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error(`Unknown notification type: ${type}`);
     }
 
+    // Send to N8N webhook if configured
+    if (adminSettings.n8n_webhook_url) {
+      console.log("Sending notification to N8N webhook...");
+      
+      try {
+        const n8nPayload = {
+          type: type,
+          user: {
+            name: userName,
+            email: userEmail
+          },
+          details: details,
+          cancellationDetails: cancellationDetails,
+          timestamp: new Date().toISOString()
+        };
+
+        const n8nResponse = await fetch(adminSettings.n8n_webhook_url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(n8nPayload)
+        });
+
+        if (n8nResponse.ok) {
+          console.log("N8N webhook notification sent successfully");
+        } else {
+          console.error("N8N webhook failed:", await n8nResponse.text());
+        }
+      } catch (error) {
+        console.error("Error sending to N8N webhook:", error);
+      }
+    }
+
     // Send email using the appropriate provider based on settings
     if (adminSettings.email_provider === 'resend') {
       // Use Resend for email sending
