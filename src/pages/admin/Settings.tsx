@@ -868,6 +868,21 @@ const Settings = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
+                  <Label htmlFor="admin-email">Admin Email</Label>
+                  <Input
+                    id="admin-email"
+                    type="email"
+                    placeholder="admin@example.com"
+                    value={emailSettings.notification_email}
+                    onChange={(e) => setEmailSettings({...emailSettings, notification_email: e.target.value})}
+                    className="mt-1"
+                  />
+                  <p className="text-sm text-gray-600 mt-1">
+                    Email address to receive admin notifications
+                  </p>
+                </div>
+                
+                <div>
                   <Label htmlFor="n8n-webhook">N8N Webhook URL</Label>
                   <Input
                     id="n8n-webhook"
