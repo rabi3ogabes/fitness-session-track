@@ -192,7 +192,8 @@ const handler = async (req: Request): Promise<Response> => {
         break;
     }
 
-    // Send to N8N webhook if configured
+    // Send to N8N webhook if configured - do this FIRST and independently
+    let webhookSuccess = false;
     if (webhookUrl) {
       console.log(`Sending ${type} notification to N8N webhook: ${webhookUrl}`);
       
@@ -203,6 +204,7 @@ const handler = async (req: Request): Promise<Response> => {
             name: userName,
             email: userEmail
           },
+          adminEmail: adminSettings.notification_email,
           details: details,
           className: className,
           classDate: classDate,
@@ -211,6 +213,8 @@ const handler = async (req: Request): Promise<Response> => {
           cancellationDetails: cancellationDetails,
           timestamp: new Date().toISOString()
         };
+
+        console.log('N8N webhook payload:', JSON.stringify(n8nPayload, null, 2));
 
         const n8nResponse = await fetch(webhookUrl, {
           method: 'POST',
@@ -221,117 +225,121 @@ const handler = async (req: Request): Promise<Response> => {
         });
 
         if (n8nResponse.ok) {
-          console.log(`N8N ${type} webhook notification sent successfully`);
+          console.log(`✅ N8N ${type} webhook notification sent successfully`);
+          webhookSuccess = true;
         } else {
-          console.error(`N8N ${type} webhook failed:`, await n8nResponse.text());
+          const errorText = await n8nResponse.text();
+          console.error(`❌ N8N ${type} webhook failed with status ${n8nResponse.status}:`, errorText);
         }
       } catch (error) {
-        console.error(`Error sending ${type} notification to N8N webhook:`, error);
+        console.error(`❌ Error sending ${type} notification to N8N webhook:`, error);
       }
     } else {
-      console.log(`No N8N webhook configured for ${type} notifications`);
+      console.log(`⚠️ No N8N webhook configured for ${type} notifications`);
     }
 
-    // Send email using the appropriate provider based on settings
+    // Send email using the appropriate provider based on settings (optional, don't fail if this fails)
     let emailResponse;
+    let emailSuccess = false;
     
-    if (adminSettings.email_provider === 'resend') {
-      // Use Resend for email sending
-      const emailPayload = {
-        userEmail: userEmail,
-        userName: userName,
-        notificationEmail: adminSettings.notification_email,
-        subject: subject,
-        body: body
-      };
-
-      console.log("Sending email notification via Resend...");
-      
-      emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-notification`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(emailPayload)
-      });
-    } else {
-      // Use SMTP for email sending
-      const emailPayload = {
-        userEmail: userEmail,
-        userName: userName,
-        notificationEmail: adminSettings.notification_email,
-        subject: subject,
-        body: body,
-        smtpSettings: {
-          smtpHost: adminSettings.smtp_host,
-          smtpPort: adminSettings.smtp_port.toString(),
-          smtpUsername: adminSettings.smtp_username,
-          smtpPassword: adminSettings.smtp_password,
-          fromEmail: adminSettings.from_email,
-          fromName: adminSettings.from_name,
-          useSsl: adminSettings.smtp_use_tls || false
-        }
-      };
-
-      console.log("Sending email notification via SMTP...");
-      
-      emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-smtp-notification`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(emailPayload)
-      });
-    }
-
-    let emailResult;
     try {
-      emailResult = await emailResponse.json();
-    } catch (e) {
-      emailResult = { error: "Failed to parse email response" };
+      if (adminSettings.email_provider === 'resend') {
+        // Use Resend for email sending
+        const emailPayload = {
+          userEmail: userEmail,
+          userName: userName,
+          notificationEmail: adminSettings.notification_email,
+          subject: subject,
+          body: body
+        };
+
+        console.log("Sending email notification via Resend...");
+        
+        emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-notification`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(emailPayload)
+        });
+      } else {
+        // Use SMTP for email sending
+        const emailPayload = {
+          userEmail: userEmail,
+          userName: userName,
+          notificationEmail: adminSettings.notification_email,
+          subject: subject,
+          body: body,
+          smtpSettings: {
+            smtpHost: adminSettings.smtp_host,
+            smtpPort: adminSettings.smtp_port.toString(),
+            smtpUsername: adminSettings.smtp_username,
+            smtpPassword: adminSettings.smtp_password,
+            fromEmail: adminSettings.from_email,
+            fromName: adminSettings.from_name,
+            useSsl: adminSettings.smtp_use_tls || false
+          }
+        };
+
+        console.log("Sending email notification via SMTP...");
+        
+        emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-smtp-notification`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(emailPayload)
+        });
+      }
+
+      if (emailResponse && emailResponse.ok) {
+        emailSuccess = true;
+        console.log("✅ Email notification sent successfully");
+      } else {
+        console.log("⚠️ Email notification failed but continuing...");
+      }
+    } catch (emailError) {
+      console.error("⚠️ Email sending error (non-critical):", emailError);
     }
 
     // Log the notification attempt
-    const logPayload = {
-      notification_type: type,
-      recipient_email: adminSettings.notification_email,
-      subject: subject,
-      status: emailResponse.ok ? 'sent' : 'failed',
-      error_message: emailResponse.ok ? null : emailResult?.error || 'Unknown error',
-      user_name: userName,
-      user_email: userEmail
-    };
+    try {
+      const logPayload = {
+        notification_type: type,
+        recipient_email: adminSettings.notification_email,
+        subject: subject,
+        status: (webhookSuccess || emailSuccess) ? 'sent' : 'failed',
+        error_message: (!webhookSuccess && !emailSuccess) ? 'Both webhook and email failed' : null,
+        user_name: userName,
+        user_email: userEmail
+      };
 
-    await fetch(`${supabaseUrl}/rest/v1/notification_logs`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
-        'apikey': supabaseKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(logPayload)
-    });
-
-    if (!emailResponse.ok) {
-      console.error("Email sending failed:", emailResult);
-      return new Response(
-        JSON.stringify({ 
-          error: "Failed to send email notification",
-          details: emailResult?.error 
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      await fetch(`${supabaseUrl}/rest/v1/notification_logs`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseKey}`,
+          'apikey': supabaseKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(logPayload)
+      });
+    } catch (logError) {
+      console.error("Failed to log notification:", logError);
     }
 
-    console.log("Admin notification sent successfully");
+    console.log(`✅ Admin notification processed - Webhook: ${webhookSuccess}, Email: ${emailSuccess}`);
     
     return new Response(
       JSON.stringify({ 
-        message: "Admin notification sent successfully",
-        type: type
+        message: "Admin notification processed",
+        type: type,
+        webhookSent: webhookSuccess,
+        emailSent: emailSuccess
       }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
