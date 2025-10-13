@@ -108,47 +108,56 @@ const Settings = () => {
     setOperationLog('Saving all settings to database...\nUpdating configuration...');
 
     try {
+      console.log('=== SAVING SETTINGS ===');
+      console.log('Current emailSettings state:', emailSettings);
+      console.log('N8N Webhook URL from state:', emailSettings.n8n_webhook_url);
+      
       // First, get existing settings to ensure we have the ID
       const { data: existingSettings } = await supabase
         .from('admin_notification_settings')
-        .select('id')
-        .maybeSingle();
+        .select('*')
+        .limit(1)
+        .single();
 
-      // Save email settings to Supabase database
+      console.log('Existing settings from DB:', existingSettings);
+
+      // Always UPDATE the existing row, never INSERT
       const emailPayload: any = {
+        id: existingSettings?.id, // Always use the existing ID
         from_email: emailSettings.from_email,
         from_name: emailSettings.from_name,
         notification_email: emailSettings.notification_email,
         notification_cc_email: emailSettings.notification_cc_email || null,
-        email_provider: "resend",
-        smtp_host: "",
-        smtp_port: 587,
-        smtp_username: "",
-        smtp_password: "",
-        smtp_use_tls: true,
+        email_provider: existingSettings?.email_provider || "resend",
+        smtp_host: existingSettings?.smtp_host || "",
+        smtp_port: existingSettings?.smtp_port || 587,
+        smtp_username: existingSettings?.smtp_username || "",
+        smtp_password: existingSettings?.smtp_password || "",
+        smtp_use_tls: existingSettings?.smtp_use_tls ?? true,
         signup_notifications: emailSettings.signup_notifications,
         booking_notifications: emailSettings.booking_notifications,
         session_request_notifications: emailSettings.session_request_notifications,
         n8n_webhook_url: emailSettings.n8n_webhook_url || null
       };
 
-      // Include id if it exists from state or database
-      if (emailSettings.id || existingSettings?.id) {
-        emailPayload.id = emailSettings.id || existingSettings.id;
-      }
+      console.log('Payload to save:', emailPayload);
+      console.log('N8N Webhook URL in payload:', emailPayload.n8n_webhook_url);
 
       const { data: emailData, error: emailError } = await supabase
         .from('admin_notification_settings')
-        .upsert(emailPayload)
+        .update(emailPayload)
+        .eq('id', existingSettings.id)
         .select()
         .single();
+
+      console.log('Save result:', { emailData, emailError });
 
       if (emailError) {
         throw emailError;
       }
 
-      // Update state with the returned id
-      if (emailData?.id && !emailSettings.id) {
+      // Update state with the saved data
+      if (emailData?.id) {
         setEmailSettings(prev => ({ ...prev, id: emailData.id }));
       }
 
@@ -412,13 +421,17 @@ const Settings = () => {
 
   const loadEmailSettings = async () => {
     try {
+      console.log('=== LOADING EMAIL SETTINGS ===');
       const { data, error } = await supabase
         .from('admin_notification_settings')
         .select('*')
         .maybeSingle();
 
+      console.log('Loaded from DB:', { data, error });
+      console.log('N8N Webhook URL from DB:', data?.n8n_webhook_url);
+
       if (data && !error) {
-        setEmailSettings({
+        const loadedSettings = {
           id: data.id || null,
           from_email: data.from_email || "",
           from_name: data.from_name || "",
@@ -428,7 +441,9 @@ const Settings = () => {
           booking_notifications: data.booking_notifications ?? true,
           session_request_notifications: data.session_request_notifications ?? true,
           n8n_webhook_url: data.n8n_webhook_url || ""
-        });
+        };
+        console.log('Setting state to:', loadedSettings);
+        setEmailSettings(loadedSettings);
       } else {
         // Fallback to local storage if no database settings
         const savedEmailSettings = localStorage.getItem("emailSettings");
