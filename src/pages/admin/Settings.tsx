@@ -1086,16 +1086,6 @@ const Settings = () => {
                   </p>
                  </div>
                </div>
-               
-               <div className="pt-4 border-t">
-                 <Button 
-                   onClick={handleSaveSettings}
-                   disabled={saving}
-                   className="w-full"
-                 >
-                   {saving ? 'Saving...' : 'Save Email Configuration'}
-                 </Button>
-               </div>
              </CardContent>
            </Card>
 
