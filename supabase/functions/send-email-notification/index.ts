@@ -545,35 +545,36 @@ const handler = async (req: Request): Promise<Response> => {
           console.log("Skipping email send - no notification email configured");
         }
 
-        // Send to n8n webhook if configured (runs regardless of email status)
-        const { data: n8nSettings } = await supabase
-          .from('admin_notification_settings')
-          .select('n8n_webhook_url, notification_email')
-          .single();
+        // Send to n8n webhook only for successful new account creation
+        if (type !== 'existing_account') {
+          const { data: n8nSettings } = await supabase
+            .from('admin_notification_settings')
+            .select('n8n_webhook_url, notification_email')
+            .single();
 
-        if (n8nSettings?.n8n_webhook_url) {
-          console.log("Sending to n8n webhook:", n8nSettings.n8n_webhook_url);
-          try {
-            const webhookPayload = {
-              type,
-              timestamp: new Date().toISOString(),
-              adminEmail: n8nSettings.notification_email,
-              user: {
-                name: userName || memberName,
-                email: userEmail || memberEmail,
-                phone: userPhone
-              },
-              notification: {
-                subject: emailSubject,
-                to: emailTo || 'N/A'
-              },
-              emailSent,
-              ...(bookingDetails && { bookingDetails }),
-              ...(sessionRequestDetails && { sessionRequestDetails }),
-              ...(cancellationDetails && { cancellationDetails }),
-              ...(requestedSessions && { requestedSessions }),
-              ...(newBalance && { newBalance })
-            };
+          if (n8nSettings?.n8n_webhook_url) {
+            console.log("Sending to n8n webhook:", n8nSettings.n8n_webhook_url);
+            try {
+              const webhookPayload = {
+                type,
+                timestamp: new Date().toISOString(),
+                adminEmail: n8nSettings.notification_email,
+                user: {
+                  name: userName || memberName,
+                  email: userEmail || memberEmail,
+                  phone: userPhone
+                },
+                notification: {
+                  subject: emailSubject,
+                  to: emailTo || 'N/A'
+                },
+                emailSent,
+                ...(bookingDetails && { bookingDetails }),
+                ...(sessionRequestDetails && { sessionRequestDetails }),
+                ...(cancellationDetails && { cancellationDetails }),
+                ...(requestedSessions && { requestedSessions }),
+                ...(newBalance && { newBalance })
+              };
 
             const webhookResponse = await fetch(n8nSettings.n8n_webhook_url, {
               method: 'POST',
@@ -592,12 +593,15 @@ const handler = async (req: Request): Promise<Response> => {
             } else {
               console.log("n8n webhook sent successfully");
             }
-          } catch (webhookError: any) {
-            console.error("Error calling n8n webhook:", webhookError.message);
-            // Don't fail the request if webhook fails
+            } catch (webhookError: any) {
+              console.error("Error calling n8n webhook:", webhookError.message);
+              // Don't fail the request if webhook fails
+            }
+          } else {
+            console.log("No n8n webhook URL configured");
           }
         } else {
-          console.log("No n8n webhook URL configured");
+          console.log("Skipping n8n webhook for existing account notification");
         }
         
         // Keep only last 100 logs
