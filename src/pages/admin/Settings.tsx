@@ -1130,13 +1130,49 @@ const Settings = () => {
                   <Mail className="h-5 w-5 text-blue-600" />
                   <CardTitle>Resend Email Configuration</CardTitle>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Label htmlFor="resend-enabled">Enable Resend Notifications</Label>
-                  <Switch
-                    id="resend-enabled"
-                    checked={emailSettings.resend_enabled !== false}
-                    onCheckedChange={(checked) => setEmailSettings({...emailSettings, resend_enabled: checked})}
-                  />
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="resend-enabled">Enable Resend Notifications</Label>
+                    <Switch
+                      id="resend-enabled"
+                      checked={emailSettings.resend_enabled !== false}
+                      onCheckedChange={(checked) => setEmailSettings({...emailSettings, resend_enabled: checked})}
+                    />
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const { data: existingSettings } = await supabase
+                          .from('admin_notification_settings')
+                          .select('*')
+                          .single();
+
+                        if (existingSettings) {
+                          const { error } = await supabase
+                            .from('admin_notification_settings')
+                            .update({ resend_enabled: emailSettings.resend_enabled })
+                            .eq('id', existingSettings.id);
+
+                          if (error) throw error;
+
+                          toast({
+                            title: "Saved",
+                            description: `Resend notifications ${emailSettings.resend_enabled ? 'enabled' : 'disabled'}`,
+                          });
+                        }
+                      } catch (error) {
+                        toast({
+                          title: "Error",
+                          description: "Failed to save setting",
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Save
+                  </Button>
                 </div>
               </div>
               <CardDescription>
