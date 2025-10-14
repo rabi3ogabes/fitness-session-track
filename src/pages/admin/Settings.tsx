@@ -905,62 +905,99 @@ const Settings = () => {
                 <div className="space-y-4 pt-4 border-t">
                   <h4 className="font-medium text-sm text-gray-700">Separate Webhook URLs by Notification Type</h4>
                   
-                  <div>
-                    <Label htmlFor="n8n-signup-webhook">Signup Notifications Webhook</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="n8n-signup-webhook">Signup Notifications Webhook</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Enable</span>
+                        <Switch
+                          checked={emailSettings.signup_notifications}
+                          onCheckedChange={(checked) => setEmailSettings({...emailSettings, signup_notifications: checked})}
+                        />
+                      </div>
+                    </div>
                     <Input
                       id="n8n-signup-webhook"
                       type="url"
                       placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/signup..."
                       value={emailSettings.n8n_signup_webhook_url || ''}
                       onChange={(e) => setEmailSettings({...emailSettings, n8n_signup_webhook_url: e.target.value})}
-                      className="mt-1"
+                      disabled={!emailSettings.signup_notifications}
                     />
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-gray-600">
                       Webhook URL for new member signup notifications
                     </p>
                   </div>
 
-                  <div>
-                    <Label htmlFor="n8n-booking-webhook">Booking Notifications Webhook</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="n8n-booking-webhook">Booking Notifications Webhook</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Enable</span>
+                        <Switch
+                          checked={emailSettings.booking_notifications}
+                          onCheckedChange={(checked) => setEmailSettings({...emailSettings, booking_notifications: checked})}
+                        />
+                      </div>
+                    </div>
                     <Input
                       id="n8n-booking-webhook"
                       type="url"
                       placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/booking..."
                       value={emailSettings.n8n_booking_webhook_url || ''}
                       onChange={(e) => setEmailSettings({...emailSettings, n8n_booking_webhook_url: e.target.value})}
-                      className="mt-1"
+                      disabled={!emailSettings.booking_notifications}
                     />
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-gray-600">
                       Webhook URL for class booking notifications
                     </p>
                   </div>
 
-                  <div>
-                    <Label htmlFor="n8n-cancellation-webhook">Cancellation Notifications Webhook</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="n8n-cancellation-webhook">Cancellation Notifications Webhook</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Enable</span>
+                        <Switch
+                          id="cancellation-notifications-switch"
+                          checked={emailSettings.booking_notifications}
+                          onCheckedChange={(checked) => setEmailSettings({...emailSettings, booking_notifications: checked})}
+                        />
+                      </div>
+                    </div>
                     <Input
                       id="n8n-cancellation-webhook"
                       type="url"
                       placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/cancellation..."
                       value={emailSettings.n8n_cancellation_webhook_url || ''}
                       onChange={(e) => setEmailSettings({...emailSettings, n8n_cancellation_webhook_url: e.target.value})}
-                      className="mt-1"
+                      disabled={!emailSettings.booking_notifications}
                     />
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-gray-600">
                       Webhook URL for booking cancellation notifications
                     </p>
                   </div>
 
-                  <div>
-                    <Label htmlFor="n8n-session-webhook">Session Request Notifications Webhook</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="n8n-session-webhook">Session Request Notifications Webhook</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Enable</span>
+                        <Switch
+                          checked={emailSettings.session_request_notifications}
+                          onCheckedChange={(checked) => setEmailSettings({...emailSettings, session_request_notifications: checked})}
+                        />
+                      </div>
+                    </div>
                     <Input
                       id="n8n-session-webhook"
                       type="url"
                       placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/session..."
                       value={emailSettings.n8n_session_request_webhook_url || ''}
                       onChange={(e) => setEmailSettings({...emailSettings, n8n_session_request_webhook_url: e.target.value})}
-                      className="mt-1"
+                      disabled={!emailSettings.session_request_notifications}
                     />
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-gray-600">
                       Webhook URL for session balance request notifications
                     </p>
                   </div>
