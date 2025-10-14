@@ -248,6 +248,16 @@ const Bookings = () => {
           </div>
           
           <div className="flex items-center space-x-2 w-full sm:w-auto">
+            {selectedDate && (
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedDate(undefined)}
+                className="text-xs"
+              >
+                View All Sessions
+              </Button>
+            )}
+            
             <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="flex items-center">
