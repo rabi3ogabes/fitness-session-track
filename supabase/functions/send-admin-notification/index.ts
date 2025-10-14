@@ -198,9 +198,9 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`Sending ${type} notification to N8N webhook: ${webhookUrl}`);
       
       try {
-        // Get member's remaining sessions if this is a booking
+        // Get member's remaining sessions if this is a booking or cancellation
         let remainingSessions = null;
-        if (type === 'booking' && userEmail) {
+        if ((type === 'booking' || type === 'cancellation') && userEmail) {
           try {
             const memberResponse = await fetch(`${supabaseUrl}/rest/v1/members?email=eq.${encodeURIComponent(userEmail)}&select=remaining_sessions`, {
               headers: {
