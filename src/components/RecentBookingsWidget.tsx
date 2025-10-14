@@ -483,7 +483,7 @@ const RecentBookingsWidget = () => {
         <Button 
           variant="outline" 
           className="w-full"
-          onClick={() => navigate('/admin/bookings')}
+          onClick={() => navigate('/admin/memberships')}
         >
           View All Bookings
         </Button>
