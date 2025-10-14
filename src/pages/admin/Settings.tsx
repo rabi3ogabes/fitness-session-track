@@ -31,6 +31,7 @@ const Settings = () => {
     notification_cc_email: "",
     from_email: "",
     from_name: "",
+    resend_enabled: true,
     signup_notifications: true,
     booking_notifications: true,
     session_request_notifications: true,
@@ -445,6 +446,7 @@ const Settings = () => {
           from_name: data.from_name || "",
           notification_email: data.notification_email || "",
           notification_cc_email: data.notification_cc_email || "",
+          resend_enabled: data.resend_enabled ?? true,
           signup_notifications: data.signup_notifications ?? true,
           booking_notifications: data.booking_notifications ?? true,
           session_request_notifications: data.session_request_notifications ?? true,
@@ -467,6 +469,7 @@ const Settings = () => {
           from_name: parsed.from_name || parsed.fromName || "",
           notification_email: parsed.notification_email || parsed.notificationEmail || "",
           notification_cc_email: parsed.notification_cc_email || "",
+          resend_enabled: parsed.resend_enabled ?? true,
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
@@ -490,6 +493,7 @@ const Settings = () => {
           from_name: parsed.from_name || parsed.fromName || "",
           notification_email: parsed.notification_email || parsed.notificationEmail || "",
           notification_cc_email: parsed.notification_cc_email || "",
+          resend_enabled: parsed.resend_enabled ?? true,
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
@@ -1120,9 +1124,19 @@ const Settings = () => {
           {/* Resend Email Configuration */}
           <Card>
             <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Mail className="h-5 w-5 text-blue-600" />
-                <CardTitle>Resend Email Configuration</CardTitle>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-5 w-5 text-blue-600" />
+                  <CardTitle>Resend Email Configuration</CardTitle>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="resend-enabled">Enable Resend Notifications</Label>
+                  <Switch
+                    id="resend-enabled"
+                    checked={emailSettings.resend_enabled !== false}
+                    onCheckedChange={(checked) => setEmailSettings({...emailSettings, resend_enabled: checked})}
+                  />
+                </div>
               </div>
               <CardDescription>
                 Configure your Resend service for sending notifications

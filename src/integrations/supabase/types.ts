@@ -29,6 +29,7 @@ export type Database = {
           n8n_webhook_url: string | null
           notification_cc_email: string | null
           notification_email: string
+          resend_enabled: boolean | null
           session_request_notifications: boolean
           signup_notifications: boolean
           smtp_host: string | null
@@ -52,6 +53,7 @@ export type Database = {
           n8n_webhook_url?: string | null
           notification_cc_email?: string | null
           notification_email: string
+          resend_enabled?: boolean | null
           session_request_notifications?: boolean
           signup_notifications?: boolean
           smtp_host?: string | null
@@ -75,6 +77,7 @@ export type Database = {
           n8n_webhook_url?: string | null
           notification_cc_email?: string | null
           notification_email?: string
+          resend_enabled?: boolean | null
           session_request_notifications?: boolean
           signup_notifications?: boolean
           smtp_host?: string | null
