@@ -15,6 +15,9 @@ interface AdminNotificationRequest {
   classDate?: string;
   classTime?: string;
   trainerName?: string;
+  planName?: string;
+  sessions?: number;
+  price?: number;
   cancellationDetails?: {
     className: string;
     classDate: string;
@@ -36,7 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log("Admin notification request received");
     
-    const { type, userEmail, userName, details, className, classDate, classTime, trainerName, cancellationDetails }: AdminNotificationRequest = await req.json();
+    const { type, userEmail, userName, details, className, classDate, classTime, trainerName, planName, sessions, price, cancellationDetails }: AdminNotificationRequest = await req.json();
     
     if (!type || !userEmail || !userName) {
       return new Response(
@@ -133,6 +136,9 @@ const handler = async (req: Request): Promise<Response> => {
           <p>A member has requested additional sessions!</p>
           <p><strong>Member:</strong> ${userName}</p>
           <p><strong>Email:</strong> ${userEmail}</p>
+          ${planName ? `<p><strong>Plan:</strong> ${planName}</p>` : ''}
+          ${sessions ? `<p><strong>Sessions Requested:</strong> ${sessions}</p>` : ''}
+          ${price ? `<p><strong>Price:</strong> $${price}</p>` : ''}
           <p><strong>Request Time:</strong> ${new Date().toLocaleString()}</p>
           ${details ? `<p><strong>Request Details:</strong> ${details}</p>` : ''}
           <p>Please review and process this session balance request.</p>
@@ -198,9 +204,9 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`Sending ${type} notification to N8N webhook: ${webhookUrl}`);
       
       try {
-        // Get member's remaining sessions if this is a booking or cancellation
+        // Get member's remaining sessions if this is a booking, cancellation, or session request
         let remainingSessions = null;
-        if ((type === 'booking' || type === 'cancellation') && userEmail) {
+        if ((type === 'booking' || type === 'cancellation' || type === 'session_request') && userEmail) {
           try {
             const memberResponse = await fetch(`${supabaseUrl}/rest/v1/members?email=eq.${encodeURIComponent(userEmail)}&select=remaining_sessions`, {
               headers: {
@@ -214,7 +220,7 @@ const handler = async (req: Request): Promise<Response> => {
               const members = await memberResponse.json();
               if (members && members.length > 0) {
                 remainingSessions = members[0].remaining_sessions;
-                console.log(`Member ${userName} has ${remainingSessions} remaining sessions after booking`);
+                console.log(`Member ${userName} has ${remainingSessions} remaining sessions`);
               }
             }
           } catch (error) {
@@ -234,6 +240,9 @@ const handler = async (req: Request): Promise<Response> => {
           classDate: classDate,
           classTime: classTime,
           trainerName: trainerName,
+          planName: planName,
+          sessions: sessions,
+          price: price,
           remainingSessions: remainingSessions,
           cancellationDetails: cancellationDetails,
           timestamp: new Date().toISOString()
