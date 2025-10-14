@@ -34,6 +34,7 @@ const Settings = () => {
     resend_enabled: true,
     signup_notifications: true,
     booking_notifications: true,
+    cancellation_notifications: true,
     session_request_notifications: true,
     n8n_webhook_url: "",
     n8n_signup_webhook_url: "",
@@ -450,6 +451,7 @@ const Settings = () => {
           resend_enabled: data.resend_enabled ?? true,
           signup_notifications: data.signup_notifications ?? true,
           booking_notifications: data.booking_notifications ?? true,
+          cancellation_notifications: data.cancellation_notifications ?? true,
           session_request_notifications: data.session_request_notifications ?? true,
           n8n_webhook_url: data.n8n_webhook_url || "",
           n8n_signup_webhook_url: data.n8n_signup_webhook_url || "",
@@ -473,6 +475,7 @@ const Settings = () => {
           resend_enabled: parsed.resend_enabled ?? true,
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
+          cancellation_notifications: parsed.cancellation_notifications ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
           n8n_webhook_url: parsed.n8n_webhook_url || "",
           n8n_signup_webhook_url: parsed.n8n_signup_webhook_url || "",
@@ -497,6 +500,7 @@ const Settings = () => {
           resend_enabled: parsed.resend_enabled ?? true,
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
+          cancellation_notifications: parsed.cancellation_notifications ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
           n8n_webhook_url: parsed.n8n_webhook_url || "",
           n8n_signup_webhook_url: parsed.n8n_signup_webhook_url || "",
@@ -965,8 +969,8 @@ const Settings = () => {
                         <span className="text-xs text-muted-foreground">Enable</span>
                         <Switch
                           id="cancellation-notifications-switch"
-                          checked={!!emailSettings.n8n_cancellation_webhook_url}
-                          onCheckedChange={(checked) => setEmailSettings({...emailSettings, n8n_cancellation_webhook_url: checked ? emailSettings.n8n_cancellation_webhook_url || '' : ''})}
+                          checked={emailSettings.cancellation_notifications}
+                          onCheckedChange={(checked) => setEmailSettings({...emailSettings, cancellation_notifications: checked})}
                         />
                       </div>
                     </div>
@@ -976,7 +980,7 @@ const Settings = () => {
                       placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/cancellation..."
                       value={emailSettings.n8n_cancellation_webhook_url || ''}
                       onChange={(e) => setEmailSettings({...emailSettings, n8n_cancellation_webhook_url: e.target.value})}
-                      disabled={!emailSettings.n8n_cancellation_webhook_url}
+                      disabled={!emailSettings.cancellation_notifications}
                     />
                     <p className="text-sm text-gray-600">
                       Webhook URL for booking cancellation notifications

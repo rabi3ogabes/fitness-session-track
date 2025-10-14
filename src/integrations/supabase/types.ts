@@ -17,6 +17,7 @@ export type Database = {
       admin_notification_settings: {
         Row: {
           booking_notifications: boolean
+          cancellation_notifications: boolean | null
           created_at: string
           email_provider: string | null
           from_email: string | null
@@ -41,6 +42,7 @@ export type Database = {
         }
         Insert: {
           booking_notifications?: boolean
+          cancellation_notifications?: boolean | null
           created_at?: string
           email_provider?: string | null
           from_email?: string | null
@@ -65,6 +67,7 @@ export type Database = {
         }
         Update: {
           booking_notifications?: boolean
+          cancellation_notifications?: boolean | null
           created_at?: string
           email_provider?: string | null
           from_email?: string | null
