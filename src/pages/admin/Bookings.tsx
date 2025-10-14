@@ -59,7 +59,7 @@ const Bookings = () => {
   const [bookings, setBookings] = useState(initialBookings);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false); 
   const [newBooking, setNewBooking] = useState({
