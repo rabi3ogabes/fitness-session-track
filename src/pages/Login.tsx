@@ -301,7 +301,7 @@ const Login = () => {
             .limit(1)
             .single();
 
-          if (adminSettings && adminSettings.signup_notifications && adminSettings.email_provider === 'resend') {
+          if (adminSettings && adminSettings.signup_notifications && adminSettings.email_provider === 'resend' && adminSettings.resend_enabled) {
             console.log("Creating signup notification log...");
             
             // Create notification log entry which will trigger automatic email sending

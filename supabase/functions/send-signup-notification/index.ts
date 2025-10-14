@@ -27,6 +27,38 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending signup notification for:", userEmail);
     console.log("Notification emails:", notificationEmails);
+    
+    // Check if Resend is enabled in admin settings
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (supabaseUrl && supabaseServiceKey) {
+      try {
+        const settingsResponse = await fetch(`${supabaseUrl}/rest/v1/admin_notification_settings?select=resend_enabled`, {
+          headers: {
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+            'apikey': supabaseServiceKey,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (settingsResponse.ok) {
+          const settings = await settingsResponse.json();
+          if (settings && settings.length > 0 && !settings[0].resend_enabled) {
+            console.log("Resend notifications are disabled, skipping signup notification");
+            return new Response(JSON.stringify({ message: "Resend notifications are disabled" }), {
+              status: 200,
+              headers: {
+                "Content-Type": "application/json",
+                ...corsHeaders,
+              },
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error checking Resend settings:", error);
+      }
+    }
 
     // Filter out empty emails
     const validEmails = notificationEmails.filter(email => email && email.trim() !== "");
@@ -43,7 +75,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Send email to each notification email
-    const emailPromises = validEmails.map(email => 
+    const emailPromises = validEmails.map(email =>
       resend.emails.send({
         from: "FitTrack Pro <onboarding@resend.dev>",
         to: [email],

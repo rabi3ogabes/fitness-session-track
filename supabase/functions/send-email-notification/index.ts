@@ -63,6 +63,17 @@ const processPendingNotifications = async () => {
   console.log("Processing pending notifications...");
   
   try {
+    // Check if Resend is enabled
+    const { data: adminSettings } = await supabase
+      .from('admin_notification_settings')
+      .select('resend_enabled, notification_cc_email, from_name')
+      .single();
+    
+    if (!adminSettings?.resend_enabled) {
+      console.log("Resend notifications are disabled, skipping pending notifications processing");
+      return;
+    }
+
     const { data: pendingLogs, error: fetchError } = await supabase
       .from('notification_logs')
       .select('*')
@@ -83,12 +94,6 @@ const processPendingNotifications = async () => {
     for (const log of pendingLogs) {
       try {
         console.log(`Processing notification ${log.id} of type ${log.notification_type}`);
-        
-        // Get admin settings to check for CC email and sender name
-        const { data: adminSettings } = await supabase
-          .from('admin_notification_settings')
-          .select('notification_cc_email, from_name')
-          .single();
 
         const ccEmails = adminSettings?.notification_cc_email ? [adminSettings.notification_cc_email] : [];
         const senderName = adminSettings?.from_name || "Gym System";
@@ -492,54 +497,60 @@ const handler = async (req: Request): Promise<Response> => {
           // Get admin settings for sender name and CC email
           const { data: adminSettings } = await supabase
             .from('admin_notification_settings')
-            .select('notification_cc_email, from_name, from_email')
+            .select('notification_cc_email, from_name, from_email, resend_enabled')
             .single();
-
-          const ccEmails = adminSettings?.notification_cc_email ? [adminSettings.notification_cc_email] : [];
-          const defaultSenderName = adminSettings?.from_name || "Gym Management";
-          const defaultSenderEmail = adminSettings?.from_email || "onboarding@resend.dev";
           
-          console.log(`From: ${fromEmail && fromName ? `${fromName} <${fromEmail}>` : `${defaultSenderName} <${defaultSenderEmail}>`}`);
-          console.log(`Subject: ${emailSubject}`);
-          
-          const emailResponse = await resend.emails.send({
-            from: fromEmail && fromName ? `${fromName} <${fromEmail}>` : `${defaultSenderName} <${defaultSenderEmail}>`,
-            to: [emailTo],
-            cc: ccEmails,
-            subject: emailSubject,
-            html: emailBody,
-          });
-
-          console.log("Email API response:", emailResponse);
-
-          // Check if there's an error in the response
-          if (emailResponse.error) {
-            console.error("Email API error:", emailResponse.error);
-            
-            // Log failed email
-            const logEntry: EmailLogEntry = {
-              timestamp: new Date().toISOString(),
-              to: emailTo,
-              subject: emailSubject,
-              success: false,
-              error: emailResponse.error.message || JSON.stringify(emailResponse.error)
-            };
-            emailLogs.push(logEntry);
-            
-            // Still try to send webhook even if email fails
+          // Check if Resend is enabled
+          if (!adminSettings?.resend_enabled) {
+            console.log("Resend notifications are disabled, skipping email send");
+            emailSent = false;
           } else {
-            console.log("Email sent successfully!");
-            emailSent = true;
+            const ccEmails = adminSettings?.notification_cc_email ? [adminSettings.notification_cc_email] : [];
+            const defaultSenderName = adminSettings?.from_name || "Gym Management";
+            const defaultSenderEmail = adminSettings?.from_email || "onboarding@resend.dev";
             
-            // Log successful email
-            const logEntry: EmailLogEntry = {
-              timestamp: new Date().toISOString(),
-              to: emailTo,
+            console.log(`From: ${fromEmail && fromName ? `${fromName} <${fromEmail}>` : `${defaultSenderName} <${defaultSenderEmail}>`}`);
+            console.log(`Subject: ${emailSubject}`);
+            
+            const emailResponse = await resend.emails.send({
+              from: fromEmail && fromName ? `${fromName} <${fromEmail}>` : `${defaultSenderName} <${defaultSenderEmail}>`,
+              to: [emailTo],
+              cc: ccEmails,
               subject: emailSubject,
-              success: true,
-              error: null
-            };
-            emailLogs.push(logEntry);
+              html: emailBody,
+            });
+
+            console.log("Email API response:", emailResponse);
+
+            // Check if there's an error in the response
+            if (emailResponse.error) {
+              console.error("Email API error:", emailResponse.error);
+              
+              // Log failed email
+              const logEntry: EmailLogEntry = {
+                timestamp: new Date().toISOString(),
+                to: emailTo,
+                subject: emailSubject,
+                success: false,
+                error: emailResponse.error.message || JSON.stringify(emailResponse.error)
+              };
+              emailLogs.push(logEntry);
+              
+              // Still try to send webhook even if email fails
+            } else {
+              console.log("Email sent successfully!");
+              emailSent = true;
+              
+              // Log successful email
+              const logEntry: EmailLogEntry = {
+                timestamp: new Date().toISOString(),
+                to: emailTo,
+                subject: emailSubject,
+                success: true,
+                error: null
+              };
+              emailLogs.push(logEntry);
+            }
           }
         } else {
           console.log("Skipping email send - no notification email configured");

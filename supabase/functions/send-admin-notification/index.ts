@@ -277,8 +277,8 @@ const handler = async (req: Request): Promise<Response> => {
     let emailSuccess = false;
     
     try {
-      if (adminSettings.email_provider === 'resend') {
-        // Use Resend for email sending
+      if (adminSettings.email_provider === 'resend' && adminSettings.resend_enabled) {
+        // Use Resend for email sending only if enabled
         const emailPayload = {
           userEmail: userEmail,
           userName: userName,
@@ -297,6 +297,9 @@ const handler = async (req: Request): Promise<Response> => {
           },
           body: JSON.stringify(emailPayload)
         });
+      } else if (adminSettings.email_provider === 'resend' && !adminSettings.resend_enabled) {
+        console.log("⚠️ Resend email provider selected but Resend is disabled, skipping email");
+        emailSuccess = false;
       } else {
         // Use SMTP for email sending
         const emailPayload = {
