@@ -340,43 +340,35 @@ const UserMembership = () => {
         },
       ]);
 
-      // Send email notification if enabled and successful
+      // Send notification to n8n if successful
       if (!error) {
         try {
-          const { data: adminSettings } = await supabase
-            .from('admin_notification_settings')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (adminSettings && adminSettings.session_request_notifications && adminSettings.email_provider === 'resend') {
-            console.log("Creating session request notification log...");
-            
-            // Create notification log entry which will trigger automatic email sending
-            const { error: logError } = await supabase
-              .from('notification_logs')
-              .insert({
-                notification_type: 'session_request',
-                recipient_email: adminSettings.notification_email,
-                user_name: currentUser.name,
-                user_email: currentUser.email,
-                subject: `Session Request from ${currentUser.name}`,
-                status: 'pending'
-              });
-            
-            if (logError) {
-              console.error("Failed to create notification log:", logError);
-            } else {
-              console.log("Session request notification log created successfully");
+          console.log("Calling send-admin-notification edge function...");
+          
+          const { error: notificationError } = await supabase.functions.invoke(
+            'send-admin-notification',
+            {
+              body: {
+                type: 'session_request',
+                userEmail: currentUser.email,
+                userName: currentUser.name,
+                planName: planName,
+                sessions: plan.sessions,
+                price: plan.price,
+                details: `Requested ${plan.sessions} sessions of ${planName} plan`
+              }
             }
+          );
+          
+          if (notificationError) {
+            console.error("Failed to send admin notification:", notificationError);
+          } else {
+            console.log("Admin notification sent successfully to n8n");
           }
-        } catch (emailError) {
-          console.error("Failed to send session request email notification:", emailError);
-          // Don't fail the request if email fails
+        } catch (notificationError) {
+          console.error("Exception sending admin notification:", notificationError);
+          // Don't fail the request if notification fails
         }
-
-        // Session request completed successfully
       }
 
       if (error) {
