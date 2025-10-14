@@ -294,7 +294,7 @@ const BalanceRequestsWidget: React.FC = () => {
                   </div>
                   
                   <div>
-                    <div className="font-medium text-gray-900">
+                    <div className="font-bold text-gray-900">
                       {request.member}
                     </div>
                     <div className="text-sm text-gray-600">
