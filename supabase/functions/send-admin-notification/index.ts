@@ -198,6 +198,30 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`Sending ${type} notification to N8N webhook: ${webhookUrl}`);
       
       try {
+        // Get member's remaining sessions if this is a booking
+        let remainingSessions = null;
+        if (type === 'booking' && userEmail) {
+          try {
+            const memberResponse = await fetch(`${supabaseUrl}/rest/v1/members?email=eq.${encodeURIComponent(userEmail)}&select=remaining_sessions`, {
+              headers: {
+                'Authorization': `Bearer ${supabaseKey}`,
+                'apikey': supabaseKey,
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (memberResponse.ok) {
+              const members = await memberResponse.json();
+              if (members && members.length > 0) {
+                remainingSessions = members[0].remaining_sessions;
+                console.log(`Member ${userName} has ${remainingSessions} remaining sessions after booking`);
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching member sessions:', error);
+          }
+        }
+
         const n8nPayload = {
           type: type,
           user: {
@@ -210,6 +234,7 @@ const handler = async (req: Request): Promise<Response> => {
           classDate: classDate,
           classTime: classTime,
           trainerName: trainerName,
+          remainingSessions: remainingSessions,
           cancellationDetails: cancellationDetails,
           timestamp: new Date().toISOString()
         };
