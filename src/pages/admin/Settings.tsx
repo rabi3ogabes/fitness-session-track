@@ -965,8 +965,8 @@ const Settings = () => {
                         <span className="text-xs text-muted-foreground">Enable</span>
                         <Switch
                           id="cancellation-notifications-switch"
-                          checked={emailSettings.booking_notifications}
-                          onCheckedChange={(checked) => setEmailSettings({...emailSettings, booking_notifications: checked})}
+                          checked={!!emailSettings.n8n_cancellation_webhook_url}
+                          onCheckedChange={(checked) => setEmailSettings({...emailSettings, n8n_cancellation_webhook_url: checked ? emailSettings.n8n_cancellation_webhook_url || '' : ''})}
                         />
                       </div>
                     </div>
@@ -976,7 +976,7 @@ const Settings = () => {
                       placeholder="https://n8n.srv1058931.hstgr.cloud/webhook/cancellation..."
                       value={emailSettings.n8n_cancellation_webhook_url || ''}
                       onChange={(e) => setEmailSettings({...emailSettings, n8n_cancellation_webhook_url: e.target.value})}
-                      disabled={!emailSettings.booking_notifications}
+                      disabled={!emailSettings.n8n_cancellation_webhook_url}
                     />
                     <p className="text-sm text-gray-600">
                       Webhook URL for booking cancellation notifications
