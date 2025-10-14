@@ -133,6 +133,7 @@ const Settings = () => {
         from_name: emailSettings.from_name,
         notification_email: emailSettings.notification_email,
         notification_cc_email: emailSettings.notification_cc_email || null,
+        resend_enabled: emailSettings.resend_enabled,
         email_provider: existingSettings?.email_provider || "resend",
         smtp_host: existingSettings?.smtp_host || "",
         smtp_port: existingSettings?.smtp_port || 587,
