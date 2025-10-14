@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Calendar, User, Clock, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface RecentBooking {
   id: string;
@@ -22,6 +24,7 @@ const RecentBookingsWidget = () => {
   const [loading, setLoading] = useState(true);
   const [showDeleteIcons, setShowDeleteIcons] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Load the delete icon visibility setting from localStorage
   useEffect(() => {
@@ -475,6 +478,16 @@ const RecentBookingsWidget = () => {
           <p>No recent bookings</p>
         </div>
       )}
+      
+      <div className="mt-4 pt-4 border-t">
+        <Button 
+          variant="outline" 
+          className="w-full"
+          onClick={() => navigate('/admin/bookings')}
+        >
+          View All Bookings
+        </Button>
+      </div>
     </div>
   );
 };
