@@ -143,6 +143,7 @@ const Settings = () => {
         smtp_use_tls: existingSettings?.smtp_use_tls ?? true,
         signup_notifications: emailSettings.signup_notifications,
         booking_notifications: emailSettings.booking_notifications,
+        cancellation_notifications: emailSettings.cancellation_notifications,
         session_request_notifications: emailSettings.session_request_notifications,
         n8n_webhook_url: emailSettings.n8n_webhook_url || null,
         n8n_signup_webhook_url: emailSettings.n8n_signup_webhook_url || null,
