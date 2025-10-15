@@ -179,6 +179,7 @@ const Settings = () => {
       const { data: existingAdminSettings } = await supabase
         .from('admin_settings')
         .select('id')
+        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
@@ -365,6 +366,8 @@ const Settings = () => {
       const { data, error } = await supabase
         .from('admin_settings')
         .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (data && !error) {
