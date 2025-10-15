@@ -175,43 +175,57 @@ const Settings = () => {
 
       setOperationLog('Email settings saved...\nSaving admin settings to database...');
 
+      // Get existing settings to ensure we have an ID
+      const { data: existingAdminSettings } = await supabase
+        .from('admin_settings')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+
+      const adminSettingsPayload: any = {
+        cancellation_hours: cancellationHours,
+        logo: logo,
+        header_color: headerColor,
+        footer_color: footerColor,
+        membership_expiry_basic: membershipExpiry.basic,
+        membership_expiry_standard: membershipExpiry.standard,
+        membership_expiry_premium: membershipExpiry.premium,
+        show_testimonials: showTestimonials,
+        show_low_session_warning: showLowSessionWarning,
+        show_member_delete_icon: showMemberDeleteIcon,
+        show_class_delete_icon: showClassDeleteIcon,
+        show_booking_delete_icon: showBookingDeleteIcon,
+        hero_title: mainPageContent.heroTitle,
+        hero_description: mainPageContent.heroDescription,
+        hero_image: mainPageContent.heroImage,
+        feature1_title: mainPageContent.feature1Title,
+        feature1_description: mainPageContent.feature1Description,
+        feature2_title: mainPageContent.feature2Title,
+        feature2_description: mainPageContent.feature2Description,
+        feature3_title: mainPageContent.feature3Title,
+        feature3_description: mainPageContent.feature3Description,
+        features_section: mainPageContent.featuresSection,
+        testimonials_section: mainPageContent.testimonialsSection,
+        cta_title: mainPageContent.ctaTitle,
+        cta_description: mainPageContent.ctaDescription,
+        cta_button: mainPageContent.ctaButton,
+        company_name: mainPageContent.companyName,
+        copyright: mainPageContent.copyright,
+        footer_login: mainPageContent.footerLogin,
+        footer_about: mainPageContent.footerAbout,
+        footer_contact: mainPageContent.footerContact,
+        footer_privacy: mainPageContent.footerPrivacy
+      };
+
+      // If there's an existing ID, add it to the payload for upsert
+      if (existingAdminSettings?.id) {
+        adminSettingsPayload.id = existingAdminSettings.id;
+      }
+
       // Save all other settings to admin_settings table
       const { data: settingsData, error: settingsError } = await supabase
         .from('admin_settings')
-        .upsert({
-          cancellation_hours: cancellationHours,
-          logo: logo,
-          header_color: headerColor,
-          footer_color: footerColor,
-          membership_expiry_basic: membershipExpiry.basic,
-          membership_expiry_standard: membershipExpiry.standard,
-          membership_expiry_premium: membershipExpiry.premium,
-          show_testimonials: showTestimonials,
-          show_low_session_warning: showLowSessionWarning,
-          show_member_delete_icon: showMemberDeleteIcon,
-          show_class_delete_icon: showClassDeleteIcon,
-          show_booking_delete_icon: showBookingDeleteIcon,
-          hero_title: mainPageContent.heroTitle,
-          hero_description: mainPageContent.heroDescription,
-          hero_image: mainPageContent.heroImage,
-          feature1_title: mainPageContent.feature1Title,
-          feature1_description: mainPageContent.feature1Description,
-          feature2_title: mainPageContent.feature2Title,
-          feature2_description: mainPageContent.feature2Description,
-          feature3_title: mainPageContent.feature3Title,
-          feature3_description: mainPageContent.feature3Description,
-          features_section: mainPageContent.featuresSection,
-          testimonials_section: mainPageContent.testimonialsSection,
-          cta_title: mainPageContent.ctaTitle,
-          cta_description: mainPageContent.ctaDescription,
-          cta_button: mainPageContent.ctaButton,
-          company_name: mainPageContent.companyName,
-          copyright: mainPageContent.copyright,
-          footer_login: mainPageContent.footerLogin,
-          footer_about: mainPageContent.footerAbout,
-          footer_contact: mainPageContent.footerContact,
-          footer_privacy: mainPageContent.footerPrivacy
-        }, {
+        .upsert(adminSettingsPayload, {
           onConflict: 'id'
         });
 
