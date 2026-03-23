@@ -71,6 +71,7 @@ const Settings = () => {
   const [showMemberDeleteIcon, setShowMemberDeleteIcon] = useState(true);
   const [showClassDeleteIcon, setShowClassDeleteIcon] = useState(true);
   const [showBookingDeleteIcon, setShowBookingDeleteIcon] = useState(false);
+  const [autoApproveBalanceRequests, setAutoApproveBalanceRequests] = useState(false);
   const [mainPageContent, setMainPageContent] = useState({
     heroTitle: "Streamlined Gym Management System",
     heroDescription: "A complete solution for gym owners and members. Manage memberships, book sessions, track attendance, and more.",
@@ -196,6 +197,7 @@ const Settings = () => {
         show_member_delete_icon: showMemberDeleteIcon,
         show_class_delete_icon: showClassDeleteIcon,
         show_booking_delete_icon: showBookingDeleteIcon,
+        auto_approve_balance_requests: autoApproveBalanceRequests,
         hero_title: mainPageContent.heroTitle,
         hero_description: mainPageContent.heroDescription,
         hero_image: mainPageContent.heroImage,
@@ -386,6 +388,7 @@ const Settings = () => {
         setShowMemberDeleteIcon(data.show_member_delete_icon ?? true);
         setShowClassDeleteIcon(data.show_class_delete_icon ?? true);
         setShowBookingDeleteIcon(data.show_booking_delete_icon ?? false);
+        setAutoApproveBalanceRequests(data.auto_approve_balance_requests ?? false);
         setMainPageContent({
           heroTitle: data.hero_title || "Streamlined Gym Management System",
           heroDescription: data.hero_description || "A complete solution for gym owners and members. Manage memberships, book sessions, track attendance, and more.",
@@ -897,6 +900,20 @@ const Settings = () => {
                       id="show-booking-delete-icon"
                       checked={showBookingDeleteIcon}
                       onCheckedChange={setShowBookingDeleteIcon}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="auto-approve-balance">Auto Approve Balance Requests</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically approve session balance requests when users submit them (no manual approval needed)
+                      </p>
+                    </div>
+                    <Switch
+                      id="auto-approve-balance"
+                      checked={autoApproveBalanceRequests}
+                      onCheckedChange={setAutoApproveBalanceRequests}
                     />
                   </div>
                </CardContent>
