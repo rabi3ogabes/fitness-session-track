@@ -71,6 +71,7 @@ const Settings = () => {
   const [showMemberDeleteIcon, setShowMemberDeleteIcon] = useState(true);
   const [showClassDeleteIcon, setShowClassDeleteIcon] = useState(true);
   const [showBookingDeleteIcon, setShowBookingDeleteIcon] = useState(false);
+  const [autoApproveBalanceRequests, setAutoApproveBalanceRequests] = useState(false);
   const [mainPageContent, setMainPageContent] = useState({
     heroTitle: "Streamlined Gym Management System",
     heroDescription: "A complete solution for gym owners and members. Manage memberships, book sessions, track attendance, and more.",
