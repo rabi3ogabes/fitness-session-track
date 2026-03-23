@@ -100,6 +100,20 @@ const UserMembership = () => {
     }
   };
 
+  const fetchAutoApproveSetting = async () => {
+    try {
+      const { data } = await supabase
+        .from('admin_settings')
+        .select('auto_approve_balance_requests')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setAutoApproveEnabled(data?.auto_approve_balance_requests ?? false);
+    } catch (e) {
+      console.error('Error fetching auto-approve setting:', e);
+    }
+  };
+
   const fetchAllData = async (user) => {
     setLoading(true);
 
