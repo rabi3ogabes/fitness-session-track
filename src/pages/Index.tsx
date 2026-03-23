@@ -132,33 +132,50 @@ const Index = () => {
   const years = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
 
   useEffect(() => {
-    // Load settings from localStorage
-    const savedLogo = localStorage.getItem("gymLogo");
-    if (savedLogo) {
-      setLogo(savedLogo);
-    }
-    
-    const savedHeaderColor = localStorage.getItem("headerBackgroundColor");
-    if (savedHeaderColor) {
-      setHeaderColor(savedHeaderColor);
-    }
-    
-    const savedFooterColor = localStorage.getItem("footerBackgroundColor");
-    if (savedFooterColor) {
-      setFooterColor(savedFooterColor);
-    }
-    
-    // Load testimonials visibility setting
-    const savedShowTestimonials = localStorage.getItem("showTestimonials");
-    if (savedShowTestimonials !== null) {
-      setShowTestimonials(JSON.parse(savedShowTestimonials));
-    }
-    
-    // Load main page content from localStorage
-    const savedMainPageContent = localStorage.getItem("mainPageContent");
-    if (savedMainPageContent) {
-      setContent(JSON.parse(savedMainPageContent));
-    }
+    // Load settings from database
+    const loadFromDatabase = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('admin_settings')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (data && !error) {
+          if (data.logo) setLogo(data.logo);
+          if (data.header_color) setHeaderColor(data.header_color);
+          if (data.footer_color) setFooterColor(data.footer_color);
+          setShowTestimonials(data.show_testimonials ?? true);
+          setContent({
+            heroTitle: data.hero_title || content.heroTitle,
+            heroDescription: data.hero_description || content.heroDescription,
+            heroImage: data.hero_image || content.heroImage,
+            feature1Title: data.feature1_title || content.feature1Title,
+            feature1Description: data.feature1_description || content.feature1Description,
+            feature2Title: data.feature2_title || content.feature2Title,
+            feature2Description: data.feature2_description || content.feature2Description,
+            feature3Title: data.feature3_title || content.feature3Title,
+            feature3Description: data.feature3_description || content.feature3Description,
+            featuresSection: data.features_section || content.featuresSection,
+            testimonialsSection: data.testimonials_section || content.testimonialsSection,
+            ctaTitle: data.cta_title || content.ctaTitle,
+            ctaDescription: data.cta_description || content.ctaDescription,
+            ctaButton: data.cta_button || content.ctaButton,
+            companyName: data.company_name || content.companyName,
+            copyright: data.copyright || content.copyright,
+            footerLogin: data.footer_login || content.footerLogin,
+            footerAbout: data.footer_about || content.footerAbout,
+            footerContact: data.footer_contact || content.footerContact,
+            footerPrivacy: data.footer_privacy || content.footerPrivacy,
+          });
+        }
+      } catch (e) {
+        console.error('Error loading settings from database:', e);
+      }
+    };
+
+    loadFromDatabase();
   }, []);
 
   // Update birthday when date is selected
