@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,11 +8,10 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // Verify the caller is an admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "No authorization header" }), {
@@ -22,22 +21,22 @@ Deno.serve(async (req) => {
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Create a client with the user's token to verify they're admin
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    // Verify the caller is admin
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user: callerUser } } = await userClient.auth.getUser();
-    if (!callerUser) {
+    const { data: { user: callerUser }, error: userError } = await userClient.auth.getUser();
+    if (userError || !callerUser) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check if caller is admin
     const role = callerUser.user_metadata?.role;
     if (role !== "admin") {
       return new Response(JSON.stringify({ error: "Only admins can reset passwords" }), {
@@ -47,7 +46,6 @@ Deno.serve(async (req) => {
     }
 
     const { email, newPassword } = await req.json();
-
     if (!email || !newPassword) {
       return new Response(JSON.stringify({ error: "Email and newPassword are required" }), {
         status: 400,
@@ -55,15 +53,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create admin client with service role key
+    // Admin client
     const adminClient = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Find the user by email
-    const { data: usersData, error: listError } = await adminClient.auth.admin.listUsers();
+    // Find the user by email using listUsers with filter
+    const { data: usersData, error: listError } = await adminClient.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+
     if (listError) {
-      return new Response(JSON.stringify({ error: "Failed to list users" }), {
+      console.error("listUsers error:", listError);
+      return new Response(JSON.stringify({ error: "Failed to list users: " + listError.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -71,30 +74,33 @@ Deno.serve(async (req) => {
 
     const targetUser = usersData.users.find((u) => u.email === email);
     if (!targetUser) {
-      return new Response(JSON.stringify({ error: "User not found with this email" }), {
+      return new Response(JSON.stringify({ error: "User not found with email: " + email }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Update the user's password
+    // Update password
     const { error: updateError } = await adminClient.auth.admin.updateUserById(
       targetUser.id,
       { password: newPassword }
     );
 
     if (updateError) {
+      console.error("updateUser error:", updateError);
       return new Response(JSON.stringify({ error: updateError.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    console.log("Password reset successfully for:", email);
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    console.error("Unexpected error:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
