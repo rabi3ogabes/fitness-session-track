@@ -594,14 +594,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_user_name: {
-        Args: { user_id: string }
-        Returns: string
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      get_user_name: { Args: { user_id: string }; Returns: string }
+      is_admin: { Args: never; Returns: boolean }
       send_admin_notification: {
         Args: {
           details?: string
