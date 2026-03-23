@@ -119,7 +119,7 @@ const MemberGrid = ({
                 <span className="text-gray-600">{member.phone || 'Not provided'}</span>
               </div>
               
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-2 text-sm hidden">
                 <CreditCard className="h-4 w-4 text-gray-400" />
                 <span className="text-gray-600">{member.membership && member.membership !== 'null' ? member.membership : 'Basic'}</span>
               </div>
