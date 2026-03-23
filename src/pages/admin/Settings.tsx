@@ -902,6 +902,20 @@ const Settings = () => {
                       onCheckedChange={setShowBookingDeleteIcon}
                     />
                   </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="auto-approve-balance">Auto Approve Balance Requests</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically approve session balance requests when users submit them (no manual approval needed)
+                      </p>
+                    </div>
+                    <Switch
+                      id="auto-approve-balance"
+                      checked={autoApproveBalanceRequests}
+                      onCheckedChange={setAutoApproveBalanceRequests}
+                    />
+                  </div>
                </CardContent>
             </Card>
 
