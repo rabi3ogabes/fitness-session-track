@@ -275,11 +275,18 @@ const UserMembership = () => {
                  membershipTypes.find((p) => p.name === planName);
     if (!plan) return;
 
-    // Show toast
-    toast({
-      title: "Membership request sent",
-      description: `Your request for the ${planName} plan has been submitted. A staff member will review it shortly.`,
-    });
+    // Show initial toast based on auto-approve setting
+    if (autoApproveEnabled) {
+      toast({
+        title: "Processing your request",
+        description: `Your ${planName} plan request is being processed and will be approved automatically.`,
+      });
+    } else {
+      toast({
+        title: "Membership request sent",
+        description: `Your request for the ${planName} plan has been submitted. A staff member will review it shortly.`,
+      });
+    }
 
     const today = new Date();
     const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD format for database
