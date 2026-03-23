@@ -197,6 +197,7 @@ const Settings = () => {
         show_member_delete_icon: showMemberDeleteIcon,
         show_class_delete_icon: showClassDeleteIcon,
         show_booking_delete_icon: showBookingDeleteIcon,
+        auto_approve_balance_requests: autoApproveBalanceRequests,
         hero_title: mainPageContent.heroTitle,
         hero_description: mainPageContent.heroDescription,
         hero_image: mainPageContent.heroImage,
