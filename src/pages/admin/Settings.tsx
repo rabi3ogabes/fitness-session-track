@@ -388,6 +388,7 @@ const Settings = () => {
         setShowMemberDeleteIcon(data.show_member_delete_icon ?? true);
         setShowClassDeleteIcon(data.show_class_delete_icon ?? true);
         setShowBookingDeleteIcon(data.show_booking_delete_icon ?? false);
+        setAutoApproveBalanceRequests(data.auto_approve_balance_requests ?? false);
         setMainPageContent({
           heroTitle: data.hero_title || "Streamlined Gym Management System",
           heroDescription: data.hero_description || "A complete solution for gym owners and members. Manage memberships, book sessions, track attendance, and more.",
