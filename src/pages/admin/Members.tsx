@@ -290,15 +290,40 @@ const Members = () => {
     setIsResetPasswordDialogOpen(true);
   };
 
-  const confirmResetPassword = () => {
+  const confirmResetPassword = async () => {
     if (selectedMemberId === null) return;
 
     const member = members.find((m) => m.id === selectedMemberId);
-    if (member) {
+    if (!member) return;
+
+    if (!member.phone) {
+      toast({
+        title: "Error",
+        description: "This member has no phone number set. Cannot reset password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-member-password', {
+        body: { email: member.email, newPassword: member.phone },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
       toast({
         title: "Password reset successfully",
         description: `${member.name}'s password has been reset to their phone number`,
       });
+    } catch (error: any) {
+      toast({
+        title: "Failed to reset password",
+        description: error.message || "An error occurred while resetting the password",
+        variant: "destructive",
+      });
+    } finally {
       setIsResetPasswordDialogOpen(false);
       setSelectedMemberId(null);
     }
