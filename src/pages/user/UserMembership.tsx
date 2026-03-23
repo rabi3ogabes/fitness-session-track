@@ -548,6 +548,12 @@ const UserMembership = () => {
         <div>
           <div className="mb-6">
             <h2 className="text-2xl font-bold">Available Plans</h2>
+            {autoApproveEnabled && (
+              <div className="mt-3 flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 rounded-lg px-4 py-2.5 text-sm">
+                <Zap className="h-4 w-4 text-green-600 flex-shrink-0" />
+                <span><strong>Instant Approval:</strong> Your session requests will be approved automatically — no waiting needed!</span>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
