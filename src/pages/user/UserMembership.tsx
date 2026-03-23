@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -53,6 +54,7 @@ const UserMembership = () => {
   });
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [autoApproveEnabled, setAutoApproveEnabled] = useState(false);
 
   // Function to format date/time in Qatar timezone
   const formatQatarDateTime = (dateString: string) => {
@@ -95,6 +97,20 @@ const UserMembership = () => {
       console.error('Error fetching membership types:', error);
       // Fallback to context data
       setDbMembershipTypes(membershipTypes.filter(type => type.active));
+    }
+  };
+
+  const fetchAutoApproveSetting = async () => {
+    try {
+      const { data } = await supabase
+        .from('admin_settings')
+        .select('auto_approve_balance_requests')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setAutoApproveEnabled(data?.auto_approve_balance_requests ?? false);
+    } catch (e) {
+      console.error('Error fetching auto-approve setting:', e);
     }
   };
 
@@ -232,8 +248,8 @@ const UserMembership = () => {
   // Fetch user information and payment history when component mounts
   useEffect(() => {
     const initializeData = async () => {
-      // First fetch membership types
       await fetchMembershipTypes();
+      await fetchAutoApproveSetting();
       
       const {
         data: { user },
@@ -532,6 +548,12 @@ const UserMembership = () => {
         <div>
           <div className="mb-6">
             <h2 className="text-2xl font-bold">Available Plans</h2>
+            {autoApproveEnabled && (
+              <div className="mt-3 flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 rounded-lg px-4 py-2.5 text-sm">
+                <Zap className="h-4 w-4 text-green-600 flex-shrink-0" />
+                <span><strong>Instant Approval:</strong> Your session requests will be approved automatically — no waiting needed!</span>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
