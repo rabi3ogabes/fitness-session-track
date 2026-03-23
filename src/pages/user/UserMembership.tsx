@@ -329,50 +329,99 @@ const UserMembership = () => {
       }
 
       // Try to add to Supabase
-      const { error } = await supabase.from("membership_requests").insert([
+      const { data: insertedData, error } = await supabase.from("membership_requests").insert([
         {
           member: currentUser.name,
           email: currentUser.email,
           type: planName,
-          sessions: plan.sessions, // Store the actual session count
+          sessions: plan.sessions,
           date: formattedDate,
           status: "Pending",
         },
-      ]);
-
-      // Send notification to n8n if successful
-      if (!error) {
-        try {
-          console.log("Calling send-admin-notification edge function...");
-          
-          const { error: notificationError } = await supabase.functions.invoke(
-            'send-admin-notification',
-            {
-              body: {
-                type: 'session_request',
-                userEmail: currentUser.email,
-                userName: currentUser.name,
-                planName: planName,
-                sessions: plan.sessions,
-                price: plan.price,
-                details: `Requested ${plan.sessions} sessions of ${planName} plan`
-              }
-            }
-          );
-          
-          if (notificationError) {
-            console.error("Failed to send admin notification:", notificationError);
-          } else {
-            console.log("Admin notification sent successfully to n8n");
-          }
-        } catch (notificationError) {
-          console.error("Exception sending admin notification:", notificationError);
-          // Don't fail the request if notification fails
-        }
-      }
+      ]).select().single();
 
       if (error) {
         storeRequestLocally(newRequest);
+        return;
+      }
+
+      // Check if auto-approve is enabled
+      try {
+        const { data: adminSettings } = await supabase
+          .from('admin_settings')
+          .select('auto_approve_balance_requests')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (adminSettings?.auto_approve_balance_requests && insertedData) {
+          console.log("Auto-approve enabled, approving request automatically...");
+          
+          // Update request status to Approved
+          await supabase
+            .from('membership_requests')
+            .update({ status: 'Approved' })
+            .eq('id', insertedData.id);
+
+          // Update member's sessions
+          const { data: memberData } = await supabase
+            .from('members')
+            .select('id, remaining_sessions, total_sessions')
+            .eq('email', currentUser.email)
+            .single();
+
+          if (memberData) {
+            const newRemaining = (memberData.remaining_sessions || 0) + plan.sessions;
+            const newTotal = (memberData.total_sessions || 0) + plan.sessions;
+            await supabase
+              .from('members')
+              .update({ remaining_sessions: newRemaining, total_sessions: newTotal })
+              .eq('id', memberData.id);
+          }
+
+          // Update UI
+          setPaymentHistory((prev) =>
+            prev.map((p) =>
+              p.id === newPayment.id ? { ...p, status: "Approved" } : p
+            )
+          );
+
+          toast({
+            title: "Request Auto-Approved",
+            description: `${plan.sessions} sessions have been added to your account automatically.`,
+          });
+          return;
+        }
+      } catch (autoApproveError) {
+        console.error("Error checking auto-approve setting:", autoApproveError);
+      }
+
+      // Send notification to n8n if not auto-approved
+      try {
+        console.log("Calling send-admin-notification edge function...");
+        
+        const { error: notificationError } = await supabase.functions.invoke(
+          'send-admin-notification',
+          {
+            body: {
+              type: 'session_request',
+              userEmail: currentUser.email,
+              userName: currentUser.name,
+              planName: planName,
+              sessions: plan.sessions,
+              price: plan.price,
+              details: `Requested ${plan.sessions} sessions of ${planName} plan`
+            }
+          }
+        );
+        
+        if (notificationError) {
+          console.error("Failed to send admin notification:", notificationError);
+        } else {
+          console.log("Admin notification sent successfully to n8n");
+        }
+      } catch (notificationError) {
+        console.error("Exception sending admin notification:", notificationError);
       }
     } catch (err) {
       console.error("Exception when submitting request:", err);
