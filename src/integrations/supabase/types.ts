@@ -94,6 +94,7 @@ export type Database = {
       }
       admin_settings: {
         Row: {
+          auto_approve_balance_requests: boolean | null
           cancellation_hours: number
           company_name: string | null
           copyright: string | null
@@ -131,6 +132,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_approve_balance_requests?: boolean | null
           cancellation_hours?: number
           company_name?: string | null
           copyright?: string | null
@@ -168,6 +170,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_approve_balance_requests?: boolean | null
           cancellation_hours?: number
           company_name?: string | null
           copyright?: string | null

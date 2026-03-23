@@ -1,0 +1,1 @@
+ALTER TABLE public.admin_settings ADD COLUMN IF NOT EXISTS auto_approve_balance_requests boolean DEFAULT false;
