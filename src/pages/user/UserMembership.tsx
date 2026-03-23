@@ -248,8 +248,8 @@ const UserMembership = () => {
   // Fetch user information and payment history when component mounts
   useEffect(() => {
     const initializeData = async () => {
-      // First fetch membership types
       await fetchMembershipTypes();
+      await fetchAutoApproveSetting();
       
       const {
         data: { user },
