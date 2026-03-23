@@ -5,6 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import SessionBalance from "./SessionBalance";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Home,
   User,
@@ -31,19 +32,28 @@ const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    // Load logo and app name from local storage
-    const savedLogo = localStorage.getItem("gymLogo");
-    if (savedLogo) {
-      setLogo(savedLogo);
-    }
-    
-    const savedMainPageContent = localStorage.getItem("mainPageContent");
-    if (savedMainPageContent) {
-      const content = JSON.parse(savedMainPageContent);
-      setAppName(content.companyName || "GYM SYSTEM");
-    }
-    
-    // Listen for storage changes (in case logo or app name is updated in settings)
+    // Load logo and app name from database
+    const loadFromDatabase = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('admin_settings')
+          .select('logo, company_name')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (data && !error) {
+          if (data.logo) setLogo(data.logo);
+          if (data.company_name) setAppName(data.company_name);
+        }
+      } catch (e) {
+        console.error('Error loading sidebar settings:', e);
+      }
+    };
+
+    loadFromDatabase();
+
+    // Listen for storage changes as fallback (when settings are saved)
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "gymLogo") {
         setLogo(e.newValue);
