@@ -54,6 +54,7 @@ const UserMembership = () => {
   });
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [autoApproveEnabled, setAutoApproveEnabled] = useState(false);
 
   // Function to format date/time in Qatar timezone
   const formatQatarDateTime = (dateString: string) => {
