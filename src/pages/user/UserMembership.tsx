@@ -264,6 +264,45 @@ const UserMembership = () => {
     initializeData();
   }, []);
 
+  // Real-time subscription to update sessions without page reload
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) return;
+
+      channel = supabase
+        .channel('member-sessions-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'members',
+            filter: `email=eq.${user.email}`,
+          },
+          (payload) => {
+            const updated = payload.new as any;
+            setCurrentMembership((prev) => ({
+              ...prev,
+              sessionsRemaining: updated.remaining_sessions ?? prev.sessionsRemaining,
+              sessions: updated.sessions ?? prev.sessions,
+            }));
+          }
+        )
+        .subscribe();
+    };
+
+    setupRealtime();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, []);
+
   // Refresh membership types when membershipTypes context changes
   useEffect(() => {
     fetchMembershipTypes();
