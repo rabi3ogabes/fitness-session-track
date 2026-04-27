@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { User, UserRound, Mail, Phone, Calendar, CreditCard, Activity, Clock, MapPin } from "lucide-react";
+import { User, UserRound, Mail, Phone, Calendar, CreditCard, Activity, Clock, MapPin, History, Plus, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Member } from "./types";
