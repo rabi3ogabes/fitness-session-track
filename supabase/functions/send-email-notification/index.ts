@@ -627,7 +627,6 @@ const handler = async (req: Request): Promise<Response> => {
               ? 'Test email sent successfully! Email notifications are working.'
               : 'New user registration notification sent successfully.',
             emailDetails: {
-              id: emailResponse.data?.id,
               to: emailTo,
               subject: emailSubject,
               timestamp: new Date().toISOString()
