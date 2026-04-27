@@ -333,6 +333,57 @@ const MemberDetailsDialog = ({ member, open, onOpenChange }: MemberDetailsDialog
                 )}
               </CardContent>
             </Card>
+
+            {/* Session History Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Session History ({sessionHistory.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {historyLoading ? (
+                  <div className="text-center py-4">Loading history...</div>
+                ) : sessionHistory.length === 0 ? (
+                  <div className="text-center py-6 text-gray-500">
+                    No session changes recorded yet
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Change</TableHead>
+                        <TableHead>Before</TableHead>
+                        <TableHead>After</TableHead>
+                        <TableHead>By</TableHead>
+                        <TableHead>Reason</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sessionHistory.map((entry) => (
+                        <TableRow key={entry.id}>
+                          <TableCell className="text-sm">
+                            {format(new Date(entry.created_at), "MMM d, yyyy HH:mm")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={entry.delta > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                              {entry.delta > 0 ? <Plus className="h-3 w-3 inline mr-0.5" /> : <Minus className="h-3 w-3 inline mr-0.5" />}
+                              {Math.abs(entry.delta)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{entry.previous_sessions}</TableCell>
+                          <TableCell className="font-medium">{entry.new_sessions}</TableCell>
+                          <TableCell className="text-sm">{entry.changed_by_name || "—"}</TableCell>
+                          <TableCell className="text-sm text-gray-600">{entry.reason || "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </ScrollArea>
       </DialogContent>
