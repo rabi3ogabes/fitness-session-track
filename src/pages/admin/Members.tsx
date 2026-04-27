@@ -193,6 +193,41 @@ const Members = () => {
     setIsDetailsDialogOpen(true);
   };
 
+  const adjustSessions = async (id: number, delta: number) => {
+    try {
+      const member = members.find((m) => m.id === id);
+      if (!member) return;
+      const newSessions = Math.max(0, (member.remainingSessions || 0) + delta);
+      if (newSessions === member.remainingSessions) return;
+
+      await requireAuth(async () => {
+        const { error } = await supabase
+          .from("members")
+          .update({ remaining_sessions: newSessions })
+          .eq("id", id);
+        if (error) throw error;
+
+        setMembers((prev) =>
+          prev.map((m) =>
+            m.id === id ? { ...m, remainingSessions: newSessions } : m
+          )
+        );
+
+        toast({
+          title: delta > 0 ? "Session added" : "Session removed",
+          description: `${member.name} now has ${newSessions} session${newSessions === 1 ? "" : "s"}`,
+        });
+      });
+    } catch (err: any) {
+      console.error("Error adjusting sessions:", err);
+      toast({
+        title: "Failed to update sessions",
+        description: err.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
   const toggleMemberStatus = async (id: number) => {
     try {
       // First, find the current member to get their status
