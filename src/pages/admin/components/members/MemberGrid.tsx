@@ -131,9 +131,34 @@ const MemberGrid = ({
                   <Activity className="h-4 w-4 text-gray-400" />
                   <span className="text-sm text-gray-600">Sessions:</span>
                 </div>
-                <Badge className={member.remainingSessions <= 2 ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
-                  {member.remainingSessions}
-                </Badge>
+                <div className="flex items-center gap-1">
+                  {adjustSessions && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => adjustSessions(member.id, -1)}
+                      disabled={member.remainingSessions <= 0}
+                      className="h-6 w-6 text-red-600 hover:text-red-800 hover:bg-red-50"
+                      aria-label="Remove session"
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                  )}
+                  <Badge className={member.remainingSessions <= 2 ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
+                    {member.remainingSessions}
+                  </Badge>
+                  {adjustSessions && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => adjustSessions(member.id, 1)}
+                      className="h-6 w-6 text-green-600 hover:text-green-800 hover:bg-green-50"
+                      aria-label="Add session"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
