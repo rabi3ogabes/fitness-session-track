@@ -201,11 +201,36 @@ const Members = () => {
       if (newSessions === member.remainingSessions) return;
 
       await requireAuth(async () => {
+        const previousSessions = member.remainingSessions || 0;
         const { error } = await supabase
           .from("members")
           .update({ remaining_sessions: newSessions })
           .eq("id", id);
         if (error) throw error;
+
+        // Log the change in session_history (best-effort; don't block UI on failure)
+        const { data: authData } = await supabase.auth.getUser();
+        const changedByUserId = authData?.user?.id ?? null;
+        const changedByName =
+          (authData?.user?.user_metadata as any)?.name ||
+          authData?.user?.email ||
+          null;
+
+        const { error: historyError } = await supabase
+          .from("session_history")
+          .insert({
+            member_id: id,
+            member_name: member.name,
+            delta,
+            previous_sessions: previousSessions,
+            new_sessions: newSessions,
+            reason: delta > 0 ? "Admin added session" : "Admin removed session",
+            changed_by_user_id: changedByUserId,
+            changed_by_name: changedByName,
+          });
+        if (historyError) {
+          console.error("Failed to log session history:", historyError);
+        }
 
         setMembers((prev) =>
           prev.map((m) =>
