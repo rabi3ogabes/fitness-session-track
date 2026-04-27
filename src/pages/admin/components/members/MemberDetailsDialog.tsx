@@ -31,15 +31,46 @@ interface MemberDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface SessionHistoryEntry {
+  id: string;
+  delta: number;
+  previous_sessions: number;
+  new_sessions: number;
+  reason: string | null;
+  changed_by_name: string | null;
+  created_at: string;
+}
+
 const MemberDetailsDialog = ({ member, open, onOpenChange }: MemberDetailsDialogProps) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sessionHistory, setSessionHistory] = useState<SessionHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     if (member && open) {
       fetchMemberBookings();
+      fetchSessionHistory();
     }
   }, [member, open]);
+
+  const fetchSessionHistory = async () => {
+    if (!member) return;
+    setHistoryLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("session_history")
+        .select("id, delta, previous_sessions, new_sessions, reason, changed_by_name, created_at")
+        .eq("member_id", member.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setSessionHistory(data || []);
+    } catch (error) {
+      console.error("Error fetching session history:", error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   const fetchMemberBookings = async () => {
     if (!member) return;
