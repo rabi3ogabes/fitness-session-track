@@ -457,6 +457,7 @@ const Members = () => {
         showDeleteIcon={showDeleteIcon}
         onMemberClick={handleMemberClick}
         viewMode={viewMode}
+        adjustSessions={adjustSessions}
       />
 
       <AddMemberDialog
