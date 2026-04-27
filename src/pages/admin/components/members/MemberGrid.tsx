@@ -16,6 +16,7 @@ interface MemberGridProps {
   isLoading?: boolean;
   showDeleteIcon?: boolean;
   onMemberClick?: (member: Member) => void;
+  adjustSessions?: (id: number, delta: number) => void;
 }
 
 const MemberGrid = ({
@@ -28,7 +29,8 @@ const MemberGrid = ({
   deleteMember,
   isLoading = false,
   showDeleteIcon = true,
-  onMemberClick
+  onMemberClick,
+  adjustSessions,
 }: MemberGridProps) => {
 
   if (isLoading) {
