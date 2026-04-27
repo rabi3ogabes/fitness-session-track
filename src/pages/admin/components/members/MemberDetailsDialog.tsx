@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { User, UserRound, Mail, Phone, Calendar, CreditCard, Activity, Clock, MapPin } from "lucide-react";
+import { User, UserRound, Mail, Phone, Calendar, CreditCard, Activity, Clock, MapPin, History, Plus, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { Member } from "./types";
@@ -31,15 +31,46 @@ interface MemberDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface SessionHistoryEntry {
+  id: string;
+  delta: number;
+  previous_sessions: number;
+  new_sessions: number;
+  reason: string | null;
+  changed_by_name: string | null;
+  created_at: string;
+}
+
 const MemberDetailsDialog = ({ member, open, onOpenChange }: MemberDetailsDialogProps) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sessionHistory, setSessionHistory] = useState<SessionHistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     if (member && open) {
       fetchMemberBookings();
+      fetchSessionHistory();
     }
   }, [member, open]);
+
+  const fetchSessionHistory = async () => {
+    if (!member) return;
+    setHistoryLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("session_history")
+        .select("id, delta, previous_sessions, new_sessions, reason, changed_by_name, created_at")
+        .eq("member_id", member.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setSessionHistory(data || []);
+    } catch (error) {
+      console.error("Error fetching session history:", error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   const fetchMemberBookings = async () => {
     if (!member) return;
@@ -299,6 +330,57 @@ const MemberDetailsDialog = ({ member, open, onOpenChange }: MemberDetailsDialog
                       )}
                     </TabsContent>
                   </Tabs>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Session History Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Session History ({sessionHistory.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {historyLoading ? (
+                  <div className="text-center py-4">Loading history...</div>
+                ) : sessionHistory.length === 0 ? (
+                  <div className="text-center py-6 text-gray-500">
+                    No session changes recorded yet
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Change</TableHead>
+                        <TableHead>Before</TableHead>
+                        <TableHead>After</TableHead>
+                        <TableHead>By</TableHead>
+                        <TableHead>Reason</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sessionHistory.map((entry) => (
+                        <TableRow key={entry.id}>
+                          <TableCell className="text-sm">
+                            {format(new Date(entry.created_at), "MMM d, yyyy HH:mm")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={entry.delta > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                              {entry.delta > 0 ? <Plus className="h-3 w-3 inline mr-0.5" /> : <Minus className="h-3 w-3 inline mr-0.5" />}
+                              {Math.abs(entry.delta)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{entry.previous_sessions}</TableCell>
+                          <TableCell className="font-medium">{entry.new_sessions}</TableCell>
+                          <TableCell className="text-sm">{entry.changed_by_name || "—"}</TableCell>
+                          <TableCell className="text-sm text-gray-600">{entry.reason || "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 )}
               </CardContent>
             </Card>
