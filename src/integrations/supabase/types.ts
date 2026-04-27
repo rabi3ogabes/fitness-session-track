@@ -559,6 +559,45 @@ export type Database = {
         }
         Relationships: []
       }
+      session_history: {
+        Row: {
+          changed_by_name: string | null
+          changed_by_user_id: string | null
+          created_at: string
+          delta: number
+          id: string
+          member_id: number
+          member_name: string | null
+          new_sessions: number
+          previous_sessions: number
+          reason: string | null
+        }
+        Insert: {
+          changed_by_name?: string | null
+          changed_by_user_id?: string | null
+          created_at?: string
+          delta: number
+          id?: string
+          member_id: number
+          member_name?: string | null
+          new_sessions: number
+          previous_sessions: number
+          reason?: string | null
+        }
+        Update: {
+          changed_by_name?: string | null
+          changed_by_user_id?: string | null
+          created_at?: string
+          delta?: number
+          id?: string
+          member_id?: number
+          member_name?: string | null
+          new_sessions?: number
+          previous_sessions?: number
+          reason?: string | null
+        }
+        Relationships: []
+      }
       trainers: {
         Row: {
           created_at: string | null
