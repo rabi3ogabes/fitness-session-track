@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PencilIcon, PowerIcon, UserMinusIcon, Lock, Trash2, User, UserRound, Mail, Phone, CreditCard, Activity, CheckCircle, XCircle } from "lucide-react";
+import { PencilIcon, PowerIcon, UserMinusIcon, Lock, Trash2, User, UserRound, Mail, Phone, CreditCard, Activity, CheckCircle, XCircle, Plus, Minus } from "lucide-react";
 import { Member } from "./types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
