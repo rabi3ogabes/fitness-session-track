@@ -18,6 +18,7 @@ interface MemberTableProps {
   showDeleteIcon?: boolean;
   onMemberClick?: (member: Member) => void;
   viewMode?: 'box' | 'grid';
+  adjustSessions?: (id: number, delta: number) => void;
 }
 
 const MemberTable = ({
@@ -31,7 +32,8 @@ const MemberTable = ({
   isLoading = false,
   showDeleteIcon = true,
   onMemberClick,
-  viewMode = 'box'
+  viewMode = 'box',
+  adjustSessions,
 }: MemberTableProps) => {
 
   // If viewMode is 'box', render the grid component
@@ -48,6 +50,7 @@ const MemberTable = ({
         isLoading={isLoading}
         showDeleteIcon={showDeleteIcon}
         onMemberClick={onMemberClick}
+        adjustSessions={adjustSessions}
       />
     );
   }
