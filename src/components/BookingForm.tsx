@@ -139,22 +139,7 @@ const BookingForm = ({
       });
       return;
     }
-      toast({
-        title: "No sessions remaining",
-        description: "Please purchase a membership to book more sessions.",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to book a session.",
-        variant: "destructive",
-      });
-      return;
-    }
 
     // Check gender restrictions - only restrict men from women-only classes
     const selectedClassData = unbookedClasses.find(cls => cls.id === selectedClass);
