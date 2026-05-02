@@ -1,0 +1,1 @@
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS count_credit boolean NOT NULL DEFAULT true;

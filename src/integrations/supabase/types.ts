@@ -311,6 +311,7 @@ export type Database = {
         Row: {
           birthday: string | null
           can_be_edited_by_trainers: boolean | null
+          count_credit: boolean
           created_at: string | null
           email: string
           gender: string | null
@@ -327,6 +328,7 @@ export type Database = {
         Insert: {
           birthday?: string | null
           can_be_edited_by_trainers?: boolean | null
+          count_credit?: boolean
           created_at?: string | null
           email: string
           gender?: string | null
@@ -343,6 +345,7 @@ export type Database = {
         Update: {
           birthday?: string | null
           can_be_edited_by_trainers?: boolean | null
+          count_credit?: boolean
           created_at?: string | null
           email?: string
           gender?: string | null
