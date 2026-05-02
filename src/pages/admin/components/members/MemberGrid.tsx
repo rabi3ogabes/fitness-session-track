@@ -135,7 +135,7 @@ const MemberGrid = ({
                   <span className="text-sm text-gray-600">Sessions:</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  {adjustSessions && (
+                  {adjustSessions && member.countCredit !== false && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -150,7 +150,7 @@ const MemberGrid = ({
                   <Badge className={member.remainingSessions <= 2 ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
                     {member.remainingSessions}
                   </Badge>
-                  {adjustSessions && (
+                  {adjustSessions && member.countCredit !== false && (
                     <Button
                       variant="ghost"
                       size="icon"
