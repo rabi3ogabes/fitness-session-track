@@ -11,6 +11,7 @@ export interface Member {
   birthday: string;
   canBeEditedByTrainers: boolean;
   gender?: "Male" | "Female"; // Adding gender field as optional to maintain compatibility
+  countCredit?: boolean;
 }
 
 export interface PaymentHistoryItem {

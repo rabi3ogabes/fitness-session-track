@@ -113,15 +113,6 @@ const BookingForm = ({
       return;
     }
 
-    if (remainingSessions <= 0) {
-      toast({
-        title: "No sessions remaining",
-        description: "Please purchase a membership to book more sessions.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!user) {
       toast({
         title: "Authentication required",
@@ -130,6 +121,25 @@ const BookingForm = ({
       });
       return;
     }
+
+    // Check if this member has credit-counting enabled
+    const { data: memberRow } = await supabase
+      .from("members")
+      .select("count_credit")
+      .eq("email", user.email)
+      .maybeSingle();
+
+    const countCredit = memberRow?.count_credit !== false; // default true
+
+    if (countCredit && remainingSessions <= 0) {
+      toast({
+        title: "No sessions remaining",
+        description: "Please purchase a membership to book more sessions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
 
     // Check gender restrictions - only restrict men from women-only classes
     const selectedClassData = unbookedClasses.find(cls => cls.id === selectedClass);

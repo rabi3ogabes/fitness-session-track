@@ -1,5 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { PencilIcon, PowerIcon, UserMinusIcon, Lock, Trash2, User, UserRound } from "lucide-react";
 import { Member } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,6 +20,7 @@ interface MemberTableProps {
   onMemberClick?: (member: Member) => void;
   viewMode?: 'box' | 'grid';
   adjustSessions?: (id: number, delta: number) => void;
+  toggleCountCredit?: (id: number) => void;
 }
 
 const MemberTable = ({
@@ -34,6 +36,7 @@ const MemberTable = ({
   onMemberClick,
   viewMode = 'box',
   adjustSessions,
+  toggleCountCredit,
 }: MemberTableProps) => {
 
   // If viewMode is 'box', render the grid component
@@ -51,6 +54,7 @@ const MemberTable = ({
         showDeleteIcon={showDeleteIcon}
         onMemberClick={onMemberClick}
         adjustSessions={adjustSessions}
+        toggleCountCredit={toggleCountCredit}
       />
     );
   }
@@ -77,13 +81,14 @@ const MemberTable = ({
                 <TableHead className="hidden md:table-cell">Phone</TableHead>
                 <TableHead className="hidden lg:table-cell">Sessions</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="hidden md:table-cell">Count Credit</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredMembers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-gray-500">
+                  <TableCell colSpan={7} className="text-center py-10 text-gray-500">
                     {members.length === 0 ? "No members found in the database." : "No members matching your search criteria."}
                   </TableCell>
                 </TableRow>
@@ -125,6 +130,18 @@ const MemberTable = ({
                       >
                         {member.status}
                       </span>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={member.countCredit !== false}
+                          onCheckedChange={() => toggleCountCredit?.(member.id)}
+                          aria-label="Toggle credit counting"
+                        />
+                        <span className="text-xs text-gray-500">
+                          {member.countCredit !== false ? "On" : "Off"}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <TooltipProvider>
