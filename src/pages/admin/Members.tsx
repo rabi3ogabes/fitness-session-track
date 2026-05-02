@@ -87,6 +87,7 @@ const Members = () => {
             birthday: member.birthday || "",
             canBeEditedByTrainers: member.can_be_edited_by_trainers || false,
             gender: member.gender || "Male",
+            countCredit: member.count_credit !== false,
           }));
 
           setMembers(formattedMembers);
@@ -146,6 +147,7 @@ const Members = () => {
           birthday: editedMember.birthday,
           can_be_edited_by_trainers: editedMember.canBeEditedByTrainers,
           gender: editedMember.gender,
+          count_credit: editedMember.countCredit !== false,
         };
 
 
