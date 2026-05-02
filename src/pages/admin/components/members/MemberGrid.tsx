@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { PencilIcon, PowerIcon, UserMinusIcon, Lock, Trash2, User, UserRound, Mail, Phone, CreditCard, Activity, CheckCircle, XCircle, Plus, Minus } from "lucide-react";
 import { Member } from "./types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -17,6 +18,7 @@ interface MemberGridProps {
   showDeleteIcon?: boolean;
   onMemberClick?: (member: Member) => void;
   adjustSessions?: (id: number, delta: number) => void;
+  toggleCountCredit?: (id: number) => void;
 }
 
 const MemberGrid = ({
@@ -31,6 +33,7 @@ const MemberGrid = ({
   showDeleteIcon = true,
   onMemberClick,
   adjustSessions,
+  toggleCountCredit,
 }: MemberGridProps) => {
 
   if (isLoading) {
@@ -158,6 +161,23 @@ const MemberGrid = ({
                       <Plus className="h-3 w-3" />
                     </Button>
                   )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-dashed border-gray-100">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Count Credit</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={member.countCredit !== false}
+                    onCheckedChange={() => toggleCountCredit?.(member.id)}
+                    aria-label="Toggle credit counting"
+                  />
+                  <span className="text-xs text-gray-500 w-6">
+                    {member.countCredit !== false ? "On" : "Off"}
+                  </span>
                 </div>
               </div>
             </div>
