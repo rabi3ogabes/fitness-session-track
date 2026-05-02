@@ -347,6 +347,38 @@ const Members = () => {
     }
   };
 
+  const toggleCountCredit = async (id: number) => {
+    try {
+      const member = members.find((m) => m.id === id);
+      if (!member) return;
+      const newValue = !(member.countCredit !== false);
+
+      await requireAuth(async () => {
+        const { error } = await supabase
+          .from("members")
+          .update({ count_credit: newValue })
+          .eq("id", id);
+        if (error) throw error;
+
+        setMembers((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, countCredit: newValue } : m))
+        );
+
+        toast({
+          title: "Credit tracking updated",
+          description: `${member.name}: credit counting is now ${newValue ? "ON" : "OFF"}`,
+        });
+      });
+    } catch (err: any) {
+      console.error("Error toggling count_credit:", err);
+      toast({
+        title: "Failed to update credit tracking",
+        description: err.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
   const openResetPasswordDialog = (id: number) => {
     setSelectedMemberId(id);
     setIsResetPasswordDialogOpen(true);
@@ -485,6 +517,7 @@ const Members = () => {
         onMemberClick={handleMemberClick}
         viewMode={viewMode}
         adjustSessions={adjustSessions}
+        toggleCountCredit={toggleCountCredit}
       />
 
       <AddMemberDialog
