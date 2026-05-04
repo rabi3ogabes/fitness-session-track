@@ -119,7 +119,7 @@ const UserBooking = () => {
     fetchUserData();
   }, [user, toast]);
 
-  const handleCancelBooking = async (id: number) => {
+  const handleCancelBooking = async (id: string) => {
     try {
       // In a real app, we would update the booking in Supabase
       // For now we'll just update the state
