@@ -40,78 +40,62 @@ const UserBooking = () => {
     
     const fetchUserData = async () => {
       setIsLoading(true);
-      
+
       try {
-        // Convert user.id to UUID type for Supabase query
-        const { data: profileData, error: profileError } = await supabase
+        // Fetch profile (sessions remaining)
+        const { data: profileData } = await supabase
           .from('profiles')
           .select('sessions_remaining, total_sessions')
           .eq('id', user.id)
-          .single();
-          
-        if (profileError) throw profileError;
-        
-        // For now, until we have real data, we'll use mock data
-        // In a real implementation, you would fetch bookings from Supabase
-        const upcomingBookings = [
-          { 
-            id: 1, 
-            className: "Morning Yoga", 
-            date: "2025-05-01", 
-            time: "08:00 AM", 
-            trainer: "Jane Doe",
-            status: "Confirmed"
-          },
-          { 
-            id: 2, 
-            className: "HIIT Workout", 
-            date: "2025-05-03", 
-            time: "10:00 AM", 
-            trainer: "John Smith",
-            status: "Confirmed"
-          },
-        ];
-        
-        const pastBookings = [
-          { 
-            id: 3, 
-            className: "Strength Training", 
-            date: "2025-04-27", 
-            time: "02:00 PM", 
-            trainer: "Alex Johnson",
-            status: "Completed",
-            attendance: true
-          },
-          { 
-            id: 4, 
-            className: "Pilates", 
-            date: "2025-04-25", 
-            time: "04:00 PM", 
-            trainer: "Sarah Williams",
-            status: "Completed",
-            attendance: true
-          },
-          { 
-            id: 5, 
-            className: "Boxing", 
-            date: "2025-04-22", 
-            time: "06:00 PM", 
-            trainer: "Mike Tyson",
-            status: "Cancelled"
-          },
-        ];
-        
-        // Fix the type error by handling profileData properly with type checking and optional chaining
-        let sessionsRemaining = 7; // Default value
-        
-        if (profileData && typeof profileData === 'object' && 'sessions_remaining' in profileData) {
-          sessionsRemaining = profileData.sessions_remaining ?? 7;
-        }
-        
+          .maybeSingle();
+
+        // Fetch real bookings for this user, joined with class details
+        const { data: bookingsData, error: bookingsError } = await supabase
+          .from('bookings')
+          .select('id, status, attendance, booking_date, class_id, classes:class_id(name, schedule, start_time, trainer)')
+          .eq('user_id', user.id)
+          .order('booking_date', { ascending: false });
+
+        if (bookingsError) throw bookingsError;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const upcomingBookings: Booking[] = [];
+        const pastBookings: Booking[] = [];
+
+        (bookingsData || []).forEach((b: any) => {
+          const cls = b.classes || {};
+          const scheduleDate = cls.schedule ? new Date(cls.schedule) : null;
+          const mapped: Booking = {
+            id: b.id,
+            className: cls.name || 'Unknown Class',
+            date: cls.schedule || '',
+            time: cls.start_time || '',
+            trainer: cls.trainer || '',
+            status: b.status === 'confirmed' ? 'Confirmed' : b.status === 'cancelled' ? 'Cancelled' : 'Completed',
+            attendance: b.attendance ?? undefined,
+          };
+
+          const isPast = scheduleDate ? scheduleDate < today : false;
+          if (b.status === 'cancelled' || isPast) {
+            if (isPast && b.status === 'confirmed') mapped.status = 'Completed';
+            pastBookings.push(mapped);
+          } else {
+            upcomingBookings.push(mapped);
+          }
+        });
+
+        // Sort upcoming ascending by date, past descending
+        upcomingBookings.sort((a, b) => (a.date > b.date ? 1 : -1));
+        pastBookings.sort((a, b) => (a.date > b.date ? -1 : 1));
+
+        const sessionsRemaining = profileData?.sessions_remaining ?? 0;
+
         setBookings({
           upcomingBookings,
           pastBookings,
-          remainingSessions: sessionsRemaining
+          remainingSessions: sessionsRemaining,
         });
       } catch (error) {
         console.error("Error fetching user data:", error);
