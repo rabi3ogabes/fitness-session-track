@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 
 // Define interfaces to type our data
 interface Booking {
-  id: number;
+  id: string;
   className: string;
   date: string;
   time: string;
