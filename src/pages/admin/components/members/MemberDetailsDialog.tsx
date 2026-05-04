@@ -77,7 +77,27 @@ const MemberDetailsDialog = ({ member, open, onOpenChange }: MemberDetailsDialog
 
     setLoading(true);
     try {
-      // First get bookings for this member
+      // Resolve auth user id via profiles (matched by email) so we can match bookings.user_id
+      let userId: string | null = null;
+      if (member.email) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("email", member.email)
+          .maybeSingle();
+        userId = profileData?.id ?? null;
+      }
+
+      // bookings.user_name is sometimes stored as the email prefix (e.g. "hi" for hi@tinaribbon.com)
+      const emailPrefix = member.email ? member.email.split("@")[0] : "";
+      const trimmedName = (member.name || "").trim();
+
+      // Build OR filter: match by member_id, user_id (auth uuid), or user_name variants
+      const orParts: string[] = [`member_id.eq.${member.id}`];
+      if (userId) orParts.push(`user_id.eq.${userId}`);
+      if (trimmedName) orParts.push(`user_name.eq.${trimmedName}`);
+      if (emailPrefix && emailPrefix !== trimmedName) orParts.push(`user_name.eq.${emailPrefix}`);
+
       const { data: bookingsData, error: bookingsError } = await supabase
         .from("bookings")
         .select(`
@@ -87,7 +107,7 @@ const MemberDetailsDialog = ({ member, open, onOpenChange }: MemberDetailsDialog
           attendance,
           class_id
         `)
-        .or(`member_id.eq.${member.id},user_name.eq.${member.name}`)
+        .or(orParts.join(","))
         .order('booking_date', { ascending: false });
 
       if (bookingsError) throw bookingsError;
