@@ -9,6 +9,7 @@ import useIsNetworkConnected from "@/hooks/useIsNetworkConntected";
 
 interface BookingFormProps {
   remainingSessions: number;
+  countCredit?: boolean;
   onBookingComplete?: () => void;
 }
 interface ClassWithBooking extends ClassModel {
