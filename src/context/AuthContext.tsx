@@ -639,7 +639,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           remaining_sessions: 0,
           status: "Active",
           gender: gender || "Not specified",
-          count_credit: false,
+          count_credit: countCredit ?? false,
         });
       }
 
