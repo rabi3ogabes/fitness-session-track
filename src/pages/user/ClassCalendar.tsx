@@ -241,7 +241,7 @@ const ClassCalendar = () => {
       setError(null);
       const { data, error: profileError } = await supabase
         .from("members")
-        .select("name, total_sessions, remaining_sessions, sessions")
+        .select("name, total_sessions, remaining_sessions, sessions, count_credit")
         .eq("email", user.email)
         .single();
 
@@ -252,6 +252,7 @@ const ClassCalendar = () => {
             name: user.email || "User",
             remainingSessions: 10,
             totalSessions: 20,
+            countCredit: false,
           });
           return;
         }
@@ -262,6 +263,7 @@ const ClassCalendar = () => {
         name: data.name || user.email || "User",
         remainingSessions: data.remaining_sessions || 0,
         totalSessions: data.total_sessions || data.sessions || 0,
+        countCredit: !!data.count_credit,
       });
     } catch (err) {
       console.error("Error fetching user data:", err);
