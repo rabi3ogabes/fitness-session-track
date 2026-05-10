@@ -278,16 +278,16 @@ const Dashboard = () => {
             />
             <StatsCard
               title="Sessions Remaining"
-              value={loadingUserData ? "..." : sessionsRemaining}
+              value={loadingUserData ? "..." : !countCredit ? "Count Credit Off" : sessionsRemaining}
               icon={<Clock className="h-6 w-6 text-gym-blue" />}
               change={
-                isLowOnSessions ? sessionsRemaining.toString() : undefined
+                countCredit && isLowOnSessions ? sessionsRemaining.toString() : undefined
               }
               positive={false}
             />
           </div>
 
-          {isLowOnSessions && showLowSessionWarning && (
+          {countCredit && isLowOnSessions && showLowSessionWarning && (
             <Alert variant="destructive" className="bg-red-50 border-red-200">
               <AlertTitle className="text-red-500">
                 Low Session Count Warning
