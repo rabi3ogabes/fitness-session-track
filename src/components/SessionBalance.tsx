@@ -78,8 +78,13 @@ const SessionBalance = ({ className = "", showIcon = true, compact = false }: Se
         },
         (payload) => {
           console.log("Session balance updated (members):", payload);
-          if (payload.new && payload.new.remaining_sessions !== undefined) {
-            setSessionBalance(payload.new.remaining_sessions);
+          if (payload.new) {
+            if (payload.new.remaining_sessions !== undefined) {
+              setSessionBalance(payload.new.remaining_sessions);
+            }
+            if (payload.new.count_credit !== undefined) {
+              setCountCredit(payload.new.count_credit !== false);
+            }
           }
         }
       )
