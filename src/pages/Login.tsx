@@ -287,7 +287,8 @@ const Login = () => {
         name, 
         phone, 
         selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined,
-        gender
+        gender,
+        countCredit
       );
       
       if (success === true) {
