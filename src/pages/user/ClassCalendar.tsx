@@ -142,6 +142,7 @@ interface UserData {
   name: string;
   remainingSessions: number;
   totalSessions: number;
+  countCredit: boolean;
   email?: string;
 }
 
@@ -172,6 +173,7 @@ const ClassCalendar = () => {
     name: "User",
     remainingSessions: 0,
     totalSessions: 0,
+    countCredit: false,
   });
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
@@ -239,7 +241,7 @@ const ClassCalendar = () => {
       setError(null);
       const { data, error: profileError } = await supabase
         .from("members")
-        .select("name, total_sessions, remaining_sessions, sessions")
+        .select("name, total_sessions, remaining_sessions, sessions, count_credit")
         .eq("email", user.email)
         .single();
 
@@ -250,6 +252,7 @@ const ClassCalendar = () => {
             name: user.email || "User",
             remainingSessions: 10,
             totalSessions: 20,
+            countCredit: false,
           });
           return;
         }
@@ -260,6 +263,7 @@ const ClassCalendar = () => {
         name: data.name || user.email || "User",
         remainingSessions: data.remaining_sessions || 0,
         totalSessions: data.total_sessions || data.sessions || 0,
+        countCredit: !!data.count_credit,
       });
     } catch (err) {
       console.error("Error fetching user data:", err);
@@ -446,7 +450,7 @@ const ClassCalendar = () => {
   const handleBooking = async () => {
     if (!selectedClass || !user) return;
 
-    if (userData.remainingSessions < 1) {
+    if (userData.countCredit && userData.remainingSessions < 1) {
       toast({
         title: "Not enough sessions",
         description: "You need at least 1 session to book a class.",
@@ -1170,7 +1174,7 @@ const ClassCalendar = () => {
               {selectedClass && !(bookedClasses.includes(selectedClass.id) || selectedClass.isBooked) && (
                 <Button
                   onClick={handleBooking}
-                  disabled={isBookingInProgress || userData.remainingSessions < 1}
+                  disabled={isBookingInProgress || (userData.countCredit && userData.remainingSessions < 1)}
                 >
                   {isBookingInProgress ? "Booking..." : "Confirm Booking"}
                 </Button>
@@ -1291,7 +1295,7 @@ const ClassCalendar = () => {
               </Button>
               <Button
                 onClick={handleBooking}
-                disabled={isBookingInProgress || userData.remainingSessions < 1}
+                disabled={isBookingInProgress || (userData.countCredit && userData.remainingSessions < 1)}
                 className="min-w-[100px]"
               >
                 {isBookingInProgress ? (
