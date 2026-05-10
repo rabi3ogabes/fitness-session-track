@@ -1257,30 +1257,34 @@ const ClassCalendar = () => {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Sessions remaining:</span>
-                  </div>
-                  <Badge variant={userData.remainingSessions > 0 ? "default" : "destructive"}>
-                    {userData.remainingSessions}
-                  </Badge>
-                </div>
+                {userData.countCredit && (
+                  <>
+                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">Sessions remaining:</span>
+                      </div>
+                      <Badge variant={userData.remainingSessions > 0 ? "default" : "destructive"}>
+                        {userData.remainingSessions}
+                      </Badge>
+                    </div>
 
-                {userData.remainingSessions < 1 && (
-                  <Alert>
-                    <AlertDescription>
-                      You don't have enough sessions to book this class. Please purchase a membership to continue.
-                    </AlertDescription>
-                  </Alert>
-                )}
+                    {userData.remainingSessions < 1 && (
+                      <Alert>
+                        <AlertDescription>
+                          You don't have enough sessions to book this class. Please purchase a membership to continue.
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
-                {sessionsLow && userData.remainingSessions > 0 && (
-                  <Alert>
-                    <AlertDescription>
-                      You're running low on sessions! Consider purchasing more sessions soon.
-                    </AlertDescription>
-                  </Alert>
+                    {sessionsLow && userData.remainingSessions > 0 && (
+                      <Alert>
+                        <AlertDescription>
+                          You're running low on sessions! Consider purchasing more sessions soon.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </>
                 )}
               </div>
             )}
