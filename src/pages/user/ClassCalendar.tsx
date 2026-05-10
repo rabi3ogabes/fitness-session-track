@@ -1295,7 +1295,7 @@ const ClassCalendar = () => {
               </Button>
               <Button
                 onClick={handleBooking}
-                disabled={isBookingInProgress || userData.remainingSessions < 1}
+                disabled={isBookingInProgress || (userData.countCredit && userData.remainingSessions < 1)}
                 className="min-w-[100px]"
               >
                 {isBookingInProgress ? (
