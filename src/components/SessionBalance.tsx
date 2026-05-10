@@ -25,7 +25,7 @@ const SessionBalance = ({ className = "", showIcon = true, compact = false }: Se
       // Try to get data from members table
       const { data: memberData, error: memberError } = await supabase
         .from("members")
-        .select("remaining_sessions")
+        .select("remaining_sessions, count_credit")
         .eq("email", user.email)
         .maybeSingle();
 
@@ -35,6 +35,7 @@ const SessionBalance = ({ className = "", showIcon = true, compact = false }: Se
 
       if (memberData) {
         setSessionBalance(memberData.remaining_sessions || 0);
+        setCountCredit(memberData.count_credit !== false);
       } else {
         // Fallback to profiles table
         const { data: profileData, error: profileError } = await supabase
