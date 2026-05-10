@@ -11,6 +11,7 @@ interface Member {
   created_at: string;
   membership: string;
   remaining_sessions: number;
+  count_credit: boolean;
   hasRequest: boolean;
 }
 
@@ -23,7 +24,7 @@ const RecentMembersWidget = () => {
       // First get recent members with their session data
       const { data: members } = await supabase
         .from('members')
-        .select('id, name, email, created_at, membership, remaining_sessions')
+        .select('id, name, email, created_at, membership, remaining_sessions, count_credit')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -42,6 +43,7 @@ const RecentMembersWidget = () => {
             return {
               ...member,
               remaining_sessions: member.remaining_sessions || 0,
+              count_credit: member.count_credit ?? false,
               hasRequest: (requests && requests.length > 0) || false
             };
           })
@@ -140,9 +142,15 @@ const RecentMembersWidget = () => {
                       {new Date(member.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Badge variant="outline" className="text-blue-800 border-blue-300">
-                        {member.remaining_sessions} sessions
-                      </Badge>
+                      {member.count_credit ? (
+                        <Badge variant="outline" className="text-blue-800 border-blue-300">
+                          {member.remaining_sessions} sessions
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-gray-500 border-gray-300">
+                          Count Credit Off
+                        </Badge>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
