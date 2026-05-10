@@ -341,9 +341,15 @@ const BookingForm = ({
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-xl font-bold mb-4">Book a Session</h2>
       <p className="mb-4">
-        You have{" "}
-        <span className="font-bold text-gym-blue">{remainingSessions}</span>{" "}
-        sessions remaining.
+        {countCredit ? (
+          <>
+            You have{" "}
+            <span className="font-bold text-gym-blue">{remainingSessions}</span>{" "}
+            sessions remaining.
+          </>
+        ) : (
+          <span className="font-bold text-muted-foreground">Count Credit Off</span>
+        )}
       </p>
 
       {error && (
