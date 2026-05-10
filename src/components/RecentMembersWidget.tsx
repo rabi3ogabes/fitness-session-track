@@ -24,7 +24,7 @@ const RecentMembersWidget = () => {
       // First get recent members with their session data
       const { data: members } = await supabase
         .from('members')
-        .select('id, name, email, created_at, membership, remaining_sessions')
+        .select('id, name, email, created_at, membership, remaining_sessions, count_credit')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(5);
@@ -43,6 +43,7 @@ const RecentMembersWidget = () => {
             return {
               ...member,
               remaining_sessions: member.remaining_sessions || 0,
+              count_credit: member.count_credit ?? false,
               hasRequest: (requests && requests.length > 0) || false
             };
           })
