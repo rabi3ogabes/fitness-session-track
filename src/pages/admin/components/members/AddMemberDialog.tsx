@@ -394,6 +394,25 @@ const AddMemberDialog = ({
               </div>
             </div>
           )}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label className="text-right text-sm font-medium col-span-1">
+              Count Credit
+            </label>
+            <div className="col-span-3 flex items-center">
+              <Switch
+                checked={newMember.countCredit}
+                onCheckedChange={() =>
+                  setNewMember({
+                    ...newMember,
+                    countCredit: !newMember.countCredit,
+                  })
+                }
+              />
+              <span className="ml-2 text-sm text-gray-500">
+                {newMember.countCredit ? "On — session credits will be counted" : "Off — session credits will not be counted (default)"}
+              </span>
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
