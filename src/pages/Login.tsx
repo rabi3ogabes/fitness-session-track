@@ -27,6 +27,7 @@ const Login = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [gender, setGender] = useState("");
+  const [countCredit, setCountCredit] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [yearView, setYearView] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
