@@ -609,10 +609,11 @@ const Settings = () => {
   return (
     <DashboardLayout title="System Settings">
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="email">Email</TabsTrigger>
           <TabsTrigger value="mainpage">Main Page</TabsTrigger>
+          <TabsTrigger value="deleted">Deleted Members</TabsTrigger>
         </TabsList>
         
         <TabsContent value="general" className="space-y-6">
