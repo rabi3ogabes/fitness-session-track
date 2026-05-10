@@ -1174,7 +1174,7 @@ const ClassCalendar = () => {
               {selectedClass && !(bookedClasses.includes(selectedClass.id) || selectedClass.isBooked) && (
                 <Button
                   onClick={handleBooking}
-                  disabled={isBookingInProgress || userData.remainingSessions < 1}
+                  disabled={isBookingInProgress || (userData.countCredit && userData.remainingSessions < 1)}
                 >
                   {isBookingInProgress ? "Booking..." : "Confirm Booking"}
                 </Button>
