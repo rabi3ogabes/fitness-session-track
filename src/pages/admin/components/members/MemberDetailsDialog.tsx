@@ -228,9 +228,13 @@ const MemberDetailsDialog = ({ member, open, onOpenChange }: MemberDetailsDialog
                   <div className="flex items-center gap-2">
                     <Activity className="h-4 w-4 text-gray-500" />
                     <span className="text-sm text-gray-600">Remaining Sessions:</span>
-                    <Badge className={member.remainingSessions <= 2 ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
-                      {member.remainingSessions}
-                    </Badge>
+                    {member.countCredit === false ? (
+                      <Badge className="bg-gray-100 text-gray-600">Count Credit Off</Badge>
+                    ) : (
+                      <Badge className={member.remainingSessions <= 2 ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
+                        {member.remainingSessions}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">Status:</span>
