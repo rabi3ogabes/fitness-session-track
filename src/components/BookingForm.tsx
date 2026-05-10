@@ -416,9 +416,9 @@ const BookingForm = ({
 
       <button
         onClick={handleBooking}
-        disabled={!selectedClass || remainingSessions <= 0 || isLoading}
+        disabled={!selectedClass || (countCredit && remainingSessions <= 0) || isLoading}
         className={`w-full py-2 px-4 rounded-md ${
-          !selectedClass || remainingSessions <= 0 || isLoading
+          !selectedClass || (countCredit && remainingSessions <= 0) || isLoading
             ? "bg-gray-300 cursor-not-allowed"
             : "bg-gym-blue hover:bg-gym-dark-blue text-white"
         }`}
@@ -428,7 +428,7 @@ const BookingForm = ({
             <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
             Booking...
           </span>
-        ) : remainingSessions <= 0 ? (
+        ) : countCredit && remainingSessions <= 0 ? (
           "No Sessions Available"
         ) : (
           "Book Session"
