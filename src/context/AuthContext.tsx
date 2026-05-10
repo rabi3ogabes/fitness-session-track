@@ -529,7 +529,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     name: string,
     phone?: string,
     dob?: string,
-    gender?: string
+    gender?: string,
+    countCredit?: boolean
   ) => {
     try {
       console.log("Signup attempt for:", email);
