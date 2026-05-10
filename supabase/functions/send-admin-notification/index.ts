@@ -204,27 +204,56 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`Sending ${type} notification to N8N webhook: ${webhookUrl}`);
       
       try {
-        // Get member's remaining sessions if this is a booking, cancellation, or session request
+        // Fetch member's phone (and remaining sessions for booking/cancellation/session_request)
         let remainingSessions = null;
-        if ((type === 'booking' || type === 'cancellation' || type === 'session_request') && userEmail) {
+        let userPhone: string | null = null;
+        if (userEmail) {
           try {
-            const memberResponse = await fetch(`${supabaseUrl}/rest/v1/members?email=eq.${encodeURIComponent(userEmail)}&select=remaining_sessions`, {
-              headers: {
-                'Authorization': `Bearer ${supabaseKey}`,
-                'apikey': supabaseKey,
-                'Content-Type': 'application/json'
+            const memberResponse = await fetch(
+              `${supabaseUrl}/rest/v1/members?email=eq.${encodeURIComponent(userEmail)}&select=phone,remaining_sessions`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${supabaseKey}`,
+                  'apikey': supabaseKey,
+                  'Content-Type': 'application/json'
+                }
               }
-            });
-            
+            );
+
             if (memberResponse.ok) {
               const members = await memberResponse.json();
               if (members && members.length > 0) {
-                remainingSessions = members[0].remaining_sessions;
-                console.log(`Member ${userName} has ${remainingSessions} remaining sessions`);
+                userPhone = members[0].phone || null;
+                remainingSessions = members[0].remaining_sessions ?? null;
+                console.log(`Member ${userName} - phone: ${userPhone}, remaining sessions: ${remainingSessions}`);
               }
             }
           } catch (error) {
-            console.error('Error fetching member sessions:', error);
+            console.error('Error fetching member info:', error);
+          }
+        }
+
+        // Fallback: try profiles table for phone if not found in members
+        if (!userPhone && userEmail) {
+          try {
+            const profileResponse = await fetch(
+              `${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(userEmail)}&select=phone_number`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${supabaseKey}`,
+                  'apikey': supabaseKey,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            if (profileResponse.ok) {
+              const profiles = await profileResponse.json();
+              if (profiles && profiles.length > 0) {
+                userPhone = profiles[0].phone_number || null;
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching profile phone:', error);
           }
         }
 
@@ -232,8 +261,10 @@ const handler = async (req: Request): Promise<Response> => {
           type: type,
           user: {
             name: userName,
-            email: userEmail
+            email: userEmail,
+            phone: userPhone
           },
+          phone: userPhone,
           adminEmail: adminSettings.notification_email,
           details: details,
           className: className,
