@@ -11,6 +11,7 @@ interface Member {
   created_at: string;
   membership: string;
   remaining_sessions: number;
+  count_credit: boolean;
   hasRequest: boolean;
 }
 
