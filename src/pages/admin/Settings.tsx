@@ -2214,6 +2214,10 @@ const Settings = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="deleted" className="space-y-6">
+          <DeletedMembers />
+        </TabsContent>
       </Tabs>
 
     </DashboardLayout>
