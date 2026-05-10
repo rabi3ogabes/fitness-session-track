@@ -39,7 +39,8 @@ interface AuthContextType {
     name: string,
     phone?: string,
     dob?: string,
-    gender?: string
+    gender?: string,
+    countCredit?: boolean
   ) => Promise<boolean>;
   loading: boolean;
 }
