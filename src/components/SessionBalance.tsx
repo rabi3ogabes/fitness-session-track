@@ -12,6 +12,7 @@ interface SessionBalanceProps {
 const SessionBalance = ({ className = "", showIcon = true, compact = false }: SessionBalanceProps) => {
   const { user, isAuthenticated, isAdmin } = useAuth();
   const [sessionBalance, setSessionBalance] = useState<number>(0);
+  const [countCredit, setCountCredit] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
 
   // Fetch user's session balance
