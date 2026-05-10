@@ -503,14 +503,41 @@ const ClassCalendar = () => {
       }
 
       // Get member record first to link the booking
-      const { data: memberData, error: memberError } = await supabase
+      let { data: memberData } = await supabase
         .from("members")
         .select("id, name")
         .eq("email", user.email)
-        .single();
+        .maybeSingle();
 
-      if (memberError) {
-        throw new Error("Member record not found. Please contact support.");
+      // Auto-create a member row if it doesn't exist (e.g. older signups)
+      if (!memberData) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("name, phone_number, gender")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        const { data: createdMember, error: createError } = await supabase
+          .from("members")
+          .insert({
+            name: profileData?.name || (user as any).user_metadata?.name || user.email,
+            email: user.email,
+            phone: profileData?.phone_number || "",
+            membership: "null",
+            sessions: 0,
+            remaining_sessions: 0,
+            status: "Active",
+            gender: profileData?.gender || "Not specified",
+            count_credit: false,
+          })
+          .select("id, name")
+          .single();
+
+        if (createError || !createdMember) {
+          console.error("Failed to auto-create member:", createError);
+          throw new Error("Member record not found. Please contact support.");
+        }
+        memberData = createdMember;
       }
 
       // Insert booking with proper member linkage
