@@ -153,7 +153,7 @@ const AddMemberDialog = ({
         // Insert the new member into Supabase
         const { data, error } = await supabase
           .from("members")
-          .insert([
+        .insert([
             {
               name: newMember.name,
               email: newMember.email,
@@ -165,6 +165,7 @@ const AddMemberDialog = ({
               status: newMember.status,
               can_be_edited_by_trainers: newMember.canBeEditedByTrainers,
               gender: newMember.gender,
+              count_credit: false,
               // Removed password field as it doesn't exist in the database schema
             },
           ])
