@@ -115,7 +115,8 @@ const Reports = () => {
       const { data: members } = await supabase
         .from("members")
         .select("*")
-        .eq("status", "Active");
+        .eq("status", "Active")
+        .is("deleted_at", null);
 
       if (!members) return;
 
