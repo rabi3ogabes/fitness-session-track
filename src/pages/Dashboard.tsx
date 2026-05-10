@@ -94,7 +94,7 @@ const Dashboard = () => {
       // Try to get data from members table first (primary source)
       const { data: memberData, error: memberError } = await supabase
         .from("members")
-        .select("remaining_sessions, membership")
+        .select("remaining_sessions, membership, count_credit")
         .eq("email", user.email)
         .maybeSingle();
 
@@ -105,6 +105,7 @@ const Dashboard = () => {
       if (memberData) {
         setSessionsRemaining(memberData.remaining_sessions ?? 0);
         setUserMembership(memberData.membership || "Basic");
+        setCountCredit(memberData.count_credit !== false);
       } else {
         // Fallback to profiles table
         const { data: profileData, error: profileError } = await supabase
