@@ -33,6 +33,7 @@ interface MemberShip {
   sessionsRemaining: number;
   price: number;
   automatic: boolean;
+  countCredit: boolean;
 }
 const UserMembership = () => {
   const { toast } = useToast();
