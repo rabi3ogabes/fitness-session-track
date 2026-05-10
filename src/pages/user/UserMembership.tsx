@@ -52,6 +52,7 @@ const UserMembership = () => {
     sessionsRemaining: 0,
     price: 0,
     automatic: false,
+    countCredit: true,
   });
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [loading, setLoading] = useState(true);
