@@ -118,7 +118,11 @@ const MemberTable = ({
                     <TableCell>{member.email}</TableCell>
                     <TableCell className="hidden md:table-cell">{member.phone}</TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      {member.remainingSessions}
+                      {member.countCredit === false ? (
+                        <span className="text-xs text-gray-500">Count Credit Off</span>
+                      ) : (
+                        member.remainingSessions
+                      )}
                     </TableCell>
                     <TableCell>
                       <span
