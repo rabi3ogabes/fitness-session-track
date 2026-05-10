@@ -426,62 +426,25 @@ const Members = () => {
   const deleteMember = async (id: number) => {
     try {
       await requireAuth(async () => {
-        // First, get the member's email to find the corresponding auth user
-        const { data: member, error: fetchError } = await supabase
+        // Soft-delete: hide the member but keep the record so it can be restored
+        const { error: softDeleteError } = await supabase
           .from("members")
-          .select("email")
-          .eq("id", id)
-          .single();
-
-        if (fetchError) {
-          console.error("Error fetching member:", fetchError);
-          throw fetchError;
-        }
-
-        if (!member) {
-          throw new Error("Member not found");
-        }
-
-        const memberEmail = member.email as string;
-        if (!memberEmail) {
-          throw new Error("Member email missing");
-        }
-
-        // Delete from members table first
-        const { error: memberDeleteError } = await supabase
-          .from("members")
-          .delete()
+          .update({ deleted_at: new Date().toISOString() } as any)
           .eq("id", id);
 
-        if (memberDeleteError) {
-          console.error("Error deleting member:", memberDeleteError);
-          throw memberDeleteError;
+        if (softDeleteError) {
+          console.error("Error soft-deleting member:", softDeleteError);
+          throw softDeleteError;
         }
 
-        // Call edge function to delete auth user (requires admin privileges)
-        console.log("About to call delete-user edge function for email:", memberEmail);
-        const { data, error } = await supabase.functions.invoke('delete-user', {
-          body: { email: memberEmail }
-        });
-
-        console.log("delete-user function response:", { data, error });
-
-        if (error) {
-          console.error("Error calling delete-user function:", error);
-          // Don't throw here - the member is already deleted from members table
-          console.warn("Member deleted from members table but auth user deletion failed:", error);
-        } else {
-          console.log("delete-user function succeeded:", data);
-        }
-
-        // Update local state by removing the member
+        // Update local state by removing the member from the visible list
         setMembers((prevMembers) =>
           prevMembers.filter((member) => member.id !== id)
         );
 
         toast({
-          title: "Member deleted successfully",
-          description: "The member and all associated data have been removed",
+          title: "Member hidden successfully",
+          description: "The member has been hidden. You can restore them anytime from Settings → Deleted Members.",
         });
       });
     } catch (err: any) {
