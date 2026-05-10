@@ -405,7 +405,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <BookingForm remainingSessions={Number(sessionsRemaining)} />
+          <BookingForm remainingSessions={Number(sessionsRemaining)} countCredit={countCredit} />
         </div>
       </div>
     </DashboardLayout>
