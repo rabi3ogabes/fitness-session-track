@@ -12,6 +12,7 @@ interface SessionBalanceProps {
 const SessionBalance = ({ className = "", showIcon = true, compact = false }: SessionBalanceProps) => {
   const { user, isAuthenticated, isAdmin } = useAuth();
   const [sessionBalance, setSessionBalance] = useState<number>(0);
+  const [countCredit, setCountCredit] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
 
   // Fetch user's session balance
@@ -24,7 +25,7 @@ const SessionBalance = ({ className = "", showIcon = true, compact = false }: Se
       // Try to get data from members table
       const { data: memberData, error: memberError } = await supabase
         .from("members")
-        .select("remaining_sessions")
+        .select("remaining_sessions, count_credit")
         .eq("email", user.email)
         .maybeSingle();
 
@@ -34,6 +35,7 @@ const SessionBalance = ({ className = "", showIcon = true, compact = false }: Se
 
       if (memberData) {
         setSessionBalance(memberData.remaining_sessions || 0);
+        setCountCredit(memberData.count_credit !== false);
       } else {
         // Fallback to profiles table
         const { data: profileData, error: profileError } = await supabase
@@ -76,8 +78,13 @@ const SessionBalance = ({ className = "", showIcon = true, compact = false }: Se
         },
         (payload) => {
           console.log("Session balance updated (members):", payload);
-          if (payload.new && payload.new.remaining_sessions !== undefined) {
-            setSessionBalance(payload.new.remaining_sessions);
+          if (payload.new) {
+            if (payload.new.remaining_sessions !== undefined) {
+              setSessionBalance(payload.new.remaining_sessions);
+            }
+            if (payload.new.count_credit !== undefined) {
+              setCountCredit(payload.new.count_credit !== false);
+            }
           }
         }
       )
@@ -116,6 +123,17 @@ const SessionBalance = ({ className = "", showIcon = true, compact = false }: Se
   const sessionText = sessionBalance === 1 ? "session" : "sessions";
   const isLow = sessionBalance <= 2;
   const isNegative = sessionBalance < 0;
+
+  if (!countCredit) {
+    return (
+      <div className={`flex items-center gap-2 ${className}`}>
+        {showIcon && <User className="h-4 w-4 text-muted-foreground" />}
+        <span className={`font-semibold text-muted-foreground ${compact ? "text-xs" : "text-sm"}`}>
+          Count Credit Off
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>

@@ -63,6 +63,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { unbookedClasses } = useComingClass();
   const [sessionsRemaining, setSessionsRemaining] = useState<number | string>(0);
+  const [countCredit, setCountCredit] = useState<boolean>(true);
   
   // Calculate upcoming classes for next 7 days
   const upcomingClassesNext7Days = unbookedClasses.filter(cls => {
@@ -93,7 +94,7 @@ const Dashboard = () => {
       // Try to get data from members table first (primary source)
       const { data: memberData, error: memberError } = await supabase
         .from("members")
-        .select("remaining_sessions, membership")
+        .select("remaining_sessions, membership, count_credit")
         .eq("email", user.email)
         .maybeSingle();
 
@@ -104,6 +105,7 @@ const Dashboard = () => {
       if (memberData) {
         setSessionsRemaining(memberData.remaining_sessions ?? 0);
         setUserMembership(memberData.membership || "Basic");
+        setCountCredit(memberData.count_credit !== false);
       } else {
         // Fallback to profiles table
         const { data: profileData, error: profileError } = await supabase
@@ -230,8 +232,13 @@ const Dashboard = () => {
         },
         (payload) => {
           console.log("Member data changed:", payload);
-          if (payload.new && payload.new.remaining_sessions !== undefined) {
-            setSessionsRemaining(payload.new.remaining_sessions);
+          if (payload.new) {
+            if (payload.new.remaining_sessions !== undefined) {
+              setSessionsRemaining(payload.new.remaining_sessions);
+            }
+            if (payload.new.count_credit !== undefined) {
+              setCountCredit(payload.new.count_credit !== false);
+            }
           }
         }
       )
@@ -271,16 +278,16 @@ const Dashboard = () => {
             />
             <StatsCard
               title="Sessions Remaining"
-              value={loadingUserData ? "..." : sessionsRemaining}
+              value={loadingUserData ? "..." : !countCredit ? "Count Credit Off" : sessionsRemaining}
               icon={<Clock className="h-6 w-6 text-gym-blue" />}
               change={
-                isLowOnSessions ? sessionsRemaining.toString() : undefined
+                countCredit && isLowOnSessions ? sessionsRemaining.toString() : undefined
               }
               positive={false}
             />
           </div>
 
-          {isLowOnSessions && showLowSessionWarning && (
+          {countCredit && isLowOnSessions && showLowSessionWarning && (
             <Alert variant="destructive" className="bg-red-50 border-red-200">
               <AlertTitle className="text-red-500">
                 Low Session Count Warning
@@ -398,7 +405,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <BookingForm remainingSessions={Number(sessionsRemaining)} />
+          <BookingForm remainingSessions={Number(sessionsRemaining)} countCredit={countCredit} />
         </div>
       </div>
     </DashboardLayout>

@@ -33,6 +33,7 @@ interface MemberShip {
   sessionsRemaining: number;
   price: number;
   automatic: boolean;
+  countCredit: boolean;
 }
 const UserMembership = () => {
   const { toast } = useToast();
@@ -51,6 +52,7 @@ const UserMembership = () => {
     sessionsRemaining: 0,
     price: 0,
     automatic: false,
+    countCredit: true,
   });
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -139,7 +141,7 @@ const UserMembership = () => {
       // Get membership data
       const { data: memberData } = await supabase
         .from("members")
-        .select("membership, sessions, remaining_sessions")
+        .select("membership, sessions, remaining_sessions, count_credit")
         .eq("email", user.email)
         .single();
       if (memberData) {
@@ -167,6 +169,7 @@ const UserMembership = () => {
               ?.price || membershipTypes.find((p) => p.name === memberData.membership)
               ?.price || 250,
           automatic: true,
+          countCredit: memberData.count_credit !== false,
         });
       }
 
@@ -548,7 +551,10 @@ const UserMembership = () => {
                 {currentMembership.name === "null" ? (
                   <div>
                     <p className="text-muted-foreground mt-2">
-                      Session Balance: {currentMembership.sessionsRemaining || 0} sessions
+                      Session Balance:{" "}
+                      {currentMembership.countCredit
+                        ? `${currentMembership.sessionsRemaining || 0} sessions`
+                        : "Count Credit Off"}
                     </p>
                   </div>
                 ) : (
@@ -563,7 +569,7 @@ const UserMembership = () => {
                     </p>
                   </>
                 )}
-                {currentMembership.name === "null" ? null : (
+                {currentMembership.name === "null" ? null : currentMembership.countCredit ? (
                   <>
                     <p className="mt-4">
                       <span className="font-medium">Sessions:</span>{" "}
@@ -583,6 +589,10 @@ const UserMembership = () => {
                       ></div>
                     </div>
                   </>
+                ) : (
+                  <p className="mt-4 font-medium text-muted-foreground">
+                    Count Credit Off
+                  </p>
                 )}
               </div>
               <div className="border-l-0 md:border-l border-gray-200 pl-0 md:pl-4 mt-4 md:mt-0"></div>

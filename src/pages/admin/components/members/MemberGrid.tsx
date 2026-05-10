@@ -147,9 +147,13 @@ const MemberGrid = ({
                       <Minus className="h-3 w-3" />
                     </Button>
                   )}
-                  <Badge className={member.remainingSessions <= 2 ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
-                    {member.remainingSessions}
-                  </Badge>
+                  {member.countCredit === false ? (
+                    <Badge className="bg-gray-100 text-gray-600">Count Credit Off</Badge>
+                  ) : (
+                    <Badge className={member.remainingSessions <= 2 ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
+                      {member.remainingSessions}
+                    </Badge>
+                  )}
                   {adjustSessions && member.countCredit !== false && (
                     <Button
                       variant="ghost"

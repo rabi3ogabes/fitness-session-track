@@ -9,6 +9,7 @@ import useIsNetworkConnected from "@/hooks/useIsNetworkConntected";
 
 interface BookingFormProps {
   remainingSessions: number;
+  countCredit?: boolean;
   onBookingComplete?: () => void;
 }
 interface ClassWithBooking extends ClassModel {
@@ -81,6 +82,7 @@ const DEMO_CLASSES: ClassWithBooking[] = [
 ];
 const BookingForm = ({
   remainingSessions,
+  countCredit = true,
   onBookingComplete,
 }: BookingFormProps) => {
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
@@ -339,9 +341,15 @@ const BookingForm = ({
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-xl font-bold mb-4">Book a Session</h2>
       <p className="mb-4">
-        You have{" "}
-        <span className="font-bold text-gym-blue">{remainingSessions}</span>{" "}
-        sessions remaining.
+        {countCredit ? (
+          <>
+            You have{" "}
+            <span className="font-bold text-gym-blue">{remainingSessions}</span>{" "}
+            sessions remaining.
+          </>
+        ) : (
+          <span className="font-bold text-muted-foreground">Count Credit Off</span>
+        )}
       </p>
 
       {error && (
@@ -408,9 +416,9 @@ const BookingForm = ({
 
       <button
         onClick={handleBooking}
-        disabled={!selectedClass || remainingSessions <= 0 || isLoading}
+        disabled={!selectedClass || (countCredit && remainingSessions <= 0) || isLoading}
         className={`w-full py-2 px-4 rounded-md ${
-          !selectedClass || remainingSessions <= 0 || isLoading
+          !selectedClass || (countCredit && remainingSessions <= 0) || isLoading
             ? "bg-gray-300 cursor-not-allowed"
             : "bg-gym-blue hover:bg-gym-dark-blue text-white"
         }`}
@@ -420,7 +428,7 @@ const BookingForm = ({
             <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
             Booking...
           </span>
-        ) : remainingSessions <= 0 ? (
+        ) : countCredit && remainingSessions <= 0 ? (
           "No Sessions Available"
         ) : (
           "Book Session"
