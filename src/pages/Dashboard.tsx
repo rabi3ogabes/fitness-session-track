@@ -232,8 +232,13 @@ const Dashboard = () => {
         },
         (payload) => {
           console.log("Member data changed:", payload);
-          if (payload.new && payload.new.remaining_sessions !== undefined) {
-            setSessionsRemaining(payload.new.remaining_sessions);
+          if (payload.new) {
+            if (payload.new.remaining_sessions !== undefined) {
+              setSessionsRemaining(payload.new.remaining_sessions);
+            }
+            if (payload.new.count_credit !== undefined) {
+              setCountCredit(payload.new.count_credit !== false);
+            }
           }
         }
       )
