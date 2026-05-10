@@ -450,7 +450,7 @@ const ClassCalendar = () => {
   const handleBooking = async () => {
     if (!selectedClass || !user) return;
 
-    if (userData.remainingSessions < 1) {
+    if (userData.countCredit && userData.remainingSessions < 1) {
       toast({
         title: "Not enough sessions",
         description: "You need at least 1 session to book a class.",
