@@ -39,7 +39,8 @@ interface AuthContextType {
     name: string,
     phone?: string,
     dob?: string,
-    gender?: string
+    gender?: string,
+    countCredit?: boolean
   ) => Promise<boolean>;
   loading: boolean;
 }
@@ -528,7 +529,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     name: string,
     phone?: string,
     dob?: string,
-    gender?: string
+    gender?: string,
+    countCredit?: boolean
   ) => {
     try {
       console.log("Signup attempt for:", email);
@@ -637,7 +639,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           remaining_sessions: 0,
           status: "Active",
           gender: gender || "Not specified",
-          count_credit: false,
+          count_credit: countCredit ?? false,
         });
       }
 

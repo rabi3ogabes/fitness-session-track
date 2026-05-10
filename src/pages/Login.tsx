@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -27,6 +28,7 @@ const Login = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [gender, setGender] = useState("");
+  const [countCredit, setCountCredit] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [yearView, setYearView] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -286,7 +288,8 @@ const Login = () => {
         name, 
         phone, 
         selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined,
-        gender
+        gender,
+        countCredit
       );
       
       if (success === true) {
@@ -695,6 +698,27 @@ const Login = () => {
                       <Label htmlFor="female">Female</Label>
                     </div>
                   </RadioGroup>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="countCredit">Count Credit</Label>
+                    <span className="text-xs text-gray-500">
+                      {countCredit ? "On" : "Off (default)"}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <Switch
+                      id="countCredit"
+                      checked={countCredit}
+                      onCheckedChange={setCountCredit}
+                    />
+                    <span className="text-sm text-gray-500">
+                      {countCredit 
+                        ? "Session credits will be counted" 
+                        : "Session credits will not be counted"}
+                    </span>
+                  </div>
                 </div>
                 
                 <div className="space-y-2">

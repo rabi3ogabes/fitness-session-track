@@ -39,7 +39,8 @@ const AddMemberDialog = ({
     remainingSessions: 4,
     status: "Active",
     canBeEditedByTrainers: true,
-    gender: "Male", // Default gender
+    countCredit: false,
+    gender: "Male",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
@@ -165,7 +166,7 @@ const AddMemberDialog = ({
               status: newMember.status,
               can_be_edited_by_trainers: newMember.canBeEditedByTrainers,
               gender: newMember.gender,
-              count_credit: false,
+              count_credit: newMember.countCredit,
               // Removed password field as it doesn't exist in the database schema
             },
           ])
@@ -238,6 +239,7 @@ const AddMemberDialog = ({
           remainingSessions: 4,
           status: "Active",
           canBeEditedByTrainers: true,
+          countCredit: false,
           gender: "Male",
         });
         setFormErrors({});
@@ -392,6 +394,25 @@ const AddMemberDialog = ({
               </div>
             </div>
           )}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label className="text-right text-sm font-medium col-span-1">
+              Count Credit
+            </label>
+            <div className="col-span-3 flex items-center">
+              <Switch
+                checked={newMember.countCredit}
+                onCheckedChange={() =>
+                  setNewMember({
+                    ...newMember,
+                    countCredit: !newMember.countCredit,
+                  })
+                }
+              />
+              <span className="ml-2 text-sm text-gray-500">
+                {newMember.countCredit ? "On — session credits will be counted" : "Off — session credits will not be counted (default)"}
+              </span>
+            </div>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
