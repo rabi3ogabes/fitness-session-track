@@ -39,7 +39,8 @@ const AddMemberDialog = ({
     remainingSessions: 4,
     status: "Active",
     canBeEditedByTrainers: true,
-    gender: "Male", // Default gender
+    countCredit: false,
+    gender: "Male",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
@@ -165,7 +166,7 @@ const AddMemberDialog = ({
               status: newMember.status,
               can_be_edited_by_trainers: newMember.canBeEditedByTrainers,
               gender: newMember.gender,
-              count_credit: false,
+              count_credit: newMember.countCredit,
               // Removed password field as it doesn't exist in the database schema
             },
           ])
@@ -238,6 +239,7 @@ const AddMemberDialog = ({
           remainingSessions: 4,
           status: "Active",
           canBeEditedByTrainers: true,
+          countCredit: false,
           gender: "Male",
         });
         setFormErrors({});
