@@ -141,7 +141,7 @@ const UserMembership = () => {
       // Get membership data
       const { data: memberData } = await supabase
         .from("members")
-        .select("membership, sessions, remaining_sessions")
+        .select("membership, sessions, remaining_sessions, count_credit")
         .eq("email", user.email)
         .single();
       if (memberData) {
@@ -169,6 +169,7 @@ const UserMembership = () => {
               ?.price || membershipTypes.find((p) => p.name === memberData.membership)
               ?.price || 250,
           automatic: true,
+          countCredit: memberData.count_credit !== false,
         });
       }
 
