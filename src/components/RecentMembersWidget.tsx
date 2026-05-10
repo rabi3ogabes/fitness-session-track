@@ -142,9 +142,15 @@ const RecentMembersWidget = () => {
                       {new Date(member.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <Badge variant="outline" className="text-blue-800 border-blue-300">
-                        {member.remaining_sessions} sessions
-                      </Badge>
+                      {member.count_credit ? (
+                        <Badge variant="outline" className="text-blue-800 border-blue-300">
+                          {member.remaining_sessions} sessions
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-gray-500 border-gray-300">
+                          Count Credit Off
+                        </Badge>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
