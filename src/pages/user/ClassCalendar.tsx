@@ -173,6 +173,7 @@ const ClassCalendar = () => {
     name: "User",
     remainingSessions: 0,
     totalSessions: 0,
+    countCredit: false,
   });
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
