@@ -77,6 +77,7 @@ const AddPaymentDialog = ({
           .from('members')
           .select('id, name')
           .eq('status', 'Active')
+          .is('deleted_at', null)
           .order('name');
           
         if (error) {
