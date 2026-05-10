@@ -82,6 +82,7 @@ const DEMO_CLASSES: ClassWithBooking[] = [
 ];
 const BookingForm = ({
   remainingSessions,
+  countCredit = true,
   onBookingComplete,
 }: BookingFormProps) => {
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
