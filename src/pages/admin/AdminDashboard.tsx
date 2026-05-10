@@ -58,7 +58,8 @@ const AdminDashboard = () => {
       // Fetch members count
       const { count: membersCount } = await supabase
         .from('members')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .is('deleted_at', null);
 
       // Fetch trainers count  
       const { count: trainersCount } = await supabase

@@ -1074,7 +1074,8 @@ const ClassSchedulePage = () => {
         .from("members")
         .select("*")
         .gte("remaining_sessions", 1)
-        .eq("status", "Active");
+        .eq("status", "Active")
+        .is("deleted_at", null);
 
       if (error) throw error;
       

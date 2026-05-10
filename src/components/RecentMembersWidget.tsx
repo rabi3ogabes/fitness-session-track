@@ -24,6 +24,7 @@ const RecentMembersWidget = () => {
       const { data: members } = await supabase
         .from('members')
         .select('id, name, email, created_at, membership, remaining_sessions')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(5);
 

@@ -313,6 +313,7 @@ export type Database = {
           can_be_edited_by_trainers: boolean | null
           count_credit: boolean
           created_at: string | null
+          deleted_at: string | null
           email: string
           gender: string | null
           id: number
@@ -330,6 +331,7 @@ export type Database = {
           can_be_edited_by_trainers?: boolean | null
           count_credit?: boolean
           created_at?: string | null
+          deleted_at?: string | null
           email: string
           gender?: string | null
           id?: number
@@ -347,6 +349,7 @@ export type Database = {
           can_be_edited_by_trainers?: boolean | null
           count_credit?: boolean
           created_at?: string | null
+          deleted_at?: string | null
           email?: string
           gender?: string | null
           id?: number

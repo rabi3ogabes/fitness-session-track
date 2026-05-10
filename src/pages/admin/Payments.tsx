@@ -58,7 +58,8 @@ const Payments = () => {
         const { data, error } = await supabase
           .from("members")
           .select("id, name")
-          .eq("status", "Active");
+          .eq("status", "Active")
+          .is("deleted_at", null);
 
         if (error) {
           return;

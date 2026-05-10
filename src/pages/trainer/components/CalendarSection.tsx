@@ -134,7 +134,8 @@ export const CalendarSection = ({
     const fetchData = async () => {
       const { data } = await supabase
         .from("members")
-        .select("email, name, total_sessions, remaining_sessions, sessions");
+        .select("email, name, total_sessions, remaining_sessions, sessions")
+        .is("deleted_at", null);
       console.log(data, "data");
 
       const matchedUsers = data.filter((item) => userNames.includes(item.name));
