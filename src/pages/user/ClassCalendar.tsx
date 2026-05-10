@@ -142,6 +142,7 @@ interface UserData {
   name: string;
   remainingSessions: number;
   totalSessions: number;
+  countCredit: boolean;
   email?: string;
 }
 
