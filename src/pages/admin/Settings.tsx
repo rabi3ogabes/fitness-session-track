@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import DeletedMembers from "./components/members/DeletedMembers";
 
 const Settings = () => {
   const [cancellationHours, setCancellationHours] = useState(4);
