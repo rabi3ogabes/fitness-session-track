@@ -79,6 +79,7 @@ const EmailDeliveryLogsWidget = () => {
             {logs.map((log) => {
               const payload = log.payload ?? {};
               const email = (payload.email as string) || '—';
+              const adminEmail = (payload.admin_email as string) || '—';
               const type = (payload.type as string) || 'unknown';
               const isSuccess = log.success;
 
@@ -107,8 +108,13 @@ const EmailDeliveryLogsWidget = () => {
                   </div>
 
                   <div className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Email:</span>{' '}
+                    <span className="font-medium text-foreground">Member Email:</span>{' '}
                     {email}
+                  </div>
+
+                  <div className="text-muted-foreground">
+                    <span className="font-medium text-foreground">Admin Email:</span>{' '}
+                    {adminEmail}
                   </div>
 
                   {log.status_code !== null && (
