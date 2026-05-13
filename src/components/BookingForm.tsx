@@ -6,6 +6,7 @@ import { ClassModel } from "@/pages/admin/components/classes/ClassTypes";
 import { isAfter, isSameDay, format } from "date-fns";
 import useComingClass from "@/hooks/useComingClass";
 import useIsNetworkConnected from "@/hooks/useIsNetworkConntected";
+import { logActivity } from "@/lib/activityTracker";
 
 interface BookingFormProps {
   remainingSessions: number;
