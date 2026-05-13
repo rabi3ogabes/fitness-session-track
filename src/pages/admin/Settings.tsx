@@ -23,6 +23,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import DeletedMembers from "./components/members/DeletedMembers";
+import WebhookHealth from "./components/settings/WebhookHealth";
 
 const Settings = () => {
   const [cancellationHours, setCancellationHours] = useState(4);
