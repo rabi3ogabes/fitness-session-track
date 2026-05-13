@@ -184,11 +184,30 @@ const RecentMembersWidget = () => {
                         )}
                       </div>
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {member.webhookStatus === 'success' ? (
+                        <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50 gap-1">
+                          <Mail className="h-3 w-3" /> Sent{member.webhookStatusCode ? ` (${member.webhookStatusCode})` : ''}
+                        </Badge>
+                      ) : member.webhookStatus === 'failed' ? (
+                        <Badge
+                          variant="outline"
+                          className="text-red-700 border-red-300 bg-red-50 gap-1 cursor-help"
+                          title={member.webhookError || 'Webhook delivery failed'}
+                        >
+                          <MailX className="h-3 w-3" /> Failed{member.webhookStatusCode ? ` (${member.webhookStatusCode})` : ''}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-gray-500 border-gray-300 gap-1">
+                          <Clock className="h-3 w-3" /> No log
+                        </Badge>
+                      )}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                     No recent members found
                   </td>
                 </tr>
