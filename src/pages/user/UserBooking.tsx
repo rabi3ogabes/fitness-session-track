@@ -6,6 +6,7 @@ import { Calendar, CheckCircle, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { logActivity } from "@/lib/activityTracker";
 
 // Define interfaces to type our data
 interface Booking {
