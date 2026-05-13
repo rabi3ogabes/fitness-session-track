@@ -29,6 +29,8 @@ import UserSchedule from "./pages/user/UserSchedule";
 import ClassCalendar from "./pages/user/ClassCalendar";
 import TrainerDashboard from "./pages/trainer/TrainerDashboard";
 import AttendeesPage from "./pages/trainer/AttendeesPage";
+import ActivityLog from "./pages/admin/ActivityLog";
+import ActivityTracker from "./components/ActivityTracker";
 
 // Context
 import { AuthProvider } from "./context/AuthContext";
@@ -131,6 +133,7 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
+      <ActivityTracker />
       <Routes>
         <Route path="/" element={<TrainerHomeRedirect />} />
         <Route path="/login" element={<Login />} />
@@ -206,6 +209,14 @@ const AppContent = () => {
           element={
             <AdminProtectedRoute>
               <Settings />
+            </AdminProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/activity"
+          element={
+            <AdminProtectedRoute>
+              <ActivityLog />
             </AdminProtectedRoute>
           }
         />

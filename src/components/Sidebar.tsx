@@ -15,6 +15,7 @@ import {
   Settings,
   BadgeCheck,
   BarChart3,
+  Activity,
   LogOut,
   Calendar,
   ExternalLink,
@@ -89,6 +90,7 @@ const Sidebar = () => {
     { name: "Memberships", path: "/admin/memberships", icon: <BadgeCheck className="h-5 w-5" /> },
     { name: "Payments", path: "/admin/payments", icon: <CreditCard className="h-5 w-5" /> },
     { name: "Reports", path: "/admin/reports", icon: <BarChart3 className="h-5 w-5" /> },
+    { name: "Activity Log", path: "/admin/activity", icon: <Activity className="h-5 w-5" /> },
     { name: "Settings", path: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
   ];
 
