@@ -116,7 +116,8 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(JSON.stringify({ 
       message: `Notifications sent to ${successCount} recipients`,
       successCount,
-      failureCount
+      failureCount,
+      adminEmails: validEmails,
     }), {
       status: 200,
       headers: {

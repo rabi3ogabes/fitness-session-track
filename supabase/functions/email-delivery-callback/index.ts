@@ -14,6 +14,7 @@ const corsHeaders = {
 interface DeliveryCallback {
   type?: string;
   email?: string;
+  admin_email?: string;
   status?: "success" | "failed";
   error_message?: string;
 }
@@ -40,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
     );
   }
 
-  const { type = "unknown", email = "", status = "failed", error_message } = body;
+  const { type = "unknown", email = "", admin_email = "", status = "failed", error_message } = body;
 
   try {
     await supabase.from("webhook_delivery_logs").insert({
@@ -50,7 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
       success: status === "success",
       error_message: error_message || null,
       response_body: JSON.stringify(body),
-      payload: { type, email, status, error_message },
+      payload: { type, email, admin_email, status, error_message },
     });
 
     return new Response(
