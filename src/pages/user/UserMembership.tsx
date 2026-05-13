@@ -421,14 +421,6 @@ const UserMembership = () => {
         return;
       }
 
-      logActivity("session_request", {
-        details: {
-          plan: planName,
-          sessions: plan.sessions,
-          email: currentUser.email,
-        },
-      });
-
       // Check if auto-approve is enabled
       try {
         const { data: adminSettings } = await supabase
