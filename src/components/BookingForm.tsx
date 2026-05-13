@@ -214,6 +214,17 @@ const BookingForm = ({
 
       if (error) throw error;
 
+      try {
+        const selected = (classes as any[]).find((c: any) => c.id === selectedClass);
+        logActivity("booking_created", {
+          details: {
+            class_id: selectedClass,
+            class_name: selected?.name,
+            schedule: selected?.schedule,
+          },
+        });
+      } catch {}
+
       // Create notification log entry which will trigger the notification system
       try {
         // Get admin notification settings to check if notifications are enabled
