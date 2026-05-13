@@ -34,6 +34,7 @@ const DeletedMembers = () => {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
 
   const fetchDeleted = async () => {
     setLoading(true);
