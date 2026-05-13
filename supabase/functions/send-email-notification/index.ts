@@ -561,13 +561,22 @@ const handler = async (req: Request): Promise<Response> => {
         if (type !== 'existing_account') {
           const { data: n8nSettings } = await supabase
             .from('admin_notification_settings')
-            .select('n8n_webhook_url, notification_email')
+            .select('n8n_webhook_url, n8n_signup_webhook_url, n8n_booking_webhook_url, n8n_cancellation_webhook_url, n8n_session_request_webhook_url, notification_email')
             .single();
 
-          if (n8nSettings?.n8n_webhook_url) {
-            console.log("Sending to n8n webhook:", n8nSettings.n8n_webhook_url);
+          // Pick type-specific webhook URL, fall back to general n8n_webhook_url
+          const typeUrlMap: Record<string, string | undefined> = {
+            signup: n8nSettings?.n8n_signup_webhook_url,
+            booking: n8nSettings?.n8n_booking_webhook_url,
+            cancellation: n8nSettings?.n8n_cancellation_webhook_url,
+            session_request: n8nSettings?.n8n_session_request_webhook_url,
+          };
+          const resolvedWebhookUrl = typeUrlMap[type as string] || n8nSettings?.n8n_webhook_url;
+
+          if (resolvedWebhookUrl) {
+            console.log("Sending to n8n webhook:", resolvedWebhookUrl);
             const webhookType = type || 'unknown';
-            const webhookUrl = n8nSettings.n8n_webhook_url;
+            const webhookUrl = resolvedWebhookUrl;
             try {
               const webhookPayload = {
                 type,
