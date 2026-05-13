@@ -146,6 +146,9 @@ const RecentMembersWidget = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Has Request
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Signup Notification
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
