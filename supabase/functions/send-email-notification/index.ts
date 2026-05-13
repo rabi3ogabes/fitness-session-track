@@ -257,8 +257,9 @@ const handler = async (req: Request): Promise<Response> => {
         fromName, 
         bookingDetails, 
         sessionRequestDetails,
-        cancellationDetails
-      }: EmailNotificationRequest = requestBody;
+        cancellationDetails,
+        signupDetails,
+      }: EmailNotificationRequest & { signupDetails?: any } = requestBody;
 
       // Validate required fields - notificationEmail is now optional
       // We'll still send webhooks even if email notifications are not configured
