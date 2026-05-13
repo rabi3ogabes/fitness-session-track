@@ -158,29 +158,31 @@ const DeletedMembers = () => {
                     <Undo2 className="h-4 w-4 mr-1" />
                     Restore
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="sm" variant="destructive" disabled={busyId === m.id}>
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete forever
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Permanently delete {m.name}?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will remove the member record completely and cannot be undone. The
-                          authentication account will also be deleted.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => permanentlyDelete(m)}>
+                  {isAdmin && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="destructive" disabled={busyId === m.id}>
+                          <Trash2 className="h-4 w-4 mr-1" />
                           Delete forever
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Permanently delete {m.name}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove the member record completely and cannot be undone. The
+                            authentication account will also be deleted.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => permanentlyDelete(m)}>
+                            Delete forever
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               </div>
             ))}
