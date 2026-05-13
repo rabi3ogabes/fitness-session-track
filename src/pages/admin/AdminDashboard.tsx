@@ -161,6 +161,11 @@ const AdminDashboard = () => {
           <RecentBookingsWidget />
           <BalanceRequestsWidget />
         </div>
+
+        {/* Email Delivery Logs */}
+        <div className="mt-6">
+          <EmailDeliveryLogsWidget />
+        </div>
         
       </div>
     </DashboardLayout>
