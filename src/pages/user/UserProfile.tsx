@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { logActivity } from "@/lib/activityTracker";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -157,6 +158,14 @@ const UserProfile = () => {
 
       setProfile(editedProfile);
       setIsEditing(false);
+
+      logActivity("profile_updated", {
+        details: {
+          name: editedProfile.name,
+          phone: editedProfile.phone,
+          emergency_contact_name: editedProfile.emergencyContact,
+        },
+      });
       
       toast({
         title: "Profile updated",

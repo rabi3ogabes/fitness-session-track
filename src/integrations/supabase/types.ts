@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          path: string | null
+          referrer: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+          user_name: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          path?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          path?: string | null
+          referrer?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_name?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: []
+      }
       admin_notification_settings: {
         Row: {
           booking_notifications: boolean
@@ -678,6 +720,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_activity_logs: { Args: never; Returns: undefined }
       get_user_name: { Args: { user_id: string }; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       send_admin_notification: {

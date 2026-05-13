@@ -12,6 +12,7 @@ import {
 } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AuthTokenResponse, User as SupabaseUser } from "@supabase/supabase-js";
+import { logActivity } from "@/lib/activityTracker";
 
 interface User {
   id: string;
@@ -394,6 +395,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }
 
+        logActivity("login_failed", { details: { email, reason: errorMessage } });
+
         toast({
           title: "Login failed",
           description: errorMessage,
@@ -402,6 +405,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         throw new Error(errorMessage);
       }
+
+      logActivity("login", { details: { email } });
 
       console.log("Login successful for:", email);
 
@@ -564,6 +569,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // Handle user already exists case
       if (error && error.message?.includes("User already registered")) {
+        logActivity("signup_failed", { details: { email, name, reason: "already_registered" } });
         console.log("User already exists, sending notifications about attempted signup:", email);
         
         // Send notification to admin about attempted signup with existing email
@@ -643,7 +649,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      // Get admin notification settings
+      logActivity("signup", { details: { email, name, phone } });
+
       const { data: adminSettings } = await supabase
         .from('admin_notification_settings')
         .select('notification_email')
@@ -807,6 +814,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           );
         }, 3000);
       });
+
+      logActivity("logout", { details: { email: user?.email } });
 
       // Attempt Supabase logout
       const logoutPromise = supabase.auth.signOut().then(({ error }) => {

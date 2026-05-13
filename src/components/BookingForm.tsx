@@ -6,6 +6,7 @@ import { ClassModel } from "@/pages/admin/components/classes/ClassTypes";
 import { isAfter, isSameDay, format } from "date-fns";
 import useComingClass from "@/hooks/useComingClass";
 import useIsNetworkConnected from "@/hooks/useIsNetworkConntected";
+import { logActivity } from "@/lib/activityTracker";
 
 interface BookingFormProps {
   remainingSessions: number;
@@ -212,6 +213,17 @@ const BookingForm = ({
       });
 
       if (error) throw error;
+
+      try {
+        const selected = (unbookedClasses as any[])?.find?.((c: any) => c.id === selectedClass);
+        logActivity("booking_created", {
+          details: {
+            class_id: selectedClass,
+            class_name: selected?.name,
+            schedule: selected?.schedule,
+          },
+        });
+      } catch {}
 
       // Create notification log entry which will trigger the notification system
       try {

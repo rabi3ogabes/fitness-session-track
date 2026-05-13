@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { logActivity } from "@/lib/activityTracker";
 import { Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -409,6 +410,14 @@ const UserMembership = () => {
         storeRequestLocally(newRequest);
         return;
       }
+
+      logActivity("session_request", {
+        details: {
+          plan: planName,
+          sessions: plan.sessions,
+          email: currentUser.email,
+        },
+      });
 
       // Check if auto-approve is enabled
       try {
