@@ -13,6 +13,9 @@ interface Member {
   remaining_sessions: number;
   count_credit: boolean;
   hasRequest: boolean;
+  webhookStatus: 'success' | 'failed' | 'pending';
+  webhookError?: string | null;
+  webhookStatusCode?: number | null;
 }
 
 const RecentMembersWidget = () => {
