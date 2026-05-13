@@ -731,6 +731,10 @@ const ClassCalendar = () => {
         return;
       }
 
+      logActivity("booking_cancelled", {
+        details: { class_id: classId, class_name: className, class_time: classTime },
+      });
+
       // Update local state
       setBookedClasses((prev) => prev.filter((id) => id !== classId));
       setClasses((prevClasses) =>
