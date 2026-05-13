@@ -6,6 +6,7 @@ import { Calendar, CheckCircle, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { logActivity } from "@/lib/activityTracker";
 
 // Define interfaces to type our data
 interface Booking {
@@ -121,28 +122,44 @@ const UserBooking = () => {
 
   const handleCancelBooking = async (id: string) => {
     try {
-      // In a real app, we would update the booking in Supabase
-      // For now we'll just update the state
-      
+      const booking = bookings.upcomingBookings.find((b) => b.id === id);
+      if (!booking) return;
+
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: "cancelled" })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      logActivity("booking_cancelled", {
+        details: {
+          class_name: booking.className,
+          date: booking.date,
+          time: booking.time,
+          trainer: booking.trainer,
+        },
+      });
+
       setBookings({
         ...bookings,
         upcomingBookings: bookings.upcomingBookings.filter(
           (booking) => booking.id !== id
         ),
-        remainingSessions: bookings.remainingSessions + 1
+        remainingSessions: bookings.remainingSessions + 1,
       });
-      
+
       toast({
         title: "Booking cancelled",
         description: "Your booking has been successfully cancelled.",
-        variant: "default"
+        variant: "default",
       });
     } catch (error) {
       console.error("Error cancelling booking:", error);
       toast({
         title: "Error cancelling booking",
         description: "Could not cancel your booking. Please try again later.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };

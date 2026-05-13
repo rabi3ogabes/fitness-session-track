@@ -318,6 +318,16 @@ const UserMembership = () => {
                  membershipTypes.find((p) => p.name === planName);
     if (!plan) return;
 
+    // Log intent immediately when user submits the request
+    logActivity("session_request", {
+      details: {
+        plan: planName,
+        sessions: plan.sessions,
+        email: currentUser.email,
+        intent: true,
+      },
+    });
+
     // Show initial toast based on auto-approve setting
     if (autoApproveEnabled) {
       toast({
@@ -410,14 +420,6 @@ const UserMembership = () => {
         storeRequestLocally(newRequest);
         return;
       }
-
-      logActivity("session_request", {
-        details: {
-          plan: planName,
-          sessions: plan.sessions,
-          email: currentUser.email,
-        },
-      });
 
       // Check if auto-approve is enabled
       try {
