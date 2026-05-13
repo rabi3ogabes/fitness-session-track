@@ -33,21 +33,38 @@ const RecentMembersWidget = () => {
         .limit(5);
 
       if (members) {
-        // For each member, check if they have pending membership requests
+        // For each member, check pending requests + last signup webhook delivery
         const membersWithRequests = await Promise.all(
           members.map(async (member) => {
-            const { data: requests } = await supabase
-              .from('membership_requests')
-              .select('id')
-              .eq('email', member.email)
-              .eq('status', 'Pending')
-              .limit(1);
+            const [requestsRes, webhookRes] = await Promise.all([
+              supabase
+                .from('membership_requests')
+                .select('id')
+                .eq('email', member.email)
+                .eq('status', 'Pending')
+                .limit(1),
+              supabase
+                .from('webhook_delivery_logs')
+                .select('success, status_code, error_message, response_body, created_at')
+                .eq('webhook_type', 'signup')
+                .filter('payload->>email', 'eq', member.email)
+                .order('created_at', { ascending: false })
+                .limit(1),
+            ]);
+
+            const requests = requestsRes.data;
+            const log = webhookRes.data?.[0];
+            let webhookStatus: 'success' | 'failed' | 'pending' = 'pending';
+            if (log) webhookStatus = log.success ? 'success' : 'failed';
 
             return {
               ...member,
               remaining_sessions: member.remaining_sessions || 0,
               count_credit: member.count_credit ?? false,
-              hasRequest: (requests && requests.length > 0) || false
+              hasRequest: (requests && requests.length > 0) || false,
+              webhookStatus,
+              webhookError: log?.error_message || log?.response_body || null,
+              webhookStatusCode: log?.status_code ?? null,
             };
           })
         );
