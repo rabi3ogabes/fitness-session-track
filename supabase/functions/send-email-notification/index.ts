@@ -584,6 +584,7 @@ const handler = async (req: Request): Promise<Response> => {
                 ...(bookingDetails && { bookingDetails }),
                 ...(sessionRequestDetails && { sessionRequestDetails }),
                 ...(cancellationDetails && { cancellationDetails }),
+                ...(signupDetails && { signupDetails }),
                 ...(requestedSessions && { requestedSessions }),
                 ...(newBalance && { newBalance })
               };
