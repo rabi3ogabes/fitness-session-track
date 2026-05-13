@@ -649,7 +649,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
       }
 
-      // Get admin notification settings
+      logActivity("signup", { details: { email, name, phone } });
+
       const { data: adminSettings } = await supabase
         .from('admin_notification_settings')
         .select('notification_email')
