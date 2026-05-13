@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase, requireAuth } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,7 @@ const DeletedMembers = () => {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
 
   const fetchDeleted = async () => {
     setLoading(true);
@@ -156,29 +158,31 @@ const DeletedMembers = () => {
                     <Undo2 className="h-4 w-4 mr-1" />
                     Restore
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button size="sm" variant="destructive" disabled={busyId === m.id}>
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete forever
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Permanently delete {m.name}?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will remove the member record completely and cannot be undone. The
-                          authentication account will also be deleted.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => permanentlyDelete(m)}>
+                  {isAdmin && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="destructive" disabled={busyId === m.id}>
+                          <Trash2 className="h-4 w-4 mr-1" />
                           Delete forever
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Permanently delete {m.name}?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will remove the member record completely and cannot be undone. The
+                            authentication account will also be deleted.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => permanentlyDelete(m)}>
+                            Delete forever
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               </div>
             ))}
