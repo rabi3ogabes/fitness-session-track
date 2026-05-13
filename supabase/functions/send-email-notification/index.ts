@@ -600,7 +600,7 @@ const handler = async (req: Request): Promise<Response> => {
                 ...(newBalance && { newBalance })
               };
 
-            const webhookResponse = await fetch(n8nSettings.n8n_webhook_url, {
+            const webhookResponse = await fetch(resolvedWebhookUrl, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
