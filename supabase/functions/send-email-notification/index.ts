@@ -566,6 +566,8 @@ const handler = async (req: Request): Promise<Response> => {
 
           if (n8nSettings?.n8n_webhook_url) {
             console.log("Sending to n8n webhook:", n8nSettings.n8n_webhook_url);
+            const webhookType = type || 'unknown';
+            const webhookUrl = n8nSettings.n8n_webhook_url;
             try {
               const webhookPayload = {
                 type,
