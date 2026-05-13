@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, CheckCircle, XCircle } from 'lucide-react';
+import { Users, CheckCircle, XCircle, Mail, MailX, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +13,9 @@ interface Member {
   remaining_sessions: number;
   count_credit: boolean;
   hasRequest: boolean;
+  webhookStatus: 'success' | 'failed' | 'pending';
+  webhookError?: string | null;
+  webhookStatusCode?: number | null;
 }
 
 const RecentMembersWidget = () => {
@@ -30,21 +33,38 @@ const RecentMembersWidget = () => {
         .limit(5);
 
       if (members) {
-        // For each member, check if they have pending membership requests
+        // For each member, check pending requests + last signup webhook delivery
         const membersWithRequests = await Promise.all(
           members.map(async (member) => {
-            const { data: requests } = await supabase
-              .from('membership_requests')
-              .select('id')
-              .eq('email', member.email)
-              .eq('status', 'Pending')
-              .limit(1);
+            const [requestsRes, webhookRes] = await Promise.all([
+              supabase
+                .from('membership_requests')
+                .select('id')
+                .eq('email', member.email)
+                .eq('status', 'Pending')
+                .limit(1),
+              supabase
+                .from('webhook_delivery_logs')
+                .select('success, status_code, error_message, response_body, created_at')
+                .eq('webhook_type', 'signup')
+                .filter('payload->>email', 'eq', member.email)
+                .order('created_at', { ascending: false })
+                .limit(1),
+            ]);
+
+            const requests = requestsRes.data;
+            const log = webhookRes.data?.[0];
+            let webhookStatus: 'success' | 'failed' | 'pending' = 'pending';
+            if (log) webhookStatus = log.success ? 'success' : 'failed';
 
             return {
               ...member,
               remaining_sessions: member.remaining_sessions || 0,
               count_credit: member.count_credit ?? false,
-              hasRequest: (requests && requests.length > 0) || false
+              hasRequest: (requests && requests.length > 0) || false,
+              webhookStatus,
+              webhookError: log?.error_message || log?.response_body || null,
+              webhookStatusCode: log?.status_code ?? null,
             };
           })
         );
@@ -126,6 +146,9 @@ const RecentMembersWidget = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Has Request
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Signup Notification
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -161,11 +184,30 @@ const RecentMembersWidget = () => {
                         )}
                       </div>
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {member.webhookStatus === 'success' ? (
+                        <Badge variant="outline" className="text-green-700 border-green-300 bg-green-50 gap-1">
+                          <Mail className="h-3 w-3" /> Sent{member.webhookStatusCode ? ` (${member.webhookStatusCode})` : ''}
+                        </Badge>
+                      ) : member.webhookStatus === 'failed' ? (
+                        <Badge
+                          variant="outline"
+                          className="text-red-700 border-red-300 bg-red-50 gap-1 cursor-help"
+                          title={member.webhookError || 'Webhook delivery failed'}
+                        >
+                          <MailX className="h-3 w-3" /> Failed{member.webhookStatusCode ? ` (${member.webhookStatusCode})` : ''}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-gray-500 border-gray-300 gap-1">
+                          <Clock className="h-3 w-3" /> No log
+                        </Badge>
+                      )}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                     No recent members found
                   </td>
                 </tr>
