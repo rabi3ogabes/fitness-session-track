@@ -46,7 +46,7 @@ const RecentMembersWidget = () => {
               supabase
                 .from('webhook_delivery_logs')
                 .select('success, status_code, error_message, response_body, created_at')
-                .eq('webhook_type', 'signup')
+                .eq('webhook_type', 'email_status')
                 .filter('payload->>email', 'eq', member.email)
                 .order('created_at', { ascending: false })
                 .limit(1),
