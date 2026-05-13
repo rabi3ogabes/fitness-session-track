@@ -333,7 +333,7 @@ const Login = () => {
               const emails = JSON.parse(notificationEmails);
               const smtp = JSON.parse(smtpSettings);
               
-              if (emails.email1 && smtp.host) {
+              if (emails.email1 && smtp.host && smtp.port && smtp.username && smtp.password && smtp.fromEmail) {
                 console.log("Sending SMTP signup notification...");
                 const response = await supabase.functions.invoke('send-smtp-notification', {
                   body: {
