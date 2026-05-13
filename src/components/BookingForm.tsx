@@ -215,7 +215,7 @@ const BookingForm = ({
       if (error) throw error;
 
       try {
-        const selected = (classes as any[]).find((c: any) => c.id === selectedClass);
+        const selected = (unbookedClasses as any[])?.find?.((c: any) => c.id === selectedClass);
         logActivity("booking_created", {
           details: {
             class_id: selectedClass,
