@@ -150,20 +150,15 @@ serve(async (req: Request): Promise<Response> => {
       };
 
       if (!mappedSmtpSettings.smtpHost || !mappedSmtpSettings.smtpUsername || !mappedSmtpSettings.smtpPassword) {
-        console.error('Missing or incomplete SMTP settings');
-        const logEntry: EmailLogEntry = {
-          timestamp: new Date().toISOString(),
-          to: notificationEmail,
-          subject: 'Configuration Error',
-          success: false,
-          error: 'SMTP settings are incomplete'
-        };
-        emailLogs.push(logEntry);
-        
+        console.warn('SMTP settings not configured — skipping SMTP notification (no-op)');
         return new Response(
-          JSON.stringify({ error: 'Complete SMTP settings are required' }),
+          JSON.stringify({ 
+            success: true, 
+            skipped: true,
+            message: 'SMTP not configured; notification skipped.' 
+          }),
           { 
-            status: 400, 
+            status: 200, 
             headers: { 'Content-Type': 'application/json', ...corsHeaders } 
           }
         );
