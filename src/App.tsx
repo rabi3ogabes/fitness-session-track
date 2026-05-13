@@ -31,6 +31,7 @@ import TrainerDashboard from "./pages/trainer/TrainerDashboard";
 import AttendeesPage from "./pages/trainer/AttendeesPage";
 import ActivityLog from "./pages/admin/ActivityLog";
 import ActivityTracker from "./components/ActivityTracker";
+import GlobalClickTracker from "./components/GlobalClickTracker";
 
 // Context
 import { AuthProvider } from "./context/AuthContext";
@@ -134,6 +135,7 @@ const AppContent = () => {
   return (
     <BrowserRouter>
       <ActivityTracker />
+      <GlobalClickTracker />
       <Routes>
         <Route path="/" element={<TrainerHomeRedirect />} />
         <Route path="/login" element={<Login />} />

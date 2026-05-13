@@ -25,7 +25,8 @@ export type ActivityEventType =
   | "booking_created"
   | "booking_cancelled"
   | "session_request"
-  | "profile_updated";
+  | "profile_updated"
+  | "ui_click";
 
 interface LogOptions {
   path?: string;
