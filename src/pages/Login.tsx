@@ -700,26 +700,6 @@ const Login = () => {
                   </RadioGroup>
                 </div>
                 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="countCredit">Count Credit</Label>
-                    <span className="text-xs text-gray-500">
-                      {countCredit ? "On" : "Off (default)"}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Switch
-                      id="countCredit"
-                      checked={countCredit}
-                      onCheckedChange={setCountCredit}
-                    />
-                    <span className="text-sm text-gray-500">
-                      {countCredit 
-                        ? "Session credits will be counted" 
-                        : "Session credits will not be counted"}
-                    </span>
-                  </div>
-                </div>
                 
                 <div className="space-y-2">
                   <Label>Date of Birth</Label>
