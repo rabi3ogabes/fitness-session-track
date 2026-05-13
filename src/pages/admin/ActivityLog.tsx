@@ -126,7 +126,7 @@ const ActivityLog = () => {
   }, [rows]);
 
   return (
-    <DashboardLayout>
+    <DashboardLayout title="Activity Log">
       <div className="p-4 md:p-6 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
