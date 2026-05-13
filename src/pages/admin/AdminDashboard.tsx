@@ -8,6 +8,7 @@ import UpcomingClassWidget from "@/components/UpcomingClassWidget";
 import RecentMembersWidget from "@/components/RecentMembersWidget";
 import RecentBookingsWidget from "@/components/RecentBookingsWidget";
 import BalanceRequestsWidget from "@/components/BalanceRequestsWidget";
+import EmailDeliveryLogsWidget from "@/components/EmailDeliveryLogsWidget";
 import { NotificationTester } from "@/components/NotificationTester";
 import { useNotificationProcessor } from "@/hooks/useNotificationProcessor";
 import { Users, User, Calendar, CreditCard } from "lucide-react";
