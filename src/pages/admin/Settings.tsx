@@ -2217,6 +2217,10 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="webhooks" className="space-y-6">
+          <WebhookHealth />
+        </TabsContent>
+
         <TabsContent value="deleted" className="space-y-6">
           <DeletedMembers />
         </TabsContent>
