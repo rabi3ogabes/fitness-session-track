@@ -656,10 +656,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await supabase.functions.invoke('send-email-notification', {
           body: {
             type: 'signup',
+            userName: name,
+            userEmail: email,
+            userPhone: phone || '',
             memberName: name,
             memberEmail: email,
             emailTo: email,
-            notificationEmail: notificationEmail
+            notificationEmail: notificationEmail,
+            signupDetails: {
+              name,
+              email,
+              phone: phone || '',
+              gender: gender || '',
+              birthday: dob || '',
+              registeredAt: new Date().toISOString(),
+            }
           }
         });
         console.log('Welcome email sent to new member:', email);
