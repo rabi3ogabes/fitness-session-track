@@ -33,6 +33,7 @@ interface ActivityLogRow {
 const EVENT_TYPES = [
   "all",
   "page_view",
+  "ui_click",
   "signup",
   "signup_failed",
   "login",
