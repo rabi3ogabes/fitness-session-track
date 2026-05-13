@@ -602,14 +602,48 @@ const handler = async (req: Request): Promise<Response> => {
             console.log("n8n webhook response status:", webhookResponse.status);
             const responseText = await webhookResponse.text();
             console.log("n8n webhook response body:", responseText);
-            
-            if (!webhookResponse.ok) {
+
+            const ok = webhookResponse.ok;
+            let errorMsg: string | null = null;
+            if (!ok) {
               console.error("n8n webhook failed with status:", webhookResponse.status);
+              try {
+                const parsed = JSON.parse(responseText);
+                errorMsg = parsed.message || parsed.error || responseText.slice(0, 500);
+              } catch {
+                errorMsg = responseText.slice(0, 500);
+              }
             } else {
               console.log("n8n webhook sent successfully");
             }
+
+            // Log delivery
+            try {
+              await supabase.from('webhook_delivery_logs').insert({
+                webhook_type: webhookType,
+                webhook_url: webhookUrl,
+                status_code: webhookResponse.status,
+                success: ok,
+                error_message: errorMsg,
+                response_body: responseText.slice(0, 2000),
+                payload: webhookPayload,
+              });
+            } catch (logErr: any) {
+              console.error("Failed to log webhook delivery:", logErr.message);
+            }
             } catch (webhookError: any) {
               console.error("Error calling n8n webhook:", webhookError.message);
+              try {
+                await supabase.from('webhook_delivery_logs').insert({
+                  webhook_type: webhookType,
+                  webhook_url: webhookUrl,
+                  status_code: null,
+                  success: false,
+                  error_message: webhookError.message || 'Network error',
+                  response_body: null,
+                  payload: null,
+                });
+              } catch (e) { /* ignore */ }
               // Don't fail the request if webhook fails
             }
           } else {
