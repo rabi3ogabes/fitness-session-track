@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { logActivity } from "@/lib/activityTracker";
 import {
   format,
   isSameDay,
@@ -556,7 +557,15 @@ const ClassCalendar = () => {
 
       if (error) throw error;
 
-      // Update enrolled count with real count from bookings
+      logActivity("booking_created", {
+        details: {
+          class_id: selectedClass.id,
+          class_name: selectedClass.name,
+          schedule: selectedClass.schedule,
+          start_time: selectedClass.start_time,
+        },
+      });
+
       const { data: currentBookings } = await supabase
         .from("bookings")
         .select("id")
