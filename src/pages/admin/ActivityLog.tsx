@@ -190,63 +190,140 @@ const ActivityLog = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              Events {filtered.length > 0 && <span className="text-muted-foreground font-normal">({filtered.length})</span>}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-10 text-muted-foreground">Loading...</div>
-            ) : filtered.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">No activity yet.</div>
-            ) : (
-              <div className="space-y-2 max-h-[70vh] overflow-y-auto">
-                {filtered.map((r) => (
-                  <div key={r.id} className="border rounded-md p-3 hover:bg-muted/40 transition">
-                    <div className="flex items-start justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant={eventColor(r.event_type) as any}>{r.event_type}</Badge>
-                        {r.path && (
-                          <code className="text-xs bg-muted px-2 py-0.5 rounded">{r.path}</code>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(r.created_at), "MMM d, yyyy HH:mm:ss")}
-                      </span>
-                    </div>
-                    <div className="mt-2 text-sm grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1">
-                      <div>
-                        <span className="text-muted-foreground">User: </span>
-                        {r.user_email ? (
-                          <span className="font-medium">{r.user_name || r.user_email} <span className="text-muted-foreground">({r.user_email})</span></span>
-                        ) : (
-                          <span className="italic text-muted-foreground">Guest</span>
-                        )}
-                      </div>
-                      <div className="truncate">
-                        <span className="text-muted-foreground">Visitor ID: </span>
-                        <code className="text-xs">{r.visitor_id?.slice(0, 16) || "-"}</code>
-                      </div>
-                    </div>
-                    {r.details && Object.keys(r.details).length > 0 && (
-                      <details className="mt-2">
-                        <summary className="text-xs text-muted-foreground cursor-pointer">Details</summary>
-                        <pre className="text-xs bg-muted/50 p-2 rounded mt-1 overflow-x-auto">{JSON.stringify(r.details, null, 2)}</pre>
-                      </details>
-                    )}
-                    {r.user_agent && (
-                      <div className="text-[10px] text-muted-foreground mt-1 truncate">{r.user_agent}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <UserActivityGrid rows={filtered} loading={loading} />
       </div>
     </DashboardLayout>
+  );
+};
+
+interface UserGroup {
+  key: string;
+  label: string;
+  email: string | null;
+  isGuest: boolean;
+  visitorId: string | null;
+  events: ActivityLogRow[];
+}
+
+const UserActivityGrid = ({ rows, loading }: { rows: ActivityLogRow[]; loading: boolean }) => {
+  const groups = useMemo<UserGroup[]>(() => {
+    const map = new Map<string, UserGroup>();
+    for (const r of rows) {
+      const key = r.user_id || r.user_email || r.visitor_id || "unknown";
+      const existing = map.get(key);
+      if (existing) {
+        existing.events.push(r);
+      } else {
+        map.set(key, {
+          key,
+          label: r.user_name || r.user_email || (r.visitor_id ? `Guest ${r.visitor_id.slice(0, 8)}` : "Unknown"),
+          email: r.user_email,
+          isGuest: !r.user_id,
+          visitorId: r.visitor_id,
+          events: [r],
+        });
+      }
+    }
+    // sort groups by most recent event
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(b.events[0].created_at).getTime() - new Date(a.events[0].created_at).getTime()
+    );
+  }, [rows]);
+
+  if (loading) {
+    return <div className="text-center py-10 text-muted-foreground">Loading...</div>;
+  }
+  if (groups.length === 0) {
+    return <div className="text-center py-10 text-muted-foreground">No activity yet.</div>;
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {groups.map((g) => (
+        <UserActivityCard key={g.key} group={g} />
+      ))}
+    </div>
+  );
+};
+
+const UserActivityCard = ({ group }: { group: UserGroup }) => {
+  const [open, setOpen] = useState(false);
+  const [latest, ...previous] = group.events;
+
+  return (
+    <Card className="flex flex-col h-[360px]">
+      <CardHeader className="pb-3 border-b">
+        <div className="flex items-start gap-3">
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <UserIcon className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-sm truncate">{group.label}</CardTitle>
+            <div className="text-xs text-muted-foreground truncate">
+              {group.email || (group.isGuest ? "Guest visitor" : "—")}
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant={group.isGuest ? "outline" : "secondary"} className="text-[10px]">
+                {group.isGuest ? "Guest" : "Member"}
+              </Badge>
+              <span className="text-[10px] text-muted-foreground">
+                {group.events.length} event{group.events.length === 1 ? "" : "s"}
+              </span>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+        <div className="p-4 bg-muted/30">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Most recent</div>
+          <EventLine row={latest} highlight />
+        </div>
+        <Collapsible open={open} onOpenChange={setOpen} className="flex-1 flex flex-col min-h-0">
+          <CollapsibleContent className="flex-1 overflow-y-auto px-4 py-2 space-y-2 border-t">
+            {previous.length === 0 ? (
+              <div className="text-xs text-muted-foreground text-center py-4">No previous events.</div>
+            ) : (
+              previous.map((e) => <EventLine key={e.id} row={e} />)
+            )}
+          </CollapsibleContent>
+          {previous.length > 0 && (
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="rounded-none border-t mt-auto">
+                {open ? (
+                  <><ChevronUp className="h-4 w-4 mr-1" /> Hide previous</>
+                ) : (
+                  <><ChevronDown className="h-4 w-4 mr-1" /> More ({previous.length})</>
+                )}
+              </Button>
+            </CollapsibleTrigger>
+          )}
+        </Collapsible>
+      </CardContent>
+    </Card>
+  );
+};
+
+const EventLine = ({ row, highlight = false }: { row: ActivityLogRow; highlight?: boolean }) => {
+  return (
+    <div className={highlight ? "" : "border-b last:border-b-0 pb-2 last:pb-0"}>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <Badge variant={eventColor(row.event_type) as any} className="text-[10px]">{row.event_type}</Badge>
+        <span className="text-[10px] text-muted-foreground">
+          {format(new Date(row.created_at), "MMM d, HH:mm:ss")}
+        </span>
+      </div>
+      {row.path && (
+        <code className="text-[11px] bg-muted px-1.5 py-0.5 rounded inline-block mt-1 truncate max-w-full">
+          {row.path}
+        </code>
+      )}
+      {row.details && Object.keys(row.details).length > 0 && (
+        <details className="mt-1">
+          <summary className="text-[10px] text-muted-foreground cursor-pointer">Details</summary>
+          <pre className="text-[10px] bg-muted/50 p-1.5 rounded mt-1 overflow-x-auto">{JSON.stringify(row.details, null, 2)}</pre>
+        </details>
+      )}
+    </div>
   );
 };
 
