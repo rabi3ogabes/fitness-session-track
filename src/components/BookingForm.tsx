@@ -341,17 +341,13 @@ const BookingForm = ({
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h2 className="text-xl font-bold mb-4">Book a Session</h2>
-      <p className="mb-4">
-        {countCredit ? (
-          <>
-            You have{" "}
-            <span className="font-bold text-gym-blue">{remainingSessions}</span>{" "}
-            sessions remaining.
-          </>
-        ) : (
-          <span className="font-bold text-muted-foreground">Count Credit Off</span>
-        )}
-      </p>
+      {countCredit && (
+        <p className="mb-4">
+          You have{" "}
+          <span className="font-bold text-gym-blue">{remainingSessions}</span>{" "}
+          sessions remaining.
+        </p>
+      )}
 
       {error && (
         <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-800 flex justify-between items-center">

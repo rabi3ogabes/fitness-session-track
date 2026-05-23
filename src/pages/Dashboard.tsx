@@ -271,21 +271,21 @@ const Dashboard = () => {
     <DashboardLayout title="User Dashboard">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={`grid grid-cols-1 ${countCredit ? "md:grid-cols-2" : ""} gap-4`}>
             <StatsCard
               title="Upcoming Classes on the next 7 days"
               value={upcomingClassesNext7Days.length}
               icon={<Calendar className="h-6 w-6 text-gym-blue" />}
             />
-            <StatsCard
-              title="Sessions Remaining"
-              value={loadingUserData ? "..." : !countCredit ? "Count Credit Off" : sessionsRemaining}
-              icon={<Clock className="h-6 w-6 text-gym-blue" />}
-              change={
-                countCredit && isLowOnSessions ? sessionsRemaining.toString() : undefined
-              }
-              positive={false}
-            />
+            {countCredit && (
+              <StatsCard
+                title="Sessions Remaining"
+                value={loadingUserData ? "..." : sessionsRemaining}
+                icon={<Clock className="h-6 w-6 text-gym-blue" />}
+                change={isLowOnSessions ? sessionsRemaining.toString() : undefined}
+                positive={false}
+              />
+            )}
           </div>
 
           {countCredit && isLowOnSessions && showLowSessionWarning && (
