@@ -10,6 +10,7 @@ import { useNotificationProcessor } from "./hooks/useNotificationProcessor";
 // Pages
 import Index from "./pages/Index";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -141,6 +142,7 @@ const AppContent = () => {
       <Routes>
         <Route path="/" element={<TrainerHomeRedirect />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<UserDashboardRedirect />} />
 
         {/* Admin Routes */}

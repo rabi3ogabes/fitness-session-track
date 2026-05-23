@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import NotificationPreferences from "@/components/NotificationPreferences";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 
 const UserProfile = () => {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ const UserProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState(profile);
   const [loading, setLoading] = useState(true);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
   // Load profile data from database
   useEffect(() => {
@@ -381,7 +383,11 @@ const UserProfile = () => {
         <div className="bg-white rounded-lg shadow-md p-6 mt-6">
           <h2 className="text-xl font-bold mb-6">Account Settings</h2>
           <div className="space-y-4">
-            <Button variant="outline" className="text-gym-blue border-gym-blue hover:bg-gym-light w-full md:w-auto">
+            <Button
+              variant="outline"
+              className="text-gym-blue border-gym-blue hover:bg-gym-light w-full md:w-auto"
+              onClick={() => setPasswordDialogOpen(true)}
+            >
               Change Password
             </Button>
             <p className="text-sm text-gray-500 mt-2">
@@ -390,6 +396,13 @@ const UserProfile = () => {
           </div>
         </div>
       </div>
+
+      <ChangePasswordDialog
+        isOpen={passwordDialogOpen}
+        onClose={() => setPasswordDialogOpen(false)}
+        email={user?.email}
+        name={profile.name}
+      />
     </DashboardLayout>
   );
 };

@@ -16,11 +16,13 @@ import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { checkSupabaseConnection, isOffline } from "@/integrations/supabase/helpers";
+import ForgotPasswordDialog from "@/components/ForgotPasswordDialog";
 
 const Login = () => {
   // Login state
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [forgotOpen, setForgotOpen] = useState(false);
   
   // Signup state
   const [phone, setPhone] = useState("");
@@ -603,6 +605,16 @@ const Login = () => {
                   </div>
                 </div>
                 
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => setForgotOpen(true)}
+                    className="text-sm text-gym-blue hover:underline"
+                  >
+                    Forgot your password?
+                  </button>
+                </div>
+
                 <Button 
                   type="submit" 
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
@@ -610,6 +622,14 @@ const Login = () => {
                 >
                   {isLoading ? "Signing in..." : "Sign in"}
                 </Button>
+
+                <ForgotPasswordDialog
+                  isOpen={forgotOpen}
+                  onClose={() => setForgotOpen(false)}
+                  defaultEmail={identifier.includes("@") ? identifier : ""}
+                />
+
+
 
                 {loginAttempts > 1 && error && (
                   <div className="mt-3 text-sm text-gray-600">
