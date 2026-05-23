@@ -88,18 +88,22 @@ export default function NotificationsAdmin() {
       <Sidebar />
       <main className="flex-1 p-4 md:p-8 md:ml-64">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2"><Mail className="h-6 w-6 text-primary" /> Email Activity</h1>
-              <p className="text-sm text-muted-foreground">Track every notification sent to admins and members.</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Mail className="h-6 w-6 text-primary shrink-0" /> Email Activity
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Track every notification sent to admins and members.
+              </p>
             </div>
-            <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+            <Button variant="outline" size="sm" onClick={load} disabled={loading} className="self-start sm:self-auto">
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Refresh
             </Button>
           </div>
 
           {/* Stat cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <StatCard icon={<Inbox className="h-5 w-5" />} label="Total" value={stats.total} color="text-foreground" />
             <StatCard icon={<CheckCircle2 className="h-5 w-5" />} label="Sent" value={stats.sent} color="text-green-600" />
             <StatCard icon={<XCircle className="h-5 w-5" />} label="Failed" value={stats.failed} color="text-red-600" />
@@ -111,23 +115,29 @@ export default function NotificationsAdmin() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Filters</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div className="flex flex-wrap gap-1">
-                  {RANGES.map(r => (
-                    <Button key={r.id} variant={range === r.id ? "default" : "outline"} size="sm"
-                      onClick={() => { setRange(r.id); setPage(0); }}>{r.label}</Button>
-                  ))}
-                </div>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {RANGES.map(r => (
+                  <Button
+                    key={r.id}
+                    variant={range === r.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => { setRange(r.id); setPage(0); }}
+                  >
+                    {r.label}
+                  </Button>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(0); }}>
-                  <SelectTrigger><SelectValue placeholder="Event type" /></SelectTrigger>
+                  <SelectTrigger className="h-10"><SelectValue placeholder="Event type" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All event types</SelectItem>
                     {types.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
-                  <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectTrigger className="h-10"><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All statuses</SelectItem>
                     <SelectItem value="sent">Sent</SelectItem>
@@ -136,8 +146,12 @@ export default function NotificationsAdmin() {
                     <SelectItem value="pending">Pending</SelectItem>
                   </SelectContent>
                 </Select>
-                <Input placeholder="Search recipient or name..." value={search}
-                  onChange={e => { setSearch(e.target.value); setPage(0); }} />
+                <Input
+                  className="h-10"
+                  placeholder="Search recipient or name..."
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); setPage(0); }}
+                />
               </div>
             </CardContent>
           </Card>
