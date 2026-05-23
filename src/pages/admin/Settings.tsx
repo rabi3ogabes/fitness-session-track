@@ -393,7 +393,30 @@ const Settings = () => {
         // Load all settings from database
         setCancellationHours(data.cancellation_hours || 4);
         setLogo(data.logo);
-        setLogoUrl((data as any).logo_url ?? null);
+        const existingLogoUrl = (data as any).logo_url ?? null;
+        setLogoUrl(existingLogoUrl);
+        // Auto-migrate legacy base64 logo to public storage so emails can render it
+        if (!existingLogoUrl && typeof data.logo === 'string' && data.logo.startsWith('data:image/')) {
+          try {
+            const match = data.logo.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+            if (match) {
+              const mime = match[1];
+              const ext = mime.split('/')[1].split('+')[0];
+              const bin = atob(match[2]);
+              const bytes = new Uint8Array(bin.length);
+              for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+              const path = `logo-${Date.now()}.${ext}`;
+              const { error: upErr } = await supabase.storage
+                .from('branding')
+                .upload(path, new Blob([bytes], { type: mime }), { upsert: true, contentType: mime });
+              if (!upErr) {
+                const { data: pub } = supabase.storage.from('branding').getPublicUrl(path);
+                setLogoUrl(pub.publicUrl);
+                await supabase.from('admin_settings').update({ logo_url: pub.publicUrl }).eq('id', data.id);
+              }
+            }
+          } catch (e) { console.warn('logo auto-migrate failed', e); }
+        }
         setHeaderColor(data.header_color || "#ffffff");
         setFooterColor(data.footer_color || "#000000");
         setMembershipExpiry({
