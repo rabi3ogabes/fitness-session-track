@@ -206,6 +206,11 @@ const handler = async (req: Request): Promise<Response> => {
         `;
         break;
         
+      case 'login':
+        subject = `Login - ${userName}`;
+        body = `<h2>User Login</h2><p><strong>${userName}</strong> (${userEmail}) just logged in at ${new Date().toLocaleString()}.</p>`;
+        break;
+
       default:
         throw new Error(`Unknown notification type: ${type}`);
     }
