@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.handle-email-suppression]
 verify_jwt = false
+
+[functions.send-admin-notification]
+verify_jwt = false
