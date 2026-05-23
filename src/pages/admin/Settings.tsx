@@ -809,6 +809,29 @@ const Settings = () => {
                     Recommended size: 200x60 pixels. Max file size: 2MB.
                   </p>
                 </div>
+
+                <div className="border-t pt-4">
+                  <Label htmlFor="favicon-upload">Favicon</Label>
+                  {faviconUrl && (
+                    <div className="flex items-center gap-3 mt-2 mb-2">
+                      <img src={faviconUrl} alt="Favicon" className="h-8 w-8 object-contain border rounded" />
+                      <Button variant="destructive" size="sm" onClick={handleDeleteFavicon}>
+                        <Trash className="h-4 w-4 mr-1" /> Remove
+                      </Button>
+                    </div>
+                  )}
+                  <Input
+                    id="favicon-upload"
+                    type="file"
+                    accept="image/png,image/x-icon,image/svg+xml,image/jpeg"
+                    onChange={handleFaviconChange}
+                    disabled={uploadingFavicon}
+                    className="mt-2"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Recommended: square PNG/ICO/SVG, 32x32 or 64x64.
+                  </p>
+                </div>
               </CardContent>
             </Card>
             
