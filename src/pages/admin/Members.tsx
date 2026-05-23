@@ -514,14 +514,14 @@ const Members = () => {
             <AlertDialogDescription>
               {selectedMemberId && (
                 <>
-                  Are you sure you want to reset the password for{" "}
+                  Send a password reset email to{" "}
                   <strong>
                     {members.find((m) => m.id === selectedMemberId)?.name}
                   </strong>
                   ?<br />
-                  The new password will be their phone number:{" "}
+                  An email with a reset link will be sent to:{" "}
                   <strong>
-                    {members.find((m) => m.id === selectedMemberId)?.phone}
+                    {members.find((m) => m.id === selectedMemberId)?.email}
                   </strong>
                 </>
               )}
