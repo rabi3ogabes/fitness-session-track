@@ -128,7 +128,9 @@ const Sidebar = () => {
     { name: "Reports", path: "/admin/reports", icon: <BarChart3 className="h-5 w-5" /> },
     { name: "Activity Log", path: "/admin/activity", icon: <Activity className="h-5 w-5" /> },
     { name: "Notifications", path: "/admin/notifications", icon: <Mail className="h-5 w-5" /> },
+    { name: "Email Templates", path: "/admin/email-templates", icon: <Mail className="h-5 w-5" /> },
     { name: "Settings", path: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
+
   ];
 
   const userNavItems = [
