@@ -408,6 +408,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       logActivity("login", { details: { email } });
 
+      // Fire-and-forget login notification (admin + customer per their prefs)
+      try {
+        supabase.functions.invoke('send-admin-notification', {
+          body: {
+            type: 'login',
+            userEmail: email,
+            userName: result.data?.user?.user_metadata?.name || email,
+            userId: result.data?.user?.id,
+          },
+        }).catch((e) => console.warn('login notification failed:', e));
+      } catch (e) { console.warn('login notification dispatch error:', e); }
+
       console.log("Login successful for:", email);
 
       if (result.data?.user) {
