@@ -1,11 +1,9 @@
 /// <reference types="npm:@types/react@18.3.1" />
 import * as React from 'npm:react@18.3.1'
-import {
-  Body, Container, Head, Heading, Html, Preview, Section, Text, Hr,
-} from 'npm:@react-email/components@0.0.22'
+import { LuxuryEmail } from '../luxury-layout.tsx'
 import type { TemplateEntry } from './registry.ts'
 
-interface MemberNotificationProps {
+interface Props {
   eventType?: string
   memberName?: string
   className?: string
@@ -14,68 +12,50 @@ interface MemberNotificationProps {
   trainerName?: string
   sessions?: number
   details?: string
+  // overrides
+  siteName?: string
+  preheader?: string; heading?: string; intro?: string; body?: string
+  footerText?: string; accentColor?: string
 }
 
-const titleFor = (t?: string, name?: string) => {
+const defaults = (t?: string, name?: string) => {
   const greet = name ? `Hi ${name},` : 'Hello,'
   switch (t) {
-    case 'booking': return { title: 'Booking confirmed', greet, body: 'Your class booking is confirmed. We look forward to seeing you!' }
-    case 'cancellation': return { title: 'Booking cancelled', greet, body: 'Your class booking has been cancelled.' }
-    case 'session_request': return { title: 'Session request received', greet, body: 'We received your session request and will process it shortly.' }
-    case 'password_changed': return { title: 'Your password was changed', greet, body: 'This is a confirmation that the password for your account was just changed. If you did not perform this action, please contact the gym administration immediately.' }
-    default: return { title: 'Notification', greet, body: '' }
+    case 'booking': return { heading: 'Booking confirmed', intro: greet, body: 'Your class booking is confirmed. We look forward to training with you.' }
+    case 'cancellation': return { heading: 'Booking cancelled', intro: greet, body: 'Your class booking has been cancelled.' }
+    case 'session_request': return { heading: 'Session request received', intro: greet, body: "Thanks — we've received your request and will process it shortly." }
+    case 'password_changed': return { heading: 'Password updated', intro: greet, body: 'The password on your account was just changed. If this was not you, please contact us immediately.' }
+    default: return { heading: 'Notification', intro: greet, body: '' }
   }
 }
 
-const MemberNotificationEmail = ({
-  eventType, memberName, className, classDate, classTime, trainerName, sessions, details,
-}: MemberNotificationProps) => {
-  const { title, greet, body } = titleFor(eventType, memberName)
+const MemberNotificationEmail = (p: Props) => {
+  const d = defaults(p.eventType, p.memberName)
+  const detailsArr: { label: string; value: string }[] = []
+  if (p.className) detailsArr.push({ label: 'Class', value: p.className })
+  if (p.classDate) detailsArr.push({ label: 'Date', value: p.classDate })
+  if (p.classTime) detailsArr.push({ label: 'Time', value: p.classTime })
+  if (p.trainerName) detailsArr.push({ label: 'Trainer', value: p.trainerName })
+  if (typeof p.sessions === 'number') detailsArr.push({ label: 'Sessions', value: String(p.sessions) })
+
   return (
-    <Html lang="en" dir="ltr">
-      <Head />
-      <Preview>{title}</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={h1}>{title}</Heading>
-          <Text style={text}>{greet}</Text>
-          <Text style={text}>{body}</Text>
-          {(className || classDate || classTime || trainerName || typeof sessions === 'number') && (
-            <Section style={detailsBox}>
-              {className && <Text style={detailsText}><strong>Class:</strong> {className}</Text>}
-              {classDate && <Text style={detailsText}><strong>Date:</strong> {classDate}</Text>}
-              {classTime && <Text style={detailsText}><strong>Time:</strong> {classTime}</Text>}
-              {trainerName && <Text style={detailsText}><strong>Trainer:</strong> {trainerName}</Text>}
-              {typeof sessions === 'number' && <Text style={detailsText}><strong>Sessions:</strong> {sessions}</Text>}
-            </Section>
-          )}
-          {details && <Text style={text}>{details}</Text>}
-          <Hr style={hr} />
-          <Text style={footer}>— The FHB Fit team</Text>
-        </Container>
-      </Body>
-    </Html>
+    <LuxuryEmail
+      siteName={p.siteName}
+      preheader={p.preheader || d.heading}
+      heading={p.heading || d.heading}
+      intro={p.intro || d.intro}
+      body={p.body || d.body}
+      details={detailsArr.length ? detailsArr : undefined}
+      extraBody={p.details}
+      footerText={p.footerText || '— The FHB Fit team'}
+      accentColor={p.accentColor}
+    />
   )
 }
 
 export const template = {
   component: MemberNotificationEmail,
-  subject: (d: Record<string, any>) => titleFor(d?.eventType, d?.memberName).title,
+  subject: (d: Record<string, any>) => defaults(d?.eventType, d?.memberName).heading,
   displayName: 'Member notification',
-  previewData: {
-    eventType: 'booking',
-    memberName: 'Jane',
-    className: 'HIIT',
-    classDate: '2026-05-25',
-    classTime: '18:00',
-  },
+  previewData: { eventType: 'booking', memberName: 'Jane', className: 'HIIT', classDate: '2026-05-25', classTime: '18:00' },
 } satisfies TemplateEntry
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
-const container = { padding: '24px', maxWidth: '560px', margin: '0 auto' }
-const h1 = { fontSize: '22px', fontWeight: 700, color: '#0f172a', margin: '0 0 16px' }
-const text = { fontSize: '14px', color: '#334155', lineHeight: '1.6', margin: '0 0 12px' }
-const detailsBox = { backgroundColor: '#f8fafc', padding: '14px 16px', borderRadius: '8px', margin: '16px 0' }
-const detailsText = { fontSize: '13px', color: '#475569', lineHeight: '1.5', margin: '0 0 4px' }
-const hr = { borderColor: '#e2e8f0', margin: '24px 0' }
-const footer = { fontSize: '12px', color: '#94a3b8', margin: 0 }

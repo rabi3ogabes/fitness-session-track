@@ -1,79 +1,23 @@
 /// <reference types="npm:@types/react@18.3.1" />
-
 import * as React from 'npm:react@18.3.1'
+import { LuxuryEmail } from '../luxury-layout.tsx'
 
-import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Link,
-  Preview,
-  Text,
-} from 'npm:@react-email/components@0.0.22'
-
-interface InviteEmailProps {
-  siteName: string
-  siteUrl: string
-  confirmationUrl: string
+interface Props {
+  siteName?: string; confirmationUrl: string
+  preheader?: string; heading?: string; intro?: string; body?: string
+  buttonLabel?: string; footerText?: string; accentColor?: string
 }
-
-export const InviteEmail = ({
-  siteName,
-  siteUrl,
-  confirmationUrl,
-}: InviteEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>You've been invited to join {siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>You've been invited</Heading>
-        <Text style={text}>
-          You've been invited to join{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
-          </Link>
-          . Click the button below to accept the invitation and create your
-          account.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Accept Invitation
-        </Button>
-        <Text style={footer}>
-          If you weren't expecting this invitation, you can safely ignore this
-          email.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
+export const InviteEmail = (p: Props) => (
+  <LuxuryEmail
+    siteName={p.siteName}
+    preheader={p.preheader || 'Your invitation is waiting'}
+    heading={p.heading || "You're invited"}
+    intro={p.intro || 'Welcome aboard.'}
+    body={p.body || 'You have been invited to join us. Tap the button below to accept and set up your account.'}
+    buttonLabel={p.buttonLabel || 'Accept Invitation'}
+    buttonUrl={p.confirmationUrl}
+    footerText={p.footerText || "If you weren't expecting this invitation, you can safely ignore this email."}
+    accentColor={p.accentColor}
+  />
 )
-
 export default InviteEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
