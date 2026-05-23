@@ -324,34 +324,8 @@ const Login = () => {
             } else {
               console.log("Signup notification log created successfully");
             }
-          } else if (adminSettings && adminSettings.signup_notifications && adminSettings.email_provider === 'smtp') {
-            // Legacy SMTP notification logic (keep for backward compatibility)
-            const notificationEmails = localStorage.getItem("notificationEmails");
-            const smtpSettings = localStorage.getItem("smtpSettings");
-            
-            if (notificationEmails && smtpSettings) {
-              const emails = JSON.parse(notificationEmails);
-              const smtp = JSON.parse(smtpSettings);
-              
-              if (emails.email1 && smtp.host && smtp.port && smtp.username && smtp.password && smtp.fromEmail) {
-                console.log("Sending SMTP signup notification...");
-                const response = await supabase.functions.invoke('send-smtp-notification', {
-                  body: {
-                    userEmail: email,
-                    userName: name,
-                    notificationEmail: emails.email1,
-                    smtpSettings: smtp
-                  }
-                });
-                
-                if (response.error) {
-                  console.error("Failed to send SMTP notification:", response.error);
-                } else {
-                  console.log("SMTP notification sent successfully");
-                }
-              }
-            }
           }
+
         } catch (notificationError) {
           console.error("Error sending signup notification:", notificationError);
           // Don't block the signup process if notification fails

@@ -640,17 +640,8 @@ const ClassCalendar = () => {
               .replace(/{classTime}/g, `${selectedClass.start_time} - ${selectedClass.end_time}`)
               .replace(/{trainerName}/g, selectedClass.trainer || 'TBD');
 
-            console.log('Sending booking WhatsApp notification...');
-            await supabase.functions.invoke('send-whatsapp-notification', {
-              body: {
-                userName: memberData.name,
-                userEmail: user.email,
-                phoneNumbers: phoneNumbers,
-                apiToken: settings.api_token,
-                instanceId: settings.instance_id,
-                customMessage: message
-              }
-            });
+            console.log('WhatsApp notifications removed; using Lovable Email instead.');
+
           }
         }
       } catch (whatsappError) {
