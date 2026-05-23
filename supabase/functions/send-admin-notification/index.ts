@@ -114,6 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     // Check if this type of notification is enabled
     const notificationEnabled = type === 'signup' ? adminSettings.signup_notifications :
+                               type === 'login' ? (adminSettings.login_notifications ?? true) :
                                type === 'booking' ? adminSettings.booking_notifications :
                                type === 'cancellation' ? adminSettings.cancellation_notifications :
                                type === 'session_request' ? adminSettings.session_request_notifications :
