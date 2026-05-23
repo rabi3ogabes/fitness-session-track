@@ -1,10 +1,10 @@
 // One-off migration dump function. Returns all public tables + auth users as JSON.
-// Protected by a shared secret to avoid leaking data.
+// Requires the caller to be an authenticated admin (role=admin in user_metadata).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-dump-token",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const TABLES = [
@@ -28,13 +28,35 @@ const TABLES = [
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors });
 
-  const token = req.headers.get("x-dump-token");
-  const expected = Deno.env.get("DUMP_TOKEN");
-  if (!expected || token !== expected) {
-    return new Response("Forbidden", { status: 403, headers: cors });
+  // Admin auth check
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...cors, "content-type": "application/json" },
+    });
+  }
+  const userClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+  );
+  const token = authHeader.replace("Bearer ", "");
+  const { data: userData, error: userErr } = await userClient.auth.getUser(token);
+  if (userErr || !userData?.user) {
+    return new Response(JSON.stringify({ error: "Invalid token", detail: userErr?.message }), {
+      status: 401,
+      headers: { ...cors, "content-type": "application/json" },
+    });
+  }
+  const role = (userData.user.user_metadata as any)?.role;
+  if (role !== "admin") {
+    return new Response(JSON.stringify({ error: "Admin only" }), {
+      status: 403,
+      headers: { ...cors, "content-type": "application/json" },
+    });
   }
 
-  const supabase = createClient(
+  const admin = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
@@ -46,7 +68,7 @@ Deno.serve(async (req) => {
     let from = 0;
     const pageSize = 1000;
     while (true) {
-      const { data, error } = await supabase
+      const { data, error } = await admin
         .from(t)
         .select("*")
         .range(from, from + pageSize - 1);
@@ -64,11 +86,10 @@ Deno.serve(async (req) => {
     (out.tables as any)[t] = all;
   }
 
-  // Auth users (paginated)
   const users: any[] = [];
   let page = 1;
   while (true) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
     if (error) {
       return new Response(JSON.stringify({ error: error.message, scope: "auth" }), {
         status: 500,
