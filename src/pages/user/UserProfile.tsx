@@ -375,6 +375,8 @@ const UserProfile = () => {
           )}
         </div>
 
+        <NotificationPreferences userId={user?.id} />
+
         <div className="bg-white rounded-lg shadow-md p-6 mt-6">
           <h2 className="text-xl font-bold mb-6">Account Settings</h2>
           <div className="space-y-4">
