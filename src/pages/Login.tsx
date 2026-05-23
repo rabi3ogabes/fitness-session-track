@@ -605,6 +605,16 @@ const Login = () => {
                   </div>
                 </div>
                 
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => setForgotOpen(true)}
+                    className="text-sm text-gym-blue hover:underline"
+                  >
+                    Forgot your password?
+                  </button>
+                </div>
+
                 <Button 
                   type="submit" 
                   className="w-full bg-gym-blue hover:bg-gym-dark-blue" 
@@ -612,6 +622,14 @@ const Login = () => {
                 >
                   {isLoading ? "Signing in..." : "Sign in"}
                 </Button>
+
+                <ForgotPasswordDialog
+                  isOpen={forgotOpen}
+                  onClose={() => setForgotOpen(false)}
+                  defaultEmail={identifier.includes("@") ? identifier : ""}
+                />
+
+
 
                 {loginAttempts > 1 && error && (
                   <div className="mt-3 text-sm text-gray-600">
