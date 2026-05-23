@@ -22,6 +22,7 @@ const titleFor = (t?: string, name?: string) => {
     case 'booking': return { title: 'Booking confirmed', greet, body: 'Your class booking is confirmed. We look forward to seeing you!' }
     case 'cancellation': return { title: 'Booking cancelled', greet, body: 'Your class booking has been cancelled.' }
     case 'session_request': return { title: 'Session request received', greet, body: 'We received your session request and will process it shortly.' }
+    case 'password_changed': return { title: 'Your password was changed', greet, body: 'This is a confirmation that the password for your account was just changed. If you did not perform this action, please contact the gym administration immediately.' }
     default: return { title: 'Notification', greet, body: '' }
   }
 }
