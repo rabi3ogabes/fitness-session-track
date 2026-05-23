@@ -566,11 +566,12 @@ const Settings = () => {
     }
   };
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setLogoFile(file);
-      
+
+      // Local preview as data URL (kept for backward compatibility)
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target && typeof event.target.result === 'string') {
@@ -578,11 +579,30 @@ const Settings = () => {
         }
       };
       reader.readAsDataURL(file);
+
+      // Upload to public storage so emails (Gmail/Outlook) can render it
+      try {
+        setUploadingLogo(true);
+        const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+        const path = `logo-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('branding')
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from('branding').getPublicUrl(path);
+        setLogoUrl(pub.publicUrl);
+        toast({ title: 'Logo uploaded', description: 'Your logo will now appear in emails.' });
+      } catch (err: any) {
+        toast({ title: 'Upload failed', description: err.message || 'Could not upload logo', variant: 'destructive' });
+      } finally {
+        setUploadingLogo(false);
+      }
     }
   };
 
   const handleDeleteLogo = () => {
     setLogo(null);
+    setLogoUrl(null);
     setLogoFile(null);
     toast({
       title: "Logo deleted",
