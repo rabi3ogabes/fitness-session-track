@@ -31,6 +31,8 @@ const Sidebar = () => {
   const [logo, setLogo] = useState<string | null>(null);
   const [appName, setAppName] = useState("GYM SYSTEM");
   const [isOpen, setIsOpen] = useState(false);
+  const [countCredit, setCountCredit] = useState<boolean>(true);
+
 
   useEffect(() => {
     // Load logo and app name from database
