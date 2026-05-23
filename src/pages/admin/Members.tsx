@@ -391,28 +391,28 @@ const Members = () => {
     const member = members.find((m) => m.id === selectedMemberId);
     if (!member) return;
 
-    if (!member.phone) {
+    if (!member.email) {
       toast({
         title: "Error",
-        description: "This member has no phone number set. Cannot reset password.",
+        description: "This member has no email set. Cannot send reset link.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('reset-member-password', {
-        body: { email: member.email, newPassword: member.phone },
+      const { error } = await supabase.auth.resetPasswordForEmail(member.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
       });
 
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
 
       toast({
-        title: "Password reset successfully",
-        description: `${member.name}'s password has been reset to their phone number`,
+        title: "Reset email sent",
+        description: `A password reset link has been emailed to ${member.email}.`,
       });
     } catch (error: any) {
+
       toast({
         title: "Failed to reset password",
         description: error.message || "An error occurred while resetting the password",
