@@ -15,6 +15,7 @@ export interface LuxuryEmailProps {
   footerText?: string
   accentColor?: string
   siteName?: string
+  logoUrl?: string | null
   details?: Array<{ label: string; value: string }>
   extraBody?: string
 }
