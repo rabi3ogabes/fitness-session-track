@@ -5,16 +5,24 @@ import { supabase } from "./client";
 export const isOffline = (): boolean =>
   typeof navigator !== "undefined" && navigator.onLine === false;
 
-export const checkSupabaseConnection = async (): Promise<boolean> => {
+export type ConnectionStatus = {
+  connected: boolean;
+  latency: number;
+};
+
+export const checkSupabaseConnection = async (
+  ..._args: unknown[]
+): Promise<ConnectionStatus> => {
+  const start = Date.now();
   try {
     const { error } = await supabase.from("admin_settings").select("id").limit(1);
-    return !error;
+    return { connected: !error, latency: Date.now() - start };
   } catch {
-    return false;
+    return { connected: false, latency: Date.now() - start };
   }
 };
 
-export const requireAuth = async () => {
+export const requireAuth = async (..._args: unknown[]) => {
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) {
     throw new Error("Authentication required");
@@ -23,7 +31,7 @@ export const requireAuth = async () => {
 };
 
 export const cacheDataForOffline = async <T>(_key: string, data: T): Promise<T> => {
-  // Offline cache disabled after migration. Return data as-is.
+  // Offline cache disabled after migration.
   return data;
 };
 
