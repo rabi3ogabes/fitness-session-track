@@ -12,3 +12,7 @@ verify_jwt = false
 
 [functions.send-whatsapp-notification]
 verify_jwt = false
+
+[functions.send-twilio-notification]
+verify_jwt = false
+
