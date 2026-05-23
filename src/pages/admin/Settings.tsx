@@ -638,6 +638,46 @@ const Settings = () => {
       description: "The logo has been removed.",
     });
   };
+
+  const applyFavicon = (url: string | null) => {
+    if (typeof document === 'undefined') return;
+    const links = document.querySelectorAll("link[rel~='icon']");
+    links.forEach(l => l.parentNode?.removeChild(l));
+    if (url) {
+      const link = document.createElement('link');
+      link.rel = 'icon';
+      link.href = url;
+      document.head.appendChild(link);
+    }
+  };
+
+  const handleFaviconChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+    try {
+      setUploadingFavicon(true);
+      const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+      const path = `favicon-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('branding')
+        .upload(path, file, { cacheControl: '3600', upsert: true, contentType: file.type || `image/${ext}` });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('branding').getPublicUrl(path);
+      setFaviconUrl(pub.publicUrl);
+      applyFavicon(pub.publicUrl);
+      toast({ title: 'Favicon uploaded', description: 'Save settings to persist.' });
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err.message || 'Could not upload favicon', variant: 'destructive' });
+    } finally {
+      setUploadingFavicon(false);
+    }
+  };
+
+  const handleDeleteFavicon = () => {
+    setFaviconUrl(null);
+    applyFavicon(null);
+    toast({ title: 'Favicon removed', description: 'Save settings to persist.' });
+  };
   
   const handleMainPageContentChange = (field: string, value: string) => {
     setMainPageContent(prev => ({
