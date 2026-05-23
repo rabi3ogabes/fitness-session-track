@@ -1,66 +1,77 @@
-# Twilio Notification Integration Plan
-
 ## Goal
-Add Twilio WhatsApp/SMS as a second notification channel alongside n8n. Admin can switch the active provider and enable/disable each event type. Each customer can also opt in/out of receiving their own notifications per event.
 
-## 1. Database changes (migration)
+Keep only two notification systems — **n8n webhooks** and **Lovable Email** — let the admin pick one as the active provider, give the admin a full email tracking dashboard, and let admins + members control per-event notifications (signup, login, booking, cancel, session request).
 
-**`admin_notification_settings`** — add columns:
-- `notification_provider` text default `'n8n'` — values: `'n8n'` | `'twilio'`
-- `twilio_from_number` text — sender (WhatsApp `whatsapp:+...` or SMS `+...`)
-- `twilio_channel` text default `'whatsapp'` — `'whatsapp'` | `'sms'`
-- `twilio_admin_number` text — admin's phone for admin alerts
-- `login_notifications` boolean default true (new event type)
+---
 
-**`notification_settings`** (per-user customer prefs) — add columns:
-- `signup_enabled` boolean default true
-- `login_enabled` boolean default true
-- `booking_enabled` boolean default true
-- `cancellation_enabled` boolean default true
-(keep existing `login_balance_notification`)
+## 1. Database changes
 
-## 2. Edge function: `send-twilio-notification`
-New function that:
-- Reads provider settings + event type
-- Sends a WhatsApp/SMS message via Twilio connector gateway to (a) admin number and (b) customer phone (if customer opted in)
-- Logs to `webhook_delivery_logs` / `notification_logs`
+- `admin_notification_settings`
+  - Add `active_provider TEXT` (`'lovable_email' | 'n8n'`, default `'lovable_email'`)
+  - Add `notify_member_on_booking BOOLEAN`, `notify_member_on_cancellation BOOLEAN`, `notify_member_on_signup BOOLEAN` (welcome), `notify_member_on_session_request BOOLEAN` (defaults true)
+  - Drop unused columns from UI: `email_provider`, `smtp_*`, `resend_enabled`, `twilio_*` (kept in DB for safety, just hidden + ignored)
+- Confirm Lovable Email infrastructure tables exist (`email_send_log`, `suppressed_emails`, `email_unsubscribe_tokens`). Set up if missing.
+- `notification_settings` (per-member preferences): already has `signup_enabled`, `login_enabled`, `booking_enabled`, `cancellation_enabled` — reuse.
 
-Uses `LOVABLE_API_KEY` + `TWILIO_API_KEY` through `https://connector-gateway.lovable.dev/twilio/Messages.json`.
+## 2. Edge function rewrite: `send-admin-notification`
 
-## 3. Update `send-admin-notification`
-- Read `notification_provider` from admin settings
-- If `'twilio'` → call `send-twilio-notification`
-- If `'n8n'` → keep existing webhook behavior
-- For both: also dispatch a customer message when the customer's per-event preference is enabled
+Single dispatcher. Reads `active_provider`:
+- If `lovable_email` → invokes `send-transactional-email` with `admin-notification` template (admin + cc) and `member-notification` template (to the member, when enabled).
+- If `n8n` → POSTs to the matching `n8n_*_webhook_url`.
 
-## 4. Trigger login + signup events
-- `AuthContext` (or login handler) calls notification dispatcher on successful login + signup
-- Already wired for booking + cancellation; ensure both fire the new dispatcher path
+Logs every attempt into `webhook_delivery_logs` (n8n) or relies on `email_send_log` (Lovable) — both feed the dashboard.
 
-## 5. Admin Settings UI (`src/pages/admin/Settings.tsx`)
-- New "Notification Provider" section:
-  - Switch: `n8n` ↔ `twilio`
-  - Twilio inputs (channel, from number, admin number) — shown when twilio selected
-- Event toggles (already partly there): signup, login, booking, cancellation, session_request
+## 3. New member-facing template
 
-## 6. Customer notification preferences UI (`src/pages/user/UserProfile.tsx`)
-- New "Notifications" card with 4 switches: signup confirmation, login alert, booking confirmation, cancellation alert
-- Reads/writes `notification_settings` row for `auth.uid()`
+Create `_shared/transactional-email-templates/member-notification.tsx` for booking confirmations, cancellation receipts, session-request acknowledgements (member side). Register in `registry.ts`. Redeploy.
 
-## 7. Files touched
-- `supabase/migrations/<new>.sql` (schema)
-- `supabase/functions/send-twilio-notification/index.ts` (new)
-- `supabase/functions/send-admin-notification/index.ts` (route by provider, also dispatch to customer)
-- `supabase/config.toml` (register new function, `verify_jwt = false`)
-- `src/pages/admin/Settings.tsx` (provider switch + Twilio fields + event toggles)
-- `src/pages/user/UserProfile.tsx` (customer per-event prefs)
-- `src/context/AuthContext.tsx` (fire login + signup events)
-- `src/integrations/supabase/types.ts` (regenerated after migration)
+## 4. Admin Settings page redesign (`src/pages/admin/Settings.tsx`)
 
-## Notes / assumptions
-- Twilio connector is already linked, so `TWILIO_API_KEY` + `LOVABLE_API_KEY` are present in edge function env.
-- WhatsApp requires the destination to have joined your Twilio sandbox (or you're using an approved sender). I'll default channel to `whatsapp` but expose SMS as an option.
-- Customer phone is read from `members.phone` (fallback `profiles.phone_number`).
-- "Login" notification to the customer is a security-style "new login detected" message; admin gets a "user X logged in" alert.
+Replace the notification section with a clean, modern card-based layout:
+- **Provider selector** (segmented control): Lovable Email | n8n Webhooks
+- **Lovable Email card** (when active): sender domain (read-only `notify.fhbfit.com`), admin email, optional CC, "Verified" status badge
+- **n8n card** (when active): per-event webhook URL inputs
+- **Event toggles** (grid, 2 columns):
+  - Admin alerts: signup, login, booking, cancellation, session request
+  - Member emails: welcome, booking confirmation, cancellation confirmation, session request received
 
-Approve and I'll start with the migration.
+Remove WhatsApp/SMS/SMTP/Resend UI entirely.
+
+## 5. New admin page: Email Activity dashboard
+
+Route: `/admin/notifications` (add to admin nav).
+Features (per dashboard spec):
+- Time range filter (24h / 7d / 30d / custom)
+- Template filter (admin-notification, member-notification, auth_emails…)
+- Status filter (sent / failed / suppressed)
+- Stat cards (total, sent, failed, suppressed) — deduplicated by `message_id`
+- Sortable, paginated table: template, recipient, status badge, timestamp, error (admin-only RLS)
+- Combined view that also surfaces n8n deliveries from `webhook_delivery_logs`
+
+## 6. Member-side notification preferences
+
+In existing member profile/notification settings UI: keep current per-event toggles, ensure they are honored by `send-admin-notification` before triggering member emails.
+
+## 7. Cleanup
+
+- Remove obsolete UI sections, helpers, and any remaining Resend / Twilio references in `Settings.tsx` and components.
+- Delete `RESEND_API_KEY` / `SENDGRID_API_KEY` reads from code (secrets stay in Supabase but unused).
+
+## Technical notes
+
+- `email_send_log` queries always dedupe with `DISTINCT ON (message_id) … ORDER BY message_id, created_at DESC`.
+- All edge function changes redeployed after edits.
+- RLS: dashboard reads gated by `is_admin()`.
+- No business-logic changes to bookings/auth flows — only the notification pipeline downstream.
+
+```text
+Trigger (booking/signup/...)
+   │
+   ▼
+send-admin-notification ──► provider switch
+   ├── lovable_email ──► send-transactional-email ──► email_send_log
+   └── n8n          ──► webhook POST           ──► webhook_delivery_logs
+                                                       │
+                                                       ▼
+                                              Admin → /admin/notifications
+```
