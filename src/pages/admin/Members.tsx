@@ -414,8 +414,8 @@ const Members = () => {
     } catch (error: any) {
 
       toast({
-        title: "Failed to reset password",
-        description: error.message || "An error occurred while resetting the password",
+        title: "Failed to send reset email",
+        description: error.message || "An error occurred while sending the reset email",
         variant: "destructive",
       });
     } finally {
