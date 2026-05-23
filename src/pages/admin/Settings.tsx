@@ -277,20 +277,24 @@ const Settings = () => {
 
   const loadEmailLogs = async () => {
     try {
-      const { data: response, error } = await supabase.functions.invoke('send-email-notification', {
-        method: 'GET'
-      });
-      
-      if (error) {
-        console.error('Failed to load email logs:', error);
-        return;
-      }
-      
-      setEmailLogs(response?.logs || []);
-    } catch (error) {
-      console.error('Failed to load email logs:', error);
+      const { data, error } = await supabase
+        .from('email_send_log')
+        .select('created_at, recipient_email, template_name, status, error_message')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) return;
+      setEmailLogs((data || []).map((r: any) => ({
+        timestamp: r.created_at,
+        to: r.recipient_email,
+        subject: r.template_name,
+        status: r.status === 'sent' ? 'success' : 'failed',
+        error: r.error_message || undefined,
+      })));
+    } catch (e) {
+      console.error('Failed to load email logs:', e);
     }
   };
+
 
   const handleTestEmail = async () => {
     // Clear previous logs
@@ -315,47 +319,38 @@ const Settings = () => {
     setOperationStatus('idle');
     
     try {
-      console.log("About to invoke edge function...");
-      console.log("Email settings:", emailSettings);
-      
-      // Use Resend function for all email testing
-      const functionName = 'send-email-notification';
-      console.log("Using function:", functionName);
-      
-      setOperationLog(`Using ${functionName} function...\nPreparing request...`);
-      
-      const requestBody = {
-        userEmail: "test@example.com",
-        userName: "Test User",
-        notificationEmail: testEmail,
-        fromEmail: emailSettings.from_email,
-        fromName: emailSettings.from_name
-      };
-      
-      setOperationLog(`Sending request to ${functionName}...\nRecipient: ${testEmail}`);
-      
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: requestBody
+      setOperationLog(`Sending test email to ${testEmail} via Lovable Email...`);
+
+      const { data, error } = await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'admin-notification',
+          recipientEmail: testEmail,
+          idempotencyKey: `test-${testEmail}-${Date.now()}`,
+          templateData: {
+            eventType: 'signup',
+            memberName: 'Test User',
+            memberEmail: 'test@example.com',
+            details: 'This is a test notification from your admin settings.',
+          },
+        },
       });
 
-      console.log("Edge function response:", { data, error });
-
       if (error) {
-        console.error("Edge function error details:", error);
-        const errorMsg = `Function Error: ${error.message || 'Unknown error'}\n\nDetails: ${JSON.stringify(error, null, 2)}`;
+        const errorMsg = `Function Error: ${error.message || 'Unknown error'}`;
         setOperationLog(errorMsg);
         setOperationStatus('error');
         throw error;
       }
 
-      const successMsg = `✅ Test email sent successfully!\n\nRecipient: ${testEmail}\nFunction: ${functionName}\nResponse: ${data?.message || 'Email sent via Resend'}`;
+      const successMsg = `✅ Test email queued successfully!\n\nRecipient: ${testEmail}\nResponse: ${data?.message || 'Sent via Lovable Email'}`;
       setOperationLog(successMsg);
       setOperationStatus('success');
 
       toast({
         title: "Test email sent",
-        description: data?.message || "A test notification was sent successfully!",
+        description: "A test notification was queued via Lovable Email.",
       });
+
 
       // Reload logs after successful test
       await loadEmailLogs();
