@@ -277,9 +277,12 @@ const Settings = () => {
 
   const loadEmailLogs = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('email_send_log')
         .select('created_at, recipient_email, template_name, status, error_message')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
         .order('created_at', { ascending: false })
         .limit(20);
       if (error) return;
