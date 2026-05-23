@@ -41,14 +41,14 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_ANON_KEY")!,
   );
   const token = authHeader.replace("Bearer ", "");
-  const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token);
-  if (claimsErr || !claimsData?.claims) {
-    return new Response(JSON.stringify({ error: "Invalid token" }), {
+  const { data: userData, error: userErr } = await userClient.auth.getUser(token);
+  if (userErr || !userData?.user) {
+    return new Response(JSON.stringify({ error: "Invalid token", detail: userErr?.message }), {
       status: 401,
       headers: { ...cors, "content-type": "application/json" },
     });
   }
-  const role = (claimsData.claims as any)?.user_metadata?.role;
+  const role = (userData.user.user_metadata as any)?.role;
   if (role !== "admin") {
     return new Response(JSON.stringify({ error: "Admin only" }), {
       status: 403,
