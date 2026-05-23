@@ -647,6 +647,31 @@ const Settings = () => {
         </TabsList>
         
         <TabsContent value="general" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center space-x-2">
+                <Shield className="h-5 w-5 text-gym-blue" />
+                <CardTitle>Account Security</CardTitle>
+              </div>
+              <CardDescription>
+                Change the password used by your admin account ({user?.email}). A confirmation email will be sent.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" onClick={() => setAdminPwOpen(true)}>
+                <Key className="h-4 w-4 mr-2" />
+                Change my password
+              </Button>
+            </CardContent>
+          </Card>
+
+          <ChangePasswordDialog
+            isOpen={adminPwOpen}
+            onClose={() => setAdminPwOpen(false)}
+            email={user?.email}
+            name={user?.name}
+          />
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
