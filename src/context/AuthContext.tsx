@@ -645,10 +645,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
 
+      // Auto sign-in right after signup so the user lands authenticated
+      // (avoids the "I just signed up but login fails" confusion).
+      try {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) {
+          console.warn("Auto sign-in after signup failed:", signInError.message);
+        }
+      } catch (e) {
+        console.warn("Auto sign-in after signup threw:", e);
+      }
+
       toast({
         title: "Sign up successful",
-        description:
-          "Your account has been created. Please check your email for verification.",
+        description: "Your account has been created and you are now signed in.",
       });
 
       return true;
