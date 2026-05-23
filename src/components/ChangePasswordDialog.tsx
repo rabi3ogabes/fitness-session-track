@@ -26,6 +26,14 @@ const ChangePasswordDialog = ({ isOpen, onClose, email, name, skipCurrentPasswor
     setCurrent(""); setNext(""); setConfirm("");
   };
 
+  const isWeakPassword = (pw: string) => {
+    if (pw.length < 8) return true;
+    const common = ["password", "12345678", "qwerty", "11111111", "abc12345", "iloveyou", "admin123"];
+    if (common.includes(pw.toLowerCase())) return true;
+    if (/^(.)\1+$/.test(pw)) return true;
+    return false;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (next.length < 6) {
@@ -35,6 +43,12 @@ const ChangePasswordDialog = ({ isOpen, onClose, email, name, skipCurrentPasswor
     if (next !== confirm) {
       toast({ title: "Passwords do not match", variant: "destructive" });
       return;
+    }
+    if (isWeakPassword(next)) {
+      toast({
+        title: "Heads up: weak password",
+        description: "Your password is easy to guess, but we'll accept it. Consider a stronger one next time.",
+      });
     }
     setLoading(true);
     try {
