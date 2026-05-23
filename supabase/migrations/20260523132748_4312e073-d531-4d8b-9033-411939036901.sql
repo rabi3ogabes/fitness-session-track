@@ -1,0 +1,1 @@
+CREATE POLICY "members self insert" ON public.members FOR INSERT TO authenticated WITH CHECK (email = (auth.jwt() ->> 'email'::text));
