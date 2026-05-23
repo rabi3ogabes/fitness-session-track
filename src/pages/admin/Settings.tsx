@@ -25,6 +25,8 @@ import {
 import DeletedMembers from "./components/members/DeletedMembers";
 import WebhookHealth from "./components/settings/WebhookHealth";
 import NotificationsTab from "./components/NotificationsTab";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
+import { useAuth } from "@/context/AuthContext";
 
 const Settings = () => {
   const [cancellationHours, setCancellationHours] = useState(4);
