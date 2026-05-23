@@ -537,7 +537,7 @@ const Members = () => {
               onClick={confirmResetPassword}
               className="bg-gym-blue hover:bg-gym-dark-blue"
             >
-              Reset Password
+              Send Reset Email
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
