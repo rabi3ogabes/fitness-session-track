@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { logActivity } from "@/lib/activityTracker";
 import { Zap } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
