@@ -320,6 +320,7 @@ export type Database = {
       classes: {
         Row: {
           capacity: number
+          color: string | null
           created_at: string | null
           description: string | null
           difficulty: string | null
@@ -337,6 +338,7 @@ export type Database = {
         }
         Insert: {
           capacity: number
+          color?: string | null
           created_at?: string | null
           description?: string | null
           difficulty?: string | null
@@ -354,6 +356,7 @@ export type Database = {
         }
         Update: {
           capacity?: number
+          color?: string | null
           created_at?: string | null
           description?: string | null
           difficulty?: string | null
@@ -682,6 +685,7 @@ export type Database = {
       }
       trainers: {
         Row: {
+          auth_id: string | null
           created_at: string | null
           email: string
           gender: string | null
@@ -692,6 +696,7 @@ export type Database = {
           status: string | null
         }
         Insert: {
+          auth_id?: string | null
           created_at?: string | null
           email: string
           gender?: string | null
@@ -702,6 +707,7 @@ export type Database = {
           status?: string | null
         }
         Update: {
+          auth_id?: string | null
           created_at?: string | null
           email?: string
           gender?: string | null
@@ -754,7 +760,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_name: { Args: { user_id: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never
