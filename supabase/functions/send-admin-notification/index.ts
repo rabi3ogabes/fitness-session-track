@@ -55,6 +55,26 @@ async function sendTwilioMessage(
   }
 }
 
+function buildCustomerMessage(
+  type: string,
+  name: string,
+  ctx: { className?: string; classDate?: string; classTime?: string; planName?: string; sessions?: number },
+): string {
+  switch (type) {
+    case 'signup':
+      return `Hi ${name}, welcome! Your account is now active. 💪`;
+    case 'login':
+      return `Hi ${name}, a new login to your account was just detected at ${new Date().toLocaleString()}. If this wasn't you, contact support.`;
+    case 'booking':
+      return `Hi ${name}, your booking for ${ctx.className || 'a class'}${ctx.classDate ? ' on ' + ctx.classDate : ''}${ctx.classTime ? ' at ' + ctx.classTime : ''} is confirmed. See you soon!`;
+    case 'cancellation':
+      return `Hi ${name}, your booking for ${ctx.className || 'the class'}${ctx.classDate ? ' on ' + ctx.classDate : ''}${ctx.classTime ? ' at ' + ctx.classTime : ''} has been cancelled. Your session was restored.`;
+    case 'session_request':
+      return `Hi ${name}, we received your request for ${ctx.sessions || ''} ${ctx.planName || ''} sessions. We'll process it shortly.`;
+    default:
+      return `Hi ${name}, you have a new notification.`;
+  }
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
