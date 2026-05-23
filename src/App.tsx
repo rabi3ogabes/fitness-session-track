@@ -142,6 +142,7 @@ const AppContent = () => {
       <Routes>
         <Route path="/" element={<TrainerHomeRedirect />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<UserDashboardRedirect />} />
 
         {/* Admin Routes */}
