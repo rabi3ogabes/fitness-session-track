@@ -9,6 +9,7 @@ import RecentMembersWidget from "@/components/RecentMembersWidget";
 import RecentBookingsWidget from "@/components/RecentBookingsWidget";
 import BalanceRequestsWidget from "@/components/BalanceRequestsWidget";
 import EmailDeliveryLogsWidget from "@/components/EmailDeliveryLogsWidget";
+import NotificationLogsWidget from "@/components/NotificationLogsWidget";
 import { NotificationTester } from "@/components/NotificationTester";
 import { useNotificationProcessor } from "@/hooks/useNotificationProcessor";
 import { Users, User, Calendar, CreditCard } from "lucide-react";
@@ -162,8 +163,9 @@ const AdminDashboard = () => {
           <BalanceRequestsWidget />
         </div>
 
-        {/* Email Delivery Logs */}
-        <div className="mt-6">
+        {/* Notification & Email Delivery Logs */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <NotificationLogsWidget />
           <EmailDeliveryLogsWidget />
         </div>
         
