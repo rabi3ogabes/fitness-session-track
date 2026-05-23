@@ -22,13 +22,24 @@ export const checkSupabaseConnection = async (
   }
 };
 
-export const requireAuth = async (..._args: unknown[]) => {
+export async function requireAuth<T>(): Promise<unknown>;
+export async function requireAuth<T>(fn: () => Promise<T>, fallback?: T): Promise<T>;
+export async function requireAuth<T>(fn?: () => Promise<T>, fallback?: T): Promise<T | unknown> {
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) {
+    if (fn !== undefined && fallback !== undefined) return fallback as T;
     throw new Error("Authentication required");
   }
+  if (fn) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (fallback !== undefined) return fallback as T;
+      throw err;
+    }
+  }
   return data.session;
-};
+}
 
 export const cacheDataForOffline = async <T>(_key: string, data: T): Promise<T> => {
   // Offline cache disabled after migration.
