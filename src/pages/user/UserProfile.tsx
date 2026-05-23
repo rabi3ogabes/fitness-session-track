@@ -383,7 +383,11 @@ const UserProfile = () => {
         <div className="bg-white rounded-lg shadow-md p-6 mt-6">
           <h2 className="text-xl font-bold mb-6">Account Settings</h2>
           <div className="space-y-4">
-            <Button variant="outline" className="text-gym-blue border-gym-blue hover:bg-gym-light w-full md:w-auto">
+            <Button
+              variant="outline"
+              className="text-gym-blue border-gym-blue hover:bg-gym-light w-full md:w-auto"
+              onClick={() => setPasswordDialogOpen(true)}
+            >
               Change Password
             </Button>
             <p className="text-sm text-gray-500 mt-2">
@@ -392,6 +396,13 @@ const UserProfile = () => {
           </div>
         </div>
       </div>
+
+      <ChangePasswordDialog
+        isOpen={passwordDialogOpen}
+        onClose={() => setPasswordDialogOpen(false)}
+        email={user?.email}
+        name={profile.name}
+      />
     </DashboardLayout>
   );
 };
