@@ -283,8 +283,7 @@ const Settings = () => {
         .order('created_at', { ascending: false })
         .limit(20);
 
-        .order('created_at', { ascending: false })
-        .limit(20);
+
       if (error) return;
       setEmailLogs((data || []).map((r: any) => ({
         timestamp: r.created_at,
