@@ -618,106 +618,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       logActivity("signup", { details: { email, name, phone } });
 
-      const { data: adminSettings } = await supabase
-        .from('admin_notification_settings')
-        .select('notification_email')
-        .single();
-
-      const notificationEmail = adminSettings?.notification_email || '';
-
-      // Send welcome email to new member
+      // Send welcome email to new member via Lovable Email
       try {
-        await supabase.functions.invoke('send-email-notification', {
+        await supabase.functions.invoke('send-transactional-email', {
+          body: {
+            templateName: 'member-welcome',
+            recipientEmail: email,
+            idempotencyKey: `welcome-${email}-${Date.now()}`,
+            templateData: { name },
+          },
+        });
+        console.log('Welcome email queued for new member:', email);
+      } catch (error) {
+        console.error('Failed to queue welcome email:', error);
+      }
+
+      // Send admin notification about new signup
+      try {
+        await supabase.functions.invoke('send-admin-notification', {
           body: {
             type: 'signup',
-            userName: name,
             userEmail: email,
-            userPhone: phone || '',
-            memberName: name,
-            memberEmail: email,
-            emailTo: email,
-            notificationEmail: notificationEmail,
-            signupDetails: {
-              name,
-              email,
-              phone: phone || '',
-              gender: gender || '',
-              birthday: dob || '',
-              registeredAt: new Date().toISOString(),
-            }
-          }
+            userName: name,
+            details: `New member registered with phone: ${phone || 'Not provided'}`,
+          },
         });
-        console.log('Welcome email sent to new member:', email);
       } catch (error) {
-        console.error('Failed to send welcome email to member:', error);
+        console.error('Failed to send admin signup notification:', error);
       }
 
-      // Send notification to admin about new signup
-      const adminNotificationEmail = localStorage.getItem('adminNotificationEmail');
-      const smtpSettings = localStorage.getItem('smtpSettings');
-      
-      if (adminNotificationEmail && smtpSettings) {
-        try {
-          const parsedSmtpSettings = JSON.parse(smtpSettings);
-          
-          // Only send if SMTP settings are properly configured
-          if (parsedSmtpSettings.host && parsedSmtpSettings.username && parsedSmtpSettings.password && parsedSmtpSettings.fromEmail) {
-            await supabase.functions.invoke('send-smtp-notification', {
-              body: {
-                userEmail: email,
-                userName: name,
-                userPhone: phone,
-                notificationEmail: adminNotificationEmail,
-                smtpSettings: {
-                  ...parsedSmtpSettings,
-                  useSsl: true
-                }
-              }
-            });
-          }
-        } catch (error) {
-          console.error('Failed to send admin notification:', error);
-        }
-      }
-
-      // Send WhatsApp notification if enabled
-      try {
-        const whatsappSettings = localStorage.getItem("whatsappSettings");
-        if (whatsappSettings) {
-          const settings = JSON.parse(whatsappSettings);
-          if (settings.enabled && settings.signup_notifications && 
-              settings.instance_id && settings.api_token && settings.phone_numbers) {
-            
-            const phoneNumbers = settings.phone_numbers.split(',').map(num => num.trim());
-            const joinDate = new Date().toLocaleDateString();
-            
-            let signupMessage = settings.templates?.signup || 
-              '🎉 New member signup!\n\nName: {userName}\nEmail: {userEmail}\nPhone: {userPhone}\nJoined: {joinDate}\n\nWelcome to our gym family! 💪';
-            
-            // Replace template variables
-            signupMessage = signupMessage
-              .replace(/{userName}/g, name)
-              .replace(/{userEmail}/g, email)
-              .replace(/{userPhone}/g, phone || 'Not provided')
-              .replace(/{joinDate}/g, joinDate);
-            
-            console.log('Sending signup WhatsApp notification...');
-            await supabase.functions.invoke('send-whatsapp-notification', {
-              body: {
-                userName: name,
-                userEmail: email,
-                phoneNumbers: phoneNumbers,
-                apiToken: settings.api_token,
-                instanceId: settings.instance_id,
-                customMessage: signupMessage
-              }
-            });
-          }
-        }
-      } catch (whatsappError) {
-        console.error("Failed to send signup WhatsApp notification:", whatsappError);
-        // Don't fail the signup if WhatsApp fails
-      }
 
       toast({
         title: "Sign up successful",
