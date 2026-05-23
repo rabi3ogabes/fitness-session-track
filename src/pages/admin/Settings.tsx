@@ -478,6 +478,7 @@ const Settings = () => {
           notification_cc_email: data.notification_cc_email || "",
           resend_enabled: data.resend_enabled ?? true,
           signup_notifications: data.signup_notifications ?? true,
+          login_notifications: (data as any).login_notifications ?? true,
           booking_notifications: data.booking_notifications ?? true,
           cancellation_notifications: data.cancellation_notifications ?? true,
           session_request_notifications: data.session_request_notifications ?? true,
@@ -485,7 +486,11 @@ const Settings = () => {
           n8n_signup_webhook_url: data.n8n_signup_webhook_url || "",
           n8n_booking_webhook_url: data.n8n_booking_webhook_url || "",
           n8n_cancellation_webhook_url: data.n8n_cancellation_webhook_url || "",
-          n8n_session_request_webhook_url: data.n8n_session_request_webhook_url || ""
+          n8n_session_request_webhook_url: data.n8n_session_request_webhook_url || "",
+          notification_provider: ((data as any).notification_provider || "n8n") as "n8n" | "twilio",
+          twilio_channel: ((data as any).twilio_channel || "whatsapp") as "whatsapp" | "sms",
+          twilio_from_number: (data as any).twilio_from_number || "",
+          twilio_admin_number: (data as any).twilio_admin_number || "",
         };
         console.log('Setting state to:', loadedSettings);
         setEmailSettings(loadedSettings);
@@ -502,6 +507,7 @@ const Settings = () => {
           notification_cc_email: parsed.notification_cc_email || "",
           resend_enabled: parsed.resend_enabled ?? true,
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
+          login_notifications: parsed.login_notifications ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
           cancellation_notifications: parsed.cancellation_notifications ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
@@ -509,7 +515,11 @@ const Settings = () => {
           n8n_signup_webhook_url: parsed.n8n_signup_webhook_url || "",
           n8n_booking_webhook_url: parsed.n8n_booking_webhook_url || "",
           n8n_cancellation_webhook_url: parsed.n8n_cancellation_webhook_url || "",
-          n8n_session_request_webhook_url: parsed.n8n_session_request_webhook_url || ""
+          n8n_session_request_webhook_url: parsed.n8n_session_request_webhook_url || "",
+          notification_provider: (parsed.notification_provider || "n8n") as "n8n" | "twilio",
+          twilio_channel: (parsed.twilio_channel || "whatsapp") as "whatsapp" | "sms",
+          twilio_from_number: parsed.twilio_from_number || "",
+          twilio_admin_number: parsed.twilio_admin_number || "",
         });
         }
       }
@@ -527,6 +537,7 @@ const Settings = () => {
           notification_cc_email: parsed.notification_cc_email || "",
           resend_enabled: parsed.resend_enabled ?? true,
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
+          login_notifications: parsed.login_notifications ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
           cancellation_notifications: parsed.cancellation_notifications ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
@@ -534,7 +545,11 @@ const Settings = () => {
           n8n_signup_webhook_url: parsed.n8n_signup_webhook_url || "",
           n8n_booking_webhook_url: parsed.n8n_booking_webhook_url || "",
           n8n_cancellation_webhook_url: parsed.n8n_cancellation_webhook_url || "",
-          n8n_session_request_webhook_url: parsed.n8n_session_request_webhook_url || ""
+          n8n_session_request_webhook_url: parsed.n8n_session_request_webhook_url || "",
+          notification_provider: (parsed.notification_provider || "n8n") as "n8n" | "twilio",
+          twilio_channel: (parsed.twilio_channel || "whatsapp") as "whatsapp" | "sms",
+          twilio_from_number: parsed.twilio_from_number || "",
+          twilio_admin_number: parsed.twilio_admin_number || "",
         });
       }
     }
