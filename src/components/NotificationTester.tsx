@@ -200,56 +200,8 @@ export const NotificationTester: React.FC = () => {
           <Button onClick={runAllTests} disabled={isLoading} className="ml-auto">
             {isLoading ? 'Running Tests...' : 'Run All Tests'}
           </Button>
-          <Button 
-            onClick={async () => {
-              setIsLoading(true);
-              try {
-                console.log("Processing pending notifications...");
-                
-                // Call the test function to see what's happening
-                const { data, error } = await supabase.functions.invoke('test-notifications');
-                
-                console.log("Test notifications result:", { data, error });
-                
-                if (error) {
-                  toast({
-                    title: "Error",
-                    description: error.message,
-                    variant: "destructive",
-                  });
-                } else {
-                  toast({
-                    title: "Success", 
-                    description: `Processed ${data?.before || 0} pending notifications. Check email logs.`,
-                  });
-                  
-                  // Also try to process via send-email-notification directly
-                  const { data: directData, error: directError } = await supabase.functions.invoke('send-admin-notification', {
-                    body: { action: 'process_pending' }
-                  });
-                  
-                  if (directError) {
-                    console.error("Direct processing error:", directError);
-                  } else {
-                    console.log("Direct processing success:", directData);
-                  }
-                }
-              } catch (err: any) {
-                console.error("Failed to process notifications:", err);
-                toast({
-                  title: "Error",
-                  description: err.message || "Failed to process notifications",
-                  variant: "destructive",
-                });
-              } finally {
-                setIsLoading(false);
-              }
-            }}
-            disabled={isLoading}
-            variant="secondary"
-          >
-            {isLoading ? "Processing..." : "Process Pending Notifications"}
-          </Button>
+
+
         </div>
 
         {testResults.length > 0 && (
