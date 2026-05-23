@@ -633,4 +633,3 @@ function StatCard({
   );
 }
 
-type MemberRowFull = MemberRow;
