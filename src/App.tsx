@@ -224,6 +224,14 @@ const AppContent = () => {
             </AdminProtectedRoute>
           }
         />
+        <Route
+          path="/admin/notifications"
+          element={
+            <AdminProtectedRoute>
+              <NotificationsAdmin />
+            </AdminProtectedRoute>
+          }
+        />
 
         {/* User Routes */}
         <Route path="/user/profile" element={<UserProfile />} />
