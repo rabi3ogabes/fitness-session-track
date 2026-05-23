@@ -35,6 +35,7 @@ const Settings = () => {
     from_name: "",
     resend_enabled: true,
     signup_notifications: true,
+    login_notifications: true,
     booking_notifications: true,
     cancellation_notifications: true,
     session_request_notifications: true,
@@ -42,7 +43,11 @@ const Settings = () => {
     n8n_signup_webhook_url: "",
     n8n_booking_webhook_url: "",
     n8n_cancellation_webhook_url: "",
-    n8n_session_request_webhook_url: ""
+    n8n_session_request_webhook_url: "",
+    notification_provider: "n8n" as "n8n" | "twilio",
+    twilio_channel: "whatsapp" as "whatsapp" | "sms",
+    twilio_from_number: "",
+    twilio_admin_number: "",
   });
   
   const [isLoading, setIsLoading] = useState(false);
