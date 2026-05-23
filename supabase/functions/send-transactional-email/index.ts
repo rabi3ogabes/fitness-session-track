@@ -332,7 +332,7 @@ Deno.serve(async (req) => {
   // Resolve subject + sender name (admin overrides win)
   const resolvedSubject = (override?.subject && override.subject.trim()) ||
     (typeof template.subject === 'function' ? template.subject(mergedData) : template.subject)
-  const senderName = (override?.sender_name && override.sender_name.trim()) || SITE_NAME
+  const senderName = (override?.sender_name && override.sender_name.trim()) || brandSiteName
 
   // 5. Enqueue the pre-rendered email for async processing by the dispatcher.
   await supabase.from('email_send_log').insert({
