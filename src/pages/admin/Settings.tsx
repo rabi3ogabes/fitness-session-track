@@ -948,6 +948,100 @@ const Settings = () => {
                </CardContent>
             </Card>
 
+            {/* Notification Provider */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Provider</CardTitle>
+                <CardDescription>
+                  Choose how admin and customer notifications are delivered.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div>
+                    <Label className="text-sm font-medium">Use Twilio (WhatsApp/SMS)</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Off = n8n webhooks. On = send messages via Twilio.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={emailSettings.notification_provider === 'twilio'}
+                    onCheckedChange={(checked) => setEmailSettings({
+                      ...emailSettings,
+                      notification_provider: checked ? 'twilio' : 'n8n',
+                    })}
+                  />
+                </div>
+
+                {emailSettings.notification_provider === 'twilio' && (
+                  <div className="space-y-3 pt-2 border-t">
+                    <div>
+                      <Label>Channel</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Button
+                          type="button"
+                          variant={emailSettings.twilio_channel === 'whatsapp' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setEmailSettings({ ...emailSettings, twilio_channel: 'whatsapp' })}
+                        >WhatsApp</Button>
+                        <Button
+                          type="button"
+                          variant={emailSettings.twilio_channel === 'sms' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setEmailSettings({ ...emailSettings, twilio_channel: 'sms' })}
+                        >SMS</Button>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="twilio-from">Sender number (Twilio)</Label>
+                      <Input
+                        id="twilio-from"
+                        placeholder="+14155551234"
+                        value={emailSettings.twilio_from_number}
+                        onChange={(e) => setEmailSettings({ ...emailSettings, twilio_from_number: e.target.value })}
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Your Twilio-approved sender. For WhatsApp use your sandbox/business number in E.164 (the prefix is added automatically).
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="twilio-admin">Admin phone number</Label>
+                      <Input
+                        id="twilio-admin"
+                        placeholder="+14155551234"
+                        value={emailSettings.twilio_admin_number}
+                        onChange={(e) => setEmailSettings({ ...emailSettings, twilio_admin_number: e.target.value })}
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Where admin alerts are sent (E.164).
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2 pt-3 border-t">
+                  <h4 className="text-sm font-medium">Enable notification events</h4>
+                  {[
+                    { key: 'signup_notifications', label: 'Sign up' },
+                    { key: 'login_notifications', label: 'Login' },
+                    { key: 'booking_notifications', label: 'Booking' },
+                    { key: 'cancellation_notifications', label: 'Booking cancelled' },
+                    { key: 'session_request_notifications', label: 'Session request' },
+                  ].map((row) => (
+                    <div key={row.key} className="flex items-center justify-between">
+                      <Label className="text-sm">{row.label}</Label>
+                      <Switch
+                        checked={(emailSettings as any)[row.key]}
+                        onCheckedChange={(checked) => setEmailSettings({ ...emailSettings, [row.key]: checked } as any)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* N8N Webhook Integration */}
             <Card>
               <CardHeader>
