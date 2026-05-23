@@ -60,7 +60,7 @@ const Members = () => {
       try {
         setIsLoading(true);
         await requireAuth(async () => {
-          const { data, error } = await supabase.from("members").select("*").is("deleted_at", null).order("created_at", { ascending: false });
+          const { data, error } = await supabase.from("members").select("*").is("deleted_at", null).not("email", "in", "(admin@gym.com,trainer@gym.com)").order("created_at", { ascending: false });
 
           if (error) {
             console.error("Error fetching members:", error);
