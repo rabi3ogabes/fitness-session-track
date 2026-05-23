@@ -86,7 +86,7 @@ export default function NotificationsAdmin() {
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
-      <main className="flex-1 p-4 md:p-8 md:ml-64">
+      <main className="flex-1 p-4 md:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
