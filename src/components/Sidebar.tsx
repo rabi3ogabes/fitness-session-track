@@ -99,8 +99,9 @@ const Sidebar = () => {
   const userNavItems = [
     { name: "Dashboard", path: "/dashboard", icon: <Home className="h-5 w-5" /> },
     { name: "Calendar", path: "/user/calendar", icon: <Calendar className="h-5 w-5" /> },
-    { name: "Membership", path: "/user/membership", icon: <BadgeCheck className="h-5 w-5" /> },
+    ...(countCredit ? [{ name: "Membership", path: "/user/membership", icon: <BadgeCheck className="h-5 w-5" /> }] : []),
   ];
+
   
   const trainerNavItems = [
     { name: "Dashboard", path: "/trainer", icon: <Home className="h-5 w-5" /> },
