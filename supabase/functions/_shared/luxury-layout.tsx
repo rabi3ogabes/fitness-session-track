@@ -31,6 +31,7 @@ export const LuxuryEmail: React.FC<LuxuryEmailProps> = ({
   footerText,
   accentColor = '#c9a861',
   siteName = 'FHB Fit',
+  logoUrl,
   details,
   extraBody,
 }) => {
@@ -43,7 +44,11 @@ export const LuxuryEmail: React.FC<LuxuryEmailProps> = ({
         <Container style={wrapper}>
           {/* Brand bar */}
           <Section style={{ textAlign: 'center', padding: '36px 0 22px' }}>
-            <Text style={{ ...brand, color: accent }}>{siteName.toUpperCase()}</Text>
+            {logoUrl ? (
+              <Img src={logoUrl} alt={siteName} height="56" style={{ margin: '0 auto', maxHeight: 56, objectFit: 'contain' }} />
+            ) : (
+              <Text style={{ ...brand, color: accent }}>{siteName.toUpperCase()}</Text>
+            )}
             <div style={{ width: 36, height: 1, backgroundColor: accent, margin: '14px auto 0' }} />
           </Section>
 
