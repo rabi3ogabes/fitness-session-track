@@ -73,6 +73,8 @@ const Settings = () => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [headerColor, setHeaderColor] = useState<string>("#ffffff");
   const [footerColor, setFooterColor] = useState<string>("#000000");
   const [membershipExpiry, setMembershipExpiry] = useState({
