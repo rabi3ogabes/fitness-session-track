@@ -611,7 +611,8 @@ const UserMembership = () => {
           </CardContent>
         </Card>
 
-        {/* Available Plans - read only */}
+        {/* Available Plans - read only (hidden when count credit is off) */}
+        {currentMembership.countCredit && (
         <div>
           <div className="mb-6">
             <h2 className="text-2xl font-bold">Available Plans</h2>
@@ -664,6 +665,7 @@ const UserMembership = () => {
             ))}
           </div>
         </div>
+        )}
 
         {/* Payment History */}
         <Card>
