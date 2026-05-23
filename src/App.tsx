@@ -32,6 +32,7 @@ import AttendeesPage from "./pages/trainer/AttendeesPage";
 import ActivityLog from "./pages/admin/ActivityLog";
 import ActivityTracker from "./components/ActivityTracker";
 import GlobalClickTracker from "./components/GlobalClickTracker";
+import Unsubscribe from "./pages/Unsubscribe";
 
 // Context
 import { AuthProvider } from "./context/AuthContext";
@@ -263,6 +264,8 @@ const AppContent = () => {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/unsubscribe" element={<Unsubscribe />} />
 
         {/* 404 Page */}
         <Route path="*" element={<NotFound />} />
