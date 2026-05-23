@@ -10,6 +10,7 @@ interface Props {
   memberEmail?: string
   details?: string
   siteName?: string
+  logoUrl?: string | null
   preheader?: string; heading?: string; intro?: string; body?: string
   footerText?: string; accentColor?: string
 }
@@ -22,6 +23,7 @@ const AdminNotificationEmail = (p: Props) => {
   return (
     <LuxuryEmail
       siteName={p.siteName}
+    logoUrl={p.logoUrl}
       preheader={p.preheader || 'A new event needs your attention'}
       heading={p.heading || 'New activity'}
       intro={p.intro || 'A new event has occurred on your platform.'}

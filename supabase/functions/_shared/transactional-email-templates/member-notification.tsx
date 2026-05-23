@@ -14,6 +14,7 @@ interface Props {
   details?: string
   // overrides
   siteName?: string
+  logoUrl?: string | null
   preheader?: string; heading?: string; intro?: string; body?: string
   footerText?: string; accentColor?: string
 }
@@ -41,6 +42,7 @@ const MemberNotificationEmail = (p: Props) => {
   return (
     <LuxuryEmail
       siteName={p.siteName}
+    logoUrl={p.logoUrl}
       preheader={p.preheader || d.heading}
       heading={p.heading || d.heading}
       intro={p.intro || d.intro}

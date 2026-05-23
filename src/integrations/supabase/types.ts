@@ -192,6 +192,7 @@ export type Database = {
           hero_title: string | null
           id: string
           logo: string | null
+          logo_url: string | null
           membership_expiry_basic: number | null
           membership_expiry_premium: number | null
           membership_expiry_standard: number | null
@@ -230,6 +231,7 @@ export type Database = {
           hero_title?: string | null
           id?: string
           logo?: string | null
+          logo_url?: string | null
           membership_expiry_basic?: number | null
           membership_expiry_premium?: number | null
           membership_expiry_standard?: number | null
@@ -268,6 +270,7 @@ export type Database = {
           hero_title?: string | null
           id?: string
           logo?: string | null
+          logo_url?: string | null
           membership_expiry_basic?: number | null
           membership_expiry_premium?: number | null
           membership_expiry_standard?: number | null

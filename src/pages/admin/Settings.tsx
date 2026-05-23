@@ -70,7 +70,9 @@ const Settings = () => {
     error?: string;
   }>>([]);
   const [logo, setLogo] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [headerColor, setHeaderColor] = useState<string>("#ffffff");
   const [footerColor, setFooterColor] = useState<string>("#000000");
   const [membershipExpiry, setMembershipExpiry] = useState({
@@ -204,6 +206,7 @@ const Settings = () => {
       const adminSettingsPayload: any = {
         cancellation_hours: cancellationHours,
         logo: logo,
+        logo_url: logoUrl,
         header_color: headerColor,
         footer_color: footerColor,
         membership_expiry_basic: membershipExpiry.basic,
@@ -390,6 +393,30 @@ const Settings = () => {
         // Load all settings from database
         setCancellationHours(data.cancellation_hours || 4);
         setLogo(data.logo);
+        const existingLogoUrl = (data as any).logo_url ?? null;
+        setLogoUrl(existingLogoUrl);
+        // Auto-migrate legacy base64 logo to public storage so emails can render it
+        if (!existingLogoUrl && typeof data.logo === 'string' && data.logo.startsWith('data:image/')) {
+          try {
+            const match = data.logo.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+            if (match) {
+              const mime = match[1];
+              const ext = mime.split('/')[1].split('+')[0];
+              const bin = atob(match[2]);
+              const bytes = new Uint8Array(bin.length);
+              for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+              const path = `logo-${Date.now()}.${ext}`;
+              const { error: upErr } = await supabase.storage
+                .from('branding')
+                .upload(path, new Blob([bytes], { type: mime }), { upsert: true, contentType: mime });
+              if (!upErr) {
+                const { data: pub } = supabase.storage.from('branding').getPublicUrl(path);
+                setLogoUrl(pub.publicUrl);
+                await supabase.from('admin_settings').update({ logo_url: pub.publicUrl }).eq('id', data.id);
+              }
+            }
+          } catch (e) { console.warn('logo auto-migrate failed', e); }
+        }
         setHeaderColor(data.header_color || "#ffffff");
         setFooterColor(data.footer_color || "#000000");
         setMembershipExpiry({
@@ -562,11 +589,12 @@ const Settings = () => {
     }
   };
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setLogoFile(file);
-      
+
+      // Local preview as data URL (kept for backward compatibility)
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target && typeof event.target.result === 'string') {
@@ -574,11 +602,30 @@ const Settings = () => {
         }
       };
       reader.readAsDataURL(file);
+
+      // Upload to public storage so emails (Gmail/Outlook) can render it
+      try {
+        setUploadingLogo(true);
+        const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+        const path = `logo-${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('branding')
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from('branding').getPublicUrl(path);
+        setLogoUrl(pub.publicUrl);
+        toast({ title: 'Logo uploaded', description: 'Your logo will now appear in emails.' });
+      } catch (err: any) {
+        toast({ title: 'Upload failed', description: err.message || 'Could not upload logo', variant: 'destructive' });
+      } finally {
+        setUploadingLogo(false);
+      }
     }
   };
 
   const handleDeleteLogo = () => {
     setLogo(null);
+    setLogoUrl(null);
     setLogoFile(null);
     toast({
       title: "Logo deleted",

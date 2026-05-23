@@ -1,7 +1,7 @@
 /// <reference types="npm:@types/react@18.3.1" />
 import * as React from 'npm:react@18.3.1'
 import {
-  Body, Container, Head, Heading, Html, Preview, Section, Text, Button, Hr,
+  Body, Container, Head, Heading, Html, Img, Preview, Section, Text, Button, Hr,
 } from 'npm:@react-email/components@0.0.22'
 
 export interface LuxuryEmailProps {
@@ -15,6 +15,7 @@ export interface LuxuryEmailProps {
   footerText?: string
   accentColor?: string
   siteName?: string
+  logoUrl?: string | null
   details?: Array<{ label: string; value: string }>
   extraBody?: string
 }
@@ -30,6 +31,7 @@ export const LuxuryEmail: React.FC<LuxuryEmailProps> = ({
   footerText,
   accentColor = '#c9a861',
   siteName = 'FHB Fit',
+  logoUrl,
   details,
   extraBody,
 }) => {
@@ -42,7 +44,11 @@ export const LuxuryEmail: React.FC<LuxuryEmailProps> = ({
         <Container style={wrapper}>
           {/* Brand bar */}
           <Section style={{ textAlign: 'center', padding: '36px 0 22px' }}>
-            <Text style={{ ...brand, color: accent }}>{siteName.toUpperCase()}</Text>
+            {logoUrl ? (
+              <Img src={logoUrl} alt={siteName} height="56" style={{ margin: '0 auto', maxHeight: 56, objectFit: 'contain' }} />
+            ) : (
+              <Text style={{ ...brand, color: accent }}>{siteName.toUpperCase()}</Text>
+            )}
             <div style={{ width: 36, height: 1, backgroundColor: accent, margin: '14px auto 0' }} />
           </Section>
 
