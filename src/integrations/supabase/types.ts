@@ -174,6 +174,7 @@ export type Database = {
           cta_button: string | null
           cta_description: string | null
           cta_title: string | null
+          favicon_url: string | null
           feature1_description: string | null
           feature1_title: string | null
           feature2_description: string | null
@@ -213,6 +214,7 @@ export type Database = {
           cta_button?: string | null
           cta_description?: string | null
           cta_title?: string | null
+          favicon_url?: string | null
           feature1_description?: string | null
           feature1_title?: string | null
           feature2_description?: string | null
@@ -252,6 +254,7 @@ export type Database = {
           cta_button?: string | null
           cta_description?: string | null
           cta_title?: string | null
+          favicon_url?: string | null
           feature1_description?: string | null
           feature1_title?: string | null
           feature2_description?: string | null
