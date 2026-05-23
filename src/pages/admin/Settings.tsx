@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import DeletedMembers from "./components/members/DeletedMembers";
 import WebhookHealth from "./components/settings/WebhookHealth";
+import NotificationsTab from "./components/NotificationsTab";
 
 const Settings = () => {
   const [cancellationHours, setCancellationHours] = useState(4);
