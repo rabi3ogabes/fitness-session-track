@@ -65,6 +65,7 @@ export type Database = {
           from_email: string | null
           from_name: string | null
           id: string
+          login_notifications: boolean
           n8n_booking_webhook_url: string | null
           n8n_cancellation_webhook_url: string | null
           n8n_session_request_webhook_url: string | null
@@ -72,6 +73,7 @@ export type Database = {
           n8n_webhook_url: string | null
           notification_cc_email: string | null
           notification_email: string
+          notification_provider: string
           resend_enabled: boolean | null
           session_request_notifications: boolean
           signup_notifications: boolean
@@ -80,6 +82,9 @@ export type Database = {
           smtp_port: number | null
           smtp_use_tls: boolean | null
           smtp_username: string | null
+          twilio_admin_number: string | null
+          twilio_channel: string
+          twilio_from_number: string | null
           updated_at: string
         }
         Insert: {
@@ -90,6 +95,7 @@ export type Database = {
           from_email?: string | null
           from_name?: string | null
           id?: string
+          login_notifications?: boolean
           n8n_booking_webhook_url?: string | null
           n8n_cancellation_webhook_url?: string | null
           n8n_session_request_webhook_url?: string | null
@@ -97,6 +103,7 @@ export type Database = {
           n8n_webhook_url?: string | null
           notification_cc_email?: string | null
           notification_email: string
+          notification_provider?: string
           resend_enabled?: boolean | null
           session_request_notifications?: boolean
           signup_notifications?: boolean
@@ -105,6 +112,9 @@ export type Database = {
           smtp_port?: number | null
           smtp_use_tls?: boolean | null
           smtp_username?: string | null
+          twilio_admin_number?: string | null
+          twilio_channel?: string
+          twilio_from_number?: string | null
           updated_at?: string
         }
         Update: {
@@ -115,6 +125,7 @@ export type Database = {
           from_email?: string | null
           from_name?: string | null
           id?: string
+          login_notifications?: boolean
           n8n_booking_webhook_url?: string | null
           n8n_cancellation_webhook_url?: string | null
           n8n_session_request_webhook_url?: string | null
@@ -122,6 +133,7 @@ export type Database = {
           n8n_webhook_url?: string | null
           notification_cc_email?: string | null
           notification_email?: string
+          notification_provider?: string
           resend_enabled?: boolean | null
           session_request_notifications?: boolean
           signup_notifications?: boolean
@@ -130,6 +142,9 @@ export type Database = {
           smtp_port?: number | null
           smtp_use_tls?: boolean | null
           smtp_username?: string | null
+          twilio_admin_number?: string | null
+          twilio_channel?: string
+          twilio_from_number?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -510,23 +525,35 @@ export type Database = {
       }
       notification_settings: {
         Row: {
+          booking_enabled: boolean
+          cancellation_enabled: boolean
           created_at: string
           id: string
           login_balance_notification: boolean
+          login_enabled: boolean
+          signup_enabled: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
+          booking_enabled?: boolean
+          cancellation_enabled?: boolean
           created_at?: string
           id?: string
           login_balance_notification?: boolean
+          login_enabled?: boolean
+          signup_enabled?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
+          booking_enabled?: boolean
+          cancellation_enabled?: boolean
           created_at?: string
           id?: string
           login_balance_notification?: boolean
+          login_enabled?: boolean
+          signup_enabled?: boolean
           updated_at?: string
           user_id?: string
         }
