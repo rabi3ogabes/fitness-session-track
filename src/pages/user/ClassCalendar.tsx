@@ -53,7 +53,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/context/AuthContext";
-import { supabase, cancelClassBooking } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import { cancelClassBooking } from "@/integrations/supabase/helpers";
 import { ClassModel } from "@/pages/admin/components/classes/ClassTypes";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { cancelClassBooking } from "@/integrations/supabase/client";
+import { cancelClassBooking } from "@/integrations/supabase/helpers";
 import { format } from "date-fns";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
