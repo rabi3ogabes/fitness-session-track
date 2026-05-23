@@ -14,7 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, AlertCircle, User, Lock, Wifi, WifiOff, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { supabase, checkSupabaseConnection, isOffline } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import { checkSupabaseConnection, isOffline } from "@/integrations/supabase/helpers";
 
 const Login = () => {
   // Login state

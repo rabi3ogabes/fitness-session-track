@@ -1,12 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import {
-  supabase,
-  requireAuth,
-  isOffline,
-  cacheDataForOffline,
-} from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import { requireAuth, isOffline, cacheDataForOffline } from "@/integrations/supabase/helpers";
 import { format, addDays, addWeeks, addMonths, parse } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import {

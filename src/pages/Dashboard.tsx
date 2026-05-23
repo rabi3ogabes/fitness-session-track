@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Calendar, Clock, Bell, Settings } from "lucide-react";
-import { supabase, requireAuth } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import { requireAuth } from "@/integrations/supabase/helpers";
 import useComingClass from "@/hooks/useComingClass";
 import BalanceRequestsWidget from "@/components/BalanceRequestsWidget";
 

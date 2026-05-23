@@ -5,11 +5,8 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import {
-  supabase,
-  checkSupabaseConnection,
-  isOffline,
-} from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import { checkSupabaseConnection, isOffline } from "@/integrations/supabase/helpers";
 import { useToast } from "@/hooks/use-toast";
 import { AuthTokenResponse, User as SupabaseUser } from "@supabase/supabase-js";
 import { logActivity } from "@/lib/activityTracker";

@@ -107,7 +107,8 @@ import {
   formatClassTime,
   checkScheduleConflict
 } from "./components/classes/ClassTypes";
-import { supabase, requireAuth } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import { requireAuth } from "@/integrations/supabase/helpers";
 
 const Classes = () => {
   const [classes, setClasses] = useState<ClassModel[]>([]);

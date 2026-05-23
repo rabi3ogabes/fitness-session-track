@@ -14,7 +14,8 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { supabase, requireAuth } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
+import { requireAuth } from "@/integrations/supabase/helpers";
 
 interface AddMemberDialogProps {
   isOpen: boolean;
