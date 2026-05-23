@@ -35,6 +35,8 @@ import ActivityTracker from "./components/ActivityTracker";
 import GlobalClickTracker from "./components/GlobalClickTracker";
 import Unsubscribe from "./pages/Unsubscribe";
 import NotificationsAdmin from "./pages/admin/NotificationsAdmin";
+import EmailTemplatesAdmin from "./pages/admin/EmailTemplatesAdmin";
+
 
 // Context
 import { AuthProvider } from "./context/AuthContext";
@@ -234,6 +236,15 @@ const AppContent = () => {
             </AdminProtectedRoute>
           }
         />
+        <Route
+          path="/admin/email-templates"
+          element={
+            <AdminProtectedRoute>
+              <EmailTemplatesAdmin />
+            </AdminProtectedRoute>
+          }
+        />
+
 
         {/* User Routes */}
         <Route path="/user/profile" element={<UserProfile />} />
