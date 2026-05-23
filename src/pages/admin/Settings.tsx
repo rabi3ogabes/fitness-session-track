@@ -393,6 +393,7 @@ const Settings = () => {
         // Load all settings from database
         setCancellationHours(data.cancellation_hours || 4);
         setLogo(data.logo);
+        setLogoUrl((data as any).logo_url ?? null);
         setHeaderColor(data.header_color || "#ffffff");
         setFooterColor(data.footer_color || "#000000");
         setMembershipExpiry({
