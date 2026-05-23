@@ -547,12 +547,12 @@ const UserMembership = () => {
     }
   };
 
-  return (
   if (!loading && !currentMembership.countCredit) {
     return <Navigate to="/dashboard" replace />;
   }
 
   return (
+
     <DashboardLayout title="Membership">
       <div className="space-y-8">
 
