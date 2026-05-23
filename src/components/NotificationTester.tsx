@@ -284,18 +284,13 @@ export const NotificationTester: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-          <h4 className="font-medium text-yellow-800 mb-2">⚠️ Resend Setup Notice</h4>
-          <div className="text-sm text-yellow-700 space-y-2">
-            <p>Currently using Resend's testing mode with the default <code className="bg-yellow-100 px-1 rounded">onboarding@resend.dev</code> domain.</p>
-            <p><strong>For production:</strong> To send emails from your own domain (like notifications@fhb-fit.com):</p>
-            <ol className="list-decimal list-inside space-y-1 ml-2">
-              <li>Go to <a href="https://resend.com/domains" target="_blank" className="text-blue-600 underline">resend.com/domains</a></li>
-              <li>Add and verify your domain (fhb-fit.com)</li>
-              <li>Update the admin notification settings with your verified domain email</li>
-            </ol>
-          </div>
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <h4 className="font-medium text-blue-800 mb-2">📧 Email Provider</h4>
+          <p className="text-sm text-blue-700">
+            Notifications are sent via <strong>Lovable Email</strong> from your verified domain <code className="bg-blue-100 px-1 rounded">notify.fhbfit.com</code>.
+          </p>
         </div>
+
       </CardContent>
     </Card>
   );
