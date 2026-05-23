@@ -809,15 +809,18 @@ const ClassCalendar = () => {
             
             {/* Session Info */}
             <div className="flex items-center gap-4">
-              <Card className="p-4">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-muted-foreground">Sessions:</span>
-                  <span className={cn("font-semibold", sessionsLow ? "text-destructive" : "text-primary")}>
-                    {userData.remainingSessions}
-                  </span>
-                </div>
-              </Card>
+              {userData.countCredit && (
+                <Card className="p-4">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="text-sm text-muted-foreground">Sessions:</span>
+                    <span className={cn("font-semibold", sessionsLow ? "text-destructive" : "text-primary")}>
+                      {userData.remainingSessions}
+                    </span>
+                  </div>
+                </Card>
+              )}
+
               
               {!isNetworkConnected && (
                 <div className="flex items-center gap-2 text-muted-foreground">
