@@ -280,35 +280,24 @@ const BookingForm = ({
             .eq("id", selectedClass)
             .single();
 
-          // Process notification immediately
+          // Send admin booking notification via Lovable Email
           try {
-            const { error: processError } = await supabase.functions.invoke('send-email-notification', {
-              body: { 
+            const { error: processError } = await supabase.functions.invoke('send-admin-notification', {
+              body: {
                 type: 'booking',
                 userEmail: user.email,
                 userName: userName,
-                notificationEmail: adminSettings.notification_email,
-                fromEmail: adminSettings.from_email || 'info@fhb-fit.com',
-                fromName: adminSettings.from_name || 'Gym System',
-                bookingDetails: {
-                  className: classDetails?.name || 'Unknown Class',
-                  date: classDetails?.schedule || 'Unknown Date',
-                  time: `${classDetails?.start_time || '00:00'} - ${classDetails?.end_time || '00:00'}`,
-                  trainer: classDetails?.trainer || 'Unknown Trainer',
-                  location: classDetails?.location || 'Main Gym',
-                  memberName: userName
-                }
-              }
+                className: classDetails?.name,
+                classDate: classDetails?.schedule,
+                classTime: `${classDetails?.start_time || ''} - ${classDetails?.end_time || ''}`,
+                trainerName: classDetails?.trainer,
+              },
             });
-            
-            if (processError) {
-              console.error('Error processing booking notification immediately:', processError);
-            } else {
-              console.log('Booking notification processed immediately');
-            }
+            if (processError) console.error('Booking notification error:', processError);
           } catch (err) {
-            console.error('Error calling notification processor for booking:', err);
+            console.error('Error sending booking notification:', err);
           }
+
         }
       } catch (emailError) {
         console.error("Failed to create booking notification:", emailError);

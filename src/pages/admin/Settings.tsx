@@ -277,20 +277,26 @@ const Settings = () => {
 
   const loadEmailLogs = async () => {
     try {
-      const { data: response, error } = await supabase.functions.invoke('send-email-notification', {
-        method: 'GET'
-      });
-      
-      if (error) {
-        console.error('Failed to load email logs:', error);
-        return;
-      }
-      
-      setEmailLogs(response?.logs || []);
-    } catch (error) {
-      console.error('Failed to load email logs:', error);
+      const { data, error } = await (supabase as any)
+        .from('email_send_log')
+        .select('created_at, recipient_email, template_name, status, error_message')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+
+      if (error) return;
+      setEmailLogs((data || []).map((r: any) => ({
+        timestamp: r.created_at,
+        to: r.recipient_email,
+        subject: r.template_name,
+        status: r.status === 'sent' ? 'success' : 'failed',
+        error: r.error_message || undefined,
+      })));
+    } catch (e) {
+      console.error('Failed to load email logs:', e);
     }
   };
+
 
   const handleTestEmail = async () => {
     // Clear previous logs
@@ -315,47 +321,38 @@ const Settings = () => {
     setOperationStatus('idle');
     
     try {
-      console.log("About to invoke edge function...");
-      console.log("Email settings:", emailSettings);
-      
-      // Use Resend function for all email testing
-      const functionName = 'send-email-notification';
-      console.log("Using function:", functionName);
-      
-      setOperationLog(`Using ${functionName} function...\nPreparing request...`);
-      
-      const requestBody = {
-        userEmail: "test@example.com",
-        userName: "Test User",
-        notificationEmail: testEmail,
-        fromEmail: emailSettings.from_email,
-        fromName: emailSettings.from_name
-      };
-      
-      setOperationLog(`Sending request to ${functionName}...\nRecipient: ${testEmail}`);
-      
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: requestBody
+      setOperationLog(`Sending test email to ${testEmail} via Lovable Email...`);
+
+      const { data, error } = await supabase.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: 'admin-notification',
+          recipientEmail: testEmail,
+          idempotencyKey: `test-${testEmail}-${Date.now()}`,
+          templateData: {
+            eventType: 'signup',
+            memberName: 'Test User',
+            memberEmail: 'test@example.com',
+            details: 'This is a test notification from your admin settings.',
+          },
+        },
       });
 
-      console.log("Edge function response:", { data, error });
-
       if (error) {
-        console.error("Edge function error details:", error);
-        const errorMsg = `Function Error: ${error.message || 'Unknown error'}\n\nDetails: ${JSON.stringify(error, null, 2)}`;
+        const errorMsg = `Function Error: ${error.message || 'Unknown error'}`;
         setOperationLog(errorMsg);
         setOperationStatus('error');
         throw error;
       }
 
-      const successMsg = `✅ Test email sent successfully!\n\nRecipient: ${testEmail}\nFunction: ${functionName}\nResponse: ${data?.message || 'Email sent via Resend'}`;
+      const successMsg = `✅ Test email queued successfully!\n\nRecipient: ${testEmail}\nResponse: ${data?.message || 'Sent via Lovable Email'}`;
       setOperationLog(successMsg);
       setOperationStatus('success');
 
       toast({
         title: "Test email sent",
-        description: data?.message || "A test notification was sent successfully!",
+        description: "A test notification was queued via Lovable Email.",
       });
+
 
       // Reload logs after successful test
       await loadEmailLogs();
@@ -962,18 +959,6 @@ const Settings = () => {
                   <div className="flex flex-wrap gap-2 mt-2">
                     <Button
                       type="button"
-                      variant={emailSettings.notification_provider === 'twilio' && emailSettings.twilio_channel === 'whatsapp' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setEmailSettings({ ...emailSettings, notification_provider: 'twilio', twilio_channel: 'whatsapp' })}
-                    >WhatsApp</Button>
-                    <Button
-                      type="button"
-                      variant={emailSettings.notification_provider === 'twilio' && emailSettings.twilio_channel === 'sms' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setEmailSettings({ ...emailSettings, notification_provider: 'twilio', twilio_channel: 'sms' })}
-                    >SMS</Button>
-                    <Button
-                      type="button"
                       variant={emailSettings.notification_provider === 'email' ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => setEmailSettings({ ...emailSettings, notification_provider: 'email' })}
@@ -986,42 +971,12 @@ const Settings = () => {
                     >n8n Webhook</Button>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {emailSettings.notification_provider === 'email' && 'Notifications are sent by email using your SMTP/Resend settings below.'}
-                    {emailSettings.notification_provider === 'twilio' && `Notifications are sent via Twilio ${emailSettings.twilio_channel === 'whatsapp' ? 'WhatsApp' : 'SMS'}.`}
+                    {emailSettings.notification_provider === 'email' && 'Notifications are sent by email from your verified domain (notify.fhbfit.com).'}
                     {emailSettings.notification_provider === 'n8n' && 'Notifications are dispatched to your configured n8n webhooks.'}
                   </p>
                 </div>
 
-                {emailSettings.notification_provider === 'twilio' && (
-                  <div className="space-y-3 pt-2 border-t">
-                    <div>
-                      <Label htmlFor="twilio-from">Sender number (Twilio)</Label>
-                      <Input
-                        id="twilio-from"
-                        placeholder="+14155551234"
-                        value={emailSettings.twilio_from_number}
-                        onChange={(e) => setEmailSettings({ ...emailSettings, twilio_from_number: e.target.value })}
-                        className="mt-1"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Your Twilio-approved sender. For WhatsApp use your sandbox/business number in E.164 (the prefix is added automatically).
-                      </p>
-                    </div>
-                    <div>
-                      <Label htmlFor="twilio-admin">Admin phone number</Label>
-                      <Input
-                        id="twilio-admin"
-                        placeholder="+14155551234"
-                        value={emailSettings.twilio_admin_number}
-                        onChange={(e) => setEmailSettings({ ...emailSettings, twilio_admin_number: e.target.value })}
-                        className="mt-1"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Where admin alerts are sent (E.164).
-                      </p>
-                    </div>
-                  </div>
-                )}
+
 
 
                 <div className="space-y-2 pt-3 border-t">
@@ -1287,185 +1242,69 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="email" className="space-y-6">
-          {/* Resend Email Configuration */}
+          {/* Email Sender Configuration */}
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-5 w-5 text-blue-600" />
-                  <CardTitle>Resend Email Configuration</CardTitle>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2">
-                    <Label htmlFor="resend-enabled">Enable Resend Notifications</Label>
-                    <Switch
-                      id="resend-enabled"
-                      checked={emailSettings.resend_enabled !== false}
-                      onCheckedChange={(checked) => setEmailSettings({...emailSettings, resend_enabled: checked})}
-                    />
-                  </div>
-                  <Button
-                    onClick={async () => {
-                      try {
-                        const { data: existingSettings } = await supabase
-                          .from('admin_notification_settings')
-                          .select('*')
-                          .single();
-
-                        if (existingSettings) {
-                          const { error } = await supabase
-                            .from('admin_notification_settings')
-                            .update({ resend_enabled: emailSettings.resend_enabled })
-                            .eq('id', existingSettings.id);
-
-                          if (error) throw error;
-
-                          toast({
-                            title: "Saved",
-                            description: `Resend notifications ${emailSettings.resend_enabled ? 'enabled' : 'disabled'}`,
-                          });
-                        }
-                      } catch (error) {
-                        toast({
-                          title: "Error",
-                          description: "Failed to save setting",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    size="sm"
-                    variant="outline"
-                  >
-                    Save
-                  </Button>
-                </div>
+              <div className="flex items-center space-x-2">
+                <Mail className="h-5 w-5 text-blue-600" />
+                <CardTitle>Email Sender Configuration</CardTitle>
               </div>
               <CardDescription>
-                Configure your Resend service for sending notifications
+                Emails are sent from your verified domain <strong>notify.fhbfit.com</strong> via Lovable Email.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                {emailSettings.from_email?.includes('@gmail.com') || emailSettings.from_email?.includes('@yahoo.com') || emailSettings.from_email?.includes('@hotmail.com') ? (
-                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                    <h4 className="font-medium text-red-800 mb-2">❌ Invalid From Email</h4>
-                    <p className="text-sm text-red-700 mb-3">
-                      <strong>Error:</strong> You cannot use {emailSettings.from_email?.split('@')[1]} addresses with Resend. 
-                      Public email domains (Gmail, Yahoo, Hotmail) cannot be verified.
-                    </p>
-                    <div className="text-sm text-red-700 mb-3">
-                      <p><strong>Solutions:</strong></p>
-                      <ul className="list-disc ml-4 mt-1">
-                        <li>Use <code className="bg-red-100 px-1 rounded">onboarding@resend.dev</code> for testing</li>
-                        <li>Or verify your own custom domain at resend.com/domains</li>
-                      </ul>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setEmailSettings(prev => ({ ...prev, from_email: 'onboarding@resend.dev' }));
-                        }}
-                      >
-                        Use Test Email
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open('https://resend.com/domains', '_blank')}
-                      >
-                        Add Custom Domain
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <h4 className="font-medium text-green-800 mb-2">✓ Resend Configuration</h4>
-                    <p className="text-sm text-green-700 mb-3">
-                      Resend is configured and ready to use! Your from email looks good.
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open('https://resend.com/domains', '_blank')}
-                      >
-                        Manage Domains
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`https://supabase.com/dashboard/project/wlawjupusugrhojbywyq/functions/send-email-notification/logs`, '_blank')}
-                      >
-                        View Email Logs
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-blue-900 mb-2">Resend Setup Guide</h4>
-                  <div className="text-sm text-blue-800 space-y-2">
-                    <p><strong>Option 1 (Quick):</strong> Use <code>onboarding@resend.dev</code> for testing</p>
-                    <p><strong>Option 2 (Production):</strong> Add and verify your own domain at resend.com/domains</p>
-                    <p><strong>Note:</strong> You cannot use gmail.com, yahoo.com, or other public email domains</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="from-email">From Email</Label>
-                    <Input
-                      id="from-email"
-                      type="email"
-                      placeholder="noreply@yourdomain.com"
-                      value={emailSettings.from_email || ''}
-                      onChange={(e) => setEmailSettings({...emailSettings, from_email: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="from-name">From Name</Label>
-                    <Input
-                      id="from-name"
-                      type="text"
-                      placeholder="Gym System"
-                      value={emailSettings.from_name || 'Gym System'}
-                      onChange={(e) => setEmailSettings({...emailSettings, from_name: e.target.value})}
-                    />
-                  </div>
-                </div>
-
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="notification-email">Notification Email</Label>
+                  <Label htmlFor="from-email">From Email</Label>
                   <Input
-                    id="notification-email"
+                    id="from-email"
                     type="email"
-                    placeholder="admin@yourgym.com"
-                    value={emailSettings.notification_email || ''}
-                    onChange={(e) => setEmailSettings({...emailSettings, notification_email: e.target.value})}
+                    placeholder="noreply@fhbfit.com"
+                    value={emailSettings.from_email || ''}
+                    onChange={(e) => setEmailSettings({...emailSettings, from_email: e.target.value})}
                   />
-                  <p className="text-sm text-gray-600 mt-1">
-                    Primary email address for receiving admin notifications
-                  </p>
                 </div>
-
                 <div>
-                  <Label htmlFor="notification-cc-email">CC Email (Optional)</Label>
+                  <Label htmlFor="from-name">From Name</Label>
                   <Input
-                    id="notification-cc-email"
-                    type="email"
-                    placeholder="admin2@yourgym.com"
-                    value={emailSettings.notification_cc_email || ''}
-                    onChange={(e) => setEmailSettings({...emailSettings, notification_cc_email: e.target.value})}
+                    id="from-name"
+                    type="text"
+                    placeholder="FHB Fit"
+                    value={emailSettings.from_name || ''}
+                    onChange={(e) => setEmailSettings({...emailSettings, from_name: e.target.value})}
                   />
-                  <p className="text-sm text-gray-600 mt-1">
-                    Additional email address to receive copies of notifications
-                  </p>
-                 </div>
-               </div>
-             </CardContent>
-           </Card>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="notification-email">Admin Notification Email</Label>
+                <Input
+                  id="notification-email"
+                  type="email"
+                  placeholder="admin@fhbfit.com"
+                  value={emailSettings.notification_email || ''}
+                  onChange={(e) => setEmailSettings({...emailSettings, notification_email: e.target.value})}
+                />
+                <p className="text-sm text-gray-600 mt-1">
+                  Primary recipient for admin notifications
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="notification-cc-email">CC Email (Optional)</Label>
+                <Input
+                  id="notification-cc-email"
+                  type="email"
+                  placeholder="admin2@fhbfit.com"
+                  value={emailSettings.notification_cc_email || ''}
+                  onChange={(e) => setEmailSettings({...emailSettings, notification_cc_email: e.target.value})}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+
 
           {/* Notification Settings */}
           <Card>

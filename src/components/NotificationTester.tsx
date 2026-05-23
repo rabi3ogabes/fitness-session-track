@@ -38,7 +38,7 @@ export const NotificationTester: React.FC = () => {
         throw new Error('Signup notifications are disabled in admin settings');
       }
 
-      const response = await supabase.functions.invoke('send-email-notification', {
+      const response = await supabase.functions.invoke('send-admin-notification', {
         body: {
           type: 'signup',
           notificationEmail: adminSettings.notification_email,
@@ -73,7 +73,7 @@ export const NotificationTester: React.FC = () => {
         throw new Error('Booking notifications are disabled in admin settings');
       }
 
-      const response = await supabase.functions.invoke('send-email-notification', {
+      const response = await supabase.functions.invoke('send-admin-notification', {
         body: {
           type: 'booking',
           notificationEmail: adminSettings.notification_email,
@@ -108,7 +108,7 @@ export const NotificationTester: React.FC = () => {
         throw new Error('Session request notifications are disabled in admin settings');
       }
 
-      const response = await supabase.functions.invoke('send-email-notification', {
+      const response = await supabase.functions.invoke('send-admin-notification', {
         body: {
           type: 'session_request',
           notificationEmail: adminSettings.notification_email,
@@ -200,56 +200,8 @@ export const NotificationTester: React.FC = () => {
           <Button onClick={runAllTests} disabled={isLoading} className="ml-auto">
             {isLoading ? 'Running Tests...' : 'Run All Tests'}
           </Button>
-          <Button 
-            onClick={async () => {
-              setIsLoading(true);
-              try {
-                console.log("Processing pending notifications...");
-                
-                // Call the test function to see what's happening
-                const { data, error } = await supabase.functions.invoke('test-notifications');
-                
-                console.log("Test notifications result:", { data, error });
-                
-                if (error) {
-                  toast({
-                    title: "Error",
-                    description: error.message,
-                    variant: "destructive",
-                  });
-                } else {
-                  toast({
-                    title: "Success", 
-                    description: `Processed ${data?.before || 0} pending notifications. Check email logs.`,
-                  });
-                  
-                  // Also try to process via send-email-notification directly
-                  const { data: directData, error: directError } = await supabase.functions.invoke('send-email-notification', {
-                    body: { action: 'process_pending' }
-                  });
-                  
-                  if (directError) {
-                    console.error("Direct processing error:", directError);
-                  } else {
-                    console.log("Direct processing success:", directData);
-                  }
-                }
-              } catch (err: any) {
-                console.error("Failed to process notifications:", err);
-                toast({
-                  title: "Error",
-                  description: err.message || "Failed to process notifications",
-                  variant: "destructive",
-                });
-              } finally {
-                setIsLoading(false);
-              }
-            }}
-            disabled={isLoading}
-            variant="secondary"
-          >
-            {isLoading ? "Processing..." : "Process Pending Notifications"}
-          </Button>
+
+
         </div>
 
         {testResults.length > 0 && (
@@ -284,18 +236,13 @@ export const NotificationTester: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-          <h4 className="font-medium text-yellow-800 mb-2">⚠️ Resend Setup Notice</h4>
-          <div className="text-sm text-yellow-700 space-y-2">
-            <p>Currently using Resend's testing mode with the default <code className="bg-yellow-100 px-1 rounded">onboarding@resend.dev</code> domain.</p>
-            <p><strong>For production:</strong> To send emails from your own domain (like notifications@fhb-fit.com):</p>
-            <ol className="list-decimal list-inside space-y-1 ml-2">
-              <li>Go to <a href="https://resend.com/domains" target="_blank" className="text-blue-600 underline">resend.com/domains</a></li>
-              <li>Add and verify your domain (fhb-fit.com)</li>
-              <li>Update the admin notification settings with your verified domain email</li>
-            </ol>
-          </div>
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <h4 className="font-medium text-blue-800 mb-2">📧 Email Provider</h4>
+          <p className="text-sm text-blue-700">
+            Notifications are sent via <strong>Lovable Email</strong> from your verified domain <code className="bg-blue-100 px-1 rounded">notify.fhbfit.com</code>.
+          </p>
         </div>
+
       </CardContent>
     </Card>
   );
