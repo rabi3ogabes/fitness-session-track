@@ -206,6 +206,7 @@ const Settings = () => {
       const adminSettingsPayload: any = {
         cancellation_hours: cancellationHours,
         logo: logo,
+        logo_url: logoUrl,
         header_color: headerColor,
         footer_color: footerColor,
         membership_expiry_basic: membershipExpiry.basic,
