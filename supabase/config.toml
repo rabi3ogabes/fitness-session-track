@@ -1,20 +1,5 @@
-# Supabase project configuration - Updated 2025-09-25
+# Supabase project configuration - Updated 2026-05-23
 project_id = "wlawjupusugrhojbywyq"
-
-[functions.send-signup-notification]
-verify_jwt = false
-
-[functions.send-smtp-notification]
-verify_jwt = false
-
-[functions.send-email-notification]
-verify_jwt = false
-
-[functions.send-whatsapp-notification]
-verify_jwt = false
-
-[functions.send-twilio-notification]
-verify_jwt = false
 
 [functions.send-transactional-email]
 verify_jwt = true
@@ -27,5 +12,3 @@ verify_jwt = false
 
 [functions.handle-email-suppression]
 verify_jwt = false
-
-
