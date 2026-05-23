@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import NotificationPreferences from "@/components/NotificationPreferences";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 
 const UserProfile = () => {
   const { user } = useAuth();
