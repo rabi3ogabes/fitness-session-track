@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { logActivity } from "@/lib/activityTracker";
 import { Zap } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -545,9 +547,15 @@ const UserMembership = () => {
     }
   };
 
+  if (!loading && !currentMembership.countCredit) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
+
     <DashboardLayout title="Membership">
       <div className="space-y-8">
+
         {/* Current Membership */}
         <Card>
           <CardHeader>

@@ -31,6 +31,8 @@ const Sidebar = () => {
   const [logo, setLogo] = useState<string | null>(null);
   const [appName, setAppName] = useState("GYM SYSTEM");
   const [isOpen, setIsOpen] = useState(false);
+  const [countCredit, setCountCredit] = useState<boolean>(true);
+
 
   useEffect(() => {
     // Load logo and app name from database
@@ -77,6 +79,39 @@ const Sidebar = () => {
     setIsOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!user?.email || isAdmin || isTrainer) return;
+
+    const fetchCountCredit = async () => {
+      const { data } = await supabase
+        .from("members")
+        .select("count_credit")
+        .eq("email", user.email)
+        .maybeSingle();
+      if (data) setCountCredit(data.count_credit !== false);
+    };
+
+    fetchCountCredit();
+
+    const channel = supabase
+      .channel("sidebar-count-credit")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "members", filter: `email=eq.${user.email}` },
+        (payload: any) => {
+          if (payload.new && "count_credit" in payload.new) {
+            setCountCredit(payload.new.count_credit !== false);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.email, isAdmin, isTrainer]);
+
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -97,8 +132,9 @@ const Sidebar = () => {
   const userNavItems = [
     { name: "Dashboard", path: "/dashboard", icon: <Home className="h-5 w-5" /> },
     { name: "Calendar", path: "/user/calendar", icon: <Calendar className="h-5 w-5" /> },
-    { name: "Membership", path: "/user/membership", icon: <BadgeCheck className="h-5 w-5" /> },
+    ...(countCredit ? [{ name: "Membership", path: "/user/membership", icon: <BadgeCheck className="h-5 w-5" /> }] : []),
   ];
+
   
   const trainerNavItems = [
     { name: "Dashboard", path: "/trainer", icon: <Home className="h-5 w-5" /> },
