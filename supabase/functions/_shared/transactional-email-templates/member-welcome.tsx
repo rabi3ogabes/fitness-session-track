@@ -7,6 +7,7 @@ interface Props {
   memberName?: string
   dashboardUrl?: string
   siteName?: string
+  logoUrl?: string | null
   preheader?: string; heading?: string; intro?: string; body?: string
   buttonLabel?: string; footerText?: string; accentColor?: string
 }
@@ -14,6 +15,7 @@ interface Props {
 const MemberWelcomeEmail = (p: Props) => (
   <LuxuryEmail
     siteName={p.siteName}
+    logoUrl={p.logoUrl}
     preheader={p.preheader || 'Your membership is active'}
     heading={p.heading || 'Welcome to FHB Fit'}
     intro={p.intro || (p.memberName ? `Hi ${p.memberName},` : 'Hello,')}

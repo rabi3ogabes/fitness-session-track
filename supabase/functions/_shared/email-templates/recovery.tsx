@@ -4,6 +4,7 @@ import { LuxuryEmail } from '../luxury-layout.tsx'
 
 interface Props {
   siteName?: string
+  logoUrl?: string | null
   confirmationUrl: string
   preheader?: string; heading?: string; intro?: string; body?: string
   buttonLabel?: string; footerText?: string; accentColor?: string
@@ -12,6 +13,7 @@ interface Props {
 export const RecoveryEmail = (p: Props) => (
   <LuxuryEmail
     siteName={p.siteName}
+    logoUrl={p.logoUrl}
     preheader={p.preheader || 'A secure link to reset your password'}
     heading={p.heading || 'Reset your password'}
     intro={p.intro || 'We received a request to reset your password.'}

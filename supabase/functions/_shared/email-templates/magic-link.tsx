@@ -3,13 +3,15 @@ import * as React from 'npm:react@18.3.1'
 import { LuxuryEmail } from '../luxury-layout.tsx'
 
 interface Props {
-  siteName?: string; confirmationUrl: string
+  siteName?: string
+  logoUrl?: string | null; confirmationUrl: string
   preheader?: string; heading?: string; intro?: string; body?: string
   buttonLabel?: string; footerText?: string; accentColor?: string
 }
 export const MagicLinkEmail = (p: Props) => (
   <LuxuryEmail
     siteName={p.siteName}
+    logoUrl={p.logoUrl}
     preheader={p.preheader || 'Your secure sign-in link'}
     heading={p.heading || 'Your sign-in link is ready'}
     intro={p.intro || 'Tap the button below to securely sign in to your account.'}

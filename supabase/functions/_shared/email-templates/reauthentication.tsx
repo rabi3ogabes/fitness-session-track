@@ -3,13 +3,15 @@ import * as React from 'npm:react@18.3.1'
 import { LuxuryEmail } from '../luxury-layout.tsx'
 
 interface Props {
-  siteName?: string; token: string
+  siteName?: string
+  logoUrl?: string | null; token: string
   preheader?: string; heading?: string; intro?: string; body?: string
   footerText?: string; accentColor?: string
 }
 export const ReauthenticationEmail = (p: Props) => (
   <LuxuryEmail
     siteName={p.siteName}
+    logoUrl={p.logoUrl}
     preheader={p.preheader || 'Your one-time verification code'}
     heading={p.heading || 'Verification code'}
     intro={p.intro || 'Use the code below to continue.'}
