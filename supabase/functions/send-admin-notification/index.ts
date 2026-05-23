@@ -215,128 +215,140 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error(`Unknown notification type: ${type}`);
     }
 
-    // Determine which webhook URL to use based on notification type
-    let webhookUrl = null;
-    
-    switch (type) {
-      case 'signup':
-        webhookUrl = adminSettings.n8n_signup_webhook_url || adminSettings.n8n_webhook_url;
-        break;
-      case 'booking':
-        webhookUrl = adminSettings.n8n_booking_webhook_url || adminSettings.n8n_webhook_url;
-        break;
-      case 'cancellation':
-        webhookUrl = adminSettings.n8n_cancellation_webhook_url || adminSettings.n8n_webhook_url;
-        break;
-      case 'session_request':
-        webhookUrl = adminSettings.n8n_session_request_webhook_url || adminSettings.n8n_webhook_url;
-        break;
-    }
-
-    // Send to N8N webhook if configured - do this FIRST and independently
-    let webhookSuccess = false;
-    if (webhookUrl) {
-      console.log(`Sending ${type} notification to N8N webhook: ${webhookUrl}`);
-      
+    // Resolve the customer phone (used by both n8n payload and Twilio dispatch)
+    let userPhone: string | null = null;
+    let remainingSessions: number | null = null;
+    if (userEmail) {
       try {
-        // Fetch member's phone (and remaining sessions for booking/cancellation/session_request)
-        let remainingSessions = null;
-        let userPhone: string | null = null;
-        if (userEmail) {
-          try {
-            const memberResponse = await fetch(
-              `${supabaseUrl}/rest/v1/members?email=eq.${encodeURIComponent(userEmail)}&select=phone,remaining_sessions`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${supabaseKey}`,
-                  'apikey': supabaseKey,
-                  'Content-Type': 'application/json'
-                }
-              }
-            );
-
-            if (memberResponse.ok) {
-              const members = await memberResponse.json();
-              if (members && members.length > 0) {
-                userPhone = members[0].phone || null;
-                remainingSessions = members[0].remaining_sessions ?? null;
-                console.log(`Member ${userName} - phone: ${userPhone}, remaining sessions: ${remainingSessions}`);
-              }
-            }
-          } catch (error) {
-            console.error('Error fetching member info:', error);
+        const memberResponse = await fetch(
+          `${supabaseUrl}/rest/v1/members?email=eq.${encodeURIComponent(userEmail)}&select=phone,remaining_sessions`,
+          { headers: { 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey, 'Content-Type': 'application/json' } }
+        );
+        if (memberResponse.ok) {
+          const members = await memberResponse.json();
+          if (members?.length > 0) {
+            userPhone = members[0].phone || null;
+            remainingSessions = members[0].remaining_sessions ?? null;
           }
         }
-
-        // Fallback: try profiles table for phone if not found in members
-        if (!userPhone && userEmail) {
-          try {
-            const profileResponse = await fetch(
-              `${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(userEmail)}&select=phone_number`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${supabaseKey}`,
-                  'apikey': supabaseKey,
-                  'Content-Type': 'application/json'
-                }
-              }
-            );
-            if (profileResponse.ok) {
-              const profiles = await profileResponse.json();
-              if (profiles && profiles.length > 0) {
-                userPhone = profiles[0].phone_number || null;
-              }
-            }
-          } catch (error) {
-            console.error('Error fetching profile phone:', error);
+      } catch (err) { console.error('member fetch error:', err); }
+      if (!userPhone) {
+        try {
+          const profileResponse = await fetch(
+            `${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(userEmail)}&select=phone_number`,
+            { headers: { 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey, 'Content-Type': 'application/json' } }
+          );
+          if (profileResponse.ok) {
+            const profiles = await profileResponse.json();
+            if (profiles?.length > 0) userPhone = profiles[0].phone_number || null;
           }
-        }
-
-        const n8nPayload = {
-          type: type,
-          user: {
-            name: userName,
-            email: userEmail,
-            phone: userPhone
-          },
-          phone: userPhone,
-          adminEmail: adminSettings.notification_email,
-          details: details,
-          className: className,
-          classDate: classDate,
-          classTime: classTime,
-          trainerName: trainerName,
-          planName: planName,
-          sessions: sessions,
-          price: price,
-          remainingSessions: remainingSessions,
-          cancellationDetails: cancellationDetails,
-          timestamp: new Date().toISOString()
-        };
-
-        console.log('N8N webhook payload:', JSON.stringify(n8nPayload, null, 2));
-
-        const n8nResponse = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(n8nPayload)
-        });
-
-        if (n8nResponse.ok) {
-          console.log(`✅ N8N ${type} webhook notification sent successfully`);
-          webhookSuccess = true;
-        } else {
-          const errorText = await n8nResponse.text();
-          console.error(`❌ N8N ${type} webhook failed with status ${n8nResponse.status}:`, errorText);
-        }
-      } catch (error) {
-        console.error(`❌ Error sending ${type} notification to N8N webhook:`, error);
+        } catch (err) { console.error('profile fetch error:', err); }
       }
-    } else {
-      console.log(`⚠️ No N8N webhook configured for ${type} notifications`);
     }
+
+    // Resolve the customer's per-event opt-in preference
+    let customerOptedIn = true;
+    if (userEmail) {
+      try {
+        const colMap: Record<string, string> = {
+          signup: 'signup_enabled',
+          login: 'login_enabled',
+          booking: 'booking_enabled',
+          cancellation: 'cancellation_enabled',
+          session_request: 'booking_enabled',
+        };
+        const prefCol = colMap[type] || null;
+        if (prefCol) {
+          // notification_settings is keyed by user_id; resolve via auth.users by email
+          const userLookup = await fetch(
+            `${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(userEmail)}&select=id`,
+            { headers: { 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey } }
+          );
+          if (userLookup.ok) {
+            const rows = await userLookup.json();
+            if (rows?.length > 0) {
+              const uid = rows[0].id;
+              const prefRes = await fetch(
+                `${supabaseUrl}/rest/v1/notification_settings?user_id=eq.${uid}&select=${prefCol}`,
+                { headers: { 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey } }
+              );
+              if (prefRes.ok) {
+                const prefRows = await prefRes.json();
+                if (prefRows?.length > 0) customerOptedIn = prefRows[0][prefCol] !== false;
+              }
+            }
+          }
+        }
+      } catch (err) { console.error('customer pref lookup error:', err); }
+    }
+
+    const provider = adminSettings.notification_provider || 'n8n';
+    let webhookSuccess = false;
+
+    // ============ N8N PROVIDER ============
+    if (provider === 'n8n') {
+      let webhookUrl: string | null = null;
+      switch (type) {
+        case 'signup': webhookUrl = adminSettings.n8n_signup_webhook_url || adminSettings.n8n_webhook_url; break;
+        case 'booking': webhookUrl = adminSettings.n8n_booking_webhook_url || adminSettings.n8n_webhook_url; break;
+        case 'cancellation': webhookUrl = adminSettings.n8n_cancellation_webhook_url || adminSettings.n8n_webhook_url; break;
+        case 'session_request': webhookUrl = adminSettings.n8n_session_request_webhook_url || adminSettings.n8n_webhook_url; break;
+        case 'login': webhookUrl = adminSettings.n8n_webhook_url; break;
+      }
+
+      if (webhookUrl) {
+        try {
+          const n8nPayload = {
+            type, user: { name: userName, email: userEmail, phone: userPhone },
+            phone: userPhone, adminEmail: adminSettings.notification_email,
+            details, className, classDate, classTime, trainerName, planName,
+            sessions, price, remainingSessions, cancellationDetails,
+            customerOptedIn, timestamp: new Date().toISOString(),
+          };
+          const n8nResponse = await fetch(webhookUrl, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(n8nPayload),
+          });
+          if (n8nResponse.ok) { webhookSuccess = true; console.log(`✅ N8N ${type} webhook sent`); }
+          else console.error(`❌ N8N ${type} webhook failed:`, n8nResponse.status, await n8nResponse.text());
+        } catch (error) { console.error(`❌ N8N error:`, error); }
+      } else {
+        console.log(`⚠️ No N8N webhook configured for ${type}`);
+      }
+    }
+
+    // ============ TWILIO PROVIDER ============
+    if (provider === 'twilio') {
+      const channel = adminSettings.twilio_channel || 'whatsapp';
+      const fromNumber = adminSettings.twilio_from_number;
+      const adminNumber = adminSettings.twilio_admin_number;
+
+      if (!fromNumber) {
+        console.error('⚠️ Twilio provider selected but twilio_from_number is not configured');
+      } else {
+        // Plain-text body for messaging
+        const plain = body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const adminMsg = `[${type.toUpperCase()}] ${subject}\n\n${plain}`.slice(0, 1500);
+
+        // Notify admin
+        if (adminNumber) {
+          const ok = await sendTwilioMessage(supabaseUrl, adminNumber, adminMsg, fromNumber, channel);
+          if (ok) webhookSuccess = true;
+        } else {
+          console.log('⚠️ No twilio_admin_number set, skipping admin message');
+        }
+
+        // Notify customer if opted in
+        if (userPhone && customerOptedIn) {
+          const customerMsg = buildCustomerMessage(type, userName, { className, classDate, classTime, planName, sessions });
+          const ok = await sendTwilioMessage(supabaseUrl, userPhone, customerMsg, fromNumber, channel);
+          if (ok) webhookSuccess = true;
+        } else {
+          console.log(`Customer notify skipped (phone=${!!userPhone}, optedIn=${customerOptedIn})`);
+        }
+      }
+    }
+
 
     // Send email using the appropriate provider based on settings (optional, don't fail if this fails)
     let emailResponse;
