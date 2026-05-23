@@ -150,6 +150,7 @@ const Settings = () => {
         smtp_password: existingSettings?.smtp_password || "",
         smtp_use_tls: existingSettings?.smtp_use_tls ?? true,
         signup_notifications: emailSettings.signup_notifications,
+        login_notifications: emailSettings.login_notifications,
         booking_notifications: emailSettings.booking_notifications,
         cancellation_notifications: emailSettings.cancellation_notifications,
         session_request_notifications: emailSettings.session_request_notifications,
@@ -157,7 +158,11 @@ const Settings = () => {
         n8n_signup_webhook_url: emailSettings.n8n_signup_webhook_url || null,
         n8n_booking_webhook_url: emailSettings.n8n_booking_webhook_url || null,
         n8n_cancellation_webhook_url: emailSettings.n8n_cancellation_webhook_url || null,
-        n8n_session_request_webhook_url: emailSettings.n8n_session_request_webhook_url || null
+        n8n_session_request_webhook_url: emailSettings.n8n_session_request_webhook_url || null,
+        notification_provider: emailSettings.notification_provider,
+        twilio_channel: emailSettings.twilio_channel,
+        twilio_from_number: emailSettings.twilio_from_number || null,
+        twilio_admin_number: emailSettings.twilio_admin_number || null,
       };
 
       console.log('Payload to save:', emailPayload);
