@@ -33,6 +33,14 @@ const ResetPassword = () => {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const isWeakPassword = (pw: string) => {
+    if (pw.length < 8) return true;
+    const common = ["password", "12345678", "qwerty", "11111111", "abc12345", "iloveyou", "admin123"];
+    if (common.includes(pw.toLowerCase())) return true;
+    if (/^(.)\1+$/.test(pw)) return true;
+    return false;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 6) {
@@ -42,6 +50,12 @@ const ResetPassword = () => {
     if (password !== confirm) {
       toast({ title: "Passwords do not match", variant: "destructive" });
       return;
+    }
+    if (isWeakPassword(password)) {
+      toast({
+        title: "Heads up: weak password",
+        description: "Your password is easy to guess, but we'll accept it. Consider a stronger one next time.",
+      });
     }
     setLoading(true);
     try {
