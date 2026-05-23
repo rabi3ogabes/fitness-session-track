@@ -33,6 +33,7 @@ import ActivityLog from "./pages/admin/ActivityLog";
 import ActivityTracker from "./components/ActivityTracker";
 import GlobalClickTracker from "./components/GlobalClickTracker";
 import Unsubscribe from "./pages/Unsubscribe";
+import NotificationsAdmin from "./pages/admin/NotificationsAdmin";
 
 // Context
 import { AuthProvider } from "./context/AuthContext";
