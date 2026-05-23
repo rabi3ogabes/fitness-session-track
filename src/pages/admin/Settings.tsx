@@ -73,6 +73,8 @@ const Settings = () => {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [faviconUrl, setFaviconUrl] = useState<string | null>(null);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [headerColor, setHeaderColor] = useState<string>("#ffffff");
   const [footerColor, setFooterColor] = useState<string>("#000000");
   const [membershipExpiry, setMembershipExpiry] = useState({
@@ -207,6 +209,7 @@ const Settings = () => {
         cancellation_hours: cancellationHours,
         logo: logo,
         logo_url: logoUrl,
+        favicon_url: faviconUrl,
         header_color: headerColor,
         footer_color: footerColor,
         membership_expiry_basic: membershipExpiry.basic,
@@ -395,6 +398,9 @@ const Settings = () => {
         setLogo(data.logo);
         const existingLogoUrl = (data as any).logo_url ?? null;
         setLogoUrl(existingLogoUrl);
+        const existingFavicon = (data as any).favicon_url ?? null;
+        setFaviconUrl(existingFavicon);
+        if (existingFavicon) applyFavicon(existingFavicon);
         // Auto-migrate legacy base64 logo to public storage so emails can render it
         if (!existingLogoUrl && typeof data.logo === 'string' && data.logo.startsWith('data:image/')) {
           try {
@@ -632,6 +638,46 @@ const Settings = () => {
       description: "The logo has been removed.",
     });
   };
+
+  const applyFavicon = (url: string | null) => {
+    if (typeof document === 'undefined') return;
+    const links = document.querySelectorAll("link[rel~='icon']");
+    links.forEach(l => l.parentNode?.removeChild(l));
+    if (url) {
+      const link = document.createElement('link');
+      link.rel = 'icon';
+      link.href = url;
+      document.head.appendChild(link);
+    }
+  };
+
+  const handleFaviconChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+    try {
+      setUploadingFavicon(true);
+      const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+      const path = `favicon-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('branding')
+        .upload(path, file, { cacheControl: '3600', upsert: true, contentType: file.type || `image/${ext}` });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('branding').getPublicUrl(path);
+      setFaviconUrl(pub.publicUrl);
+      applyFavicon(pub.publicUrl);
+      toast({ title: 'Favicon uploaded', description: 'Save settings to persist.' });
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err.message || 'Could not upload favicon', variant: 'destructive' });
+    } finally {
+      setUploadingFavicon(false);
+    }
+  };
+
+  const handleDeleteFavicon = () => {
+    setFaviconUrl(null);
+    applyFavicon(null);
+    toast({ title: 'Favicon removed', description: 'Save settings to persist.' });
+  };
   
   const handleMainPageContentChange = (field: string, value: string) => {
     setMainPageContent(prev => ({
@@ -761,6 +807,29 @@ const Settings = () => {
                   />
                   <p className="text-sm text-gray-500 mt-1">
                     Recommended size: 200x60 pixels. Max file size: 2MB.
+                  </p>
+                </div>
+
+                <div className="border-t pt-4">
+                  <Label htmlFor="favicon-upload">Favicon</Label>
+                  {faviconUrl && (
+                    <div className="flex items-center gap-3 mt-2 mb-2">
+                      <img src={faviconUrl} alt="Favicon" className="h-8 w-8 object-contain border rounded" />
+                      <Button variant="destructive" size="sm" onClick={handleDeleteFavicon}>
+                        <Trash className="h-4 w-4 mr-1" /> Remove
+                      </Button>
+                    </div>
+                  )}
+                  <Input
+                    id="favicon-upload"
+                    type="file"
+                    accept="image/png,image/x-icon,image/svg+xml,image/jpeg"
+                    onChange={handleFaviconChange}
+                    disabled={uploadingFavicon}
+                    className="mt-2"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Recommended: square PNG/ICO/SVG, 32x32 or 64x64.
                   </p>
                 </div>
               </CardContent>
