@@ -236,9 +236,24 @@ async function handleWebhook(req: Request): Promise<Response> {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
+  // Fetch brand (logo, company name) for emails
+  let brandLogoUrl: string | null = null
+  let brandSiteName: string = SITE_NAME
+  {
+    const { data: brand } = await supabase
+      .from('admin_settings')
+      .select('logo_url, company_name')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (brand?.logo_url) brandLogoUrl = brand.logo_url
+    if (brand?.company_name) brandSiteName = brand.company_name
+  }
+
   // Build template props from payload.data (HookData structure) + overrides
   const templateProps: Record<string, any> = {
-    siteName: SITE_NAME,
+    siteName: brandSiteName,
+    logoUrl: brandLogoUrl,
     siteUrl: `https://${ROOT_DOMAIN}`,
     recipient: payload.data.email,
     confirmationUrl: payload.data.url,
@@ -259,7 +274,7 @@ async function handleWebhook(req: Request): Promise<Response> {
   const text = await renderAsync(React.createElement(EmailTemplate, templateProps), { plainText: true })
 
   const subject = (override?.subject && override.subject.trim()) || EMAIL_SUBJECTS[emailType] || 'Notification'
-  const senderName = (override?.sender_name && override.sender_name.trim()) || SITE_NAME
+  const senderName = (override?.sender_name && override.sender_name.trim()) || brandSiteName
 
   const messageId = crypto.randomUUID()
 
