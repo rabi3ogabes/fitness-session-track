@@ -21,6 +21,7 @@ import {
   ExternalLink,
   Menu,
   X,
+  Mail,
 } from "lucide-react";
 
 const Sidebar = () => {
