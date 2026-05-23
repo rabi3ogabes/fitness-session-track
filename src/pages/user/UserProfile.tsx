@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import NotificationPreferences from "@/components/NotificationPreferences";
 
 const UserProfile = () => {
   const { user } = useAuth();
@@ -374,6 +375,8 @@ const UserProfile = () => {
             </div>
           )}
         </div>
+
+        <NotificationPreferences userId={user?.id} />
 
         <div className="bg-white rounded-lg shadow-md p-6 mt-6">
           <h2 className="text-xl font-bold mb-6">Account Settings</h2>

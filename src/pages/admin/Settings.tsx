@@ -35,6 +35,7 @@ const Settings = () => {
     from_name: "",
     resend_enabled: true,
     signup_notifications: true,
+    login_notifications: true,
     booking_notifications: true,
     cancellation_notifications: true,
     session_request_notifications: true,
@@ -42,7 +43,11 @@ const Settings = () => {
     n8n_signup_webhook_url: "",
     n8n_booking_webhook_url: "",
     n8n_cancellation_webhook_url: "",
-    n8n_session_request_webhook_url: ""
+    n8n_session_request_webhook_url: "",
+    notification_provider: "n8n" as "n8n" | "twilio",
+    twilio_channel: "whatsapp" as "whatsapp" | "sms",
+    twilio_from_number: "",
+    twilio_admin_number: "",
   });
   
   const [isLoading, setIsLoading] = useState(false);
@@ -145,6 +150,7 @@ const Settings = () => {
         smtp_password: existingSettings?.smtp_password || "",
         smtp_use_tls: existingSettings?.smtp_use_tls ?? true,
         signup_notifications: emailSettings.signup_notifications,
+        login_notifications: emailSettings.login_notifications,
         booking_notifications: emailSettings.booking_notifications,
         cancellation_notifications: emailSettings.cancellation_notifications,
         session_request_notifications: emailSettings.session_request_notifications,
@@ -152,7 +158,11 @@ const Settings = () => {
         n8n_signup_webhook_url: emailSettings.n8n_signup_webhook_url || null,
         n8n_booking_webhook_url: emailSettings.n8n_booking_webhook_url || null,
         n8n_cancellation_webhook_url: emailSettings.n8n_cancellation_webhook_url || null,
-        n8n_session_request_webhook_url: emailSettings.n8n_session_request_webhook_url || null
+        n8n_session_request_webhook_url: emailSettings.n8n_session_request_webhook_url || null,
+        notification_provider: emailSettings.notification_provider,
+        twilio_channel: emailSettings.twilio_channel,
+        twilio_from_number: emailSettings.twilio_from_number || null,
+        twilio_admin_number: emailSettings.twilio_admin_number || null,
       };
 
       console.log('Payload to save:', emailPayload);
@@ -473,6 +483,7 @@ const Settings = () => {
           notification_cc_email: data.notification_cc_email || "",
           resend_enabled: data.resend_enabled ?? true,
           signup_notifications: data.signup_notifications ?? true,
+          login_notifications: (data as any).login_notifications ?? true,
           booking_notifications: data.booking_notifications ?? true,
           cancellation_notifications: data.cancellation_notifications ?? true,
           session_request_notifications: data.session_request_notifications ?? true,
@@ -480,7 +491,11 @@ const Settings = () => {
           n8n_signup_webhook_url: data.n8n_signup_webhook_url || "",
           n8n_booking_webhook_url: data.n8n_booking_webhook_url || "",
           n8n_cancellation_webhook_url: data.n8n_cancellation_webhook_url || "",
-          n8n_session_request_webhook_url: data.n8n_session_request_webhook_url || ""
+          n8n_session_request_webhook_url: data.n8n_session_request_webhook_url || "",
+          notification_provider: ((data as any).notification_provider || "n8n") as "n8n" | "twilio",
+          twilio_channel: ((data as any).twilio_channel || "whatsapp") as "whatsapp" | "sms",
+          twilio_from_number: (data as any).twilio_from_number || "",
+          twilio_admin_number: (data as any).twilio_admin_number || "",
         };
         console.log('Setting state to:', loadedSettings);
         setEmailSettings(loadedSettings);
@@ -497,6 +512,7 @@ const Settings = () => {
           notification_cc_email: parsed.notification_cc_email || "",
           resend_enabled: parsed.resend_enabled ?? true,
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
+          login_notifications: parsed.login_notifications ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
           cancellation_notifications: parsed.cancellation_notifications ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
@@ -504,7 +520,11 @@ const Settings = () => {
           n8n_signup_webhook_url: parsed.n8n_signup_webhook_url || "",
           n8n_booking_webhook_url: parsed.n8n_booking_webhook_url || "",
           n8n_cancellation_webhook_url: parsed.n8n_cancellation_webhook_url || "",
-          n8n_session_request_webhook_url: parsed.n8n_session_request_webhook_url || ""
+          n8n_session_request_webhook_url: parsed.n8n_session_request_webhook_url || "",
+          notification_provider: (parsed.notification_provider || "n8n") as "n8n" | "twilio",
+          twilio_channel: (parsed.twilio_channel || "whatsapp") as "whatsapp" | "sms",
+          twilio_from_number: parsed.twilio_from_number || "",
+          twilio_admin_number: parsed.twilio_admin_number || "",
         });
         }
       }
@@ -522,6 +542,7 @@ const Settings = () => {
           notification_cc_email: parsed.notification_cc_email || "",
           resend_enabled: parsed.resend_enabled ?? true,
           signup_notifications: parsed.signup_notifications ?? parsed.notifySignup ?? true,
+          login_notifications: parsed.login_notifications ?? true,
           booking_notifications: parsed.booking_notifications ?? parsed.notifyBooking ?? true,
           cancellation_notifications: parsed.cancellation_notifications ?? true,
           session_request_notifications: parsed.session_request_notifications ?? parsed.notifySessionRequest ?? true,
@@ -529,7 +550,11 @@ const Settings = () => {
           n8n_signup_webhook_url: parsed.n8n_signup_webhook_url || "",
           n8n_booking_webhook_url: parsed.n8n_booking_webhook_url || "",
           n8n_cancellation_webhook_url: parsed.n8n_cancellation_webhook_url || "",
-          n8n_session_request_webhook_url: parsed.n8n_session_request_webhook_url || ""
+          n8n_session_request_webhook_url: parsed.n8n_session_request_webhook_url || "",
+          notification_provider: (parsed.notification_provider || "n8n") as "n8n" | "twilio",
+          twilio_channel: (parsed.twilio_channel || "whatsapp") as "whatsapp" | "sms",
+          twilio_from_number: parsed.twilio_from_number || "",
+          twilio_admin_number: parsed.twilio_admin_number || "",
         });
       }
     }
@@ -921,6 +946,100 @@ const Settings = () => {
                     />
                   </div>
                </CardContent>
+            </Card>
+
+            {/* Notification Provider */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Provider</CardTitle>
+                <CardDescription>
+                  Choose how admin and customer notifications are delivered.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between rounded-md border p-3">
+                  <div>
+                    <Label className="text-sm font-medium">Use Twilio (WhatsApp/SMS)</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Off = n8n webhooks. On = send messages via Twilio.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={emailSettings.notification_provider === 'twilio'}
+                    onCheckedChange={(checked) => setEmailSettings({
+                      ...emailSettings,
+                      notification_provider: checked ? 'twilio' : 'n8n',
+                    })}
+                  />
+                </div>
+
+                {emailSettings.notification_provider === 'twilio' && (
+                  <div className="space-y-3 pt-2 border-t">
+                    <div>
+                      <Label>Channel</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Button
+                          type="button"
+                          variant={emailSettings.twilio_channel === 'whatsapp' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setEmailSettings({ ...emailSettings, twilio_channel: 'whatsapp' })}
+                        >WhatsApp</Button>
+                        <Button
+                          type="button"
+                          variant={emailSettings.twilio_channel === 'sms' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setEmailSettings({ ...emailSettings, twilio_channel: 'sms' })}
+                        >SMS</Button>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="twilio-from">Sender number (Twilio)</Label>
+                      <Input
+                        id="twilio-from"
+                        placeholder="+14155551234"
+                        value={emailSettings.twilio_from_number}
+                        onChange={(e) => setEmailSettings({ ...emailSettings, twilio_from_number: e.target.value })}
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Your Twilio-approved sender. For WhatsApp use your sandbox/business number in E.164 (the prefix is added automatically).
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="twilio-admin">Admin phone number</Label>
+                      <Input
+                        id="twilio-admin"
+                        placeholder="+14155551234"
+                        value={emailSettings.twilio_admin_number}
+                        onChange={(e) => setEmailSettings({ ...emailSettings, twilio_admin_number: e.target.value })}
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Where admin alerts are sent (E.164).
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2 pt-3 border-t">
+                  <h4 className="text-sm font-medium">Enable notification events</h4>
+                  {[
+                    { key: 'signup_notifications', label: 'Sign up' },
+                    { key: 'login_notifications', label: 'Login' },
+                    { key: 'booking_notifications', label: 'Booking' },
+                    { key: 'cancellation_notifications', label: 'Booking cancelled' },
+                    { key: 'session_request_notifications', label: 'Session request' },
+                  ].map((row) => (
+                    <div key={row.key} className="flex items-center justify-between">
+                      <Label className="text-sm">{row.label}</Label>
+                      <Switch
+                        checked={(emailSettings as any)[row.key]}
+                        onCheckedChange={(checked) => setEmailSettings({ ...emailSettings, [row.key]: checked } as any)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
             </Card>
 
             {/* N8N Webhook Integration */}
