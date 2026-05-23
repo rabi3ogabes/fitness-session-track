@@ -38,7 +38,7 @@ export const NotificationTester: React.FC = () => {
         throw new Error('Signup notifications are disabled in admin settings');
       }
 
-      const response = await supabase.functions.invoke('send-email-notification', {
+      const response = await supabase.functions.invoke('send-admin-notification', {
         body: {
           type: 'signup',
           notificationEmail: adminSettings.notification_email,
@@ -73,7 +73,7 @@ export const NotificationTester: React.FC = () => {
         throw new Error('Booking notifications are disabled in admin settings');
       }
 
-      const response = await supabase.functions.invoke('send-email-notification', {
+      const response = await supabase.functions.invoke('send-admin-notification', {
         body: {
           type: 'booking',
           notificationEmail: adminSettings.notification_email,
@@ -108,7 +108,7 @@ export const NotificationTester: React.FC = () => {
         throw new Error('Session request notifications are disabled in admin settings');
       }
 
-      const response = await supabase.functions.invoke('send-email-notification', {
+      const response = await supabase.functions.invoke('send-admin-notification', {
         body: {
           type: 'session_request',
           notificationEmail: adminSettings.notification_email,
@@ -224,7 +224,7 @@ export const NotificationTester: React.FC = () => {
                   });
                   
                   // Also try to process via send-email-notification directly
-                  const { data: directData, error: directError } = await supabase.functions.invoke('send-email-notification', {
+                  const { data: directData, error: directError } = await supabase.functions.invoke('send-admin-notification', {
                     body: { action: 'process_pending' }
                   });
                   
