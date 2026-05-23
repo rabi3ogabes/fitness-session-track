@@ -398,6 +398,9 @@ const Settings = () => {
         setLogo(data.logo);
         const existingLogoUrl = (data as any).logo_url ?? null;
         setLogoUrl(existingLogoUrl);
+        const existingFavicon = (data as any).favicon_url ?? null;
+        setFaviconUrl(existingFavicon);
+        if (existingFavicon) applyFavicon(existingFavicon);
         // Auto-migrate legacy base64 logo to public storage so emails can render it
         if (!existingLogoUrl && typeof data.logo === 'string' && data.logo.startsWith('data:image/')) {
           try {
