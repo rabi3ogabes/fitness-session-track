@@ -66,8 +66,9 @@ const SessionBalance = ({ className = "", showIcon = true, compact = false }: Se
     fetchSessionBalance();
 
     // Subscribe to members table changes
+    const uniq = `${user.id ?? user.email}-${Math.random().toString(36).slice(2, 8)}`;
     const membersChannel = supabase
-      .channel("session-balance-members")
+      .channel(`session-balance-members-${uniq}`)
       .on(
         "postgres_changes",
         {
@@ -92,7 +93,7 @@ const SessionBalance = ({ className = "", showIcon = true, compact = false }: Se
 
     // Subscribe to profiles table changes
     const profilesChannel = supabase
-      .channel("session-balance-profiles")
+      .channel(`session-balance-profiles-${uniq}`)
       .on(
         "postgres_changes",
         {
