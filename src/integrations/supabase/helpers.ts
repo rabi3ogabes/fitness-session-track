@@ -27,13 +27,18 @@ export const cacheDataForOffline = async <T>(_key: string, data: T): Promise<T> 
   return data;
 };
 
-export const cancelClassBooking = async (bookingId: string) => {
-  const { data, error } = await supabase
-    .from("bookings")
-    .update({ status: "cancelled" })
-    .eq("id", bookingId)
-    .select()
-    .maybeSingle();
-  if (error) throw error;
-  return data;
+export const cancelClassBooking = async (
+  userIdOrBookingId: string,
+  classId?: number
+): Promise<boolean> => {
+  const query = supabase.from("bookings").update({ status: "cancelled" });
+  const { error } =
+    classId !== undefined
+      ? await query.eq("user_id", userIdOrBookingId).eq("class_id", classId)
+      : await query.eq("id", userIdOrBookingId);
+  if (error) {
+    console.error("cancelClassBooking error:", error);
+    return false;
+  }
+  return true;
 };
