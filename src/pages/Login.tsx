@@ -16,11 +16,13 @@ import { cn } from "@/lib/utils";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { checkSupabaseConnection, isOffline } from "@/integrations/supabase/helpers";
+import ForgotPasswordDialog from "@/components/ForgotPasswordDialog";
 
 const Login = () => {
   // Login state
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [forgotOpen, setForgotOpen] = useState(false);
   
   // Signup state
   const [phone, setPhone] = useState("");
