@@ -27,472 +27,150 @@ interface AdminNotificationRequest {
   };
 }
 
-async function sendTwilioMessage(
-  supabaseUrl: string,
-  to: string,
-  message: string,
-  from: string,
-  channel: string,
-): Promise<boolean> {
-  try {
-    const res = await fetch(`${supabaseUrl}/functions/v1/send-twilio-notification`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ to, message, from, channel }),
-    });
-    const data = await res.json();
-    if (!res.ok || !data?.success) {
-      console.error("Twilio dispatch failed:", data);
-      return false;
-    }
-    return true;
-  } catch (e) {
-    console.error("Twilio dispatch error:", e);
-    return false;
-  }
-}
-
-function buildCustomerMessage(
-  type: string,
-  name: string,
-  ctx: { className?: string; classDate?: string; classTime?: string; planName?: string; sessions?: number },
-): string {
-  switch (type) {
-    case 'signup':
-      return `Hi ${name}, welcome! Your account is now active. 💪`;
-    case 'login':
-      return `Hi ${name}, a new login to your account was just detected at ${new Date().toLocaleString()}. If this wasn't you, contact support.`;
-    case 'booking':
-      return `Hi ${name}, your booking for ${ctx.className || 'a class'}${ctx.classDate ? ' on ' + ctx.classDate : ''}${ctx.classTime ? ' at ' + ctx.classTime : ''} is confirmed. See you soon!`;
-    case 'cancellation':
-      return `Hi ${name}, your booking for ${ctx.className || 'the class'}${ctx.classDate ? ' on ' + ctx.classDate : ''}${ctx.classTime ? ' at ' + ctx.classTime : ''} has been cancelled. Your session was restored.`;
-    case 'session_request':
-      return `Hi ${name}, we received your request for ${ctx.sessions || ''} ${ctx.planName || ''} sessions. We'll process it shortly.`;
-    default:
-      return `Hi ${name}, you have a new notification.`;
-  }
-}
-
-
+const labelFor = (t: string) => ({
+  signup: 'New member signup',
+  login: 'Member login',
+  booking: 'New class booking',
+  cancellation: 'Class booking cancelled',
+  session_request: 'Session balance request',
+} as Record<string, string>)[t] || 'New notification';
 
 const handler = async (req: Request): Promise<Response> => {
-  // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  if (req.method !== "POST") {
-    return new Response("Method not allowed", { status: 405, headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") return new Response("Method not allowed", { status: 405, headers: corsHeaders });
 
   try {
-    console.log("Admin notification request received");
-    
-    const { type, userEmail, userName, details, className, classDate, classTime, trainerName, planName, sessions, price, cancellationDetails }: AdminNotificationRequest = await req.json();
-    
+    const body: AdminNotificationRequest = await req.json();
+    const { type, userEmail, userName, details, className, classDate, classTime, planName, sessions, price, cancellationDetails } = body;
+
     if (!type || !userEmail || !userName) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log(`Processing ${type} notification for user: ${userName} (${userEmail})`);
-
-    // Get admin notification settings
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing Supabase environment variables');
-    }
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
     // Fetch admin notification settings
     const settingsResponse = await fetch(`${supabaseUrl}/rest/v1/admin_notification_settings?select=*`, {
-      headers: {
-        'Authorization': `Bearer ${supabaseKey}`,
-        'apikey': supabaseKey,
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey, 'Content-Type': 'application/json' },
     });
-
-    if (!settingsResponse.ok) {
-      throw new Error(`Failed to fetch notification settings: ${settingsResponse.statusText}`);
-    }
-
     const settings = await settingsResponse.json();
-    
-    if (!settings || settings.length === 0) {
-      console.log("No admin notification settings found");
-      return new Response(
-        JSON.stringify({ message: "No notification settings configured" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!settings?.length) {
+      return new Response(JSON.stringify({ message: "No notification settings configured" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-
     const adminSettings = settings[0];
-    
-    // Check if this type of notification is enabled
-    const notificationEnabled = type === 'signup' ? adminSettings.signup_notifications :
-                               type === 'login' ? (adminSettings.login_notifications ?? true) :
-                               type === 'booking' ? adminSettings.booking_notifications :
-                               type === 'cancellation' ? adminSettings.cancellation_notifications :
-                               type === 'session_request' ? adminSettings.session_request_notifications :
-                               false;
-    
-    if (!notificationEnabled) {
-      console.log(`Notification type ${type} is disabled in settings`);
-      return new Response(
-        JSON.stringify({ message: `${type} notifications are disabled` }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+
+    const enabled =
+      type === 'signup' ? adminSettings.signup_notifications :
+      type === 'login' ? (adminSettings.login_notifications ?? true) :
+      type === 'booking' ? adminSettings.booking_notifications :
+      type === 'cancellation' ? adminSettings.cancellation_notifications :
+      type === 'session_request' ? adminSettings.session_request_notifications : false;
+
+    if (!enabled) {
+      return new Response(JSON.stringify({ message: `${type} notifications are disabled` }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Prepare email content based on notification type
-    let subject = '';
-    let body = '';
+    const subject = `${labelFor(type)} — ${userName}`;
+    const adminEmail = adminSettings.notification_email;
+    const ccEmail = adminSettings.notification_cc_email;
 
-    switch (type) {
-      case 'signup':
-        subject = `New Member Registration - ${userName}`;
-        body = `
-          <h2>New Member Registration</h2>
-          <p>A new member has signed up for your gym!</p>
-          <p><strong>Name:</strong> ${userName}</p>
-          <p><strong>Email:</strong> ${userEmail}</p>
-          <p><strong>Registration Time:</strong> ${new Date().toLocaleString()}</p>
-          ${details ? `<p><strong>Additional Details:</strong> ${details}</p>` : ''}
-          <p>Please review the new member's information and complete any necessary onboarding steps.</p>
-        `;
-        break;
-        
-      case 'booking':
-        subject = `New Class Booking - ${userName}`;
-        body = `
-          <h2>New Class Booking</h2>
-          <p>A member has booked a class!</p>
-          <p><strong>Member:</strong> ${userName}</p>
-          <p><strong>Email:</strong> ${userEmail}</p>
-          <p><strong>Booking Time:</strong> ${new Date().toLocaleString()}</p>
-          ${details ? `<p><strong>Class Details:</strong> ${details}</p>` : ''}
-          <p>The class booking has been confirmed automatically.</p>
-        `;
-        break;
-        
-      case 'session_request':
-        subject = `Session Balance Request - ${userName}`;
-        body = `
-          <h2>Session Balance Request</h2>
-          <p>A member has requested additional sessions!</p>
-          <p><strong>Member:</strong> ${userName}</p>
-          <p><strong>Email:</strong> ${userEmail}</p>
-          ${planName ? `<p><strong>Plan:</strong> ${planName}</p>` : ''}
-          ${sessions ? `<p><strong>Sessions Requested:</strong> ${sessions}</p>` : ''}
-          ${price ? `<p><strong>Price:</strong> $${price}</p>` : ''}
-          <p><strong>Request Time:</strong> ${new Date().toLocaleString()}</p>
-          ${details ? `<p><strong>Request Details:</strong> ${details}</p>` : ''}
-          <p>Please review and process this session balance request.</p>
-        `;
-        break;
-        
-      case 'cancellation':
-        subject = `Class Booking Cancelled - ${cancellationDetails?.className || 'Unknown Class'}`;
-        body = `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #dc2626;">❌ Class Booking Cancelled</h2>
-            <p>A member has cancelled their class booking.</p>
-            <div style="background-color: #fef2f2; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #dc2626;">
-              <h3 style="margin-top: 0;">Member Details:</h3>
-              <ul>
-                <li><strong>Name:</strong> ${userName}</li>
-                <li><strong>Email:</strong> ${userEmail}</li>
-              </ul>
-            </div>
-            <div style="background-color: #f3f4f6; padding: 15px; border-radius: 5px; margin: 20px 0;">
-              <h3 style="margin-top: 0;">Class Details:</h3>
-              <ul>
-                <li><strong>Class:</strong> ${cancellationDetails?.className || 'Unknown Class'}</li>
-                <li><strong>Date:</strong> ${cancellationDetails?.classDate ? new Date(cancellationDetails.classDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown date'}</li>
-                <li><strong>Time:</strong> ${cancellationDetails?.classTime || 'Unknown time'}</li>
-                <li><strong>Current Enrollment:</strong> ${cancellationDetails?.currentEnrollment || 0} members</li>
-                <li><strong>Cancellation Time:</strong> ${new Date().toLocaleString()}</li>
-              </ul>
-            </div>
-            <p>The member's session has been restored to their account balance.</p>
-            <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
-              This email was sent automatically by your gym management system.
-            </p>
-          </div>
-        `;
-        break;
-        
-      case 'login':
-        subject = `Login - ${userName}`;
-        body = `<h2>User Login</h2><p><strong>${userName}</strong> (${userEmail}) just logged in at ${new Date().toLocaleString()}.</p>`;
-        break;
+    // Build templateData passed to admin-notification React Email template
+    const templateData: Record<string, any> = {
+      eventType: type,
+      memberName: userName,
+      memberEmail: userEmail,
+      details,
+      className: className || cancellationDetails?.className,
+      classDate: classDate || cancellationDetails?.classDate,
+      classTime: classTime || cancellationDetails?.classTime,
+      planName,
+      sessions,
+      price,
+    };
 
-      default:
-        throw new Error(`Unknown notification type: ${type}`);
-    }
-
-    // Resolve the customer phone (used by both n8n payload and Twilio dispatch)
-    let userPhone: string | null = null;
-    let remainingSessions: number | null = null;
-    if (userEmail) {
-      try {
-        const memberResponse = await fetch(
-          `${supabaseUrl}/rest/v1/members?email=eq.${encodeURIComponent(userEmail)}&select=phone,remaining_sessions`,
-          { headers: { 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey, 'Content-Type': 'application/json' } }
-        );
-        if (memberResponse.ok) {
-          const members = await memberResponse.json();
-          if (members?.length > 0) {
-            userPhone = members[0].phone || null;
-            remainingSessions = members[0].remaining_sessions ?? null;
-          }
-        }
-      } catch (err) { console.error('member fetch error:', err); }
-      if (!userPhone) {
-        try {
-          const profileResponse = await fetch(
-            `${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(userEmail)}&select=phone_number`,
-            { headers: { 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey, 'Content-Type': 'application/json' } }
-          );
-          if (profileResponse.ok) {
-            const profiles = await profileResponse.json();
-            if (profiles?.length > 0) userPhone = profiles[0].phone_number || null;
-          }
-        } catch (err) { console.error('profile fetch error:', err); }
-      }
-    }
-
-    // Resolve the customer's per-event opt-in preference
-    let customerOptedIn = true;
-    if (userEmail) {
-      try {
-        const colMap: Record<string, string> = {
-          signup: 'signup_enabled',
-          login: 'login_enabled',
-          booking: 'booking_enabled',
-          cancellation: 'cancellation_enabled',
-          session_request: 'booking_enabled',
-        };
-        const prefCol = colMap[type] || null;
-        if (prefCol) {
-          // notification_settings is keyed by user_id; resolve via auth.users by email
-          const userLookup = await fetch(
-            `${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(userEmail)}&select=id`,
-            { headers: { 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey } }
-          );
-          if (userLookup.ok) {
-            const rows = await userLookup.json();
-            if (rows?.length > 0) {
-              const uid = rows[0].id;
-              const prefRes = await fetch(
-                `${supabaseUrl}/rest/v1/notification_settings?user_id=eq.${uid}&select=${prefCol}`,
-                { headers: { 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey } }
-              );
-              if (prefRes.ok) {
-                const prefRows = await prefRes.json();
-                if (prefRows?.length > 0) customerOptedIn = prefRows[0][prefCol] !== false;
-              }
-            }
-          }
-        }
-      } catch (err) { console.error('customer pref lookup error:', err); }
-    }
-
-    const provider = adminSettings.notification_provider || 'n8n';
-    let webhookSuccess = false;
-
-    // ============ N8N PROVIDER ============
-    if (provider === 'n8n') {
-      let webhookUrl: string | null = null;
-      switch (type) {
-        case 'signup': webhookUrl = adminSettings.n8n_signup_webhook_url || adminSettings.n8n_webhook_url; break;
-        case 'booking': webhookUrl = adminSettings.n8n_booking_webhook_url || adminSettings.n8n_webhook_url; break;
-        case 'cancellation': webhookUrl = adminSettings.n8n_cancellation_webhook_url || adminSettings.n8n_webhook_url; break;
-        case 'session_request': webhookUrl = adminSettings.n8n_session_request_webhook_url || adminSettings.n8n_webhook_url; break;
-        case 'login': webhookUrl = adminSettings.n8n_webhook_url; break;
-      }
-
-      if (webhookUrl) {
-        try {
-          const n8nPayload = {
-            type, user: { name: userName, email: userEmail, phone: userPhone },
-            phone: userPhone, adminEmail: adminSettings.notification_email,
-            details, className, classDate, classTime, trainerName, planName,
-            sessions, price, remainingSessions, cancellationDetails,
-            customerOptedIn, timestamp: new Date().toISOString(),
-          };
-          const n8nResponse = await fetch(webhookUrl, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(n8nPayload),
-          });
-          if (n8nResponse.ok) { webhookSuccess = true; console.log(`✅ N8N ${type} webhook sent`); }
-          else console.error(`❌ N8N ${type} webhook failed:`, n8nResponse.status, await n8nResponse.text());
-        } catch (error) { console.error(`❌ N8N error:`, error); }
-      } else {
-        console.log(`⚠️ No N8N webhook configured for ${type}`);
-      }
-    }
-
-    // ============ TWILIO PROVIDER ============
-    if (provider === 'twilio') {
-      const channel = adminSettings.twilio_channel || 'whatsapp';
-      const fromNumber = adminSettings.twilio_from_number;
-      const adminNumber = adminSettings.twilio_admin_number;
-
-      if (!fromNumber) {
-        console.error('⚠️ Twilio provider selected but twilio_from_number is not configured');
-      } else {
-        // Plain-text body for messaging
-        const plain = body.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-        const adminMsg = `[${type.toUpperCase()}] ${subject}\n\n${plain}`.slice(0, 1500);
-
-        // Notify admin
-        if (adminNumber) {
-          const ok = await sendTwilioMessage(supabaseUrl, adminNumber, adminMsg, fromNumber, channel);
-          if (ok) webhookSuccess = true;
-        } else {
-          console.log('⚠️ No twilio_admin_number set, skipping admin message');
-        }
-
-        // Notify customer if opted in
-        if (userPhone && customerOptedIn) {
-          const customerMsg = buildCustomerMessage(type, userName, { className, classDate, classTime, planName, sessions });
-          const ok = await sendTwilioMessage(supabaseUrl, userPhone, customerMsg, fromNumber, channel);
-          if (ok) webhookSuccess = true;
-        } else {
-          console.log(`Customer notify skipped (phone=${!!userPhone}, optedIn=${customerOptedIn})`);
-        }
-      }
-    }
-
-
-    // Send email only when Email is the selected channel (don't fail if this fails)
-    let emailResponse;
     let emailSuccess = false;
+    let errorMessage: string | null = null;
 
-    try {
-      if (provider !== 'email') {
-        console.log(`Email skipped (provider=${provider})`);
-      } else
-      if (adminSettings.email_provider === 'resend' && adminSettings.resend_enabled) {
-
-        // Use Resend for email sending only if enabled
-        const emailPayload = {
-          userEmail: userEmail,
-          userName: userName,
-          notificationEmail: adminSettings.notification_email,
-          subject: subject,
-          body: body
-        };
-
-        console.log("Sending email notification via Resend...");
-        
-        emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-notification`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(emailPayload)
-        });
-      } else if (adminSettings.email_provider === 'resend' && !adminSettings.resend_enabled) {
-        console.log("⚠️ Resend email provider selected but Resend is disabled, skipping email");
-        emailSuccess = false;
-      } else {
-        // Use SMTP for email sending
-        const emailPayload = {
-          userEmail: userEmail,
-          userName: userName,
-          notificationEmail: adminSettings.notification_email,
-          subject: subject,
-          body: body,
-          smtpSettings: {
-            smtpHost: adminSettings.smtp_host,
-            smtpPort: adminSettings.smtp_port.toString(),
-            smtpUsername: adminSettings.smtp_username,
-            smtpPassword: adminSettings.smtp_password,
-            fromEmail: adminSettings.from_email,
-            fromName: adminSettings.from_name,
-            useSsl: adminSettings.smtp_use_tls || false
+    if (adminEmail) {
+      try {
+        const recipients = [adminEmail, ...(ccEmail ? [ccEmail] : [])];
+        for (const recipient of recipients) {
+          const idempotencyKey = `admin-${type}-${recipient}-${Date.now()}`;
+          const resp = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              templateName: 'admin-notification',
+              recipientEmail: recipient,
+              idempotencyKey,
+              templateData,
+            }),
+          });
+          if (resp.ok) {
+            emailSuccess = true;
+          } else {
+            errorMessage = `send-transactional-email ${resp.status}: ${await resp.text()}`;
+            console.error(errorMessage);
           }
-        };
-
-        console.log("Sending email notification via SMTP...");
-        
-        emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-smtp-notification`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(emailPayload)
-        });
+        }
+      } catch (e) {
+        errorMessage = e instanceof Error ? e.message : String(e);
+        console.error('Email dispatch error:', errorMessage);
       }
-
-      if (emailResponse && emailResponse.ok) {
-        emailSuccess = true;
-        console.log("✅ Email notification sent successfully");
-      } else {
-        console.log("⚠️ Email notification failed but continuing...");
-      }
-    } catch (emailError) {
-      console.error("⚠️ Email sending error (non-critical):", emailError);
+    } else {
+      errorMessage = 'No admin notification_email configured';
     }
 
-    // Log the notification attempt
-    try {
-      const logPayload = {
-        notification_type: type,
-        recipient_email: adminSettings.notification_email,
-        subject: subject,
-        status: (webhookSuccess || emailSuccess) ? 'sent' : 'failed',
-        error_message: (!webhookSuccess && !emailSuccess) ? 'Both webhook and email failed' : null,
-        user_name: userName,
-        user_email: userEmail
-      };
+    // Optional: also dispatch to n8n if configured (kept for back-compat)
+    let webhookSuccess = false;
+    let webhookUrl: string | null = null;
+    switch (type) {
+      case 'signup': webhookUrl = adminSettings.n8n_signup_webhook_url || adminSettings.n8n_webhook_url; break;
+      case 'booking': webhookUrl = adminSettings.n8n_booking_webhook_url || adminSettings.n8n_webhook_url; break;
+      case 'cancellation': webhookUrl = adminSettings.n8n_cancellation_webhook_url || adminSettings.n8n_webhook_url; break;
+      case 'session_request': webhookUrl = adminSettings.n8n_session_request_webhook_url || adminSettings.n8n_webhook_url; break;
+      case 'login': webhookUrl = adminSettings.n8n_webhook_url; break;
+    }
+    if (webhookUrl) {
+      try {
+        const r = await fetch(webhookUrl, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, user: { name: userName, email: userEmail }, adminEmail, details, className, classDate, classTime, planName, sessions, price, cancellationDetails, timestamp: new Date().toISOString() }),
+        });
+        webhookSuccess = r.ok;
+      } catch (err) { console.error('n8n dispatch error:', err); }
+    }
 
+    // Log to notification_logs
+    try {
       await fetch(`${supabaseUrl}/rest/v1/notification_logs`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseKey}`,
-          'apikey': supabaseKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(logPayload)
+        headers: { 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notification_type: type,
+          recipient_email: adminEmail,
+          subject,
+          status: (emailSuccess || webhookSuccess) ? 'sent' : 'failed',
+          error_message: (!emailSuccess && !webhookSuccess) ? errorMessage : null,
+          user_name: userName,
+          user_email: userEmail,
+        }),
       });
-    } catch (logError) {
-      console.error("Failed to log notification:", logError);
-    }
+    } catch (logError) { console.error("Failed to log notification:", logError); }
 
-    console.log(`✅ Admin notification processed - Webhook: ${webhookSuccess}, Email: ${emailSuccess}`);
-    
     return new Response(
-      JSON.stringify({ 
-        message: "Admin notification processed",
-        type: type,
-        webhookSent: webhookSuccess,
-        emailSent: emailSuccess
-      }),
+      JSON.stringify({ message: "Admin notification processed", type, emailSent: emailSuccess, webhookSent: webhookSuccess }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error) {
-    console.error("Error in send-admin-notification function:", error);
-    
-    return new Response(
-      JSON.stringify({ 
-        error: "Internal server error",
-        details: error instanceof Error ? error.message : 'Unknown error' 
-      }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("Error in send-admin-notification:", error);
+    return new Response(JSON.stringify({ error: "Internal server error", details: error instanceof Error ? error.message : 'Unknown' }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 };
 
