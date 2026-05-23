@@ -277,25 +277,50 @@ Deno.serve(async (req) => {
     )
   }
 
-  // 4. Render React Email template to HTML and plain text
-  const html = await renderAsync(
-    React.createElement(template.component, templateData)
-  )
-  const plainText = await renderAsync(
-    React.createElement(template.component, templateData),
-    { plainText: true }
-  )
+  // 3b. Look up admin-managed override for this template (by event sub-key if applicable)
+  let overrideKey = `transactional.${templateName}`
+  if (templateName === 'member-notification' && templateData?.eventType) {
+    overrideKey = `transactional.member-notification.${templateData.eventType}`
+  }
+  let override: Record<string, any> | null = null
+  {
+    const { data: o } = await supabase
+      .from('email_templates')
+      .select('*')
+      .in('template_key', [overrideKey, `transactional.${templateName}`])
+      .order('template_key', { ascending: false })
+    if (o && o.length > 0) override = o[0]
+    // If disabled, skip sending silently
+    if (override && override.enabled === false) {
+      await supabase.from('email_send_log').insert({
+        message_id: messageId, template_name: templateName,
+        recipient_email: effectiveRecipient, status: 'suppressed',
+        error_message: 'Template disabled by admin',
+      })
+      return new Response(JSON.stringify({ success: false, reason: 'template_disabled' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+  }
 
-  // Resolve subject — supports static string or dynamic function
-  const resolvedSubject =
-    typeof template.subject === 'function'
-      ? template.subject(templateData)
-      : template.subject
+  // Merge override fields into templateData (only non-null overrides)
+  const mergedData: Record<string, any> = { ...templateData, siteName: SITE_NAME }
+  if (override) {
+    for (const f of ['preheader','heading','intro','body','buttonLabel','footerText','accentColor'] as const) {
+      const v = (override as any)[f === 'buttonLabel' ? 'button_label' : f === 'footerText' ? 'footer_text' : f === 'accentColor' ? 'accent_color' : f]
+      if (v != null && v !== '') mergedData[f] = v
+    }
+  }
+
+  // 4. Render React Email template to HTML and plain text
+  const html = await renderAsync(React.createElement(template.component, mergedData))
+  const plainText = await renderAsync(React.createElement(template.component, mergedData), { plainText: true })
+
+  // Resolve subject + sender name (admin overrides win)
+  const resolvedSubject = (override?.subject && override.subject.trim()) ||
+    (typeof template.subject === 'function' ? template.subject(mergedData) : template.subject)
+  const senderName = (override?.sender_name && override.sender_name.trim()) || SITE_NAME
 
   // 5. Enqueue the pre-rendered email for async processing by the dispatcher.
-  // The dispatcher (process-email-queue) handles sending, retries, and rate-limit backoff.
-
-  // Log pending BEFORE enqueue so we have a record even if enqueue crashes
   await supabase.from('email_send_log').insert({
     message_id: messageId,
     template_name: templateName,
@@ -308,7 +333,7 @@ Deno.serve(async (req) => {
     payload: {
       message_id: messageId,
       to: effectiveRecipient,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+      from: `${senderName} <noreply@${FROM_DOMAIN}>`,
       sender_domain: SENDER_DOMAIN,
       subject: resolvedSubject,
       html,
@@ -320,6 +345,7 @@ Deno.serve(async (req) => {
       queued_at: new Date().toISOString(),
     },
   })
+
 
   if (enqueueError) {
     console.error('Failed to enqueue email', {

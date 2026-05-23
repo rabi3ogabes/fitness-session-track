@@ -218,8 +218,26 @@ async function handleWebhook(req: Request): Promise<Response> {
     )
   }
 
-  // Build template props from payload.data (HookData structure)
-  const templateProps = {
+  // Fetch admin override for this auth email type
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  )
+  const overrideKey = `auth.${emailType}`
+  const { data: override } = await supabase
+    .from('email_templates')
+    .select('*')
+    .eq('template_key', overrideKey)
+    .maybeSingle()
+
+  if (override && override.enabled === false) {
+    console.log('Auth email skipped — template disabled by admin', { emailType })
+    return new Response(JSON.stringify({ success: true, skipped: true }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+
+  // Build template props from payload.data (HookData structure) + overrides
+  const templateProps: Record<string, any> = {
     siteName: SITE_NAME,
     siteUrl: `https://${ROOT_DOMAIN}`,
     recipient: payload.data.email,
@@ -229,22 +247,22 @@ async function handleWebhook(req: Request): Promise<Response> {
     oldEmail: payload.data.old_email,
     newEmail: payload.data.new_email,
   }
+  if (override) {
+    for (const [src, dst] of [['preheader','preheader'],['heading','heading'],['intro','intro'],['body','body'],['button_label','buttonLabel'],['footer_text','footerText'],['accent_color','accentColor']] as const) {
+      const v = (override as any)[src]
+      if (v != null && v !== '') templateProps[dst] = v
+    }
+  }
 
   // Render React Email to HTML and plain text
   const html = await renderAsync(React.createElement(EmailTemplate, templateProps))
-  const text = await renderAsync(React.createElement(EmailTemplate, templateProps), {
-    plainText: true,
-  })
+  const text = await renderAsync(React.createElement(EmailTemplate, templateProps), { plainText: true })
 
-  // Enqueue email for async processing by the dispatcher (process-email-queue).
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
+  const subject = (override?.subject && override.subject.trim()) || EMAIL_SUBJECTS[emailType] || 'Notification'
+  const senderName = (override?.sender_name && override.sender_name.trim()) || SITE_NAME
 
   const messageId = crypto.randomUUID()
 
-  // Log pending BEFORE enqueue so we have a record even if enqueue crashes
   await supabase.from('email_send_log').insert({
     message_id: messageId,
     template_name: emailType,
@@ -258,9 +276,9 @@ async function handleWebhook(req: Request): Promise<Response> {
       run_id,
       message_id: messageId,
       to: payload.data.email,
-      from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
+      from: `${senderName} <noreply@${FROM_DOMAIN}>`,
       sender_domain: SENDER_DOMAIN,
-      subject: EMAIL_SUBJECTS[emailType] || 'Notification',
+      subject,
       html,
       text,
       purpose: 'transactional',
@@ -268,6 +286,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       queued_at: new Date().toISOString(),
     },
   })
+
 
   if (enqueueError) {
     console.error('Failed to enqueue auth email', { error: enqueueError, run_id, emailType })
