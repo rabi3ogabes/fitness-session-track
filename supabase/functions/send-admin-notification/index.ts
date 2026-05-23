@@ -373,12 +373,16 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
 
-    // Send email using the appropriate provider based on settings (optional, don't fail if this fails)
+    // Send email only when Email is the selected channel (don't fail if this fails)
     let emailResponse;
     let emailSuccess = false;
-    
+
     try {
+      if (provider !== 'email') {
+        console.log(`Email skipped (provider=${provider})`);
+      } else
       if (adminSettings.email_provider === 'resend' && adminSettings.resend_enabled) {
+
         // Use Resend for email sending only if enabled
         const emailPayload = {
           userEmail: userEmail,
