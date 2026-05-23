@@ -29,6 +29,8 @@ import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import { useAuth } from "@/context/AuthContext";
 
 const Settings = () => {
+  const { user } = useAuth();
+  const [adminPwOpen, setAdminPwOpen] = useState(false);
   const [cancellationHours, setCancellationHours] = useState(4);
   const [emailSettings, setEmailSettings] = useState({
     id: null as string | null,
