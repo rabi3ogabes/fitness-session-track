@@ -7,9 +7,10 @@ const corsHeaders = {
 };
 
 interface AdminNotificationRequest {
-  type: 'signup' | 'booking' | 'session_request' | 'cancellation';
+  type: 'signup' | 'login' | 'booking' | 'session_request' | 'cancellation';
   userEmail: string;
   userName: string;
+  userId?: string;
   details?: string;
   className?: string;
   classDate?: string;
@@ -24,6 +25,34 @@ interface AdminNotificationRequest {
     classTime: string;
     currentEnrollment: number;
   };
+}
+
+async function sendTwilioMessage(
+  supabaseUrl: string,
+  to: string,
+  message: string,
+  from: string,
+  channel: string,
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/send-twilio-notification`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ to, message, from, channel }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.success) {
+      console.error("Twilio dispatch failed:", data);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("Twilio dispatch error:", e);
+    return false;
+  }
 }
 
 const handler = async (req: Request): Promise<Response> => {
