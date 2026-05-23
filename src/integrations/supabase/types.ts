@@ -58,6 +58,7 @@ export type Database = {
       }
       admin_notification_settings: {
         Row: {
+          active_provider: string
           booking_notifications: boolean
           cancellation_notifications: boolean | null
           created_at: string
@@ -74,6 +75,10 @@ export type Database = {
           notification_cc_email: string | null
           notification_email: string
           notification_provider: string
+          notify_member_booking: boolean
+          notify_member_cancellation: boolean
+          notify_member_session_request: boolean
+          notify_member_welcome: boolean
           resend_enabled: boolean | null
           session_request_notifications: boolean
           signup_notifications: boolean
@@ -88,6 +93,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          active_provider?: string
           booking_notifications?: boolean
           cancellation_notifications?: boolean | null
           created_at?: string
@@ -104,6 +110,10 @@ export type Database = {
           notification_cc_email?: string | null
           notification_email: string
           notification_provider?: string
+          notify_member_booking?: boolean
+          notify_member_cancellation?: boolean
+          notify_member_session_request?: boolean
+          notify_member_welcome?: boolean
           resend_enabled?: boolean | null
           session_request_notifications?: boolean
           signup_notifications?: boolean
@@ -118,6 +128,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          active_provider?: string
           booking_notifications?: boolean
           cancellation_notifications?: boolean | null
           created_at?: string
@@ -134,6 +145,10 @@ export type Database = {
           notification_cc_email?: string | null
           notification_email?: string
           notification_provider?: string
+          notify_member_booking?: boolean
+          notify_member_cancellation?: boolean
+          notify_member_session_request?: boolean
+          notify_member_welcome?: boolean
           resend_enabled?: boolean | null
           session_request_notifications?: boolean
           signup_notifications?: boolean
