@@ -302,8 +302,22 @@ Deno.serve(async (req) => {
     }
   }
 
+  // 3c. Fetch brand settings (logo, company name) for emails
+  let brandLogoUrl: string | null = null
+  let brandSiteName: string = SITE_NAME
+  {
+    const { data: brand } = await supabase
+      .from('admin_settings')
+      .select('logo_url, company_name')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (brand?.logo_url) brandLogoUrl = brand.logo_url
+    if (brand?.company_name) brandSiteName = brand.company_name
+  }
+
   // Merge override fields into templateData (only non-null overrides)
-  const mergedData: Record<string, any> = { ...templateData, siteName: SITE_NAME }
+  const mergedData: Record<string, any> = { ...templateData, siteName: brandSiteName, logoUrl: brandLogoUrl }
   if (override) {
     for (const f of ['preheader','heading','intro','body','buttonLabel','footerText','accentColor'] as const) {
       const v = (override as any)[f === 'buttonLabel' ? 'button_label' : f === 'footerText' ? 'footer_text' : f === 'accentColor' ? 'accent_color' : f]
