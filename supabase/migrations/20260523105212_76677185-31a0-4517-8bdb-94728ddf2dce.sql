@@ -1,0 +1,1 @@
+UPDATE admin_notification_settings SET active_provider='n8n', notification_provider='n8n' WHERE id='41ab7fdd-e9a2-4862-a1b2-0d408a33dbc3';
