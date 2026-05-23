@@ -79,6 +79,39 @@ const Sidebar = () => {
     setIsOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!user?.email || isAdmin || isTrainer) return;
+
+    const fetchCountCredit = async () => {
+      const { data } = await supabase
+        .from("members")
+        .select("count_credit")
+        .eq("email", user.email)
+        .maybeSingle();
+      if (data) setCountCredit(data.count_credit !== false);
+    };
+
+    fetchCountCredit();
+
+    const channel = supabase
+      .channel("sidebar-count-credit")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "members", filter: `email=eq.${user.email}` },
+        (payload: any) => {
+          if (payload.new && "count_credit" in payload.new) {
+            setCountCredit(payload.new.count_credit !== false);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.email, isAdmin, isTrainer]);
+
+
   const handleLogout = () => {
     logout();
     navigate('/login');
