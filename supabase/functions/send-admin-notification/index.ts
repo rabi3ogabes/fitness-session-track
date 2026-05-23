@@ -74,6 +74,9 @@ function buildCustomerMessage(
     default:
       return `Hi ${name}, you have a new notification.`;
   }
+}
+
+
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
