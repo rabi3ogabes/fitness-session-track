@@ -69,11 +69,17 @@ const RANGES = [
 const ADMIN_EMAILS = new Set(["admin@gym.com", "trainer@gym.com"]);
 
 const statusBadge = (s: string) => {
-  if (s === "sent") return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  if (s === "failed") return "bg-red-50 text-red-700 border-red-200";
-  if (s === "suppressed") return "bg-amber-50 text-amber-700 border-amber-200";
+  if (s === "sent" || s === "delivered") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (s === "failed" || s === "dlq" || s === "bounced") return "bg-red-50 text-red-700 border-red-200";
+  if (s === "suppressed" || s === "complained") return "bg-amber-50 text-amber-700 border-amber-200";
   if (s === "pending") return "bg-sky-50 text-sky-700 border-sky-200";
   return "bg-muted text-foreground border-border";
+};
+
+const statusLabel = (s: string) => {
+  if (s === "sent") return "delivered";
+  if (s === "dlq") return "failed";
+  return s;
 };
 
 const initials = (name: string | null | undefined, email: string) => {
