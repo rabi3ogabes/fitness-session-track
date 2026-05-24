@@ -198,11 +198,11 @@ const RecentMembersWidget = () => {
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      {member.recentEmails.length === 0 ? (
+                      {(member.recentEmails || []).length === 0 ? (
                         <span className="text-xs text-gray-400">No emails</span>
                       ) : (
                         <div className="flex items-center gap-2">
-                          {member.recentEmails.map((e, i) => {
+                          {(member.recentEmails || []).map((e, i) => {
                             const { Icon, label } = kindMeta[e.kind];
                             const color = e.sent
                               ? 'text-green-600 border-green-300 bg-green-50'
