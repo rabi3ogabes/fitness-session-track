@@ -1147,6 +1147,27 @@ const ClassSchedulePage = () => {
 
       // Sessions are now automatically managed by database triggers
 
+      // Notify admin + member that the admin booked a session for them
+      try {
+        const fmtDate = (s: string) => {
+          try { return new Date(s).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); } catch { return s; }
+        };
+        await supabase.functions.invoke('send-admin-notification', {
+          body: {
+            type: 'booking',
+            userName: member.name,
+            userEmail: member.email,
+            className: currentClass.name,
+            classDate: fmtDate(currentClass.schedule),
+            classTime: `${currentClass.startTime || currentClass.start_time || ''} - ${currentClass.endTime || currentClass.end_time || ''}`.trim(),
+            trainerName: (currentClass.trainers && currentClass.trainers[0]) || currentClass.trainer || 'TBD',
+            bookedByAdmin: true,
+          },
+        });
+      } catch (notifyErr) {
+        console.error('Admin booking notification failed:', notifyErr);
+      }
+
       // Refresh the bookings list
       await fetchBookedMembers(currentClass.id);
       
@@ -1157,6 +1178,7 @@ const ClassSchedulePage = () => {
         title: "Success",
         description: "Member added to class successfully",
       });
+
 
     } catch (error) {
       console.error("Error adding member to class:", error);
