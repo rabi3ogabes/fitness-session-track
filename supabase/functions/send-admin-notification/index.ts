@@ -116,8 +116,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     const results: any[] = [];
 
+    // Lookup the member phone so the admin email can offer a WhatsApp link.
+    let memberPhone: string | null = null;
+    try {
+      const phoneResp = await fetch(
+        `${supabaseUrl}/rest/v1/members?select=phone&email=eq.${encodeURIComponent(userEmail)}&limit=1`,
+        { headers: { 'Authorization': `Bearer ${supabaseKey}`, 'apikey': supabaseKey } }
+      );
+      const phoneRows = await phoneResp.json();
+      memberPhone = phoneRows?.[0]?.phone || null;
+    } catch (e) { console.error('phone lookup failed', e); }
+
     const templateData = {
-      eventType: type, memberName: userName, memberEmail: userEmail,
+      eventType: type, memberName: userName, memberEmail: userEmail, memberPhone,
       details, className, classDate, classTime, trainerName, planName, sessions, price,
     };
 
