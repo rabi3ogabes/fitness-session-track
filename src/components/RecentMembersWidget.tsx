@@ -47,12 +47,24 @@ const RecentMembersWidget = () => {
 
   const fetchRecentMembers = async () => {
     try {
-      const { data: members } = await supabase
+      const { data: rawMembers } = await supabase
         .from('members')
         .select('id, name, email, created_at, membership, remaining_sessions, count_credit')
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(25);
+
+      // Dedupe by email (keep newest) so duplicate member rows don't
+      // render the same signup email twice.
+      const seenEmail = new Set<string>();
+      const members = (rawMembers || [])
+        .filter((m) => {
+          const k = (m.email || '').toLowerCase();
+          if (!k || seenEmail.has(k)) return false;
+          seenEmail.add(k);
+          return true;
+        })
+        .slice(0, 5);
 
       if (members) {
         const membersWithRequests = await Promise.all(
