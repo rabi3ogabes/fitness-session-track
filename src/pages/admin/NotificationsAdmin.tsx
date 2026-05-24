@@ -574,7 +574,7 @@ function LogLine({ log }: { log: LogRow }) {
   return (
     <li className="flex items-start gap-2 text-sm">
       <Badge variant="outline" className={`${statusBadge(log.status)} text-[10px] mt-0.5 shrink-0`}>
-        {log.status}
+        {statusLabel(log.status)}
       </Badge>
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs font-medium">{log.subject || log.notification_type}</div>
