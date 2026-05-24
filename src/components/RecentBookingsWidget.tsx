@@ -114,7 +114,7 @@ const RecentBookingsWidget = () => {
               // Direct member lookup by ID
               const { data: memberData } = await supabase
                 .from("members")
-                .select("name, remaining_sessions, gender, email")
+                .select("name, remaining_sessions, gender, email, count_credit")
                 .eq("id", booking.member_id)
                 .maybeSingle();
               
@@ -128,7 +128,7 @@ const RecentBookingsWidget = () => {
               // First try exact email match using the username as email prefix
               const { data: memberByEmail } = await supabase
                 .from("members")
-                .select("name, remaining_sessions, gender")
+                .select("name, remaining_sessions, gender, count_credit")
                 .ilike("email", `${booking.user_name}%`)
                 .maybeSingle();
               
@@ -141,7 +141,7 @@ const RecentBookingsWidget = () => {
                 const searchTerm = booking.user_name.replace(/[._]/g, ' ').trim();
                 const { data: memberByName } = await supabase
                   .from("members")
-                  .select("name, remaining_sessions, gender")
+                  .select("name, remaining_sessions, gender, count_credit")
                   .or(`name.ilike.%${searchTerm}%,name.ilike.%${searchTerm.split(' ').reverse().join(' ')}%`)
                   .maybeSingle();
                 
@@ -317,7 +317,7 @@ const RecentBookingsWidget = () => {
               if (booking.member_id) {
                 const { data: memberData } = await supabase
                   .from("members")
-                  .select("name, remaining_sessions, gender")
+                  .select("name, remaining_sessions, gender, count_credit")
                   .eq("id", booking.member_id)
                   .maybeSingle();
                 
@@ -330,7 +330,7 @@ const RecentBookingsWidget = () => {
                 // Try to find member by email pattern match
                 const { data: memberByEmail } = await supabase
                   .from("members")
-                  .select("name, remaining_sessions, gender")
+                  .select("name, remaining_sessions, gender, count_credit")
                   .ilike("email", `${booking.user_name}%`)
                   .maybeSingle();
                 
@@ -343,7 +343,7 @@ const RecentBookingsWidget = () => {
                   const searchTerm = booking.user_name.replace(/[._]/g, ' ').trim();
                   const { data: memberByName } = await supabase
                     .from("members")
-                    .select("name, remaining_sessions, gender")
+                    .select("name, remaining_sessions, gender, count_credit")
                     .or(`name.ilike.%${searchTerm}%,name.ilike.%${searchTerm.split(' ').reverse().join(' ')}%`)
                     .maybeSingle();
                   
