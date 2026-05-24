@@ -292,6 +292,7 @@ const RecentBookingsWidget = () => {
             (bookingsData || []).map(async (booking) => {
               let memberBalance = 0;
               let memberGender = undefined;
+              let memberCountCredit: boolean | undefined = undefined;
               let memberName = "Unknown Member";
               let classDetails = {
                 name: "Unknown Class",
@@ -330,6 +331,7 @@ const RecentBookingsWidget = () => {
                   memberName = memberData.name || memberName;
                   memberBalance = memberData.remaining_sessions || 0;
                   memberGender = memberData.gender;
+                  memberCountCredit = memberData.count_credit;
                 }
               } else if (booking.user_name && booking.user_name !== "Unknown User") {
                 // Try to find member by email pattern match
@@ -343,6 +345,7 @@ const RecentBookingsWidget = () => {
                   memberName = memberByEmail.name || memberName;
                   memberBalance = memberByEmail.remaining_sessions || 0;
                   memberGender = memberByEmail.gender;
+                  memberCountCredit = memberByEmail.count_credit;
                 } else {
                   // Fallback: search by name pattern
                   const searchTerm = booking.user_name.replace(/[._]/g, ' ').trim();
@@ -356,6 +359,7 @@ const RecentBookingsWidget = () => {
                     memberName = memberByName.name || memberName;
                     memberBalance = memberByName.remaining_sessions || 0;
                     memberGender = memberByName.gender;
+                    memberCountCredit = memberByName.count_credit;
                   }
                 }
               }
@@ -370,6 +374,7 @@ const RecentBookingsWidget = () => {
                 end_time: classDetails.end_time,
                 member_balance: memberBalance,
                 member_gender: memberGender,
+                count_credit: memberCountCredit,
                 status: booking.status,
               };
             })
