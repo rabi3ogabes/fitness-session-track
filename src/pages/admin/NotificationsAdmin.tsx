@@ -278,8 +278,8 @@ export default function NotificationsAdmin() {
     logs.forEach((l) => {
       total++;
       if (l.status === "sent") sent++;
-      else if (l.status === "failed") failed++;
-      else if (l.status === "suppressed") suppressed++;
+      else if (l.status === "failed" || l.status === "dlq" || l.status === "bounced") failed++;
+      else if (l.status === "suppressed" || l.status === "complained") suppressed++;
     });
     return { total, sent, failed, suppressed };
   }, [logs]);
