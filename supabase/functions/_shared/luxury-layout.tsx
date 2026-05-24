@@ -18,6 +18,7 @@ export interface LuxuryEmailProps {
   logoUrl?: string | null
   details?: Array<{ label: string; value: string }>
   extraBody?: string
+  htmlBlock?: string
 }
 
 export const LuxuryEmail: React.FC<LuxuryEmailProps> = ({
