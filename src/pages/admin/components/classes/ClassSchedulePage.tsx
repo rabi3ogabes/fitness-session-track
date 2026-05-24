@@ -949,17 +949,10 @@ const ClassSchedulePage = () => {
 
       console.log("Querying bookings for class_id:", classId);
       
-      // First get the bookings
+      // First get the bookings (no FK between bookings and members, fetch separately)
       const { data: bookingsData, error } = await supabase
         .from('bookings')
-        .select(`
-          *,
-          members!member_id (
-            remaining_sessions,
-            name,
-            gender
-          )
-        `)
+        .select('*')
         .eq('class_id', classId)
         .order('booking_date', { ascending: false });
 
@@ -977,16 +970,30 @@ const ClassSchedulePage = () => {
         return;
       }
 
+      // Fetch member details separately and attach
+      const memberIds = Array.from(
+        new Set((bookingsData || []).map((b: any) => b.member_id).filter(Boolean))
+      ) as number[];
+      let membersById: Record<number, any> = {};
+      if (memberIds.length > 0) {
+        const { data: membersData } = await supabase
+          .from('members')
+          .select('id, name, gender, remaining_sessions')
+          .in('id', memberIds);
+        membersById = Object.fromEntries((membersData || []).map((m: any) => [m.id, m]));
+      }
+      const bookingsWithMembers = (bookingsData || []).map((b: any) => ({
+        ...b,
+        members: b.member_id ? membersById[b.member_id] || null : null,
+      }));
+
       // Enhance bookings with user names where member data is missing
       const enhancedBookings = await Promise.all(
-        (bookingsData || []).map(async (booking) => {
-          // If we don't have member info but have user_id, try to get user name
+        bookingsWithMembers.map(async (booking: any) => {
           if (!booking.members && !booking.user_name && booking.user_id) {
             try {
-              // Try to get user name from get_user_name function
               const { data: userName, error: userError } = await supabase
                 .rpc('get_user_name', { user_id: booking.user_id });
-              
               if (!userError && userName) {
                 return { ...booking, user_name: userName };
               }
