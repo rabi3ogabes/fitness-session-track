@@ -35,6 +35,7 @@ export const LuxuryEmail: React.FC<LuxuryEmailProps> = ({
   logoUrl,
   details,
   extraBody,
+  htmlBlock,
 }) => {
   const accent = accentColor || '#c9a861'
   return (
