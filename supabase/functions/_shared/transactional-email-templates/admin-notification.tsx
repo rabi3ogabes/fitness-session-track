@@ -42,7 +42,8 @@ const AdminNotificationEmail = (p: Props) => {
        </p>`
     : ''
 
-  const extra = [phoneHtml, p.details || ''].filter(Boolean).join('')
+
+
 
   return (
     <LuxuryEmail
