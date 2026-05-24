@@ -19,7 +19,9 @@ interface AdminNotificationRequest {
   planName?: string;
   sessions?: number;
   price?: number;
+  bookedByAdmin?: boolean;
 }
+
 
 const adminLabel = (t: string) => ({
   signup: 'New member signup',
