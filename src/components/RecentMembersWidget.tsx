@@ -202,7 +202,7 @@ const RecentMembersWidget = () => {
                         <span className="text-xs text-gray-400">No emails</span>
                       ) : (
                         <div className="flex items-center gap-2">
-                          {member.recentEmails.map((e, i) => {
+                          {(member.recentEmails || []).map((e, i) => {
                             const { Icon, label } = kindMeta[e.kind];
                             const color = e.sent
                               ? 'text-green-600 border-green-300 bg-green-50'
