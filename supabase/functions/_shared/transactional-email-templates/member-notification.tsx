@@ -13,6 +13,7 @@ interface Props {
   trainerName?: string
   sessions?: number
   details?: string
+  bookedByAdmin?: boolean
   // overrides
   siteName?: string
   logoUrl?: string | null
@@ -25,16 +26,23 @@ const waUrl = (phone: string) => {
   return digits ? `https://wa.me/${digits}` : ''
 }
 
-const defaults = (t?: string, name?: string) => {
+const defaults = (t?: string, name?: string, bookedByAdmin?: boolean) => {
   const greet = name ? `Hi ${name},` : 'Hello,'
   switch (t) {
-    case 'booking': return { heading: 'Booking confirmed', intro: greet, body: 'Your class booking is confirmed. We look forward to training with you.' }
+    case 'booking': return {
+      heading: bookedByAdmin ? 'A session has been booked for you' : 'Booking confirmed',
+      intro: greet,
+      body: bookedByAdmin
+        ? 'Good news — our team has booked a session for you. The class details are below. We look forward to seeing you.'
+        : 'Your class booking is confirmed. We look forward to training with you.',
+    }
     case 'cancellation': return { heading: 'Booking cancelled', intro: greet, body: 'Your class booking has been cancelled.' }
     case 'session_request': return { heading: 'Session request received', intro: greet, body: "Thanks — we've received your request and will process it shortly." }
     case 'password_changed': return { heading: 'Password updated', intro: greet, body: 'The password on your account was just changed. If this was not you, please contact us immediately.' }
     default: return { heading: 'Notification', intro: greet, body: '' }
   }
 }
+
 
 const MemberNotificationEmail = (p: Props) => {
   const d = defaults(p.eventType, p.memberName)
