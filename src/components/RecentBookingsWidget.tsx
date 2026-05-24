@@ -167,6 +167,7 @@ const RecentBookingsWidget = () => {
               end_time: classDetails.end_time,
               member_balance: memberBalance,
               member_gender: memberGender,
+              count_credit: memberCountCredit,
               status: booking.status, // Add status to track booking state
             };
           })
