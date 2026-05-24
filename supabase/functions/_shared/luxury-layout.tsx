@@ -18,6 +18,7 @@ export interface LuxuryEmailProps {
   logoUrl?: string | null
   details?: Array<{ label: string; value: string }>
   extraBody?: string
+  htmlBlock?: string
 }
 
 export const LuxuryEmail: React.FC<LuxuryEmailProps> = ({
@@ -34,6 +35,7 @@ export const LuxuryEmail: React.FC<LuxuryEmailProps> = ({
   logoUrl,
   details,
   extraBody,
+  htmlBlock,
 }) => {
   const accent = accentColor || '#c9a861'
   return (
@@ -83,6 +85,7 @@ export const LuxuryEmail: React.FC<LuxuryEmailProps> = ({
             )}
 
             {extraBody && <Text style={text}>{extraBody}</Text>}
+            {htmlBlock && <div dangerouslySetInnerHTML={{ __html: htmlBlock }} />}
 
             <Hr style={hr} />
             {footerText && <Text style={footer}>{footerText}</Text>}
