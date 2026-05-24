@@ -78,7 +78,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const body: AdminNotificationRequest = await req.json();
-    const { type, userEmail, userName, details, className, classDate, classTime, trainerName, planName, sessions, price } = body;
+    const { type, userEmail, userName, details, className, classDate, classTime, trainerName, planName, sessions, price, bookedByAdmin } = body;
 
     if (!type || !userEmail || !userName) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
