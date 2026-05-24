@@ -83,18 +83,29 @@ const DeletedMembers = () => {
     setBusyId(member.id);
     try {
       await requireAuth(async () => {
-        const { error } = await supabase.from("members").delete().eq("id", member.id);
+        // Edge function performs full purge: related rows + member + auth user
+        const { data, error } = await supabase.functions.invoke("delete-user", {
+          body: { email: member.email, memberId: member.id },
+        });
         if (error) throw error;
 
-        // Best-effort: delete the auth user too
-        try {
-          await supabase.functions.invoke("delete-user", { body: { email: member.email } });
-        } catch (e) {
-          console.warn("Auth user deletion failed (record already removed):", e);
+        // Safety net: if the edge function couldn't remove the member row, try directly
+        const { data: stillThere } = await supabase
+          .from("members")
+          .select("id")
+          .eq("id", member.id)
+          .maybeSingle();
+        if (stillThere) {
+          const { error: delErr } = await supabase.from("members").delete().eq("id", member.id);
+          if (delErr) throw delErr;
         }
 
         setMembers((prev) => prev.filter((m) => m.id !== member.id));
-        toast({ title: "Member permanently deleted" });
+        toast({
+          title: "Member permanently deleted",
+          description: "All related records and the login account were removed.",
+        });
+        console.log("purge result", data);
       });
     } catch (err: any) {
       toast({ title: "Failed to delete permanently", description: err.message, variant: "destructive" });
@@ -102,6 +113,7 @@ const DeletedMembers = () => {
       setBusyId(null);
     }
   };
+
 
   const filtered = members.filter(
     (m) =>
