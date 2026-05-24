@@ -219,8 +219,11 @@ export default function NotificationsAdmin() {
       if (l.status === "sent") {
         card.stats.sent += 1;
         if (!card.lastSentAt || l.created_at > card.lastSentAt) card.lastSentAt = l.created_at;
-      } else if (l.status === "failed") card.stats.failed += 1;
-      else if (l.status === "suppressed") card.stats.suppressed += 1;
+      } else if (l.status === "failed" || l.status === "dlq" || l.status === "bounced") {
+        card.stats.failed += 1;
+      } else if (l.status === "suppressed" || l.status === "complained") {
+        card.stats.suppressed += 1;
+      }
     });
 
     // Mark admin emails
