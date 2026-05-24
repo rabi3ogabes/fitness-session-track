@@ -69,11 +69,17 @@ const RANGES = [
 const ADMIN_EMAILS = new Set(["admin@gym.com", "trainer@gym.com"]);
 
 const statusBadge = (s: string) => {
-  if (s === "sent") return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  if (s === "failed") return "bg-red-50 text-red-700 border-red-200";
-  if (s === "suppressed") return "bg-amber-50 text-amber-700 border-amber-200";
+  if (s === "sent" || s === "delivered") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (s === "failed" || s === "dlq" || s === "bounced") return "bg-red-50 text-red-700 border-red-200";
+  if (s === "suppressed" || s === "complained") return "bg-amber-50 text-amber-700 border-amber-200";
   if (s === "pending") return "bg-sky-50 text-sky-700 border-sky-200";
   return "bg-muted text-foreground border-border";
+};
+
+const statusLabel = (s: string) => {
+  if (s === "sent") return "delivered";
+  if (s === "dlq") return "failed";
+  return s;
 };
 
 const initials = (name: string | null | undefined, email: string) => {
@@ -97,12 +103,15 @@ export default function NotificationsAdmin() {
     const hours = RANGES.find((r) => r.id === range)?.hours ?? 168;
     const since = new Date(Date.now() - hours * 3600 * 1000).toISOString();
     const [logsRes, membersRes, prefsRes, profilesRes] = await Promise.all([
+      // Pull from email_send_log (true source of delivery status).
+      // A single email writes multiple rows (pending → sent/failed/dlq/bounced/...).
+      // We dedupe client-side by message_id, keeping the latest.
       supabase
-        .from("notification_logs")
-        .select("*")
+        .from("email_send_log")
+        .select("id,message_id,template_name,recipient_email,status,error_message,created_at,metadata")
         .gte("created_at", since)
         .order("created_at", { ascending: false })
-        .limit(2000),
+        .limit(3000),
       supabase
         .from("members")
         .select("id,name,email,phone,membership,status")
@@ -110,7 +119,28 @@ export default function NotificationsAdmin() {
       supabase.from("notification_settings").select("*"),
       supabase.from("profiles").select("id,email,name"),
     ]);
-    if (logsRes.data) setLogs(logsRes.data as LogRow[]);
+
+    if (logsRes.data) {
+      const seen = new Set<string>();
+      const deduped: LogRow[] = [];
+      for (const r of logsRes.data as any[]) {
+        const key = r.message_id || r.id;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push({
+          id: r.id,
+          notification_type: r.template_name,
+          recipient_email: r.recipient_email,
+          user_name: null,
+          user_email: r.recipient_email,
+          subject: r.template_name,
+          status: r.status,
+          error_message: r.error_message,
+          created_at: r.created_at,
+        });
+      }
+      setLogs(deduped);
+    }
     if (membersRes.data) setMembers(membersRes.data as any);
     if (prefsRes.data) setPrefs(prefsRes.data as any);
     if (profilesRes.data) setProfiles(profilesRes.data as any);
@@ -189,8 +219,11 @@ export default function NotificationsAdmin() {
       if (l.status === "sent") {
         card.stats.sent += 1;
         if (!card.lastSentAt || l.created_at > card.lastSentAt) card.lastSentAt = l.created_at;
-      } else if (l.status === "failed") card.stats.failed += 1;
-      else if (l.status === "suppressed") card.stats.suppressed += 1;
+      } else if (l.status === "failed" || l.status === "dlq" || l.status === "bounced") {
+        card.stats.failed += 1;
+      } else if (l.status === "suppressed" || l.status === "complained") {
+        card.stats.suppressed += 1;
+      }
     });
 
     // Mark admin emails
@@ -245,8 +278,8 @@ export default function NotificationsAdmin() {
     logs.forEach((l) => {
       total++;
       if (l.status === "sent") sent++;
-      else if (l.status === "failed") failed++;
-      else if (l.status === "suppressed") suppressed++;
+      else if (l.status === "failed" || l.status === "dlq" || l.status === "bounced") failed++;
+      else if (l.status === "suppressed" || l.status === "complained") suppressed++;
     });
     return { total, sent, failed, suppressed };
   }, [logs]);
@@ -541,7 +574,7 @@ function LogLine({ log }: { log: LogRow }) {
   return (
     <li className="flex items-start gap-2 text-sm">
       <Badge variant="outline" className={`${statusBadge(log.status)} text-[10px] mt-0.5 shrink-0`}>
-        {log.status}
+        {statusLabel(log.status)}
       </Badge>
       <div className="min-w-0 flex-1">
         <div className="truncate text-xs font-medium">{log.subject || log.notification_type}</div>
