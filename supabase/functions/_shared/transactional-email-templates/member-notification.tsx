@@ -19,6 +19,7 @@ interface Props {
   footerText?: string; accentColor?: string
 }
 
+
 const defaults = (t?: string, name?: string) => {
   const greet = name ? `Hi ${name},` : 'Hello,'
   switch (t) {
