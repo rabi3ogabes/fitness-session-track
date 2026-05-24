@@ -45,7 +45,8 @@ const defaults = (t?: string, name?: string, bookedByAdmin?: boolean) => {
 
 
 const MemberNotificationEmail = (p: Props) => {
-  const d = defaults(p.eventType, p.memberName)
+  const d = defaults(p.eventType, p.memberName, p.bookedByAdmin)
+
   const detailsArr: { label: string; value: string }[] = []
   if (p.className) detailsArr.push({ label: 'Class', value: p.className })
   if (p.classDate) detailsArr.push({ label: 'Date', value: p.classDate })
