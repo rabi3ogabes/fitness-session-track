@@ -103,12 +103,15 @@ export default function NotificationsAdmin() {
     const hours = RANGES.find((r) => r.id === range)?.hours ?? 168;
     const since = new Date(Date.now() - hours * 3600 * 1000).toISOString();
     const [logsRes, membersRes, prefsRes, profilesRes] = await Promise.all([
+      // Pull from email_send_log (true source of delivery status).
+      // A single email writes multiple rows (pending → sent/failed/dlq/bounced/...).
+      // We dedupe client-side by message_id, keeping the latest.
       supabase
-        .from("notification_logs")
-        .select("*")
+        .from("email_send_log")
+        .select("id,message_id,template_name,recipient_email,status,error_message,created_at,metadata")
         .gte("created_at", since)
         .order("created_at", { ascending: false })
-        .limit(2000),
+        .limit(3000),
       supabase
         .from("members")
         .select("id,name,email,phone,membership,status")
@@ -116,7 +119,28 @@ export default function NotificationsAdmin() {
       supabase.from("notification_settings").select("*"),
       supabase.from("profiles").select("id,email,name"),
     ]);
-    if (logsRes.data) setLogs(logsRes.data as LogRow[]);
+
+    if (logsRes.data) {
+      const seen = new Set<string>();
+      const deduped: LogRow[] = [];
+      for (const r of logsRes.data as any[]) {
+        const key = r.message_id || r.id;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push({
+          id: r.id,
+          notification_type: r.template_name,
+          recipient_email: r.recipient_email,
+          user_name: null,
+          user_email: r.recipient_email,
+          subject: r.template_name,
+          status: r.status,
+          error_message: r.error_message,
+          created_at: r.created_at,
+        });
+      }
+      setLogs(deduped);
+    }
     if (membersRes.data) setMembers(membersRes.data as any);
     if (prefsRes.data) setPrefs(prefsRes.data as any);
     if (profilesRes.data) setProfiles(profilesRes.data as any);
