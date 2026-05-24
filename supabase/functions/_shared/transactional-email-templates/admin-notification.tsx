@@ -53,7 +53,8 @@ const AdminNotificationEmail = (p: Props) => {
       intro={p.intro || 'A new event has occurred on your platform.'}
       body={p.body || (p.summary || 'See details below and take action from the admin dashboard.')}
       details={detailsArr.length ? detailsArr : undefined}
-      extraBody={extra || undefined}
+      extraBody={p.details}
+      htmlBlock={phoneHtml || undefined}
       footerText={p.footerText || '— FHB Fit admin notifications'}
       accentColor={p.accentColor}
     />
