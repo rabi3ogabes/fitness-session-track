@@ -563,6 +563,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
 
+      // Pre-check: does a member with this email already exist?
+      const normalizedEmail = email.trim().toLowerCase();
+      const { data: existingMember } = await supabase
+        .from("members")
+        .select("id")
+        .ilike("email", normalizedEmail)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (existingMember) {
+        logActivity("signup_failed", { details: { email, name, reason: "already_registered" } });
+        const msg = "An account with this email already exists. Please sign in instead.";
+        toast({ title: "Email already registered", description: msg, variant: "destructive" });
+        throw new Error(msg);
+      }
+
       // Register new user
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -576,15 +592,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
       });
 
-      // Handle user already exists case
-      if (error && error.message?.includes("User already registered")) {
+      // Handle user already exists case (Supabase auth-level check)
+      if (
+        error &&
+        (error.message?.toLowerCase().includes("already registered") ||
+          error.message?.toLowerCase().includes("already exists") ||
+          (error as any).code === "user_already_exists")
+      ) {
         logActivity("signup_failed", { details: { email, name, reason: "already_registered" } });
-        console.log("User already exists:", email);
-        throw error;
+        const msg = "An account with this email already exists. Please sign in instead.";
+        toast({ title: "Email already registered", description: msg, variant: "destructive" });
+        throw new Error(msg);
       }
 
-
       if (error) throw error;
+
 
       if (data.user) {
         // Create profile for the user
