@@ -16,6 +16,7 @@ interface RecentBooking {
   end_time: string;
   member_balance: number;
   member_gender?: string;
+  count_credit?: boolean;
   status: string;
 }
 
