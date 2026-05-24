@@ -740,7 +740,22 @@ const ClassCalendar = () => {
       // Refresh user data to update session balance
       await fetchUserData();
 
-      // Cancellation completed successfully
+      // Send cancellation notification (admin + member email)
+      try {
+        await supabase.functions.invoke('send-admin-notification', {
+          body: {
+            type: 'cancellation',
+            userName: (user as any)?.user_metadata?.name || user.email,
+            userEmail: user.email,
+            className,
+            classDate: format(new Date(classToCancel.schedule), 'MMM d, yyyy'),
+            classTime,
+            trainerName: classToCancel.trainer || 'TBD',
+          },
+        });
+      } catch (notifErr) {
+        console.error('Failed to send cancellation notification:', notifErr);
+      }
 
       toast({
         title: "Class cancelled",
