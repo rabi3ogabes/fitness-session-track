@@ -10,11 +10,17 @@ interface Props {
   memberEmail?: string
   memberPhone?: string
   details?: string
+  bookedByAdmin?: boolean
+  className?: string
+  classDate?: string
+  classTime?: string
+  trainerName?: string
   siteName?: string
   logoUrl?: string | null
   preheader?: string; heading?: string; intro?: string; body?: string
   footerText?: string; accentColor?: string
 }
+
 
 // Build wa.me URL: digits only, no leading +/0/spaces
 const waUrl = (phone: string) => {
