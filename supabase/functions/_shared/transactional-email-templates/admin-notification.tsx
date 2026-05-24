@@ -10,11 +10,17 @@ interface Props {
   memberEmail?: string
   memberPhone?: string
   details?: string
+  bookedByAdmin?: boolean
+  className?: string
+  classDate?: string
+  classTime?: string
+  trainerName?: string
   siteName?: string
   logoUrl?: string | null
   preheader?: string; heading?: string; intro?: string; body?: string
   footerText?: string; accentColor?: string
 }
+
 
 // Build wa.me URL: digits only, no leading +/0/spaces
 const waUrl = (phone: string) => {
@@ -24,9 +30,14 @@ const waUrl = (phone: string) => {
 
 const AdminNotificationEmail = (p: Props) => {
   const detailsArr: { label: string; value: string }[] = []
-  if (p.eventType) detailsArr.push({ label: 'Event', value: p.eventType })
+  if (p.eventType) detailsArr.push({ label: 'Event', value: p.bookedByAdmin && p.eventType === 'booking' ? 'Booking (created by admin)' : p.eventType })
   if (p.memberName) detailsArr.push({ label: 'Member', value: p.memberName })
   if (p.memberEmail) detailsArr.push({ label: 'Email', value: p.memberEmail })
+  if (p.className) detailsArr.push({ label: 'Class', value: p.className })
+  if (p.classDate) detailsArr.push({ label: 'Date', value: p.classDate })
+  if (p.classTime) detailsArr.push({ label: 'Time', value: p.classTime })
+  if (p.trainerName) detailsArr.push({ label: 'Trainer', value: p.trainerName })
+
 
   const wa = p.memberPhone ? waUrl(p.memberPhone) : ''
   // Render the phone as a clickable WhatsApp link via raw HTML in extraBody

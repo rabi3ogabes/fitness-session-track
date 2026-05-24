@@ -19,7 +19,9 @@ interface AdminNotificationRequest {
   planName?: string;
   sessions?: number;
   price?: number;
+  bookedByAdmin?: boolean;
 }
+
 
 const adminLabel = (t: string) => ({
   signup: 'New member signup',
@@ -76,7 +78,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const body: AdminNotificationRequest = await req.json();
-    const { type, userEmail, userName, details, className, classDate, classTime, trainerName, planName, sessions, price } = body;
+    const { type, userEmail, userName, details, className, classDate, classTime, trainerName, planName, sessions, price, bookedByAdmin } = body;
 
     if (!type || !userEmail || !userName) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -130,7 +132,9 @@ const handler = async (req: Request): Promise<Response> => {
     const templateData = {
       eventType: type, memberName: userName, memberEmail: userEmail, memberPhone,
       details, className, classDate, classTime, trainerName, planName, sessions, price,
+      bookedByAdmin: !!bookedByAdmin,
     };
+
 
     // ----- Admin alert -----
     if (adminEnabled && adminEmail) {
