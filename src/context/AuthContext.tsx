@@ -596,21 +596,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           gender: gender || null,
         });
 
-        // Also add to members table for admin view
-        const formattedBirthday = dob || null;
+        // Member row is created automatically by the handle_new_user DB trigger.
+        // Do NOT insert here — it causes duplicate member rows (race with trigger).
 
-        await supabase.from("members").insert({
-          name: name,
-          email: email,
-          phone: phone || "",
-          birthday: formattedBirthday,
-          membership: "null",
-          sessions: 0,
-          remaining_sessions: 0,
-          status: "Active",
-          gender: gender || "Not specified",
-          count_credit: countCredit ?? false,
-        });
       }
 
       logActivity("signup", { details: { email, name, phone } });
