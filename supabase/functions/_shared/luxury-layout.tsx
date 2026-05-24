@@ -85,6 +85,7 @@ export const LuxuryEmail: React.FC<LuxuryEmailProps> = ({
             )}
 
             {extraBody && <Text style={text}>{extraBody}</Text>}
+            {htmlBlock && <div dangerouslySetInnerHTML={{ __html: htmlBlock }} />}
 
             <Hr style={hr} />
             {footerText && <Text style={footer}>{footerText}</Text>}
