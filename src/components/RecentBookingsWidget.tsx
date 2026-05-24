@@ -123,6 +123,7 @@ const RecentBookingsWidget = () => {
                 memberName = memberData.name || memberName;
                 memberBalance = memberData.remaining_sessions || 0;
                 memberGender = memberData.gender;
+                memberCountCredit = memberData.count_credit;
               }
             } else if (booking.user_name && booking.user_name !== "Unknown User") {
               // Try to find member by searching their email or name patterns
@@ -137,6 +138,7 @@ const RecentBookingsWidget = () => {
                 memberName = memberByEmail.name || memberName;
                 memberBalance = memberByEmail.remaining_sessions || 0;
                 memberGender = memberByEmail.gender;
+                memberCountCredit = memberByEmail.count_credit;
               } else {
                 // Fallback: search by name pattern (handle reversed names, etc.)
                 const searchTerm = booking.user_name.replace(/[._]/g, ' ').trim();
@@ -150,6 +152,7 @@ const RecentBookingsWidget = () => {
                   memberName = memberByName.name || memberName;
                   memberBalance = memberByName.remaining_sessions || 0;
                   memberGender = memberByName.gender;
+                  memberCountCredit = memberByName.count_credit;
                 }
               }
             }
