@@ -16,6 +16,7 @@ interface RecentBooking {
   end_time: string;
   member_balance: number;
   member_gender?: string;
+  count_credit?: boolean;
   status: string;
 }
 
@@ -82,6 +83,7 @@ const RecentBookingsWidget = () => {
           (bookingsData || []).map(async (booking) => {
             let memberBalance = 0;
             let memberGender = undefined;
+            let memberCountCredit: boolean | undefined = undefined;
             let memberName = "Unknown Member";
             let classDetails = {
               name: "Unknown Class",
@@ -113,7 +115,7 @@ const RecentBookingsWidget = () => {
               // Direct member lookup by ID
               const { data: memberData } = await supabase
                 .from("members")
-                .select("name, remaining_sessions, gender, email")
+                .select("name, remaining_sessions, gender, email, count_credit")
                 .eq("id", booking.member_id)
                 .maybeSingle();
               
@@ -121,13 +123,14 @@ const RecentBookingsWidget = () => {
                 memberName = memberData.name || memberName;
                 memberBalance = memberData.remaining_sessions || 0;
                 memberGender = memberData.gender;
+                memberCountCredit = memberData.count_credit;
               }
             } else if (booking.user_name && booking.user_name !== "Unknown User") {
               // Try to find member by searching their email or name patterns
               // First try exact email match using the username as email prefix
               const { data: memberByEmail } = await supabase
                 .from("members")
-                .select("name, remaining_sessions, gender")
+                .select("name, remaining_sessions, gender, count_credit")
                 .ilike("email", `${booking.user_name}%`)
                 .maybeSingle();
               
@@ -135,12 +138,13 @@ const RecentBookingsWidget = () => {
                 memberName = memberByEmail.name || memberName;
                 memberBalance = memberByEmail.remaining_sessions || 0;
                 memberGender = memberByEmail.gender;
+                memberCountCredit = memberByEmail.count_credit;
               } else {
                 // Fallback: search by name pattern (handle reversed names, etc.)
                 const searchTerm = booking.user_name.replace(/[._]/g, ' ').trim();
                 const { data: memberByName } = await supabase
                   .from("members")
-                  .select("name, remaining_sessions, gender")
+                  .select("name, remaining_sessions, gender, count_credit")
                   .or(`name.ilike.%${searchTerm}%,name.ilike.%${searchTerm.split(' ').reverse().join(' ')}%`)
                   .maybeSingle();
                 
@@ -148,6 +152,7 @@ const RecentBookingsWidget = () => {
                   memberName = memberByName.name || memberName;
                   memberBalance = memberByName.remaining_sessions || 0;
                   memberGender = memberByName.gender;
+                  memberCountCredit = memberByName.count_credit;
                 }
               }
             }
@@ -162,6 +167,7 @@ const RecentBookingsWidget = () => {
               end_time: classDetails.end_time,
               member_balance: memberBalance,
               member_gender: memberGender,
+              count_credit: memberCountCredit,
               status: booking.status, // Add status to track booking state
             };
           })
@@ -286,6 +292,7 @@ const RecentBookingsWidget = () => {
             (bookingsData || []).map(async (booking) => {
               let memberBalance = 0;
               let memberGender = undefined;
+              let memberCountCredit: boolean | undefined = undefined;
               let memberName = "Unknown Member";
               let classDetails = {
                 name: "Unknown Class",
@@ -316,7 +323,7 @@ const RecentBookingsWidget = () => {
               if (booking.member_id) {
                 const { data: memberData } = await supabase
                   .from("members")
-                  .select("name, remaining_sessions, gender")
+                  .select("name, remaining_sessions, gender, count_credit")
                   .eq("id", booking.member_id)
                   .maybeSingle();
                 
@@ -324,12 +331,13 @@ const RecentBookingsWidget = () => {
                   memberName = memberData.name || memberName;
                   memberBalance = memberData.remaining_sessions || 0;
                   memberGender = memberData.gender;
+                  memberCountCredit = memberData.count_credit;
                 }
               } else if (booking.user_name && booking.user_name !== "Unknown User") {
                 // Try to find member by email pattern match
                 const { data: memberByEmail } = await supabase
                   .from("members")
-                  .select("name, remaining_sessions, gender")
+                  .select("name, remaining_sessions, gender, count_credit")
                   .ilike("email", `${booking.user_name}%`)
                   .maybeSingle();
                 
@@ -337,12 +345,13 @@ const RecentBookingsWidget = () => {
                   memberName = memberByEmail.name || memberName;
                   memberBalance = memberByEmail.remaining_sessions || 0;
                   memberGender = memberByEmail.gender;
+                  memberCountCredit = memberByEmail.count_credit;
                 } else {
                   // Fallback: search by name pattern
                   const searchTerm = booking.user_name.replace(/[._]/g, ' ').trim();
                   const { data: memberByName } = await supabase
                     .from("members")
-                    .select("name, remaining_sessions, gender")
+                    .select("name, remaining_sessions, gender, count_credit")
                     .or(`name.ilike.%${searchTerm}%,name.ilike.%${searchTerm.split(' ').reverse().join(' ')}%`)
                     .maybeSingle();
                   
@@ -350,6 +359,7 @@ const RecentBookingsWidget = () => {
                     memberName = memberByName.name || memberName;
                     memberBalance = memberByName.remaining_sessions || 0;
                     memberGender = memberByName.gender;
+                    memberCountCredit = memberByName.count_credit;
                   }
                 }
               }
@@ -364,6 +374,7 @@ const RecentBookingsWidget = () => {
                 end_time: classDetails.end_time,
                 member_balance: memberBalance,
                 member_gender: memberGender,
+                count_credit: memberCountCredit,
                 status: booking.status,
               };
             })
@@ -433,9 +444,13 @@ const RecentBookingsWidget = () => {
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <div className="text-xs text-gray-500">Sessions Left</div>
-                    <div className={`font-semibold ${booking.member_balance <= 2 ? 'text-red-600' : 'text-green-600'}`}>
-                      {booking.member_balance}
-                    </div>
+                    {booking.count_credit === false ? (
+                      <div className="font-semibold text-gray-500">Count Off</div>
+                    ) : (
+                      <div className={`font-semibold ${booking.member_balance <= 2 ? 'text-red-600' : 'text-green-600'}`}>
+                        {booking.member_balance}
+                      </div>
+                    )}
                   </div>
                   {showDeleteIcons && (
                     <button
