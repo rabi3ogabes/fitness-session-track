@@ -444,9 +444,13 @@ const RecentBookingsWidget = () => {
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <div className="text-xs text-gray-500">Sessions Left</div>
-                    <div className={`font-semibold ${booking.member_balance <= 2 ? 'text-red-600' : 'text-green-600'}`}>
-                      {booking.member_balance}
-                    </div>
+                    {booking.count_credit === false ? (
+                      <div className="font-semibold text-gray-500">Count Off</div>
+                    ) : (
+                      <div className={`font-semibold ${booking.member_balance <= 2 ? 'text-red-600' : 'text-green-600'}`}>
+                        {booking.member_balance}
+                      </div>
+                    )}
                   </div>
                   {showDeleteIcons && (
                     <button
