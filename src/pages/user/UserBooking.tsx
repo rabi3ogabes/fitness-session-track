@@ -149,6 +149,23 @@ const UserBooking = () => {
         remainingSessions: bookings.remainingSessions + 1,
       });
 
+      // Send cancellation notification (admin + member email)
+      try {
+        await supabase.functions.invoke('send-admin-notification', {
+          body: {
+            type: 'cancellation',
+            userName: (user as any)?.user_metadata?.name || user.email,
+            userEmail: user.email,
+            className: booking.className,
+            classDate: booking.date,
+            classTime: booking.time,
+            trainerName: booking.trainer || 'TBD',
+          },
+        });
+      } catch (notifErr) {
+        console.error('Failed to send cancellation notification:', notifErr);
+      }
+
       toast({
         title: "Booking cancelled",
         description: "Your booking has been successfully cancelled.",
