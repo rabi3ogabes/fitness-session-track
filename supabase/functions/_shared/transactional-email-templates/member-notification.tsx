@@ -6,6 +6,7 @@ import type { TemplateEntry } from './registry.ts'
 interface Props {
   eventType?: string
   memberName?: string
+  memberPhone?: string
   className?: string
   classDate?: string
   classTime?: string
@@ -19,6 +20,10 @@ interface Props {
   footerText?: string; accentColor?: string
 }
 
+const waUrl = (phone: string) => {
+  const digits = (phone || '').replace(/[^\d]/g, '').replace(/^0+/, '')
+  return digits ? `https://wa.me/${digits}` : ''
+}
 
 const defaults = (t?: string, name?: string) => {
   const greet = name ? `Hi ${name},` : 'Hello,'
@@ -40,16 +45,29 @@ const MemberNotificationEmail = (p: Props) => {
   if (p.trainerName) detailsArr.push({ label: 'Trainer', value: p.trainerName })
   if (typeof p.sessions === 'number') detailsArr.push({ label: 'Sessions', value: String(p.sessions) })
 
+  const wa = p.memberPhone ? waUrl(p.memberPhone) : ''
+  const phoneHtml = p.memberPhone
+    ? `<p style="margin:8px 0;font:14px/1.6 -apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a1a">
+         <strong>Phone:</strong>
+         ${wa
+           ? `<a href="${wa}" target="_blank" rel="noopener" style="color:#25D366;text-decoration:underline;font-weight:600">${p.memberPhone}</a>
+              <span style="color:#666"> &nbsp;·&nbsp; </span>
+              <a href="${wa}" target="_blank" rel="noopener" style="display:inline-block;background:#25D366;color:#fff;text-decoration:none;padding:6px 12px;border-radius:6px;font-weight:600">Chat on WhatsApp</a>`
+           : `<span>${p.memberPhone}</span>`}
+       </p>`
+    : ''
+
   return (
     <LuxuryEmail
       siteName={p.siteName}
-    logoUrl={p.logoUrl}
+      logoUrl={p.logoUrl}
       preheader={p.preheader || d.heading}
       heading={p.heading || d.heading}
       intro={p.intro || d.intro}
       body={p.body || d.body}
       details={detailsArr.length ? detailsArr : undefined}
       extraBody={p.details}
+      htmlBlock={phoneHtml || undefined}
       footerText={p.footerText || '— The FHB Fit team'}
       accentColor={p.accentColor}
     />
