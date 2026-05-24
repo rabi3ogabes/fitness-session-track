@@ -132,7 +132,9 @@ const handler = async (req: Request): Promise<Response> => {
     const templateData = {
       eventType: type, memberName: userName, memberEmail: userEmail, memberPhone,
       details, className, classDate, classTime, trainerName, planName, sessions, price,
+      bookedByAdmin: !!bookedByAdmin,
     };
+
 
     // ----- Admin alert -----
     if (adminEnabled && adminEmail) {
