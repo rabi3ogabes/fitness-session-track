@@ -67,7 +67,9 @@ const RecentBookingsWidget = () => {
             member_id,
             class_id,
             user_id,
-            status
+            status,
+            booked_by_role,
+            booked_by_name
           `)
           .in("status", ["confirmed", "cancelled"])
           .order("booking_date", { ascending: false })
