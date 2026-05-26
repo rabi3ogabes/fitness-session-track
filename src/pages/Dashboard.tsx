@@ -64,7 +64,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { unbookedClasses } = useComingClass();
   const [sessionsRemaining, setSessionsRemaining] = useState<number | string>(0);
-  const [countCredit, setCountCredit] = useState<boolean>(true);
+  const [countCredit, setCountCredit] = useState<boolean>(false);
   
   // Calculate upcoming classes for next 7 days
   const upcomingClassesNext7Days = unbookedClasses.filter(cls => {
