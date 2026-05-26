@@ -148,18 +148,18 @@ interface UserData {
   email?: string;
 }
 
-// System settings - get from localStorage with fallback
-const getSystemSettings = () => {
-  const saved = localStorage.getItem('systemSettings');
-  if (saved) {
-    return JSON.parse(saved);
-  }
-  return {
-    cancellationTimeLimit: 4, // hours before class starts
-  };
+// Qatar is UTC+3 year-round (no DST). Compare class start to "now" in Qatar wall-clock.
+const QATAR_OFFSET_HOURS = 3;
+
+const qatarClassStartMs = (schedule: string, startTime?: string | null): number => {
+  // schedule may be "YYYY-MM-DD" or a full ISO string. Take the date portion only.
+  const datePart = (schedule || "").slice(0, 10);
+  const [y, mo, d] = datePart.split("-").map(Number);
+  const [h, m] = (startTime || "00:00").split(":").map(Number);
+  // Wall-clock h:m in Qatar (UTC+3) → UTC epoch
+  return Date.UTC(y, (mo || 1) - 1, d || 1, (h || 0) - QATAR_OFFSET_HOURS, m || 0, 0);
 };
 
-const systemSettings = getSystemSettings();
 
 const ClassCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -180,6 +180,36 @@ const ClassCalendar = () => {
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   const [isNetworkConnected, setIsNetworkConnected] = useState(navigator.onLine);
+  const [cancellationHours, setCancellationHours] = useState<number>(4);
+
+  // Load the admin-configured cancellation window from admin_settings
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from('admin_settings')
+        .select('cancellation_hours')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (active && data?.cancellation_hours != null) {
+        setCancellationHours(Number(data.cancellation_hours));
+      }
+    })();
+
+    const channel = supabase
+      .channel('cancellation-hours-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_settings' }, (payload: any) => {
+        const v = payload?.new?.cancellation_hours;
+        if (v != null) setCancellationHours(Number(v));
+      })
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const { toast } = useToast();
   const { user } = useAuth();
@@ -726,20 +756,14 @@ const ClassCalendar = () => {
         return;
       }
 
-      // Check cancellation window
-      const classHour = parseInt(classTime.split(":")[0]);
-      const classMinute = parseInt(classTime.split(":")[1] || "0");
-      const now = new Date();
-      const classDate = new Date(classToCancel.schedule);
-      classDate.setHours(classHour, classMinute, 0, 0);
+      // Check cancellation window (uses admin-configured hours, Qatar time)
+      const classStartMs = qatarClassStartMs(classToCancel.schedule, classTime);
+      const hoursDifference = (classStartMs - Date.now()) / (1000 * 60 * 60);
 
-      const hoursDifference = (classDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-      // Users can only cancel classes that are 4+ hours in the future
-      if (hoursDifference < systemSettings.cancellationTimeLimit) {
+      if (hoursDifference < cancellationHours) {
         toast({
           title: "Cannot cancel class",
-          description: `You can only cancel classes ${systemSettings.cancellationTimeLimit} hours or more before they start.`,
+          description: `You can only cancel classes ${cancellationHours} hours or more before they start.`,
           variant: "destructive",
         });
         return;
@@ -1158,15 +1182,9 @@ const ClassCalendar = () => {
                   {myBookedClasses.slice(0, 3).map((cls) => {
                     const isPast = isClassInPast(new Date(cls.schedule), cls.start_time);
                     const canCancel = cls.start_time && (() => {
-                      const classHour = parseInt(cls.start_time.split(":")[0]);
-                      const classMinute = parseInt(cls.start_time.split(":")[1] || "0");
-                      const now = new Date();
-                      const classDate = new Date(cls.schedule);
-                      classDate.setHours(classHour, classMinute, 0, 0);
-                      const hoursDifference = (classDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-                      
-                      // Users can only cancel classes that are 4+ hours in the future
-                      return hoursDifference >= systemSettings.cancellationTimeLimit;
+                      const classStartMs = qatarClassStartMs(cls.schedule, cls.start_time);
+                      const hoursDifference = (classStartMs - Date.now()) / (1000 * 60 * 60);
+                      return hoursDifference >= cancellationHours;
                     })();
 
                     return (
