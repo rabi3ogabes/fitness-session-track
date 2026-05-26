@@ -142,6 +142,7 @@ const AppContent = () => {
     <BrowserRouter>
       <ActivityTracker />
       <GlobalClickTracker />
+      <AdminBookingNotifier />
       <Routes>
         <Route path="/" element={<TrainerHomeRedirect />} />
         <Route path="/login" element={<Login />} />
