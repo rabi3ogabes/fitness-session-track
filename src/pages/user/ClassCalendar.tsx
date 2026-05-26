@@ -180,6 +180,36 @@ const ClassCalendar = () => {
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
   const [isNetworkConnected, setIsNetworkConnected] = useState(navigator.onLine);
+  const [cancellationHours, setCancellationHours] = useState<number>(4);
+
+  // Load the admin-configured cancellation window from admin_settings
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from('admin_settings')
+        .select('cancellation_hours')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (active && data?.cancellation_hours != null) {
+        setCancellationHours(Number(data.cancellation_hours));
+      }
+    })();
+
+    const channel = supabase
+      .channel('cancellation-hours-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_settings' }, (payload: any) => {
+        const v = payload?.new?.cancellation_hours;
+        if (v != null) setCancellationHours(Number(v));
+      })
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const { toast } = useToast();
   const { user } = useAuth();
