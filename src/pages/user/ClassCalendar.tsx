@@ -332,59 +332,37 @@ const ClassCalendar = () => {
 
         if (data) {
           // Fetch real enrollment count for each class
-          const classesWithRealEnrollment = await Promise.all(
-            data.map(async (cls: ClassModel) => {
-              try {
-                const { data: bookings, error: bookingError } = await supabase
-                  .from("bookings")
-                  .select("id")
-                  .eq("class_id", cls.id)
-                  .eq("status", "confirmed");
-
-                if (bookingError) {
-                  console.error("Error fetching bookings for class", cls.id, bookingError);
-                  return { ...cls, enrolled: 0 };
-                }
-
-                const realEnrolled = bookings?.length || 0;
-                console.log(`Class ${cls.id} (${cls.name}): DB enrolled=${cls.enrolled}, Real enrolled=${realEnrolled}`);
-                
-                // Transform and add type property based on class name
-                let type = "default";
-                const name = cls.name.toLowerCase().trim();
-                
-                console.log('Processing class:', cls.name, 'normalized:', name, 'real enrolled:', realEnrolled);
-
-                if (name.includes("upper body") || name.includes("upper-body") || name === "upper body") {
-                  type = "upper body";
-                } else if (name.includes("lower body") || name.includes("lower-body") || name === "lower body") {
-                  type = "lower body";
-                } else if (name.includes("bands") || name.includes("band") || name === "bands") {
-                  type = "bands";
-                } else if (name.includes("yoga") || name.includes("pilates")) {
-                  type = "yoga";
-                } else if (name.includes("boxing") || name.includes("mma") || name.includes("martial")) {
-                  type = "combat";
-                } else if (name.includes("zumba") || name.includes("dance")) {
-                  type = "dance";
-                } else if (name.includes("workout") || name.includes("training") || name.includes("hiit") || name.includes("cardio") || name.includes("strength")) {
-                  type = "workout";
-                }
-                
-                console.log('Assigned type:', type, 'to class:', cls.name);
-
-                return { 
-                  ...cls, 
-                  type, 
-                  isBooked: false, 
-                  enrolled: realEnrolled 
-                };
-              } catch (err) {
-                console.error("Error processing class:", cls.id, err);
-                return { ...cls, type: "default", isBooked: false, enrolled: 0 };
-              }
-            })
+          const classIds = data.map((c: ClassModel) => c.id);
+          const { data: countRows } = await supabase.rpc(
+            "get_class_enrolled_counts",
+            { _class_ids: classIds }
           );
+          const enrolledMap = new Map<number, number>();
+          (countRows || []).forEach((r: any) => {
+            enrolledMap.set(r.class_id, Number(r.enrolled) || 0);
+          });
+
+          const classesWithRealEnrollment = data.map((cls: ClassModel) => {
+            const realEnrolled = enrolledMap.get(cls.id) ?? 0;
+            let type = "default";
+            const name = cls.name.toLowerCase().trim();
+            if (name.includes("upper body") || name.includes("upper-body")) {
+              type = "upper body";
+            } else if (name.includes("lower body") || name.includes("lower-body")) {
+              type = "lower body";
+            } else if (name.includes("bands") || name.includes("band")) {
+              type = "bands";
+            } else if (name.includes("yoga") || name.includes("pilates")) {
+              type = "yoga";
+            } else if (name.includes("boxing") || name.includes("mma") || name.includes("martial")) {
+              type = "combat";
+            } else if (name.includes("zumba") || name.includes("dance")) {
+              type = "dance";
+            } else if (name.includes("workout") || name.includes("training") || name.includes("hiit") || name.includes("cardio") || name.includes("strength")) {
+              type = "workout";
+            }
+            return { ...cls, type, isBooked: false, enrolled: realEnrolled };
+          });
 
           setClasses(classesWithRealEnrollment);
         }
