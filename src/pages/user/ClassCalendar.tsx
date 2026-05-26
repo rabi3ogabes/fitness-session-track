@@ -451,14 +451,12 @@ const ClassCalendar = () => {
     const refreshAllEnrolled = async () => {
       const ids = classes.map((c) => c.id);
       if (ids.length === 0) return;
-      const { data } = await supabase
-        .from("bookings")
-        .select("class_id")
-        .in("class_id", ids)
-        .eq("status", "confirmed");
+      const { data } = await supabase.rpc("get_class_enrolled_counts", {
+        _class_ids: ids,
+      });
       const counts = new Map<number, number>();
-      (data || []).forEach((b: any) => {
-        counts.set(b.class_id, (counts.get(b.class_id) || 0) + 1);
+      (data || []).forEach((r: any) => {
+        counts.set(r.class_id, Number(r.enrolled) || 0);
       });
       setClasses((prev) =>
         prev.map((c) => ({ ...c, enrolled: counts.get(c.id) ?? 0 }))
