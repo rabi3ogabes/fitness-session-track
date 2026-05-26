@@ -78,6 +78,7 @@ const AdminBookingNotifier = () => {
             capacity: cls.capacity ?? 0,
             bookedAt: b.booking_date || new Date().toISOString(),
           });
+          playNotificationSound();
         }
       )
       .subscribe();
