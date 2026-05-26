@@ -733,15 +733,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       logActivity("logout", { details: { email: user?.email } });
 
-      // Attempt Supabase logout
-      const logoutPromise = supabase.auth.signOut().then(({ error }) => {
-        if (error) throw error;
-        clearLocalState();
-        return;
-      });
+      // Local sign-out first — clears stored session immediately without a network call
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      clearLocalState();
 
-      // Race the logout promise against the timeout
-      await Promise.race([logoutPromise, timeoutPromise]);
+      // Best-effort global sign-out in background (revokes refresh token server-side)
+      supabase.auth.signOut({ scope: 'global' }).catch((e) => {
+        console.warn('Global signOut failed (already logged out locally):', e?.message);
+      });
     } catch (error: any) {
       console.error("Logout error:", error);
 
