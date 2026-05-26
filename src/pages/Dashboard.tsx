@@ -288,7 +288,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          {countCredit && isLowOnSessions && showLowSessionWarning && (
+          {!loadingUserData && countCredit && isLowOnSessions && showLowSessionWarning && (
             <Alert variant="destructive" className="bg-red-50 border-red-200">
               <AlertTitle className="text-red-500">
                 Low Session Count Warning
