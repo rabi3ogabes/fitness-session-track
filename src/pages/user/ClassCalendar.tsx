@@ -446,6 +446,39 @@ const ClassCalendar = () => {
     fetchBookings();
   }, [user, isNetworkConnected]);
 
+  // Realtime: keep enrolled counts for the whole calendar in sync with bookings
+  useEffect(() => {
+    const refreshAllEnrolled = async () => {
+      const ids = classes.map((c) => c.id);
+      if (ids.length === 0) return;
+      const { data } = await supabase
+        .from("bookings")
+        .select("class_id")
+        .in("class_id", ids)
+        .eq("status", "confirmed");
+      const counts = new Map<number, number>();
+      (data || []).forEach((b: any) => {
+        counts.set(b.class_id, (counts.get(b.class_id) || 0) + 1);
+      });
+      setClasses((prev) =>
+        prev.map((c) => ({ ...c, enrolled: counts.get(c.id) ?? 0 }))
+      );
+    };
+
+    const channel = supabase
+      .channel("calendar-bookings-spots-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings" },
+        () => refreshAllEnrolled()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [classes.length]);
+
   // Realtime sync of "spots left" while Book Class dialog is open
   useEffect(() => {
     if (!bookingDialogOpen || !selectedClass?.id) return;

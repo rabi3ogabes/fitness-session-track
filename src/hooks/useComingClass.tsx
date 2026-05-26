@@ -216,14 +216,29 @@ export default function useComingClass() {
       const { data: bookingsData, error: bookingsError } = await supabase
         .from("bookings")
         .select("class_id")
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .eq("status", "confirmed");
       if (bookingsError) throw bookingsError;
 
       const bookedClassIds =
         bookingsData?.map((booking) => booking.class_id) || [];
+
+      // Compute real enrolled counts per class from confirmed bookings
+      const classIds = classesWithType.map((c) => c.id);
+      const { data: allBookings } = await supabase
+        .from("bookings")
+        .select("class_id")
+        .in("class_id", classIds)
+        .eq("status", "confirmed");
+      const enrolledMap = new Map<number, number>();
+      (allBookings || []).forEach((b: any) => {
+        enrolledMap.set(b.class_id, (enrolledMap.get(b.class_id) || 0) + 1);
+      });
+
       setAvailableClasses(
         classesWithType.map((cls) => ({
           ...cls,
+          enrolled: enrolledMap.get(cls.id) ?? 0,
           isBooked: bookedClassIds.includes(cls.id),
         }))
       );
@@ -238,6 +253,26 @@ export default function useComingClass() {
 
   useEffect(() => {
     fetchClasses();
+  }, [fetchClasses]);
+
+  // Realtime: refresh enrolled counts when any booking changes
+  useEffect(() => {
+    const channel = supabase
+      .channel("coming-class-bookings-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings" },
+        () => fetchClasses()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "classes" },
+        () => fetchClasses()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchClasses]);
   return {
     fetchClasses,
