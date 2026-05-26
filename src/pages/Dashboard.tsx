@@ -64,7 +64,7 @@ const Dashboard = () => {
   const { toast } = useToast();
   const { unbookedClasses } = useComingClass();
   const [sessionsRemaining, setSessionsRemaining] = useState<number | string>(0);
-  const [countCredit, setCountCredit] = useState<boolean>(true);
+  const [countCredit, setCountCredit] = useState<boolean>(false);
   
   // Calculate upcoming classes for next 7 days
   const upcomingClassesNext7Days = unbookedClasses.filter(cls => {
@@ -288,7 +288,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          {countCredit && isLowOnSessions && showLowSessionWarning && (
+          {!loadingUserData && countCredit && isLowOnSessions && showLowSessionWarning && (
             <Alert variant="destructive" className="bg-red-50 border-red-200">
               <AlertTitle className="text-red-500">
                 Low Session Count Warning
