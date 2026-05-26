@@ -309,7 +309,7 @@ const Dashboard = () => {
           )}
 
           {/* Session Balance Requests */}
-          <BalanceRequestsWidget />
+          {countCredit && <BalanceRequestsWidget />}
 
           {/* Upcoming Classes */}
           <div className="bg-white rounded-lg shadow-md p-6">
