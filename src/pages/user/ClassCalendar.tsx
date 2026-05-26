@@ -483,12 +483,10 @@ const ClassCalendar = () => {
     const classId = selectedClass.id;
 
     const refreshEnrolled = async () => {
-      const { count } = await supabase
-        .from("bookings")
-        .select("id", { count: "exact", head: true })
-        .eq("class_id", classId)
-        .eq("status", "confirmed");
-      const realEnrolled = count ?? 0;
+      const { data } = await supabase.rpc("get_class_enrolled_count", {
+        _class_id: classId,
+      });
+      const realEnrolled = Number(data) || 0;
       setSelectedClass((prev) =>
         prev && prev.id === classId ? { ...prev, enrolled: realEnrolled } : prev
       );
