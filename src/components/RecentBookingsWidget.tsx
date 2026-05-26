@@ -18,6 +18,8 @@ interface RecentBooking {
   member_gender?: string;
   count_credit?: boolean;
   status: string;
+  booked_by_role?: string | null;
+  booked_by_name?: string | null;
 }
 
 const RecentBookingsWidget = () => {
