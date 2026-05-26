@@ -491,8 +491,24 @@ const RecentBookingsWidget = () => {
                 )}
               </div>
               
-              <div className="text-xs text-gray-400 mt-2">
-                {booking.status === 'cancelled' ? 'Cancelled' : 'Booked'}: {format(new Date(booking.booking_date), 'MMM d, yyyy HH:mm')}
+              <div className="text-xs text-gray-400 mt-2 flex flex-wrap items-center gap-x-2">
+                <span>
+                  {booking.status === 'cancelled' ? 'Cancelled' : 'Booked'}:{' '}
+                  {format(new Date(booking.booking_date), 'MMM d, yyyy HH:mm')}
+                </span>
+                {booking.booked_by_role && (
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                      booking.booked_by_role === 'admin'
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-blue-100 text-blue-700'
+                    }`}
+                    title={booking.booked_by_name || ''}
+                  >
+                    by {booking.booked_by_role === 'admin' ? 'Admin' : 'Member'}
+                    {booking.booked_by_name ? ` · ${booking.booked_by_name}` : ''}
+                  </span>
+                )}
               </div>
             </div>
           ))}
