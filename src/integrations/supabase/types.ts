@@ -290,6 +290,9 @@ export type Database = {
       bookings: {
         Row: {
           attendance: boolean | null
+          booked_by_name: string | null
+          booked_by_role: string | null
+          booked_by_user_id: string | null
           booking_date: string
           class_id: number
           id: string
@@ -301,6 +304,9 @@ export type Database = {
         }
         Insert: {
           attendance?: boolean | null
+          booked_by_name?: string | null
+          booked_by_role?: string | null
+          booked_by_user_id?: string | null
           booking_date?: string
           class_id: number
           id?: string
@@ -312,6 +318,9 @@ export type Database = {
         }
         Update: {
           attendance?: boolean | null
+          booked_by_name?: string | null
+          booked_by_role?: string | null
+          booked_by_user_id?: string | null
           booking_date?: string
           class_id?: number
           id?: string
