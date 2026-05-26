@@ -148,18 +148,18 @@ interface UserData {
   email?: string;
 }
 
-// System settings - get from localStorage with fallback
-const getSystemSettings = () => {
-  const saved = localStorage.getItem('systemSettings');
-  if (saved) {
-    return JSON.parse(saved);
-  }
-  return {
-    cancellationTimeLimit: 4, // hours before class starts
-  };
+// Qatar is UTC+3 year-round (no DST). Compare class start to "now" in Qatar wall-clock.
+const QATAR_OFFSET_HOURS = 3;
+
+const qatarClassStartMs = (schedule: string, startTime?: string | null): number => {
+  // schedule may be "YYYY-MM-DD" or a full ISO string. Take the date portion only.
+  const datePart = (schedule || "").slice(0, 10);
+  const [y, mo, d] = datePart.split("-").map(Number);
+  const [h, m] = (startTime || "00:00").split(":").map(Number);
+  // Wall-clock h:m in Qatar (UTC+3) → UTC epoch
+  return Date.UTC(y, (mo || 1) - 1, d || 1, (h || 0) - QATAR_OFFSET_HOURS, m || 0, 0);
 };
 
-const systemSettings = getSystemSettings();
 
 const ClassCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
