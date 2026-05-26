@@ -29,6 +29,35 @@ const AdminBookingNotifier = () => {
   const { isAdmin, isAuthenticated } = useAuth();
   const [notification, setNotification] = useState<BookingNotification | null>(null);
 
+  const playNotificationSound = () => {
+    try {
+      const AudioCtx =
+        (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const tones = [880, 1320]; // two-note chime
+      tones.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const start = now + i * 0.18;
+        const end = start + 0.22;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.25, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, end);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(end + 0.02);
+      });
+      setTimeout(() => ctx.close().catch(() => {}), 800);
+    } catch {
+      // ignore — browser may block audio without user interaction
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated || !isAdmin) return;
 
