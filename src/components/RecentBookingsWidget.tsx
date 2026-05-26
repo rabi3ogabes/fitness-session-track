@@ -173,6 +173,8 @@ const RecentBookingsWidget = () => {
               member_gender: memberGender,
               count_credit: memberCountCredit,
               status: booking.status, // Add status to track booking state
+              booked_by_role: (booking as any).booked_by_role ?? null,
+              booked_by_name: (booking as any).booked_by_name ?? null,
             };
           })
         );
