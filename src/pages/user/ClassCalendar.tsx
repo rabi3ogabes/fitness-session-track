@@ -756,20 +756,14 @@ const ClassCalendar = () => {
         return;
       }
 
-      // Check cancellation window
-      const classHour = parseInt(classTime.split(":")[0]);
-      const classMinute = parseInt(classTime.split(":")[1] || "0");
-      const now = new Date();
-      const classDate = new Date(classToCancel.schedule);
-      classDate.setHours(classHour, classMinute, 0, 0);
+      // Check cancellation window (uses admin-configured hours, Qatar time)
+      const classStartMs = qatarClassStartMs(classToCancel.schedule, classTime);
+      const hoursDifference = (classStartMs - Date.now()) / (1000 * 60 * 60);
 
-      const hoursDifference = (classDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-      // Users can only cancel classes that are 4+ hours in the future
-      if (hoursDifference < systemSettings.cancellationTimeLimit) {
+      if (hoursDifference < cancellationHours) {
         toast({
           title: "Cannot cancel class",
-          description: `You can only cancel classes ${systemSettings.cancellationTimeLimit} hours or more before they start.`,
+          description: `You can only cancel classes ${cancellationHours} hours or more before they start.`,
           variant: "destructive",
         });
         return;
