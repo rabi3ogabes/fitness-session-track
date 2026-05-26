@@ -33,6 +33,7 @@ import AttendeesPage from "./pages/trainer/AttendeesPage";
 import ActivityLog from "./pages/admin/ActivityLog";
 import ActivityTracker from "./components/ActivityTracker";
 import GlobalClickTracker from "./components/GlobalClickTracker";
+import AdminBookingNotifier from "./components/AdminBookingNotifier";
 import Unsubscribe from "./pages/Unsubscribe";
 import NotificationsAdmin from "./pages/admin/NotificationsAdmin";
 import EmailTemplatesAdmin from "./pages/admin/EmailTemplatesAdmin";
@@ -141,6 +142,7 @@ const AppContent = () => {
     <BrowserRouter>
       <ActivityTracker />
       <GlobalClickTracker />
+      <AdminBookingNotifier />
       <Routes>
         <Route path="/" element={<TrainerHomeRedirect />} />
         <Route path="/login" element={<Login />} />
