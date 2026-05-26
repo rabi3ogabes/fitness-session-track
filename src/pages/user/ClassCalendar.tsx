@@ -1182,15 +1182,9 @@ const ClassCalendar = () => {
                   {myBookedClasses.slice(0, 3).map((cls) => {
                     const isPast = isClassInPast(new Date(cls.schedule), cls.start_time);
                     const canCancel = cls.start_time && (() => {
-                      const classHour = parseInt(cls.start_time.split(":")[0]);
-                      const classMinute = parseInt(cls.start_time.split(":")[1] || "0");
-                      const now = new Date();
-                      const classDate = new Date(cls.schedule);
-                      classDate.setHours(classHour, classMinute, 0, 0);
-                      const hoursDifference = (classDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-                      
-                      // Users can only cancel classes that are 4+ hours in the future
-                      return hoursDifference >= systemSettings.cancellationTimeLimit;
+                      const classStartMs = qatarClassStartMs(cls.schedule, cls.start_time);
+                      const hoursDifference = (classStartMs - Date.now()) / (1000 * 60 * 60);
+                      return hoursDifference >= cancellationHours;
                     })();
 
                     return (
