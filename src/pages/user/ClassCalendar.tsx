@@ -446,6 +446,42 @@ const ClassCalendar = () => {
     fetchBookings();
   }, [user, isNetworkConnected]);
 
+  // Realtime sync of "spots left" while Book Class dialog is open
+  useEffect(() => {
+    if (!bookingDialogOpen || !selectedClass?.id) return;
+    const classId = selectedClass.id;
+
+    const refreshEnrolled = async () => {
+      const { count } = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("class_id", classId)
+        .eq("status", "confirmed");
+      const realEnrolled = count ?? 0;
+      setSelectedClass((prev) =>
+        prev && prev.id === classId ? { ...prev, enrolled: realEnrolled } : prev
+      );
+      setClasses((prev) =>
+        prev.map((c) => (c.id === classId ? { ...c, enrolled: realEnrolled } : c))
+      );
+    };
+
+    refreshEnrolled();
+
+    const channel = supabase
+      .channel(`book-dialog-spots-${classId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings", filter: `class_id=eq.${classId}` },
+        () => refreshEnrolled()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [bookingDialogOpen, selectedClass?.id]);
+
   // Get classes for a specific date
   const getClassesForDate = (date: Date) => {
     return classes
