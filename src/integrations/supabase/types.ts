@@ -972,6 +972,14 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_class_enrolled_count: { Args: { _class_id: number }; Returns: number }
+      get_class_enrolled_counts: {
+        Args: { _class_ids: number[] }
+        Returns: {
+          class_id: number
+          enrolled: number
+        }[]
+      }
       get_user_name: { Args: { user_id: string }; Returns: string }
       has_role: {
         Args: {

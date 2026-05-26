@@ -223,16 +223,15 @@ export default function useComingClass() {
       const bookedClassIds =
         bookingsData?.map((booking) => booking.class_id) || [];
 
-      // Compute real enrolled counts per class from confirmed bookings
+      // Compute real enrolled counts per class from confirmed bookings (via SECURITY DEFINER RPC so RLS doesn't hide other members' rows)
       const classIds = classesWithType.map((c) => c.id);
-      const { data: allBookings } = await supabase
-        .from("bookings")
-        .select("class_id")
-        .in("class_id", classIds)
-        .eq("status", "confirmed");
+      const { data: countRows } = await supabase.rpc(
+        "get_class_enrolled_counts",
+        { _class_ids: classIds }
+      );
       const enrolledMap = new Map<number, number>();
-      (allBookings || []).forEach((b: any) => {
-        enrolledMap.set(b.class_id, (enrolledMap.get(b.class_id) || 0) + 1);
+      (countRows || []).forEach((r: any) => {
+        enrolledMap.set(r.class_id, Number(r.enrolled) || 0);
       });
 
       setAvailableClasses(
