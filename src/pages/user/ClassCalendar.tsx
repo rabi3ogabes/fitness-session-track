@@ -487,6 +487,47 @@ const ClassCalendar = () => {
         return;
       }
 
+      // Block booking if the class has already started/finished (e.g. earlier today)
+      try {
+        const classDate = new Date(selectedClass.schedule);
+        const [sh, sm] = (selectedClass.start_time || "00:00").split(":").map(Number);
+        const classStart = new Date(classDate);
+        classStart.setHours(sh || 0, sm || 0, 0, 0);
+        if (classStart.getTime() <= Date.now()) {
+          toast({
+            title: "Class already started",
+            description: "You can no longer book this class — it has already started.",
+            variant: "destructive",
+          });
+          setIsBookingInProgress(false);
+          setConfirmDialogOpen(false);
+          setBookingDialogOpen(false);
+          return;
+        }
+      } catch {}
+
+      // Capacity check — refuse if class is already full
+      const { count: currentEnrolled } = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("class_id", selectedClass.id)
+        .eq("status", "confirmed");
+
+      if (
+        typeof selectedClass.capacity === "number" &&
+        (currentEnrolled ?? 0) >= selectedClass.capacity
+      ) {
+        toast({
+          title: "Class is full",
+          description: "No available spots left in this class.",
+          variant: "destructive",
+        });
+        setIsBookingInProgress(false);
+        setConfirmDialogOpen(false);
+        setBookingDialogOpen(false);
+        return;
+      }
+
       // Check gender restrictions - only restrict men from women-only classes
       if (selectedClass.gender === "Female") {
         // Get member record to check gender
@@ -507,6 +548,7 @@ const ClassCalendar = () => {
           return;
         }
       }
+
 
       // Get member record first to link the booking
       let { data: memberData } = await supabase
