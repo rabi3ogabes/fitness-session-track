@@ -210,6 +210,9 @@ const BookingForm = ({
         status: "confirmed",
         booking_date: new Date().toISOString(),
         user_name: userName,
+        booked_by_user_id: user.id,
+        booked_by_name: userName,
+        booked_by_role: 'member',
       });
 
       if (error) throw error;

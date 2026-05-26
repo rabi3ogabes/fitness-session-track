@@ -1140,7 +1140,10 @@ const ClassSchedulePage = () => {
           user_id: user?.id || "", // Use the current authenticated user's ID
           class_id: currentClass.id,
           user_name: member.name,
-          status: "confirmed"
+          status: "confirmed",
+          booked_by_user_id: user?.id || null,
+          booked_by_name: (user?.user_metadata as any)?.name || user?.email || 'Admin',
+          booked_by_role: 'admin',
         });
 
       if (bookingError) throw bookingError;

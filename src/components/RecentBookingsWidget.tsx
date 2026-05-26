@@ -18,6 +18,8 @@ interface RecentBooking {
   member_gender?: string;
   count_credit?: boolean;
   status: string;
+  booked_by_role?: string | null;
+  booked_by_name?: string | null;
 }
 
 const RecentBookingsWidget = () => {
@@ -65,7 +67,9 @@ const RecentBookingsWidget = () => {
             member_id,
             class_id,
             user_id,
-            status
+            status,
+            booked_by_role,
+            booked_by_name
           `)
           .in("status", ["confirmed", "cancelled"])
           .order("booking_date", { ascending: false })
@@ -169,6 +173,8 @@ const RecentBookingsWidget = () => {
               member_gender: memberGender,
               count_credit: memberCountCredit,
               status: booking.status, // Add status to track booking state
+              booked_by_role: (booking as any).booked_by_role ?? null,
+              booked_by_name: (booking as any).booked_by_name ?? null,
             };
           })
         );
@@ -276,7 +282,9 @@ const RecentBookingsWidget = () => {
               member_id,
               class_id,
               user_id,
-              status
+              status,
+              booked_by_role,
+              booked_by_name
             `)
             .in("status", ["confirmed", "cancelled"])
             .order("booking_date", { ascending: false })
@@ -376,6 +384,8 @@ const RecentBookingsWidget = () => {
                 member_gender: memberGender,
                 count_credit: memberCountCredit,
                 status: booking.status,
+                booked_by_role: (booking as any).booked_by_role ?? null,
+                booked_by_name: (booking as any).booked_by_name ?? null,
               };
             })
           );
@@ -481,8 +491,24 @@ const RecentBookingsWidget = () => {
                 )}
               </div>
               
-              <div className="text-xs text-gray-400 mt-2">
-                {booking.status === 'cancelled' ? 'Cancelled' : 'Booked'}: {format(new Date(booking.booking_date), 'MMM d, yyyy HH:mm')}
+              <div className="text-xs text-gray-400 mt-2 flex flex-wrap items-center gap-x-2">
+                <span>
+                  {booking.status === 'cancelled' ? 'Cancelled' : 'Booked'}:{' '}
+                  {format(new Date(booking.booking_date), 'MMM d, yyyy HH:mm')}
+                </span>
+                {booking.booked_by_role && (
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                      booking.booked_by_role === 'admin'
+                        ? 'bg-purple-100 text-purple-700'
+                        : 'bg-blue-100 text-blue-700'
+                    }`}
+                    title={booking.booked_by_name || ''}
+                  >
+                    by {booking.booked_by_role === 'admin' ? 'Admin' : 'Member'}
+                    {booking.booked_by_name ? ` · ${booking.booked_by_name}` : ''}
+                  </span>
+                )}
               </div>
             </div>
           ))}

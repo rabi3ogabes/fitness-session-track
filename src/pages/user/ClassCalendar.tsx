@@ -626,6 +626,9 @@ const ClassCalendar = () => {
         class_id: selectedClass.id,
         status: "confirmed",
         booking_date: new Date().toISOString(),
+        booked_by_user_id: user.id,
+        booked_by_name: memberData.name,
+        booked_by_role: 'member',
       });
 
       if (error) throw error;
