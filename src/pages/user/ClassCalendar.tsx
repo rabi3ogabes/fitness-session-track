@@ -922,7 +922,7 @@ const ClassCalendar = () => {
           )}
 
           {/* Session Warning */}
-          {sessionsLow && (
+          {sessionsLow && userData.countCredit && (
             <Alert>
               <AlertDescription>
                 You're running low on sessions ({userData.remainingSessions} remaining). Consider purchasing more to continue booking classes.
