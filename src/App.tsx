@@ -34,6 +34,8 @@ import ActivityLog from "./pages/admin/ActivityLog";
 import ActivityTracker from "./components/ActivityTracker";
 import GlobalClickTracker from "./components/GlobalClickTracker";
 import AdminBookingNotifier from "./components/AdminBookingNotifier";
+import ErrorBoundary from "./components/ErrorBoundary";
+
 import Unsubscribe from "./pages/Unsubscribe";
 import NotificationsAdmin from "./pages/admin/NotificationsAdmin";
 import EmailTemplatesAdmin from "./pages/admin/EmailTemplatesAdmin";
@@ -299,17 +301,20 @@ const AppContent = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <MembershipProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AppContent />
-        </TooltipProvider>
-      </MembershipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <MembershipProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <AppContent />
+          </TooltipProvider>
+        </MembershipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
+
 
 export default App;

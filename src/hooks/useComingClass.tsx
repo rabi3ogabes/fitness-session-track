@@ -156,8 +156,6 @@ export default function useComingClass() {
       });
   }, [availableClasses]);
   const fetchClasses = useCallback(async () => {
-    if (!isNetworkConnected && !user) return;
-
     setIsLoading(true);
     setError(null);
     try {
@@ -181,7 +179,7 @@ export default function useComingClass() {
       }
       const classesWithType = classesData.map((cls: ClassModel) => {
         let type = "default";
-        const name = cls.name.toLowerCase();
+        const name = (cls.name || "").toLowerCase();
         if (name.includes("yoga") || name.includes("pilates")) {
           type = "yoga";
         } else if (
@@ -213,15 +211,20 @@ export default function useComingClass() {
         );
         return;
       }
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from("bookings")
-        .select("class_id")
-        .eq("user_id", user.id)
-        .eq("status", "confirmed");
-      if (bookingsError) throw bookingsError;
 
-      const bookedClassIds =
-        bookingsData?.map((booking) => booking.class_id) || [];
+      // Only query bookings if we have an authenticated user
+      let bookedClassIds: number[] = [];
+      if (user?.id) {
+        const { data: bookingsData, error: bookingsError } = await supabase
+          .from("bookings")
+          .select("class_id")
+          .eq("user_id", user.id)
+          .eq("status", "confirmed");
+        if (bookingsError) throw bookingsError;
+        bookedClassIds =
+          bookingsData?.map((booking) => booking.class_id) || [];
+      }
+
 
       // Compute real enrolled counts per class from confirmed bookings (via SECURITY DEFINER RPC so RLS doesn't hide other members' rows)
       const classIds = classesWithType.map((c) => c.id);
