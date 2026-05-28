@@ -258,24 +258,30 @@ export default function useComingClass() {
   }, [fetchClasses]);
 
   // Realtime: refresh enrolled counts when any booking changes
+  const fetchClassesRef = React.useRef(fetchClasses);
+  useEffect(() => {
+    fetchClassesRef.current = fetchClasses;
+  }, [fetchClasses]);
+
   useEffect(() => {
     const channel = supabase
-      .channel("coming-class-bookings-sync")
+      .channel(`coming-class-bookings-sync-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bookings" },
-        () => fetchClasses()
+        () => fetchClassesRef.current()
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "classes" },
-        () => fetchClasses()
+        () => fetchClassesRef.current()
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchClasses]);
+  }, []);
+
   return {
     fetchClasses,
     isLoading,
