@@ -82,7 +82,7 @@ const ActivityLog = () => {
   useEffect(() => {
     load();
     const channel = supabase
-      .channel("activity_logs_realtime")
+      .channel(`activity_logs_realtime-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "activity_logs" },

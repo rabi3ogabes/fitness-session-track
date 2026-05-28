@@ -76,7 +76,7 @@ const BalanceRequestsWidget: React.FC = () => {
 
     // Set up real-time subscription
     const channel = supabase
-      .channel('membership_requests_changes')
+      .channel(`membership_requests_changes-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {

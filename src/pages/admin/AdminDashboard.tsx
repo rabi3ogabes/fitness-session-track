@@ -99,17 +99,17 @@ const AdminDashboard = () => {
 
     // Set up real-time subscriptions for all tables
     const membersChannel = supabase
-      .channel('members_changes')
+      .channel(`members_changes-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, fetchStats)
       .subscribe();
 
     const trainersChannel = supabase
-      .channel('trainers_changes')  
+      .channel(`trainers_changes-${Math.random().toString(36).slice(2)}`)  
       .on('postgres_changes', { event: '*', schema: 'public', table: 'trainers' }, fetchStats)
       .subscribe();
 
     const classesChannel = supabase
-      .channel('classes_changes')
+      .channel(`classes_changes-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, fetchStats)
       .subscribe();
 

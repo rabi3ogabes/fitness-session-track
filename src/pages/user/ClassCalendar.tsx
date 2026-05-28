@@ -198,7 +198,7 @@ const ClassCalendar = () => {
     })();
 
     const channel = supabase
-      .channel('cancellation-hours-sync')
+      .channel(`cancellation-hours-sync-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_settings' }, (payload: any) => {
         const v = payload?.new?.cancellation_hours;
         if (v != null) setCancellationHours(Number(v));

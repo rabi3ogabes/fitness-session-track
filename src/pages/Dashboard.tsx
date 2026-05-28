@@ -222,7 +222,7 @@ const Dashboard = () => {
 
     // Get the channel for the subscription
     const channel = supabase
-      .channel("sessions-changes")
+      .channel(`sessions-changes-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {

@@ -42,7 +42,7 @@ const NotificationLogsWidget = () => {
   useEffect(() => {
     load();
     const channel = supabase
-      .channel("notification_logs_widget")
+      .channel(`notification_logs_widget-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "notification_logs" },

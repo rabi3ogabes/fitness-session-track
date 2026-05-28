@@ -192,7 +192,7 @@ const RecentBookingsWidget = () => {
 
     // Set up comprehensive real-time subscriptions
     const bookingsChannel = supabase
-      .channel("recent-bookings-updates")
+      .channel(`recent-bookings-updates-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {

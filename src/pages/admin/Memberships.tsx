@@ -93,7 +93,7 @@ const Memberships = () => {
 
     // Set up real-time subscription for membership requests
     const channel = supabase
-      .channel('membership_requests_changes')
+      .channel(`membership_requests_changes-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {
