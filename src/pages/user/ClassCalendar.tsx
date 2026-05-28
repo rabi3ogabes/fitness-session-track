@@ -442,7 +442,7 @@ const ClassCalendar = () => {
     };
 
     const channel = supabase
-      .channel("calendar-bookings-spots-sync")
+      .channel(`calendar-bookings-spots-sync-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bookings" },
