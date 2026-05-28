@@ -345,7 +345,7 @@ const ClassCalendar = () => {
           const classesWithRealEnrollment = data.map((cls: ClassModel) => {
             const realEnrolled = enrolledMap.get(cls.id) ?? 0;
             let type = "default";
-            const name = cls.name.toLowerCase().trim();
+            const name = (cls.name || "").toLowerCase().trim();
             if (name.includes("upper body") || name.includes("upper-body")) {
               type = "upper body";
             } else if (name.includes("lower body") || name.includes("lower-body")) {
