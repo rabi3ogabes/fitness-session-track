@@ -80,7 +80,7 @@ const UpcomingClassWidget = () => {
 
     // Set up real-time subscription for bookings
     const channel = supabase
-      .channel('upcoming-class-bookings')
+      .channel(`upcoming-class-bookings-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {

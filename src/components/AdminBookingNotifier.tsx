@@ -62,7 +62,7 @@ const AdminBookingNotifier = () => {
     if (!isAuthenticated || !isAdmin) return;
 
     const channel = supabase
-      .channel("admin-new-booking-notifier")
+      .channel(`admin-new-booking-notifier-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "bookings" },

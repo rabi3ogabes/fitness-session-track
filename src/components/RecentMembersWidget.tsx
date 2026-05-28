@@ -123,7 +123,7 @@ const RecentMembersWidget = () => {
     fetchRecentMembers();
 
     const channel = supabase
-      .channel('recent-members')
+      .channel(`recent-members-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'members' },

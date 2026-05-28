@@ -46,7 +46,7 @@ export const WebhookHealth: React.FC = () => {
   useEffect(() => {
     load();
     const channel = supabase
-      .channel('webhook_delivery_logs_changes')
+      .channel(`webhook_delivery_logs_changes-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'webhook_delivery_logs' },

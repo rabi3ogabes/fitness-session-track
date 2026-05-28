@@ -279,7 +279,7 @@ const UserMembership = () => {
       if (!user?.email) return;
 
       channel = supabase
-        .channel('member-sessions-realtime')
+        .channel(`member-sessions-realtime-${Math.random().toString(36).slice(2)}`)
         .on(
           'postgres_changes',
           {

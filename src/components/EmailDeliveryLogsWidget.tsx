@@ -37,7 +37,7 @@ const EmailDeliveryLogsWidget = () => {
   useEffect(() => {
     load();
     const channel = supabase
-      .channel('email_status_logs')
+      .channel(`email_status_logs-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {

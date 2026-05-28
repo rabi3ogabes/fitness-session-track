@@ -8,7 +8,7 @@ export const useNotificationProcessor = () => {
   useEffect(() => {
     // Set up realtime listener for new notification logs
     const channel = supabase
-      .channel('notification_logs_changes')
+      .channel(`notification_logs_changes-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {

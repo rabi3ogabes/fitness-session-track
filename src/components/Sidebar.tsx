@@ -95,7 +95,7 @@ const Sidebar = () => {
     fetchCountCredit();
 
     const channel = supabase
-      .channel("sidebar-count-credit")
+      .channel(`sidebar-count-credit-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "members", filter: `email=eq.${user.email}` },

@@ -42,7 +42,7 @@ const RecentPaymentsWidget = () => {
 
     // Set up real-time subscription for payments
     const channel = supabase
-      .channel('recent-payments')
+      .channel(`recent-payments-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {

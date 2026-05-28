@@ -541,7 +541,7 @@ const ClassSchedulePage = () => {
   useEffect(() => {
     // Subscribe to classes table changes
     const classesChannel = supabase
-      .channel('classes-changes')
+      .channel(`classes-changes-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {
@@ -558,7 +558,7 @@ const ClassSchedulePage = () => {
 
     // Subscribe to bookings table changes
     const bookingsChannel = supabase
-      .channel('bookings-changes')
+      .channel(`bookings-changes-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {
@@ -575,7 +575,7 @@ const ClassSchedulePage = () => {
 
     // Subscribe to members table changes
     const membersChannel = supabase
-      .channel('members-changes')
+      .channel(`members-changes-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {
