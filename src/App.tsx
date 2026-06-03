@@ -143,6 +143,7 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
+      <SessionKeeper />
       <ActivityTracker />
       <GlobalClickTracker />
       <AdminBookingNotifier />
