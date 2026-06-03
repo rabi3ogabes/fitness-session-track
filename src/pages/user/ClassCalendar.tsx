@@ -569,16 +569,14 @@ const ClassCalendar = () => {
         return;
       }
 
-      // Block booking if the class has already started/finished (e.g. earlier today)
+      // Block booking only once the class has finished (end_time passed).
+      // Bookings ARE allowed during an in-progress class.
       try {
-        const classDate = new Date(selectedClass.schedule);
-        const [sh, sm] = (selectedClass.start_time || "00:00").split(":").map(Number);
-        const classStart = new Date(classDate);
-        classStart.setHours(sh || 0, sm || 0, 0, 0);
-        if (classStart.getTime() <= Date.now()) {
+        const endMs = qatarClassEndMs(selectedClass.schedule, selectedClass.end_time, selectedClass.start_time);
+        if (endMs <= Date.now()) {
           toast({
-            title: "Class already started",
-            description: "You can no longer book this class — it has already started.",
+            title: "Session already ended",
+            description: "This class has already finished — bookings are closed.",
             variant: "destructive",
           });
           setIsBookingInProgress(false);
