@@ -899,14 +899,12 @@ const ClassCalendar = () => {
     }, 500);
   };
 
-  // Check if a class is in the past
-  const isClassInPast = (classDate: Date, classTime?: string) => {
-    if (!classTime) return false;
-    const now = new Date();
-    const [hours, minutes] = classTime.split(":").map(Number);
-    const classDateTime = new Date(classDate);
-    classDateTime.setHours(hours, minutes);
-    return classDateTime < now;
+  // A class is considered "past" (no longer bookable) only after its end_time has passed.
+  // While the session is in progress, customers can still book it.
+  const isClassInPast = (classDate: Date, classTime?: string, endTime?: string) => {
+    const schedule = format(classDate, "yyyy-MM-dd");
+    const endMs = qatarClassEndMs(schedule, endTime, classTime);
+    return endMs <= Date.now();
   };
 
   // Generate calendar days
