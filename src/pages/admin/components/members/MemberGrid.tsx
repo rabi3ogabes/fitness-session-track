@@ -5,6 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { PencilIcon, PowerIcon, UserMinusIcon, Lock, Trash2, User, UserRound, Mail, Phone, CreditCard, Activity, CheckCircle, XCircle, Plus, Minus } from "lucide-react";
 import { Member } from "./types";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import OnlineIndicator from "@/components/OnlineIndicator";
 
 interface MemberGridProps {
   members: Member[];
@@ -99,7 +100,8 @@ const MemberGrid = ({
               >
                 {getGenderIcon(member.gender)}
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 hover:text-blue-600 transition-colors">
+                  <h3 className="font-semibold text-gray-900 hover:text-blue-600 transition-colors flex items-center gap-2">
+                    <OnlineIndicator email={member.email} />
                     {member.name}
                   </h3>
                   <p className="text-sm text-gray-500 flex items-center gap-1">
