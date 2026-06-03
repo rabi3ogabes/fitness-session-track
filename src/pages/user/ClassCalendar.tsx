@@ -160,6 +160,14 @@ const qatarClassStartMs = (schedule: string, startTime?: string | null): number 
   return Date.UTC(y, (mo || 1) - 1, d || 1, (h || 0) - QATAR_OFFSET_HOURS, m || 0, 0);
 };
 
+const qatarClassEndMs = (schedule: string, endTime?: string | null, startTime?: string | null): number => {
+  // If end_time is missing, assume class lasts 60 minutes from start_time.
+  if (endTime && endTime.includes(":")) {
+    return qatarClassStartMs(schedule, endTime);
+  }
+  return qatarClassStartMs(schedule, startTime) + 60 * 60 * 1000;
+};
+
 
 const ClassCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
