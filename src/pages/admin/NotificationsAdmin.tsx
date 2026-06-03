@@ -93,6 +93,7 @@ export default function NotificationsAdmin() {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [prefs, setPrefs] = useState<PrefsRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [lastEverByEmail, setLastEverByEmail] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState("7d");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -102,7 +103,7 @@ export default function NotificationsAdmin() {
     setLoading(true);
     const hours = RANGES.find((r) => r.id === range)?.hours ?? 168;
     const since = new Date(Date.now() - hours * 3600 * 1000).toISOString();
-    const [logsRes, membersRes, prefsRes, profilesRes] = await Promise.all([
+    const [logsRes, membersRes, prefsRes, profilesRes, lastEverRes] = await Promise.all([
       // Pull from email_send_log (true source of delivery status).
       // A single email writes multiple rows (pending → sent/failed/dlq/bounced/...).
       // We dedupe client-side by message_id, keeping the latest.
@@ -118,6 +119,14 @@ export default function NotificationsAdmin() {
         .is("deleted_at", null),
       supabase.from("notification_settings").select("*"),
       supabase.from("profiles").select("id,email,name"),
+      // Absolute most recent email per recipient (any time, sent only) so
+      // we can show "last email outside the selected range" hints.
+      supabase
+        .from("email_send_log")
+        .select("recipient_email,created_at")
+        .eq("status", "sent")
+        .order("created_at", { ascending: false })
+        .limit(5000),
     ]);
 
     if (logsRes.data) {
@@ -144,6 +153,15 @@ export default function NotificationsAdmin() {
     if (membersRes.data) setMembers(membersRes.data as any);
     if (prefsRes.data) setPrefs(prefsRes.data as any);
     if (profilesRes.data) setProfiles(profilesRes.data as any);
+    if (lastEverRes.data) {
+      const m = new Map<string, string>();
+      for (const r of lastEverRes.data as any[]) {
+        const k = (r.recipient_email || "").toLowerCase();
+        if (!k) continue;
+        if (!m.has(k)) m.set(k, r.created_at); // first seen = newest (ordered desc)
+      }
+      setLastEverByEmail(m);
+    }
     setLoading(false);
   };
 
@@ -377,7 +395,11 @@ export default function NotificationsAdmin() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5">
               {filteredCards.map((c) => (
-                <CustomerEmailCard key={c.email} card={c} />
+                <CustomerEmailCard
+                  key={c.email}
+                  card={c}
+                  lastEverAt={lastEverByEmail.get(c.email.toLowerCase())}
+                />
               ))}
             </div>
           )}
@@ -389,6 +411,7 @@ export default function NotificationsAdmin() {
 
 function CustomerEmailCard({
   card,
+  lastEverAt,
 }: {
   card: {
     email: string;
@@ -400,6 +423,7 @@ function CustomerEmailCard({
     stats: { total: number; sent: number; failed: number; suppressed: number };
     lastSentAt?: string;
   };
+  lastEverAt?: string;
 }) {
   const [open, setOpen] = useState(false);
   const p = card.prefs;
@@ -532,8 +556,13 @@ function CustomerEmailCard({
           </div>
 
           {card.logs.length === 0 ? (
-            <div className="text-xs text-muted-foreground italic">
-              No emails sent to this customer in the selected range.
+            <div className="text-xs text-muted-foreground italic space-y-1">
+              <div>No emails sent to this customer in the selected range.</div>
+              {lastEverAt && (
+                <div className="not-italic text-muted-foreground/80">
+                  Last email ever sent: {new Date(lastEverAt).toLocaleString()} — widen the range to see it.
+                </div>
+              )}
             </div>
           ) : (
             <Collapsible open={open} onOpenChange={setOpen}>
