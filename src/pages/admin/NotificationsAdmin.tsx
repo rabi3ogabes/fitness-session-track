@@ -411,6 +411,7 @@ export default function NotificationsAdmin() {
 
 function CustomerEmailCard({
   card,
+  lastEverAt,
 }: {
   card: {
     email: string;
@@ -422,6 +423,7 @@ function CustomerEmailCard({
     stats: { total: number; sent: number; failed: number; suppressed: number };
     lastSentAt?: string;
   };
+  lastEverAt?: string;
 }) {
   const [open, setOpen] = useState(false);
   const p = card.prefs;
