@@ -93,6 +93,7 @@ export default function NotificationsAdmin() {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [prefs, setPrefs] = useState<PrefsRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [lastEverByEmail, setLastEverByEmail] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState("7d");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -102,7 +103,7 @@ export default function NotificationsAdmin() {
     setLoading(true);
     const hours = RANGES.find((r) => r.id === range)?.hours ?? 168;
     const since = new Date(Date.now() - hours * 3600 * 1000).toISOString();
-    const [logsRes, membersRes, prefsRes, profilesRes] = await Promise.all([
+    const [logsRes, membersRes, prefsRes, profilesRes, lastEverRes] = await Promise.all([
       // Pull from email_send_log (true source of delivery status).
       // A single email writes multiple rows (pending → sent/failed/dlq/bounced/...).
       // We dedupe client-side by message_id, keeping the latest.
@@ -118,6 +119,14 @@ export default function NotificationsAdmin() {
         .is("deleted_at", null),
       supabase.from("notification_settings").select("*"),
       supabase.from("profiles").select("id,email,name"),
+      // Absolute most recent email per recipient (any time, sent only) so
+      // we can show "last email outside the selected range" hints.
+      supabase
+        .from("email_send_log")
+        .select("recipient_email,created_at")
+        .eq("status", "sent")
+        .order("created_at", { ascending: false })
+        .limit(5000),
     ]);
 
     if (logsRes.data) {
