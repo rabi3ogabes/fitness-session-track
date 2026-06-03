@@ -134,15 +134,20 @@ export default function useComingClass() {
   );
   const { user } = useAuth();
   const unbookedClasses = useMemo(() => {
-    const now = new Date();
+    const nowMs = Date.now();
     return availableClasses
       .filter((cls) => {
-        // Filter out classes that are booked or in the past
-        const classDate = new Date(cls.schedule);
-        return (
-          !cls.isBooked &&
-          (isAfter(classDate, now) || isSameDay(classDate, now))
-        );
+        if (cls.isBooked) return false;
+        // Qatar is UTC+3, no DST. Compare class end wall-clock to "now".
+        const datePart = (cls.schedule || "").slice(0, 10);
+        const [y, mo, d] = datePart.split("-").map(Number);
+        const endStr = (cls.end_time && cls.end_time.includes(":"))
+          ? cls.end_time
+          : null;
+        const [h, m] = (endStr || cls.start_time || "00:00").split(":").map(Number);
+        let endMs = Date.UTC(y, (mo || 1) - 1, d || 1, (h || 0) - 3, m || 0, 0);
+        if (!endStr) endMs += 60 * 60 * 1000; // assume 1h if no end_time
+        return endMs > nowMs;
       })
       .sort((a, b) => {
         const dateA = new Date(a.schedule);
