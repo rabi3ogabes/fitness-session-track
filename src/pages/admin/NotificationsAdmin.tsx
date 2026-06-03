@@ -153,6 +153,15 @@ export default function NotificationsAdmin() {
     if (membersRes.data) setMembers(membersRes.data as any);
     if (prefsRes.data) setPrefs(prefsRes.data as any);
     if (profilesRes.data) setProfiles(profilesRes.data as any);
+    if (lastEverRes.data) {
+      const m = new Map<string, string>();
+      for (const r of lastEverRes.data as any[]) {
+        const k = (r.recipient_email || "").toLowerCase();
+        if (!k) continue;
+        if (!m.has(k)) m.set(k, r.created_at); // first seen = newest (ordered desc)
+      }
+      setLastEverByEmail(m);
+    }
     setLoading(false);
   };
 
