@@ -35,6 +35,7 @@ import ActivityTracker from "./components/ActivityTracker";
 import GlobalClickTracker from "./components/GlobalClickTracker";
 import AdminBookingNotifier from "./components/AdminBookingNotifier";
 import ErrorBoundary from "./components/ErrorBoundary";
+import SessionKeeper from "./components/SessionKeeper";
 
 import Unsubscribe from "./pages/Unsubscribe";
 import NotificationsAdmin from "./pages/admin/NotificationsAdmin";
@@ -142,6 +143,7 @@ const AppContent = () => {
 
   return (
     <BrowserRouter>
+      <SessionKeeper />
       <ActivityTracker />
       <GlobalClickTracker />
       <AdminBookingNotifier />
