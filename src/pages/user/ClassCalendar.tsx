@@ -160,6 +160,14 @@ const qatarClassStartMs = (schedule: string, startTime?: string | null): number 
   return Date.UTC(y, (mo || 1) - 1, d || 1, (h || 0) - QATAR_OFFSET_HOURS, m || 0, 0);
 };
 
+const qatarClassEndMs = (schedule: string, endTime?: string | null, startTime?: string | null): number => {
+  // If end_time is missing, assume class lasts 60 minutes from start_time.
+  if (endTime && endTime.includes(":")) {
+    return qatarClassStartMs(schedule, endTime);
+  }
+  return qatarClassStartMs(schedule, startTime) + 60 * 60 * 1000;
+};
+
 
 const ClassCalendar = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -232,11 +240,12 @@ const ClassCalendar = () => {
 
   // Get upcoming classes
   const upcomingClasses = useMemo(() => {
-    const now = new Date();
+    const nowMs = Date.now();
     return classes
       .filter((cls) => {
-        const classDate = new Date(cls.schedule);
-        return isAfter(classDate, now) || isSameDay(classDate, now);
+        // Keep the class visible/bookable until its end_time has passed (Qatar time).
+        const endMs = qatarClassEndMs(cls.schedule, cls.end_time, cls.start_time);
+        return endMs > nowMs;
       })
       .sort((a, b) => {
         const dateA = new Date(a.schedule);
@@ -560,16 +569,14 @@ const ClassCalendar = () => {
         return;
       }
 
-      // Block booking if the class has already started/finished (e.g. earlier today)
+      // Block booking only once the class has finished (end_time passed).
+      // Bookings ARE allowed during an in-progress class.
       try {
-        const classDate = new Date(selectedClass.schedule);
-        const [sh, sm] = (selectedClass.start_time || "00:00").split(":").map(Number);
-        const classStart = new Date(classDate);
-        classStart.setHours(sh || 0, sm || 0, 0, 0);
-        if (classStart.getTime() <= Date.now()) {
+        const endMs = qatarClassEndMs(selectedClass.schedule, selectedClass.end_time, selectedClass.start_time);
+        if (endMs <= Date.now()) {
           toast({
-            title: "Class already started",
-            description: "You can no longer book this class — it has already started.",
+            title: "Session already ended",
+            description: "This class has already finished — bookings are closed.",
             variant: "destructive",
           });
           setIsBookingInProgress(false);
@@ -892,14 +899,12 @@ const ClassCalendar = () => {
     }, 500);
   };
 
-  // Check if a class is in the past
-  const isClassInPast = (classDate: Date, classTime?: string) => {
-    if (!classTime) return false;
-    const now = new Date();
-    const [hours, minutes] = classTime.split(":").map(Number);
-    const classDateTime = new Date(classDate);
-    classDateTime.setHours(hours, minutes);
-    return classDateTime < now;
+  // A class is considered "past" (no longer bookable) only after its end_time has passed.
+  // While the session is in progress, customers can still book it.
+  const isClassInPast = (classDate: Date, classTime?: string, endTime?: string) => {
+    const schedule = format(classDate, "yyyy-MM-dd");
+    const endMs = qatarClassEndMs(schedule, endTime, classTime);
+    return endMs <= Date.now();
   };
 
   // Generate calendar days
@@ -1118,7 +1123,7 @@ const ClassCalendar = () => {
                     const typeKey = (cls.type || "default") as keyof typeof classTypeColors;
                     const typeColor = classTypeColors[typeKey] || classTypeColors.default;
                     const isBooked = bookedClasses.includes(cls.id) || cls.isBooked === true;
-                    const isPast = isClassInPast(new Date(cls.schedule), cls.start_time);
+                    const isPast = isClassInPast(new Date(cls.schedule), cls.start_time, cls.end_time);
                     const isFull = cls.enrolled >= cls.capacity;
                     const availableSpots = cls.capacity - (cls.enrolled || 0);
 
@@ -1226,7 +1231,7 @@ const ClassCalendar = () => {
                 
                 <CardContent className="space-y-3">
                   {myBookedClasses.slice(0, 3).map((cls) => {
-                    const isPast = isClassInPast(new Date(cls.schedule), cls.start_time);
+                    const isPast = isClassInPast(new Date(cls.schedule), cls.start_time, cls.end_time);
                     const canCancel = cls.start_time && (() => {
                       const classStartMs = qatarClassStartMs(cls.schedule, cls.start_time);
                       const hoursDifference = (classStartMs - Date.now()) / (1000 * 60 * 60);
