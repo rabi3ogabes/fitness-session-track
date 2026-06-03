@@ -3,6 +3,7 @@ import { Users, CheckCircle, XCircle, UserPlus, CalendarCheck, CalendarX } from 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import OnlineIndicator from '@/components/OnlineIndicator';
 
 type EmailKind = 'signup' | 'booking' | 'cancellation';
 
@@ -183,7 +184,10 @@ const RecentMembersWidget = () => {
                 recentMembers.map((member) => (
                   <tr key={member.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{member.name}</div>
+                      <div className="font-medium text-gray-900 flex items-center gap-2">
+                        <OnlineIndicator email={member.email} />
+                        {member.name}
+                      </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{member.email}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">

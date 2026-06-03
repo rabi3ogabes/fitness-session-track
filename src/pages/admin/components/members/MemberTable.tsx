@@ -6,6 +6,7 @@ import { Member } from "./types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import MemberGrid from "./MemberGrid";
+import OnlineIndicator from "@/components/OnlineIndicator";
 
 interface MemberTableProps {
   members: Member[];
@@ -112,6 +113,7 @@ const MemberTable = ({
                             textShadow: '1px 1px 2px rgba(0,0,0,0.1)'
                           }} />
                         )}
+                        <OnlineIndicator email={member.email} />
                         <span className="text-blue-600 hover:text-blue-800 font-medium">{member.name}</span>
                       </div>
                     </TableCell>
