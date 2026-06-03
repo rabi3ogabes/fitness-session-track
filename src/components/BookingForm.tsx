@@ -146,6 +146,26 @@ const BookingForm = ({
 
     // Check gender restrictions - only restrict men from women-only classes
     const selectedClassData = unbookedClasses.find(cls => cls.id === selectedClass);
+    // Block booking once the class end_time has passed (Qatar UTC+3).
+    if (selectedClassData) {
+      const datePart = (selectedClassData.schedule || "").slice(0, 10);
+      const [y, mo, d] = datePart.split("-").map(Number);
+      const endStr = (selectedClassData.end_time && selectedClassData.end_time.includes(":"))
+        ? selectedClassData.end_time
+        : null;
+      const [h, m] = (endStr || selectedClassData.start_time || "00:00").split(":").map(Number);
+      let endMs = Date.UTC(y, (mo || 1) - 1, d || 1, (h || 0) - 3, m || 0, 0);
+      if (!endStr) endMs += 60 * 60 * 1000;
+      if (endMs <= Date.now()) {
+        toast({
+          title: "Session already ended",
+          description: "This class has already finished — bookings are closed.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     if (selectedClassData && selectedClassData.gender === "Female") {
       // Get user gender from members table (primary source)
       const { data: memberData } = await supabase
