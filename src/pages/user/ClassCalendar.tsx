@@ -1123,7 +1123,7 @@ const ClassCalendar = () => {
                     const typeKey = (cls.type || "default") as keyof typeof classTypeColors;
                     const typeColor = classTypeColors[typeKey] || classTypeColors.default;
                     const isBooked = bookedClasses.includes(cls.id) || cls.isBooked === true;
-                    const isPast = isClassInPast(new Date(cls.schedule), cls.start_time);
+                    const isPast = isClassInPast(new Date(cls.schedule), cls.start_time, cls.end_time);
                     const isFull = cls.enrolled >= cls.capacity;
                     const availableSpots = cls.capacity - (cls.enrolled || 0);
 
