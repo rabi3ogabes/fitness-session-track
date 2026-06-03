@@ -556,8 +556,13 @@ function CustomerEmailCard({
           </div>
 
           {card.logs.length === 0 ? (
-            <div className="text-xs text-muted-foreground italic">
-              No emails sent to this customer in the selected range.
+            <div className="text-xs text-muted-foreground italic space-y-1">
+              <div>No emails sent to this customer in the selected range.</div>
+              {lastEverAt && (
+                <div className="not-italic text-muted-foreground/80">
+                  Last email ever sent: {new Date(lastEverAt).toLocaleString()} — widen the range to see it.
+                </div>
+              )}
             </div>
           ) : (
             <Collapsible open={open} onOpenChange={setOpen}>
