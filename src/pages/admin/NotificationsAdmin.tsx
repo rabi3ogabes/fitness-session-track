@@ -395,7 +395,11 @@ export default function NotificationsAdmin() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5">
               {filteredCards.map((c) => (
-                <CustomerEmailCard key={c.email} card={c} />
+                <CustomerEmailCard
+                  key={c.email}
+                  card={c}
+                  lastEverAt={lastEverByEmail.get(c.email.toLowerCase())}
+                />
               ))}
             </div>
           )}
