@@ -240,11 +240,12 @@ const ClassCalendar = () => {
 
   // Get upcoming classes
   const upcomingClasses = useMemo(() => {
-    const now = new Date();
+    const nowMs = Date.now();
     return classes
       .filter((cls) => {
-        const classDate = new Date(cls.schedule);
-        return isAfter(classDate, now) || isSameDay(classDate, now);
+        // Keep the class visible/bookable until its end_time has passed (Qatar time).
+        const endMs = qatarClassEndMs(cls.schedule, cls.end_time, cls.start_time);
+        return endMs > nowMs;
       })
       .sort((a, b) => {
         const dateA = new Date(a.schedule);
