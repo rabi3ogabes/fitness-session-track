@@ -1231,7 +1231,7 @@ const ClassCalendar = () => {
                 
                 <CardContent className="space-y-3">
                   {myBookedClasses.slice(0, 3).map((cls) => {
-                    const isPast = isClassInPast(new Date(cls.schedule), cls.start_time);
+                    const isPast = isClassInPast(new Date(cls.schedule), cls.start_time, cls.end_time);
                     const canCancel = cls.start_time && (() => {
                       const classStartMs = qatarClassStartMs(cls.schedule, cls.start_time);
                       const hoursDifference = (classStartMs - Date.now()) / (1000 * 60 * 60);
