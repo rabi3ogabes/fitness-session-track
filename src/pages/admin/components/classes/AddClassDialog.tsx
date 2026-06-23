@@ -610,7 +610,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                               selected={formState.endDate}
                               onSelect={handleEndDateChange}
                               initialFocus
-                              disabled={(date) => date < today}
+                              disabled={(date) => date < todayStart}
                               className="pointer-events-auto"
                             />
                           </PopoverContent>
