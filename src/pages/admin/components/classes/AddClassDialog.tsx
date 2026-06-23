@@ -69,6 +69,8 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
   
   // Added console logs to debug trainers data
   useEffect(() => {
