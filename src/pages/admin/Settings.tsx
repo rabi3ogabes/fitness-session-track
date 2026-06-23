@@ -259,6 +259,11 @@ const Settings = () => {
         throw settingsError;
       }
 
+      // Persist toggle settings to localStorage so consumer pages see them immediately
+      localStorage.setItem("showMemberDeleteIcon", JSON.stringify(showMemberDeleteIcon));
+      localStorage.setItem("showClassDeleteIcon", JSON.stringify(showClassDeleteIcon));
+      localStorage.setItem("showBookingDeleteIcon", JSON.stringify(showBookingDeleteIcon));
+
       setIsLoading(false);
       const successMsg = `✅ All settings saved successfully!\n\nTimestamp: ${new Date().toLocaleString()}\n\nSettings have been saved to the database and will persist across sessions.`;
       setOperationLog(successMsg);
