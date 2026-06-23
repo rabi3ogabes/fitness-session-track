@@ -658,34 +658,14 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                   </div>
                 ) : (
                   <div className="grid grid-cols-4 items-start gap-4">
-                    <Label className="text-right pt-2">Date*</Label>
-                    <div className="col-span-3">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !selectedDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate ? format(selectedDate, "PPP") : "Select date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 z-50" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={setSelectedDate}
-                            initialFocus
-                            className="pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
+                    <Label className="text-right pt-2">Date</Label>
+                    <div className="col-span-3 text-sm text-muted-foreground">
+                      {selectedDate ? format(selectedDate, "PPP (EEEE)") : "—"}
+                      <span className="ml-2 text-xs">(change it on the Basic Info tab)</span>
                     </div>
                   </div>
                 )}
+
                 
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="start-time" className="text-right">
