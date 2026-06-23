@@ -69,6 +69,8 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
   
   // Added console logs to debug trainers data
   useEffect(() => {
@@ -405,6 +407,43 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
             <TabsContent value="basic" className="space-y-4 mt-4">
               <div className="space-y-4">
                 <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Date*</Label>
+                  <div className="col-span-3">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !selectedDate && "text-muted-foreground"
+                          )}
+                          disabled={formState.isRecurring}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {formState.isRecurring
+                            ? "Set by recurrence (see Schedule tab)"
+                            : selectedDate
+                              ? format(selectedDate, "PPP (EEEE)")
+                              : "Select date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 z-50" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={setSelectedDate}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Defaults to today. Pick any day — past, today, or future.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="name" className="text-right">
                     Class Name*
                   </Label>
@@ -419,6 +458,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                     autoFocus
                   />
                 </div>
+
                 
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right">Gender</Label>
@@ -608,7 +648,7 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                               selected={formState.endDate}
                               onSelect={handleEndDateChange}
                               initialFocus
-                              disabled={(date) => date < today}
+                              disabled={(date) => date < todayStart}
                               className="pointer-events-auto"
                             />
                           </PopoverContent>
@@ -618,34 +658,14 @@ const AddClassDialog: React.FC<AddClassDialogProps> = ({
                   </div>
                 ) : (
                   <div className="grid grid-cols-4 items-start gap-4">
-                    <Label className="text-right pt-2">Date*</Label>
-                    <div className="col-span-3">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !selectedDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {selectedDate ? format(selectedDate, "PPP") : "Select date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 z-50" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={setSelectedDate}
-                            initialFocus
-                            className="pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
+                    <Label className="text-right pt-2">Date</Label>
+                    <div className="col-span-3 text-sm text-muted-foreground">
+                      {selectedDate ? format(selectedDate, "PPP (EEEE)") : "—"}
+                      <span className="ml-2 text-xs">(change it on the Basic Info tab)</span>
                     </div>
                   </div>
                 )}
+
                 
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="start-time" className="text-right">
