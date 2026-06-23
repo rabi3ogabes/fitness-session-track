@@ -190,13 +190,55 @@ const ClassSchedulePage = () => {
   const [showDeleteButtons, setShowDeleteButtons] = useState(false);
   const [showClassDeleteIcon, setShowClassDeleteIcon] = useState(true);
 
-  // Load settings on mount
+  // Load setting from DB (source of truth) and subscribe to realtime changes
   useEffect(() => {
-    const savedShowClassDeleteIcon = localStorage.getItem("showClassDeleteIcon");
-    if (savedShowClassDeleteIcon !== null) {
-      setShowClassDeleteIcon(JSON.parse(savedShowClassDeleteIcon));
-    }
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    const applyValue = (value: boolean | null | undefined) => {
+      const next = value ?? true;
+      setShowClassDeleteIcon(next);
+      localStorage.setItem("showClassDeleteIcon", JSON.stringify(next));
+    };
+
+    const fetchSetting = async () => {
+      const { data } = await supabase
+        .from("admin_settings")
+        .select("show_class_delete_icon")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) applyValue(data.show_class_delete_icon);
+    };
+
+    fetchSetting();
+
+    channel = supabase
+      .channel("admin_settings_class_delete_icon")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "admin_settings" },
+        (payload: any) => {
+          const row = payload.new ?? payload.old;
+          if (row && "show_class_delete_icon" in row) {
+            applyValue(row.show_class_delete_icon);
+          }
+        }
+      )
+      .subscribe();
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "showClassDeleteIcon" && e.newValue) {
+        try { setShowClassDeleteIcon(JSON.parse(e.newValue)); } catch {}
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
+
   const [viewType, setViewType] = useState<'table' | 'boxes'>('boxes'); // Default to boxes
   const [showPreviousClasses, setShowPreviousClasses] = useState(false);
 
