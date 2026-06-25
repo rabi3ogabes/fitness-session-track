@@ -1702,7 +1702,11 @@ const ClassSchedulePage = () => {
                               mode="single"
                               selected={field.value}
                               onSelect={field.onChange}
-                              disabled={(date) => date < new Date()}
+                              disabled={(date) => {
+                                const t = new Date();
+                                t.setHours(0, 0, 0, 0);
+                                return date < t;
+                              }}
                               initialFocus
                             />
                           </PopoverContent>
