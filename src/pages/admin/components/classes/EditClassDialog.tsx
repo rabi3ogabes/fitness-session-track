@@ -333,16 +333,55 @@ const EditClassDialog: React.FC<EditClassDialogProps> = ({
             
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-schedule" className="text-right">
-                Schedule
+                Date*
               </Label>
-              <Input
-                id="edit-schedule"
-                name="schedule"
-                value={editClass.schedule}
-                onChange={handleInputChange}
-                className="col-span-3"
-              />
+              <div className="col-span-3">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full pl-3 text-left font-normal",
+                        !editClass.schedule && "text-muted-foreground"
+                      )}
+                    >
+                      {(() => {
+                        const s = editClass.schedule;
+                        if (!s) return <span>Pick a date</span>;
+                        const d = /^\d{4}-\d{2}-\d{2}$/.test(s)
+                          ? new Date(`${s}T00:00:00`)
+                          : new Date(s);
+                        return isNaN(d.getTime()) ? s : format(d, "PPP");
+                      })()}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={(() => {
+                        const s = editClass.schedule;
+                        if (!s) return undefined;
+                        const d = /^\d{4}-\d{2}-\d{2}$/.test(s)
+                          ? new Date(`${s}T00:00:00`)
+                          : new Date(s);
+                        return isNaN(d.getTime()) ? undefined : d;
+                      })()}
+                      onSelect={(date) => {
+                        if (date) {
+                          setEditClass((prev) => ({
+                            ...prev,
+                            schedule: format(date, "yyyy-MM-dd"),
+                          }));
+                        }
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
+
             
             {renderTimeSelect("startTime", "Start Time", editClass.startTime, handleInputChange)}
             {renderTimeSelect("endTime", "End Time", editClass.endTime, handleInputChange)}
