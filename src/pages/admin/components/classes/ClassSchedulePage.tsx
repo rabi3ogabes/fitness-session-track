@@ -162,7 +162,7 @@ const formSchema = z.object({
     .optional(),
   description: z.string().optional(),
   location: z.string().optional(),
-  
+  classDate: z.date({ required_error: "Date is required" }),
   endDate: z.date().optional(),
 });
 
@@ -256,9 +256,17 @@ const ClassSchedulePage = () => {
       selectedDays: [],
       description: "",
       location: "",
-      
+      classDate: new Date(),
     },
   });
+
+  // Reset the classDate to today whenever the create dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      form.setValue("classDate", new Date());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Network status event listeners with better handling
   useEffect(() => {
@@ -733,9 +741,9 @@ const ClassSchedulePage = () => {
 
       // For recurring classes, generate all dates
       if (values.isRecurring && values.endDate) {
-        const today = new Date();
+        const startDate = values.classDate ?? new Date();
         const dates = generateRecurringDates(
-          today,
+          startDate,
           values.endDate,
           values.recurringFrequency || "Weekly",
           values.selectedDays || []
@@ -800,7 +808,7 @@ const ClassSchedulePage = () => {
           gender: values.gender,
           start_time: values.startTime,
           end_time: values.endTime,
-          schedule: format(new Date(), "yyyy-MM-dd"),
+          schedule: format(values.classDate ?? new Date(), "yyyy-MM-dd"),
           status: "Active",
           enrolled: 0,
           description: values.description || null,
@@ -847,6 +855,30 @@ const ClassSchedulePage = () => {
 
   const handleUpdateClass = async (updatedClass: ClassModel) => {
     try {
+      // Normalize the schedule into yyyy-MM-dd so refreshes preserve the chosen date.
+      // Accepts: Date, yyyy-MM-dd, dd/MM/yyyy, dd-MM-yyyy.
+      const normalizeSchedule = (val: unknown): string | undefined => {
+        if (!val) return undefined;
+        if (val instanceof Date) return format(val, "yyyy-MM-dd");
+        const s = String(val).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (dmy) {
+          let [, d, m, y] = dmy;
+          let yr = parseInt(y);
+          if (yr < 100) yr += 2000;
+          const dd = parseInt(d), mm = parseInt(m);
+          if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return undefined;
+          return `${yr}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+        }
+        // Fallback: try Date parsing
+        const parsed = new Date(s);
+        if (!isNaN(parsed.getTime())) return format(parsed, "yyyy-MM-dd");
+        return undefined;
+      };
+
+      const normalizedSchedule = normalizeSchedule(updatedClass.schedule);
+
       const { error } = await supabase
         .from("classes")
         .update({
@@ -858,6 +890,7 @@ const ClassSchedulePage = () => {
           end_time: updatedClass.endTime,
           description: updatedClass.description,
           location: updatedClass.location,
+          ...(normalizedSchedule ? { schedule: normalizedSchedule } : {}),
         })
         .eq("id", updatedClass.id);
 
